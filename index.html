@@ -548,7 +548,7 @@ const canvas=$('c');
 const renderer=new T.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
 renderer.setPixelRatio(1);
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.BasicShadowMap;
-const scene=new T.Scene();scene.background=new T.Color(0xbfe0ff);
+const scene=new T.Scene();const skyHz=new T.Color(0xbfe0ff),skyZen=new T.Color(0x3c8ce8),skyGlow=new T.Color(0xffffff);let skyGA=0;
 scene.fog=new T.Fog(0xbfe0ff,40,150);
 const NEAR=0.5,FAR=420;
 const camera=new T.PerspectiveCamera(36,1,NEAR,FAR);
@@ -576,6 +576,27 @@ const postMat=new T.ShaderMaterial({
   depthTest:false,depthWrite:false
 });
 post.scene.add(new T.Mesh(new T.PlaneGeometry(2,2),postMat));
+const skyMat=new T.ShaderMaterial({depthTest:false,depthWrite:false,
+  uniforms:{zen:{value:new T.Color()},hz:{value:new T.Color()},glowC:{value:new T.Color()},hy:{value:0.6},ga:{value:0},sunP:{value:new T.Vector2(0.5,0.7)},aspect:{value:0.5},disc:{value:0},night:{value:0}},
+  vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
+  fragmentShader:`uniform vec3 zen;uniform vec3 hz;uniform vec3 glowC;uniform float hy;uniform float ga;uniform vec2 sunP;uniform float aspect;uniform float disc;uniform float night;varying vec2 vUv;
+    void main(){
+      float t=clamp((vUv.y-hy)/max(.001,1.-hy),0.,1.);
+      vec3 c=mix(hz,zen,pow(t,.65));
+      c=mix(c,glowC,ga*.6*exp(-t*5.));                           // warm band hugging the horizon
+      vec2 d=(vUv-sunP)*vec2(aspect,1.);float r=length(d);
+      c+=glowC*ga*(.55*exp(-r*r*40.)+.25*exp(-r*r*6.));          // soft halo around the sun or moon
+      c=mix(c,mix(vec3(1.,.93,.75),vec3(1.,.97,.9),night),disc*smoothstep(.045,.038,r)); // low sun disc
+      gl_FragColor=vec4(c,1.);}`});
+const skyScene=new T.Scene();skyScene.add(new T.Mesh(new T.PlaneGeometry(2,2),skyMat));
+const _sp=new T.Vector3();
+function updateSkyDome(){const u=skyMat.uniforms;u.zen.value.copy(skyZen);u.hz.value.copy(skyHz);u.glowC.value.copy(skyGlow);u.ga.value=skyGA;u.aspect.value=camera.aspect;u.night.value=nightF;
+  const fwd=cam.yaw+Math.PI;skyPos(fwd,0,150,_sp,false).project(camera);u.hy.value=clamp((_sp.y+1)/2,0,1);
+  // the sun rides low along the horizon at dawn and dusk; the moon glows at night
+  let az,f=0.3;if(nightF>0.5){az=fwd+0.28;f=0.55;}else{const dx=sun.position.x-cam.tx,dz=sun.position.z-cam.tz;az=Math.atan2(dx,dz);}
+  skyPos(az,f,150,_sp,false);const ok=_sp.clone().sub(camera.position).dot(camera.getWorldDirection(new T.Vector3()))>0;_sp.project(camera);
+  u.sunP.value.set((_sp.x+1)/2,(_sp.y+1)/2);if(!ok)u.ga.value*=0.25;
+  u.disc.value=nightF>0.5?0:(ok?clamp((skyGA-0.5)*2.5,0,1)*(1-rainMix):0);}
 
 function resize(){
   const cw=window.innerWidth,ch=window.innerHeight;
@@ -590,7 +611,7 @@ function resize(){
   postMat.uniforms.tC.value=rt.texture;postMat.uniforms.tD.value=rt.depthTexture;postMat.uniforms.res.value.set(W,H);
   camera.aspect=cw/ch;camera.updateProjectionMatrix();applyCam();
 }
-const cam={yaw:Math.PI*0.27,pitch:0.66,dist:30,tx:0,tz:0.3};
+const cam={yaw:Math.PI*0.27,pitch:0.58,dist:30,tx:0,tz:0.3};
 function fitZoom(){const a=window.innerWidth/window.innerHeight;cam.dist=clamp(20/Math.max(0.55,a),18,40);}
 function applyCam(){
   const hd=cam.dist*Math.cos(cam.pitch);
@@ -664,7 +685,7 @@ const water=new T.Mesh(new T.PlaneGeometry(520,520,52,52).rotateX(-Math.PI/2),wa
 const s1Mat=new T.MeshBasicMaterial({color:0x7ea6e8}),s2Mat=new T.MeshBasicMaterial({color:0x5584da});
 const TILE_PLANE=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2);
 
-const STARN=260,starGeo=new T.BufferGeometry(),sp=new Float32Array(STARN*3),ss=new Float32Array(STARN);
+const STARN=900,starGeo=new T.BufferGeometry(),sp=new Float32Array(STARN*3),ss=new Float32Array(STARN);
 for(let i=0;i<STARN;i++){const a=Math.random()*6.283,e=0.08+Math.random()*1.3;sp[i*3]=Math.cos(a)*Math.cos(e)*190;sp[i*3+1]=Math.sin(e)*190;sp[i*3+2]=Math.sin(a)*Math.cos(e)*190;ss[i]=Math.random()<0.15?2:1;}
 starGeo.setAttribute('position',new T.BufferAttribute(sp,3));starGeo.setAttribute('sz',new T.BufferAttribute(ss,1));
 const starMat=new T.ShaderMaterial({uniforms:{op:{value:0}},transparent:true,depthWrite:false,
@@ -1053,16 +1074,16 @@ function cursorAt(x,z,color=0xfff6e2){cursor.material.color.set(color);cursor.po
    Time of day
    ========================================================= */
 const KF=[
- {h:0,   sun:0x9ab0ff,si:.42,sky:0x5a6cb4,gnd:0x2c3466,hi:.78,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46},
- {h:4.8, sun:0x9aa8f0,si:.4,sky:0x6070b4,gnd:0x303868,hi:.76,water:0x243a78,s1:0x3e5ea4,s2:0x30488c,n:1,gl:0xc8d4ff,hz:0x1c2656},
- {h:6,   sun:0xff9a6a,si:.55,sky:0xffb896,gnd:0x5a4a6e,hi:.55,water:0x3a62b8,s1:0x86a4dc,s2:0x5d82cc,n:.25,gl:0xffe0c8,hz:0xf4b090},
- {h:8,   sun:0xffe6c4,si:.95,sky:0xd8e6ff,gnd:0x76866a,hi:.62,water:0x3565cc,s1:0x7ea6e8,s2:0x5584da,n:0,gl:0xffffff,hz:0xb4d8ff},
- {h:12.5,sun:0xffffff,si:1.05,sky:0xeaf2ff,gnd:0x80927a,hi:.68,water:0x376bd6,s1:0x82ade8,s2:0x588ade,n:0,gl:0xffffff,hz:0xbfe2ff},
- {h:16.5,sun:0xffe0b0,si:.95,sky:0xffe6c8,gnd:0x7a7a6a,hi:.64,water:0x3a66c8,s1:0x86a6e0,s2:0x5a82d2,n:0,gl:0xffffff,hz:0xd4dcf4},
- {h:18.3,sun:0xff8a54,si:.72,sky:0xff9c7a,gnd:0x5e4868,hi:.58,water:0x4c5aa8,s1:0x9a92cc,s2:0x6e70ba,n:.3,gl:0xffd0a0,hz:0xf89a78},
- {h:19.4,sun:0xb07ad0,si:.4,sky:0x8a6ab0,gnd:0x3a3060,hi:.68,water:0x2e3a80,s1:0x505ea6,s2:0x3c4a92,n:.8,gl:0xe0c8ff,hz:0x4a3a78},
- {h:21,  sun:0x9ab0ff,si:.42,sky:0x5a6cb4,gnd:0x2c3466,hi:.78,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46},
- {h:24,  sun:0x9ab0ff,si:.42,sky:0x5a6cb4,gnd:0x2c3466,hi:.78,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46},
+ {h:0,   sun:0x9ab0ff,si:.42,sky:0x5a6cb4,gnd:0x2c3466,hi:.78,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
+ {h:4.8, sun:0x9aa8f0,si:.4,sky:0x6070b4,gnd:0x303868,hi:.76,water:0x243a78,s1:0x3e5ea4,s2:0x30488c,n:1,gl:0xc8d4ff,hz:0x1c2656,zen:0x0c1434,glow:0x7a6aa8,ga:.25},
+ {h:6,   sun:0xff9a6a,si:.55,sky:0xffb896,gnd:0x5a4a6e,hi:.55,water:0x3a62b8,s1:0x86a4dc,s2:0x5d82cc,n:.25,gl:0xffe0c8,hz:0xf4b090,zen:0x5a78c8,glow:0xffa060,ga:1},
+ {h:8,   sun:0xffe6c4,si:.95,sky:0xd8e6ff,gnd:0x76866a,hi:.62,water:0x3565cc,s1:0x7ea6e8,s2:0x5584da,n:0,gl:0xffffff,hz:0xb4d8ff,zen:0x5aa0ea,glow:0xfff0c0,ga:.3},
+ {h:12.5,sun:0xffffff,si:1.05,sky:0xeaf2ff,gnd:0x80927a,hi:.68,water:0x376bd6,s1:0x82ade8,s2:0x588ade,n:0,gl:0xffffff,hz:0xbfe2ff,zen:0x3c8ce8,glow:0xfffbe8,ga:.15},
+ {h:16.5,sun:0xffe0b0,si:.95,sky:0xffe6c8,gnd:0x7a7a6a,hi:.64,water:0x3a66c8,s1:0x86a6e0,s2:0x5a82d2,n:0,gl:0xffffff,hz:0xd4dcf4,zen:0x5896e0,glow:0xffe0a0,ga:.35},
+ {h:18.3,sun:0xff8a54,si:.72,sky:0xff9c7a,gnd:0x5e4868,hi:.58,water:0x4c5aa8,s1:0x9a92cc,s2:0x6e70ba,n:.3,gl:0xffd0a0,hz:0xf89a78,zen:0x4a5aae,glow:0xffb050,ga:1},
+ {h:19.4,sun:0xb07ad0,si:.4,sky:0x8a6ab0,gnd:0x3a3060,hi:.68,water:0x2e3a80,s1:0x505ea6,s2:0x3c4a92,n:.8,gl:0xe0c8ff,hz:0x4a3a78,zen:0x221f5a,glow:0xff7a6a,ga:.6},
+ {h:21,  sun:0x9ab0ff,si:.42,sky:0x5a6cb4,gnd:0x2c3466,hi:.78,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
+ {h:24,  sun:0x9ab0ff,si:.42,sky:0x5a6cb4,gnd:0x2c3466,hi:.78,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
 ];
 const _a=new T.Color(),_b=new T.Color(),GREY=new T.Color(0x8a90a0);
 let nightF=0,rainMix=S.rain?1:0;
@@ -1075,7 +1096,7 @@ function applyTime(){
   const dip=smooth(0,0.5,Math.abs(h-5.5))*smooth(0,0.5,Math.abs(h-19.25));
   sun.intensity=lerp(A.si,B.si,t)*(1-rm*0.55)*(0.25+0.75*dip);
   lerpCol(waterMat.color,'water',A,B,t,rm);lerpCol(s1Mat.color,'s1',A,B,t,rm);lerpCol(s2Mat.color,'s2',A,B,t,rm);lerpCol(glintMat.color,'gl',A,B,t);
-  lerpCol(scene.background,'hz',A,B,t,rm);scene.fog.color.copy(scene.background);
+  lerpCol(skyHz,'hz',A,B,t,rm);lerpCol(skyZen,'zen',A,B,t,rm);lerpCol(skyGlow,'glow',A,B,t);skyGA=lerp(A.ga,B.ga,t)*(1-rm*0.8);scene.fog.color.copy(skyHz);
   nightF=lerp(A.n,B.n,t);
   let tt;if(h>=5.5&&h<19.25)tt=(h-5.5)/13.75;else tt=((h-19.25+24)%24)/10.25;
   const az=lerp(-1.25,1.25,tt)+0.6,el=0.28+Math.sin(tt*Math.PI)*0.9;
@@ -2020,10 +2041,10 @@ function updatePrints(dt){let n=0;for(const p of prints){p.age+=dt;const s=p.age
 // --- sky: drifting clouds, the moon, shooting stars, rainbows ---
 const skyCloudMat=new T.MeshBasicMaterial({vertexColors:true,fog:false,transparent:true,opacity:0.95,depthWrite:false});
 const skyClouds=[];
-for(let i=0;i<9;i++){const R=mulberry(i*97+11),p=[];const n=5+Math.floor(R()*4);
+for(let i=0;i<18;i++){const R=mulberry(i*97+11),p=[];const n=5+Math.floor(R()*4);
   for(let j=0;j<n;j++){const x=(j-n/2)*0.8+(R()-0.5)*0.4,s=0.9+R()*0.9;p.push(P(ICO,0xffffff,x,s*0.3,(R()-0.5)*0.6,0,R()*3,0,s*1.4,s,s*1.1),P(ICO,0xdfe6f2,x,0,(R()-0.5)*0.6,0,R()*3,0,s*1.3,s*0.5,s));}
   const m=new T.Mesh(merge(p),skyCloudMat);m.frustumCulled=false;m.renderOrder=-1;scene.add(m);
-  skyClouds.push({m,a:i/9*6.283+R()*0.5,d:120+R()*50,f:0.25+R()*0.7,s:4+R()*3});}
+  skyClouds.push({m,a:i/18*6.283+R()*0.3,d:120+R()*50,f:0.25+R()*0.7,s:4+R()*3});}
 const moon=new T.Group();
 {const disc=new T.Mesh(new T.CircleGeometry(5,24),new T.MeshBasicMaterial({color:0xfff4d6,fog:false,transparent:true}));moon.add(disc);
   for(const [x,y,r] of [[-1.6,1,1.1],[1.4,-0.8,1.4],[0.4,2.2,0.7],[-0.6,-2,0.8]]){const c=new T.Mesh(new T.CircleGeometry(r,14),new T.MeshBasicMaterial({color:0xece0bc,fog:false,transparent:true}));c.position.set(x,y,0.05);moon.add(c);}
@@ -2047,11 +2068,11 @@ function skyPos(theta,f,d,out,curved=true){const cp=camera.position,hc=cp.y,aT=c
   return out.set(cp.x+Math.sin(theta)*d,hc-d*Math.tan(a)+(curved?CURVE*d*d:0),cp.z+Math.cos(theta)*d);}
 function skySpan(d){const hc=camera.position.y,aT=cam.pitch-camera.fov/2*Math.PI/180,aH=Math.atan(2*Math.sqrt(Math.max(0.05,hc)*CURVE));return d*(Math.tan(aH)-Math.tan(aT));}
 function updateSky(dt,tt){
-  const cp=camera.position,sky=scene.background,night=nightF,fwd=cam.yaw+Math.PI;
+  const cp=camera.position,sky=skyHz,night=nightF,fwd=cam.yaw+Math.PI;
   for(const c of skyClouds){c.a+=dt*0.004*(0.5+wind);skyPos(c.a,c.f,c.d,c.m.position);c.m.scale.setScalar(c.s*c.d/140);c.m.lookAt(cp.x,c.m.position.y,cp.z);}
-  skyCloudMat.color.setRGB(1,1,1).lerp(sky,0.35+rainMix*0.3).multiplyScalar(1-night*0.55);skyCloudMat.opacity=0.95;
+  skyCloudMat.color.setRGB(1,1,1).lerp(sky,0.25+rainMix*0.35).lerp(skyGlow,skyGA*0.45).multiplyScalar(1-night*0.6);skyCloudMat.opacity=0.95;
   moon.visible=night>0.05;
-  if(moon.visible){skyPos(fwd+0.45,0.62,150,moon.position);moon.scale.setScalar(0.8);moon.lookAt(cp);moon.traverse(o=>{if(o.material)o.material.opacity=(o.material.color.getHex()===0xfff4d6&&o.geometry.parameters.radius===9?0.12:1)*night*(1-rainMix);});}
+  if(moon.visible){skyPos(fwd+0.28,0.55,150,moon.position);moon.scale.setScalar(0.8);moon.lookAt(cp);moon.traverse(o=>{if(o.material)o.material.opacity=(o.material.color.getHex()===0xfff4d6&&o.geometry.parameters.radius===9?0.12:1)*night*(1-rainMix);});}
   stars.visible=night>0.02;if(stars.visible){const pa=starGeo.attributes.position.array;for(let i=0;i<STARN;i++){skyPos(STAR_T[i],STAR_F[i],190,_v,false);pa[i*3]=_v.x;pa[i*3+1]=_v.y;pa[i*3+2]=_v.z;}starGeo.attributes.position.needsUpdate=true;}
   // shooting stars
   if(!shoot&&night>0.8&&!S.rain&&Math.random()<dt*(S.meteor?0.35:0.025))spawnShootingStar();
@@ -2166,7 +2187,7 @@ function frame(now){
   hudT-=dt;if(hudT<=0){hudT=0.5;updateHUD();}
   tickShells(dt);
   saveT+=dt;if(saveT>5){saveT=0;save();}
-  renderer.setRenderTarget(rt);renderer.render(scene,camera);renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);
+  updateSkyDome();renderer.setRenderTarget(rt);renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);
   requestAnimationFrame(frame);
 }
 
