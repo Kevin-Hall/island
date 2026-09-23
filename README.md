@@ -11,6 +11,8 @@ A tiny 3D pixel-art island farming game. Open `index.html` in any modern browser
 - **Islandex:** the main goal: record every fish, bug, plant and find in the archipelago (100+ entries), plus rare crop variants at home.
 - **Fishing (Animal Crossing style):** fish shadows swim near every shore and out at sea. Their size hints at the species, and big ones show a fin. Cast near a shadow, wait while it nibbles, then tap the moment the bobber is pulled under. Tap too early and it gets spooked.
 - **Islands:** bigger islands with cliffs and raised plateaus, rounder trees and grass tufts, in the style of Wild World. Sailing uses real pathfinding, so the boat steers around islands.
+- **Atmosphere:** waves lapping at every shore, footprints and footsteps in the sand, drifting clouds, the moon and stars, petals, autumn leaves, snow, embers or spores depending on the island, swamp mist, rain that stops mid-day and leaves a rainbow, shooting stars you can wish on (star fragments wash up the next morning), meteor showers, and a gentle music box melody with birdsong by day and crickets at night.
+- **Dev tools** (tap your level badge): time-of-day slider, time speed (pause to 60×), weather, shooting stars and meteor showers, skip to morning, extra shells.
 - **Build:** buy decor and useful buildings (sprinklers, beehives, lucky clover, windmill), expand the island, and upgrade your tent to a villa.
 - **Day/night:** a full day lasts 8 minutes, with sunrise, sunset, lantern light, fireflies and rainy days. Sleep in your home at night to skip ahead.
 - **Controls:** drag to spin, pinch to zoom, two fingers to pan. Progress saves on your device.
