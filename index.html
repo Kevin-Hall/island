@@ -53,14 +53,17 @@ img.px{image-rendering:crisp-edges;image-rendering:pixelated}
   bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
   display:flex;gap:5px;padding:5px;background:var(--paper);border:3px solid var(--ink);
   box-shadow:0 4px 0 var(--ink);max-width:calc(100vw - 24px)}
-.btn{width:58px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+.btn{position:relative;width:54px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
   background:var(--paper2);border:2px solid var(--ink);padding:0;font-size:12px;line-height:1.1;
   box-shadow:inset -2px -3px 0 rgba(53,35,46,.14),inset 2px 2px 0 rgba(255,255,255,.55)}
 .btn img{width:30px;height:30px}
 .btn:active{transform:translateY(2px)}
 .btn.on{background:#c7dd9a}
 .btn.seed{background:#f3e0a8}
-@media (max-width:360px){.btn{width:52px}}
+@media (max-width:380px){.btn{width:49px;font-size:11px}}
+.btn.ready::after{content:'';position:absolute;top:3px;right:3px;width:10px;height:10px;background:var(--rose);border:2px solid var(--ink)}
+.card img.sil{filter:brightness(0);opacity:.2}
+.card .done{color:var(--leaf-d);font-weight:700}
 
 /* ---------- Toasts / floats ---------- */
 #toasts{position:fixed;z-index:6;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 70px);
@@ -177,6 +180,7 @@ img.px{image-rendering:crisp-edges;image-rendering:pixelated}
   <button class="btn" id="bMode" aria-label="Toggle farm or edit mode"><img class="px" id="modeImg" alt=""><span id="modeTxt">Farm</span></button>
   <button class="btn" id="bBag"><img class="px" id="icoBag" alt=""><span>Bag</span></button>
   <button class="btn" id="bShop"><img class="px" id="icoShop" alt=""><span>Shop</span></button>
+  <button class="btn" id="bTask"><img class="px" id="icoTask" alt=""><span>Orders</span></button>
   <button class="btn" id="bBook"><img class="px" id="icoBook" alt=""><span>Almanac</span></button>
 </nav>
 
@@ -247,8 +251,41 @@ const BUILD={
   sprinkler:{name:'Sprinkler',   cost:350,  lvl:3, desc:'Waters the 8 tiles around it every dawn.'},
   beehive:  {name:'Beehive',     cost:700,  lvl:4, desc:'Crops within 2 tiles grow 30% faster.'},
   clover:   {name:'Lucky Clover',cost:1200, lvl:5, desc:'Rare variants are 50% likelier within 2 tiles.'},
+  scarecrow:{name:'Scarecrow',   cost:250,  lvl:2, desc:'Crows leave crops within 3 tiles alone.'},
   windmill: {name:'Windmill',    cost:3000, lvl:6, rot:true, desc:'Every crop on the island grows 15% faster.'},
 };
+const FISH={
+  sardine:{name:'Sardine',price:35,w:30,size:1,hab:'any',col:'#9fb6d0',dk:'#5a7090',fin:'#c8d8e8'},
+  mackerel:{name:'Mackerel',price:70,w:20,size:2,hab:'any',time:'day',col:'#6aa8b8',dk:'#2a5a70',fin:'#a8d0d8'},
+  bream:{name:'Sea Bream',price:110,w:16,size:2,hab:'shore',col:'#ec9a8c',dk:'#b05a5a',fin:'#f6c8b8'},
+  bass:{name:'Sea Bass',price:140,w:14,size:3,hab:'deep',col:'#8a9e8a',dk:'#4a5e4a',fin:'#b8c8b0'},
+  puffer:{name:'Pufferfish',price:240,w:8,size:2,hab:'shore',spr:'puffer',col:'#ecd890',dk:'#b09a4a',fin:'#f6ecc0'},
+  squid:{name:'Squid',price:200,w:10,size:2,hab:'deep',time:'night',spr:'squid',col:'#f0d8e0',dk:'#c08aa0'},
+  jelly:{name:'Moon Jelly',price:320,w:7,size:1,hab:'any',time:'night',spr:'jelly',col:'#d0dcff',dk:'#8aa0e8'},
+  octopus:{name:'Octopus',price:380,w:6,size:3,hab:'shore',spr:'octo',col:'#dc644c',dk:'#9a3a2a'},
+  rainbow:{name:'Rainbowfish',price:520,w:6,size:2,hab:'any',rain:true,col:'#8ad0f0',dk:'#e86a9a',fin:'#f6d04a'},
+  tuna:{name:'Bluefin Tuna',price:700,w:4,size:4,hab:'deep',time:'day',col:'#4a6aaa',dk:'#1e2e5e',fin:'#f6d04a'},
+  moonfish:{name:'Moonfish',price:900,w:2.5,size:3,hab:'deep',time:'night',col:'#eef0ff',dk:'#a0b0e8',fin:'#c8d4ff'},
+  oarfish:{name:'Oarfish',price:1600,w:1.2,size:5,hab:'deep',col:'#d8dce8',dk:'#8a90a8',fin:'#e8453a'},
+  coelacanth:{name:'Coelacanth',price:3000,w:1,size:4,hab:'deep',rain:true,col:'#5a6a8a',dk:'#2e3a58',fin:'#e8e0c8'},
+  boot:{name:'Old Boot',price:5,w:4,size:2,hab:'any',junk:true,spr:'boot'},
+};
+const BUGS={
+  white:{name:'Cabbage White',price:30,w:30,time:'day',col:'#f4f0e6',dk:'#8a8a9a'},
+  sulphur:{name:'Sulphur',price:50,w:20,time:'day',col:'#f6d84a',dk:'#a8852a'},
+  monarch:{name:'Monarch',price:140,w:10,time:'day',col:'#f08a2a',dk:'#2b1e2e'},
+  morpho:{name:'Blue Morpho',price:420,w:3,time:'day',col:'#4a8af0',dk:'#1e3a8a'},
+  firefly:{name:'Firefly',price:90,w:20,time:'night',col:'#e6ff8a',dk:'#4a4a3a'},
+  luna:{name:'Luna Moth',price:260,w:9,time:'night',col:'#b8f0a0',dk:'#5a9a50'},
+  emperor:{name:'Emperor Moth',price:800,w:1.5,time:'night',col:'#c8784a',dk:'#5a2e1e'},
+};
+const FINDS={
+  shell:{name:'Seashell',price:15,w:30},drift:{name:'Driftwood',price:12,w:18},conch:{name:'Conch',price:45,w:14},
+  dollar:{name:'Sand Dollar',price:60,w:10},star:{name:'Starfish',price:70,w:10},glass:{name:'Sea Glass',price:90,w:7},
+  bottle:{name:'Message in a Bottle',price:0,w:3},pearl:{name:'Pearl',price:450,w:1.5},feather:{name:'Crow Feather',price:25,w:0},
+};
+const RODS=[{name:'Bamboo Rod'},{name:'Sturdy Rod',cost:900,lvl:3},{name:'Golden Rod',cost:6000,lvl:7}];
+const CANS=[{name:'Tin Can'},{name:'Copper Can',cost:700,lvl:2}];
 const LAND_R=[5.2,6.4,7.6,8.8,10.2];
 const LAND_UP=[{cost:700,lvl:2},{cost:2200,lvl:4},{cost:6000,lvl:6},{cost:15000,lvl:8}];
 const HOUSES=['Tent','Cabin','Cottage','Villa'];
@@ -263,7 +300,7 @@ const BIN_AT={x:1,z:-2};
 const SAVE_KEY='driftseed-isle-v1';
 function freshState(){
   return {v:1,shells:150,xp:0,day:1,hour:7.2,land:0,house:0,tiles:{},objs:[],store:{},inv:{},alm:{},almR:{},
-    seed:'turnip',rain:false,demand:'carrot',sound:true,pxAdj:0,nextId:1,t:Date.now(),mode:'farm',tut:0,harvested:0,earned:0};
+    seed:'turnip',rain:false,demand:'carrot',sound:true,pxAdj:0,nextId:1,t:Date.now(),mode:'farm',tut:0,harvested:0,earned:0,finds:[],weeds:[],free:{},orders:[],ordBonus:0,rod:0,can:0,rec:{}};
 }
 function load(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s&&s.v===1)return Object.assign(freshState(),s);}catch(e){}return null;}
 function save(){S.t=Date.now();try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
@@ -278,12 +315,12 @@ function isNight(h=S.hour){return h>=19.5||h<5.5;}
 const PAL={k:'#2b1e2e',g:'#5f9e3a',G:'#3d6e2c',l:'#9fd060',r:'#dc4034',R:'#962a2e',p:'#f39ab0',o:'#f08a2a',O:'#b85a1e',
   y:'#f6d04a',Y:'#c8952a',w:'#f7f2e6',W:'#c9c4d8',b:'#8a5a3a',B:'#5a3a2a',n:'#cfa46e',u:'#5a8ae0',U:'#3a5ab0',
   c:'#a8e6f4',v:'#9a6ad0',V:'#6a3a9a',m:'#d4b2f2',e:'#a4a4b4',E:'#5c5c6c',s:'#e8d4a8'};
-function sprite(rows){
+function sprite(rows,pal={}){
   const h=rows.length,w=Math.max(...rows.map(r=>r.length));
   const cv=document.createElement('canvas');cv.width=w+2;cv.height=h+2;const cx=cv.getContext('2d');
   const on=(x,y)=>{const r=rows[y-1];if(!r)return false;const ch=r[x-1];return ch&&ch!=='.';};
   for(let y=0;y<h+2;y++)for(let x=0;x<w+2;x++){
-    if(on(x,y)){cx.fillStyle=PAL[rows[y-1][x-1]]||'#f0f';cx.fillRect(x,y,1,1);}
+    if(on(x,y)){const ch=rows[y-1][x-1];cx.fillStyle=pal[ch]||PAL[ch]||'#f0f';cx.fillRect(x,y,1,1);}
     else if(on(x+1,y)||on(x-1,y)||on(x,y+1)||on(x,y-1)){cx.fillStyle=PAL.k;cx.fillRect(x,y,1,1);}
   }
   return cv.toDataURL();
@@ -309,6 +346,30 @@ sprout:['....l...l...','...lgl.lgl..','....lgGgl...','......G.....','......G....
 star:['.....y.....','.....y.....','....yyy....','yyyyyyyyyyy','.yyyyyyyyy.','..yyyyyyy..','..yyyyyyy..','.yyy...yyy.','.yy.....yy.'],
 };
 const ICON={};for(const k in SPR)ICON[k]=sprite(SPR[k]);
+const FSPR={
+fish:['.....ff.....','....fAAf....','..aaaaaaa..f','.aeaaaaaaaff','aaaaaaaaaaf.','.AAaaaaaaaff','..AAAAAAA..f','....fAf.....'],
+puffer:['..f.f.f.....','.aaaaaaa....','aaaaaaaaa.f.','aeaAaAaaaff.','aaaaaaaaaaf.','aaAaAaAaa.f.','.aaaaaaa....','..f.f.f.....'],
+squid:['....a....','...aaa...','..aaaaa..','..aAaAa..','..aaaaa..','..aeaea..','..aaaaa..','.a.a.a.a.','a.a...a.a','.a.....a.'],
+jelly:['..aaaaa..','.aaaaaaa.','aaAaaaAaa','AAAAAAAAA','.a.a.a.a.','.a..a..a.','a..a..a..','..a....a.'],
+octo:['...aaaa...','..aaaaaa..','.aaaaaaaa.','.aewaaewa.','.aaaaaaaa.','aAaAaAaAa.','a.a.a.a.a.','.a.a.a.a.a'],
+boot:['..bbbb....','..bBBb....','..bbbb....','..bbbb....','..bbbbbbb.','.bbbbbbbbb','.BBBBBBBBB'],
+bug:['aa......aa','aAa.bb.aAa','aaaabbaaaa','.aaabbaaa.','..AabbaA..','.aAabbaAa.','.aa.bb.aa.']};
+for(const k in FISH){const F=FISH[k];ICON['f:'+k]=sprite(FSPR[F.spr||'fish'],{a:F.col,A:F.dk,f:F.fin||F.dk,e:'#1a1420'});}
+for(const k in BUGS){const B=BUGS[k];ICON['b:'+k]=sprite(FSPR.bug,{a:B.col,A:B.dk,b:'#2b1e2e'});}
+const FIND_SPR={
+'g:conch':['....nnn.....','..nnwwnn....','.nwwnnwwn...','nwwnppnwwn..','nwnpppwnwwn.','.nwppwnnwwwn','..nnwwwwwnn.','....nnnnn...'],
+'g:dollar':['...ssss...','..sWssWs..','.ssswWsss.','.sWwwwwWs.','.ssswWsss.','..sWssWs..','...ssss...'],
+'g:glass':['...cc.....','..cccc....','.cwcccl...','.ccccll...','..cllll...','...ll.....'],
+'g:star':['....o....','...ooo...','oooooOooo','.ooOoOoo.','..ooooo..','.oo...oo.','oo.....oo'],
+'g:pearl':['..wwww..','.wwcwww.','wwcwwwWw','wwwwwWWw','.wWWWWw.','..wwww..'],
+'g:drift':['..........bb','.......bbnb.','....bbnnbb..','.bbnnbbb....','bnbbb.......','.b..........'],
+'g:bottle':['......bb','.....cub','....ccu.','.cuuwwu.','ccwwwuu.','cuwwuu..','.uuuu...'],
+'g:feather':['.........E','.......EEE','.....EEeE.','...EEeEE..','..EeEE....','.EE.......','E.........']};
+for(const k in FIND_SPR)ICON[k]=sprite(FIND_SPR[k]);
+ICON['g:shell']=ICON.shell;
+ICON.task=sprite(['.nnnnnnnn.','nbwwwwwwbn','.nwEEEEwn.','.nwwwwwwn.','.nwEEEwwn.','.nwwwwwwn.','.nwEEEEwn.','nbwwwwwwbn','.nnnnnnnn.']);
+ICON.rod=sprite(['..........E','.........E.','........b..','.......b..u','......b...u','.....b....u','....b.....r','...B.......','..B........']);
+ICON.can=sprite(['....EEE.....','...E...E....','.OOOOOOOOE..','OOOOOOOOOOE.','.OoooooOO..O','.OOOOOOOOOOO','.OOOOOOOO...','..OOOOOO....']);
 const seedIcon=id=>id==='mystery'?ICON.mystery:ICON[id];
 const shellHTML=`<img class="px" src="${ICON.shell}" alt="">`;
 
@@ -588,6 +649,11 @@ function objGroup(kind,seed=1,rot=0){
     case'clover':{for(let i=0;i<6;i++){const cx=(R()-0.5)*0.7,cz=(R()-0.5)*0.7;for(let j=0;j<3;j++){const a=j/3*6.28+R();p.push(P(BOX,j%2?0x4f9a3a:0x5fae44,cx+Math.cos(a)*0.06,0.04,cz+Math.sin(a)*0.06,0,a,0,0.1,0.04,0.1));}}
       g.add(M(p));const gc=[P(BOX,0x4f8a34,0,0.08,0,0,0,0,0.03,0.16,0.03)];for(let j=0;j<4;j++){const a=j/4*6.28;gc.push(P(BOX,0xf5c542,Math.cos(a)*0.07,0.17,Math.sin(a)*0.07,0,a,0,0.11,0.04,0.11));}
       g.add(M(gc,goldMat));g.userData.sparkle=true;break;}
+    case'scarecrow':p.push(P(BOX,0x8a6a3a,0,0.55,0,0,0,0,0.08,1.1,0.08),P(BOX,0x8a6a3a,0,0.8,0,0,0,0,0.8,0.06,0.06),P(BOX,0x6a8ac0,0,0.7,0,0,0,0,0.34,0.36,0.2),
+        P(BOX,0x6a8ac0,-0.26,0.8,0,0,0,0,0.2,0.14,0.14),P(BOX,0x6a8ac0,0.26,0.8,0,0,0,0,0.2,0.14,0.14),P(BOX,0xe8c878,-0.42,0.78,0,0,0,0.3,0.08,0.12,0.08),P(BOX,0xe8c878,0.42,0.78,0,0,0,-0.3,0.08,0.12,0.08),
+        P(BOX,0xe8c878,0,1.06,0,0,0,0,0.26,0.26,0.24),P(BOX,0x2b1e2e,-0.06,1.08,0.125,0,0,0,0.04,0.04,0.02),P(BOX,0x2b1e2e,0.06,1.08,0.125,0,0,0,0.04,0.04,0.02),
+        P(BOX,0x8a5a3a,0,1.2,0,0,0,0,0.46,0.04,0.46),P(BOX,0x8a5a3a,0,1.29,0,0,0,0,0.24,0.16,0.24),P(BOX,0xd8453a,0,1.23,0,0,0,0,0.25,0.04,0.25));
+      g.add(M(p));break;
     case'windmill':{p.push(P(TOWER,0xf2ead8,0,0.95,0,0,0,0,1,1.9,1),P(CYL8,0x9a6a3a,0,0.08,0,0,0,0,1.06,0.16,1.06),P(CONE8,0xc4553c,0,2.15,0,0,0,0,0.9,0.6,0.9),P(BOX,0x5a3a2a,0,0.26,0.47,0,0,0,0.24,0.44,0.05));
       g.add(M(p));g.add(M([P(BOX,0x404a60,0,1.35,0.39,0,0,0,0.16,0.18,0.04)],glowMat));
       const bl=[P(BOX,0x6a4a30,0,0,0,0,0,0,0.16,0.16,0.12)];for(let k=0;k<4;k++){const a=k*Math.PI/2;bl.push(P(BOX,0xe8dcc0,-Math.sin(a)*0.58,Math.cos(a)*0.58,0,0,0,a,0.2,0.95,0.03),P(BOX,0x7a5a3a,-Math.sin(a)*0.5,Math.cos(a)*0.5,0.02,0,0,a,0.04,1.05,0.03));}
@@ -760,7 +826,8 @@ function dawn(quiet){
   if(S.rain)for(const k in S.tiles)S.tiles[k].w=1;
   let spr=0;for(const o of S.objs)if(o.k==='sprinkler'){spr++;for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){const t=S.tiles[K(o.x+dx,o.z+dz)];if(t)t.w=1;}}
   const un=CROP_IDS.filter(id=>CROPS[id].lvl<=level());S.demand=pickR(un);
-  if(!quiet){rebuildSoil();if(spr&&!S.rain){sprayT=2.5;}
+  for(let i=0;i<3;i++)spawnFind(true);for(let i=0;i<2;i++)spawnWeed(true);makeOrders();
+  if(!quiet){rebuildSoil();syncLife();if(spr&&!S.rain){sprayT=2.5;}
     toast(`Day ${S.day} — ${S.rain?'rain is watering everything':'crops are thirsty'}. The market wants <b>${CROPS[S.demand].name}</b> today.`,'',seedIcon(S.demand));}
 }
 function rollVariant(x,z,mystery){
@@ -772,7 +839,7 @@ function rollVariant(x,z,mystery){
 function growCrops(dt,quiet,out){
   const night=isNight();
   for(const k in S.tiles){const t=S.tiles[k],c=t.crop;if(!c||c.p>=1||!t.w)continue;const C=CROPS[c.t];
-    let r=hasWindmill?1.15:1;if(C.night)r*=night?1:0;if(C.day)r*=night?0.4:1.4;const b=bonus.get(k);if(b&&b.bee)r*=1.3;
+    let r=hasWindmill?1.15:1;if(C.night)r*=night?1:0;if(C.day)r*=night?0.4:1.4;const b=bonus.get(k);if(b&&b.bee)r*=1.3;if(weedSlow.has(k))r*=0.75;
     if(r<=0)continue;const s0=stageOf(c.p);c.p=Math.min(1,c.p+dt*r/C.grow);
     if(c.p>=1){const [x,z]=k.split(',').map(Number);c.v=rollVariant(x,z,c.m);if(out)out.push(c);
       if(!quiet){syncCrop(k);if(c.v!=='normal'){const V=VAR[c.v];toast(`A <b>${V.name} ${C.name}</b> is ready to harvest!`,'rare',seedIcon(c.t),c.v);SFX.rare();burst(x,0.9,z,0xfff0a0,14,1.4,0.07,2);}else SFX.pop();}}
@@ -805,6 +872,10 @@ function startWaves(){const a=ac();if(!a||waves)return;noise(0.01,0.0001);
   s.connect(f);f.connect(g);g.connect(a.destination);s.start();lfo.start();waves={g};setWaveVol();}
 function setWaveVol(){if(waves)waves.g.gain.value=S.sound?0.018:0;}
 const SFX={
+  cast:()=>noise(0.25,0.06,1800,0.7),plop:()=>{noise(0.12,0.1,700,1.2);tone(300,0.1,'sine',0.05,180);},
+  bite:()=>{noise(0.22,0.14,900,1);tone(560,0.14,'square',0.045,260);},nibble:()=>tone(240,0.05,'sine',0.05),
+  caw:()=>{tone(430,0.16,'sawtooth',0.025,300);setTimeout(()=>tone(400,0.2,'sawtooth',0.025,270),210);},
+  catch:()=>{[523,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,0.12,'square',0.035),i*70));},
   till:()=>noise(0.12,0.12,380,0.8),plant:()=>{tone(520,0.07,'triangle',0.06);setTimeout(()=>tone(780,0.08,'triangle',0.05),50);},
   water:()=>noise(0.4,0.05,2600,0.6),pop:()=>tone(900,0.06,'triangle',0.03),
   harvest:()=>{tone(660,0.07,'square',0.03);setTimeout(()=>tone(990,0.09,'square',0.03),60);},
@@ -833,7 +904,7 @@ function updateHUD(){
   const lv=level();$('lvlTxt').textContent='Lv '+lv;
   const a=LV[lv-1]||0,b=LV[lv];$('xpFill').style.width=(b?clamp((S.xp-a)/(b-a),0,1)*100:100)+'%';
   $('timeTxt').textContent=timeName(S.hour);$('dayTxt').textContent=`Day ${S.day} · ${clockStr(S.hour)}${S.rain?' · rain':''}`;
-  const sd=S.seed==='mystery'?MYSTERY:CROPS[S.seed];$('seedImg').src=seedIcon(S.seed);$('seedTxt').textContent=sd.seed+' sh';
+  const sd=S.seed==='mystery'?MYSTERY:CROPS[S.seed];$('seedImg').src=seedIcon(S.seed);$('seedTxt').textContent=S.free[S.seed]?'free ×'+S.free[S.seed]:sd.seed+' sh';$('bTask').classList.toggle('ready',ordersReady());
   $('modeImg').src=S.mode==='farm'?ICON.sprout:ICON.hammer;$('modeTxt').textContent=S.mode==='farm'?'Farm':'Edit';$('bMode').classList.toggle('on',S.mode==='edit');
 }
 function tickShells(dt){if(shownShells!==S.shells){const d=S.shells-shownShells;shownShells+=Math.sign(d)*Math.max(1,Math.abs(d)*Math.min(1,dt*8));if(Math.abs(S.shells-shownShells)<1)shownShells=S.shells;$('shellTxt').textContent=fmt(shownShells);}}
@@ -848,8 +919,9 @@ function addXP(n){const before=level();S.xp+=n;const after=level();if(after>befo
 function walkTo(x,z){const dx=x-vil.x,dz=z-vil.z,d=Math.hypot(dx,dz)||1;vil.tx=x-dx/d*0.62;vil.tz=z-dz/d*0.62;vil.idle=0;}
 function plant(k,x,z){
   const id=S.seed,info=id==='mystery'?MYSTERY:CROPS[id];
-  if(S.shells<info.seed){toast(`You need ${info.seed} shells for ${info.name}. Sell some crops first.`);SFX.no();return;}
-  S.shells-=info.seed;const type=id==='mystery'?pickR(CROP_IDS):id;
+  if(S.free[id]){S.free[id]--;if(!S.free[id])delete S.free[id];}
+  else if(S.shells<info.seed){toast(`You need ${info.seed} shells for ${info.name}. Sell some crops or go fishing.`);SFX.no();return;}
+  else S.shells-=info.seed;const type=id==='mystery'?pickR(CROP_IDS):id;
   S.tiles[k].crop={t:type,p:0,v:null,m:id==='mystery'?1:0};syncCrop(k);SFX.plant();burst(x,0.6,z,0x6a4a30,6,0.8,0.06);walkTo(x,z);
   if(id==='mystery')floatText(x,1.2,z,'? '+CROPS[type].name);
   if(S.tut===0){S.tut=1;setTimeout(()=>toast(`Seeds only grow on days they're watered — tap the planted soil to water it.`,'',ICON.sprout),600);}
@@ -863,11 +935,12 @@ function harvest(k,x,z){
   addXP(Math.max(2,Math.round(C.price*V.mult/8)));
   if(first&&V.id!=='normal'){SFX.rare();toast(`New discovery! <b>${V.name} ${C.name}</b> added to your Almanac.`,'rare',seedIcon(c.t),V.id);}else SFX.harvest();
   checkRow(c.t);
-  if(S.tut<2){S.tut=2;setTimeout(()=>toast('Tap the shipping bin by your tent, or open your Bag, to sell.','',ICON.bag),700);}
+  if(S.tut<2){S.tut=2;setTimeout(()=>toast('Tap the shipping bin by your tent, or open your Bag, to sell.','',ICON.bag),700);
+    setTimeout(()=>toast('While crops grow: tap the sea to fish, comb the beach, catch butterflies and fill your Orders.','',ICON.rod),5200);}
 }
 function checkRow(type){if(S.almR[type])return;if(VARIANTS.every(v=>S.alm[type+'|'+v.id])){S.almR[type]=1;const r=CROPS[type].price*6;S.shells+=r;SFX.level();
   toast(`Almanac page complete: ${CROPS[type].name}! Reward +${fmt(r)} shells`,'rare',seedIcon(type),'rainbow');}}
-function priceOf(key){const [t,v]=key.split('|');return Math.round(CROPS[t].price*VAR[v].mult*(S.demand===t?1.5:1));}
+function priceOf(key){const I=itemInfo(key);if(I)return I.price;const [t,v]=key.split('|');return Math.round(CROPS[t].price*VAR[v].mult*(S.demand===t?1.5:1));}
 function sell(key,n){const have=S.inv[key]||0;n=Math.min(n,have);if(!n)return 0;const g=priceOf(key)*n;S.inv[key]=have-n;if(!S.inv[key])delete S.inv[key];S.shells+=g;S.earned+=g;return g;}
 
 function farmTap(x,z){
@@ -882,10 +955,12 @@ function farmTap(x,z){
   if(!t.crop){plant(k,x,z);return;}
   const c=t.crop,C=CROPS[c.t];
   if(c.p>=1){harvest(k,x,z);return;}
-  if(!t.w){t.w=1;rebuildSoil();SFX.water();for(let i=0;i<10;i++)emit(x+(Math.random()-0.5)*0.5,1.2,z+(Math.random()-0.5)*0.5,{vy:-1,life:0.5,max:0.5,size:0.06,color:0x8ac4ff,g:6});walkTo(x,z);
+  if(!t.w){const r=S.can?1:0;for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const q=S.tiles[K(x+dx,z+dz)];if(!q)continue;q.w=1;for(let i=0;i<6;i++)emit(x+dx+(Math.random()-0.5)*0.5,1.2,z+dz+(Math.random()-0.5)*0.5,{vy:-1,life:0.5,max:0.5,size:0.06,color:0x8ac4ff,g:6});}rebuildSoil();SFX.water();walkTo(x,z);
     if(S.tut===1){S.tut=1.5;setTimeout(()=>toast('Watered soil stays wet until the next dawn. Crops ripen while you play.','',ICON.sprout),600);}return;}
+  if(c.td!==S.day){c.td=S.day;const s0=stageOf(c.p);c.p=Math.min(0.995,c.p+0.08);if(stageOf(c.p)!==s0)syncCrop(k);hearts(x,0.9,z);tone(880,0.08,'triangle',0.04);setTimeout(()=>tone(1175,0.1,'triangle',0.035),70);walkTo(x,z);vil.hop=0.25;
+    floatText(x,1.2,z,'tended +8%');return;}
   let hint='';if(C.night&&!isNight())hint=' · blooms only at night';if(C.day&&isNight())hint=' · slow at night';
-  toast(`${C.name} · ${Math.floor(c.p*100)}% grown · watered${hint}`,'',seedIcon(c.t));
+  toast(`${C.name} · ${Math.floor(c.p*100)}% grown · already tended today${hint}`,'',seedIcon(c.t));
 }
 function houseTap(){
   if(S.hour>=19||S.hour<5){setAction(`It's late. Sleep until morning in your ${HOUSES[S.house].toLowerCase()}?`,[{label:'Sleep',cls:'go',fn:sleep},{label:'Stay up',fn:clearAction}]);}
@@ -893,7 +968,7 @@ function houseTap(){
 }
 function sleep(){clearAction();$('fade').classList.add('on');
   setTimeout(()=>{const sec=((6.02-S.hour+24)%24)*DAY_LEN/24;const out=simulate(sec);afterSim(out,'While you slept');$('fade').classList.remove('on');},650);}
-function afterSim(out,label){rebuildSoil();syncAllCrops();
+function afterSim(out,label){rebuildSoil();syncAllCrops();syncLife();
   if(out.length){const rare=out.filter(c=>c.v!=='normal').length;toast(`${label}: ${out.length} crop${out.length>1?'s':''} ripened${rare?` — ${rare} rare!`:''}`,rare?'rare':'',ICON.sprout);}
   toast(`Day ${S.day}${S.rain?' — rain today':''}. The market wants <b>${CROPS[S.demand].name}</b>.`,'',seedIcon(S.demand));}
 
@@ -915,7 +990,7 @@ function removeObj(o){S.objs=S.objs.filter(q=>q!==o);syncObjs();SFX.place();}
    ========================================================= */
 let placing=null,ghost=null;
 const ghostMat=new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0.7,depthWrite:false});
-function canPlace(x,z){return isLand(x,z)&&!S.tiles[K(x,z)]&&!objAt(x,z)&&!fixedAt(x,z);}
+function canPlace(x,z){return isLand(x,z)&&!S.tiles[K(x,z)]&&!objAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z);}
 function nearestValid(x0,z0){let best=null,bd=1e9;for(const [k,t] of landMap){if(t!=='grass'&&t!=='sand')continue;const [x,z]=k.split(',').map(Number);if(!canPlace(x,z))continue;const d=(x-x0)**2+(z-z0)**2;if(d<bd){bd=d;best=[x,z];}}return best;}
 function startPlace(kind,fromStore,rot=0){
   closeSheet();clearAction();const spot=nearestValid(Math.round(vil.x),Math.round(vil.z));
@@ -964,7 +1039,7 @@ function makeThumbs(){
    Sheets
    ========================================================= */
 let sheet=null;
-function openSheet(kind,tab){SFX.ui();clearAction();if(placing)endPlace();sheet={kind,tab};renderSheet();$('sheet').hidden=false;}
+function openSheet(kind,tab){SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab};renderSheet();$('sheet').hidden=false;}
 function closeSheet(){$('sheet').hidden=true;sheet=null;}
 function tabs(list){$('sheetTabs').innerHTML=list.map(([id,l])=>`<button class="tab ${sheet.tab===id?'on':''}" data-tab="${id}">${l}</button>`).join('');}
 const sh=n=>`<span class="shl">${shellHTML}${fmt(n)}</span>`;
@@ -974,15 +1049,15 @@ function renderSheet(){
     h+=`<p class="note">Pick a seed, then tap tilled soil to plant. You pay when you plant.</p><div class="grid">`;
     for(const id of [...CROP_IDS,'mystery']){const C=id==='mystery'?MYSTERY:CROPS[id],lock=C.lvl>lv;
       const sub=id==='mystery'?'Any crop, even locked ones. 3× rare chance.':`Sells ${fmt(C.price)} · ~${Math.round(C.grow/60*10)/10} min watered${C.night?' · night only':''}${C.day?' · loves sun':''}`;
-      h+=`<button class="card ${S.seed===id?'sel':''} ${lock?'lock':''}" data-seed="${id}" ${lock?'disabled':''}><img class="px" src="${seedIcon(id)}" alt=""><span class="grow"><span class="nm">${C.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+C.lvl:sub}</span></span><span class="price">${sh(C.seed)}</span></button>`;}
+      h+=`<button class="card ${S.seed===id?'sel':''} ${lock?'lock':''}" data-seed="${id}" ${lock?'disabled':''}><img class="px" src="${seedIcon(id)}" alt=""><span class="grow"><span class="nm">${C.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+C.lvl:sub}</span></span><span class="price">${S.free[id]?`<span class="done">${S.free[id]} free</span>`:sh(C.seed)}</span></button>`;}
     h+='</div>';}
   else if(sheet.kind==='bag'){$('sheetTitle').textContent='Bag';tabs([]);
     const keys=Object.keys(S.inv).sort((a,b)=>priceOf(b)-priceOf(a));const total=keys.reduce((s,k)=>s+priceOf(k)*S.inv[k],0);
     h+=`<p class="note">Today the market pays <b>1.5×</b> for <b>${CROPS[S.demand].name}</b>. Rare finds stay in your Almanac forever, even after you sell them.</p>`;
-    if(!keys.length)h+=`<p class="note">Your bag is empty. Harvest ripe crops to fill it.</p>`;
+    if(!keys.length)h+=`<p class="note">Your bag is empty. Harvest crops, fish, catch bugs or comb the beach to fill it.</p>`;
     else{h+=`<div class="sellall"><button class="pbtn go" data-sellall="1">Sell everything · ${fmt(total)} shells</button></div><div class="list">`;
-      for(const k of keys){const [t,v]=k.split('|'),V=VAR[v];
-        h+=`<div class="card"><img class="px v-${v}" src="${seedIcon(t)}" alt=""><span class="grow"><span class="nm">${V.name?V.name+' ':''}${CROPS[t].name} ×${S.inv[k]}</span><br><span class="sub">${fmt(priceOf(k))} each${S.demand===t?' · in demand':''}</span></span><button class="pbtn" data-sell="${k}">Sell</button></div>`;}
+      for(const k of keys){const t=k.split('|')[0];const inOrder=S.orders.some(o=>!o.done&&(o.k===k||o.k==='c:'+t));
+        h+=`<div class="card"><img class="px v-${varOf(k)}" src="${iconOf(k)}" alt=""><span class="grow"><span class="nm">${nameOf(k)} ×${S.inv[k]}</span><br><span class="sub">${fmt(priceOf(k))} each${S.demand===t?' · in demand':''}${inOrder?' · wanted for an order':''}</span></span><button class="pbtn" data-sell="${k}">Sell</button></div>`;}
       h+='</div>';}}
   else if(sheet.kind==='shop'){$('sheetTitle').textContent='Shop';tabs([['decor','Decor'],['island','Island']]);
     if(sheet.tab==='decor'){h+=`<p class="note">Buy something, then tap where it should go.</p><div class="grid">`;
@@ -995,15 +1070,34 @@ function renderSheet(){
         :`<div class="card wide"><img class="px" src="${THUMB.land}" alt=""><span class="grow"><span class="nm">Island fully grown</span><br><span class="sub">Every grain of sand is yours.</span></span></div>`;
       h+=HU?`<div class="card wide"><img class="px" src="${THUMB['house'+(S.house+1)]}" alt=""><span class="grow"><span class="nm">Build a ${HOUSES[S.house+1]}</span><br><span class="sub">Replaces your ${HOUSES[S.house].toLowerCase()}.${HU.lvl>lv?' Needs Lv '+HU.lvl+'.':''}</span></span><button class="pbtn go" data-house="1" ${HU.lvl>lv||S.shells<HU.cost?'disabled':''}>${fmt(HU.cost)}</button></div>`
         :`<div class="card wide"><img class="px" src="${THUMB.house3}" alt=""><span class="grow"><span class="nm">The Villa is finished</span><br><span class="sub">Now chase every Prismatic crop.</span></span></div>`;
+      const RN=RODS[S.rod+1],CN=CANS[S.can+1];
+      h+=RN?`<div class="card wide"><img class="px" src="${ICON.rod}" alt=""><span class="grow"><span class="nm">${RN.name}</span><br><span class="sub">Longer bite window, rarer fish, fewer boots.${RN.lvl>lv?' Needs Lv '+RN.lvl+'.':''}</span></span><button class="pbtn go" data-rod="1" ${RN.lvl>lv||S.shells<RN.cost?'disabled':''}>${fmt(RN.cost)}</button></div>`
+        :`<div class="card wide"><img class="px" src="${ICON.rod}" alt=""><span class="grow"><span class="nm">Golden Rod</span><br><span class="sub">The best rod on any island.</span></span></div>`;
+      h+=CN?`<div class="card wide"><img class="px" src="${ICON.can}" alt=""><span class="grow"><span class="nm">${CN.name}</span><br><span class="sub">Waters a 3×3 patch in one tap.${CN.lvl>lv?' Needs Lv '+CN.lvl+'.':''}</span></span><button class="pbtn go" data-can="1" ${CN.lvl>lv||S.shells<CN.cost?'disabled':''}>${fmt(CN.cost)}</button></div>`
+        :`<div class="card wide"><img class="px" src="${ICON.can}" alt=""><span class="grow"><span class="nm">Copper Can</span><br><span class="sub">Waters a 3×3 patch in one tap.</span></span></div>`;
       h+='</div>';}}
-  else if(sheet.kind==='book'){$('sheetTitle').textContent='Almanac';tabs([]);
-    const total=CROP_IDS.length*VARIANTS.length,found=Object.keys(S.alm).length;
+  else if(sheet.kind==='book'&&sheet.tab!=='crops'){$('sheetTitle').textContent='Almanac';tabs([['crops','Crops'],['fish','Fish'],['nature','Nature']]);
+    const ent=sheet.tab==='fish'?Object.keys(FISH).map(k=>'f:'+k):[...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(FINDS).map(k=>'g:'+k)];
+    const got=ent.filter(k=>S.alm[k]).length;
+    h+=`<div class="stat"><span><b>${got}</b>/${ent.length} found</span></div><p class="note">${sheet.tab==='fish'?'Tap the sea to cast. The shallows and the deep hide different fish, and time of day and rain matter too.':'Butterflies love wildflowers. Moths come out at night. The tide leaves new treasures on the sand.'}</p><div class="grid">`;
+    for(const k of ent){const I=itemInfo(k),n=S.alm[k]||0,id=k.slice(2);let where='';
+      if(k.startsWith('f:'))where=[I.hab==='deep'?'deep water':I.hab==='shore'?'near shore':'anywhere',I.time==='day'?'day':I.time==='night'?'night':'',I.rain?'rain only':''].filter(Boolean).join(' · ');
+      else if(k.startsWith('b:'))where=I.time==='night'?'night':'day';else where=k==='g:feather'?'shoo a crow':'on the beach';
+      h+=`<div class="card"><img class="px ${n?'':'sil'}" src="${ICON[k]}" alt=""><span class="grow"><span class="nm">${n?I.name:'???'}</span><br><span class="sub">${I.w?rarity(I.w)+' · ':''}${where}${n?` · ${I.price?fmt(I.price)+' shells':'opened '+n}`:''}${k.startsWith('f:')&&S.rec[id]?` · best ${S.rec[id]} kg`:''}</span></span>${n?`<span class="price">×${n}</span>`:''}</div>`;}
+    h+='</div>';}
+  else if(sheet.kind==='book'){$('sheetTitle').textContent='Almanac';tabs([['crops','Crops'],['fish','Fish'],['nature','Nature']]);
+    const total=CROP_IDS.length*VARIANTS.length,found=Object.keys(S.alm).filter(k=>!k.includes(':')).length;
     h+=`<div class="stat"><span><b>${found}</b>/${total} found</span><span><b>${fmt(S.harvested)}</b> harvested</span></div><p class="note">Every crop can ripen as a rarer variant. Moonlit ones only appear when a crop ripens at night. Complete a row for a shell reward.</p>`;
     h+=`<div class="alm"><div class="ahead"><span></span>${['Normal','Giant','Moon','Gold','Crystal','Prism'].map(n=>`<span>${n}</span>`).join('')}</div>`;
     for(const id of CROP_IDS){const C=CROPS[id];h+=`<div class="arow"><span class="an">${C.lvl>lv&&!VARIANTS.some(v=>S.alm[id+'|'+v.id])?'???':C.name}<small>${S.almR[id]?'complete':VARIANTS.filter(v=>S.alm[id+'|'+v.id]).length+'/6 found'}</small></span>`;
       for(const v of VARIANTS){const n=S.alm[id+'|'+v.id]||0;h+=`<span class="acell ${n?'done':'no'}"><img class="px ${n?'v-'+v.id:''}" src="${seedIcon(id)}" alt="${v.name} ${C.name}">${n?`<i>${n}</i>`:''}</span>`;}
       h+='</div>';}
     h+='</div>';}
+  else if(sheet.kind==='orders'){$('sheetTitle').textContent='Orders';tabs([]);
+    h+=`<p class="note">Islanders across the water send new orders every morning. Finish all three for a bonus and a free <b>Mystery Seed</b>.</p><div class="list">`;
+    S.orders.forEach((o,i)=>{const have=orderHave(o),ok=have>=o.n;
+      h+=`<div class="card"><img class="px" src="${iconOf(o.k)}" alt=""><span class="grow"><span class="nm">${o.n} × ${nameOf(o.k)}</span><br><span class="sub">${o.done?'<span class="done">Delivered</span>':`You have ${Math.min(have,o.n)}/${o.n} · pays ${fmt(o.reward)} shells`}</span></span>${o.done?'':`<button class="pbtn ${ok?'go':''}" data-deliver="${i}" ${ok?'':'disabled'}>Deliver</button>`}</div>`;});
+    h+='</div>';if(S.ordBonus)h+=`<p class="note" style="margin-top:10px">All done for today. New orders arrive at dawn.</p>`;}
   else if(sheet.kind==='settings'){$('sheetTitle').textContent='Island';tabs([]);const b=LV[lv];
     h+=`<div class="stat"><span>Level <b>${lv}</b></span><span>${b?`<b>${fmt(b-S.xp)}</b> XP to next`:'max level'}</span><span>Day <b>${S.day}</b></span><span><b>${fmt(S.earned)}</b> shells earned</span></div>`;
     h+=`<div class="setrow"><span>Sound</span><span class="seg"><button data-snd="1" class="${S.sound?'on':''}">On</button><button data-snd="0" class="${S.sound?'':'on'}">Off</button></span></div>`;
@@ -1019,20 +1113,24 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.sell){const g=sell(d.sell,1);if(g){SFX.coin();floatText(BIN_AT.x,1,BIN_AT.z,'+'+fmt(g),'gold');}renderSheet();return;}
   if(d.sellall){let g=0;for(const k of Object.keys(S.inv))g+=sell(k,S.inv[k]);if(g){SFX.coin();setTimeout(SFX.coin,120);toast(`Sold everything for ${fmt(g)} shells.`,'',ICON.shell);floatText(BIN_AT.x,1,BIN_AT.z,'+'+fmt(g),'gold');}renderSheet();return;}
   if(d.buy){const k=d.buy;if(S.store[k]){startPlace(k,true);return;}if(S.shells<BUILD[k].cost){toast(`${BUILD[k].name} costs ${fmt(BUILD[k].cost)} shells.`);SFX.no();return;}startPlace(k,false);return;}
-  if(d.land){const L=LAND_UP[S.land];if(!L||S.shells<L.cost)return;S.shells-=L.cost;S.land++;buildTerrain();syncObjs();rebuildSoil();syncAllCrops();fitZoom();applyCam();SFX.level();
+  if(d.deliver!==undefined){deliver(Number(d.deliver));renderSheet();updateHUD();return;}
+  if(d.rod){const R=RODS[S.rod+1];if(!R||S.shells<R.cost)return;S.shells-=R.cost;S.rod++;SFX.level();toast(`You got the ${R.name}!`,'rare',ICON.rod);renderSheet();return;}
+  if(d.can){const R=CANS[S.can+1];if(!R||S.shells<R.cost)return;S.shells-=R.cost;S.can++;SFX.level();toast(`You got the ${R.name}! It waters a 3×3 patch.`,'rare',ICON.can);renderSheet();return;}
+  if(d.land){const L=LAND_UP[S.land];if(!L||S.shells<L.cost)return;S.shells-=L.cost;S.land++;buildTerrain();syncObjs();rebuildSoil();syncAllCrops();syncLife();fitZoom();applyCam();SFX.level();
     toast('The tide pulls back — your island has grown!','rare',ICON.star);for(let i=0;i<30;i++)sparkle((Math.random()-0.5)*14,0.6,(Math.random()-0.5)*12,0xfff6e2);renderSheet();return;}
   if(d.house){const HU=HOUSE_UP[S.house];if(!HU||S.shells<HU.cost)return;S.shells-=HU.cost;S.house++;syncObjs();SFX.level();burst(HOUSE_AT.x+0.5,1.5,HOUSE_AT.z+0.5,0xf6eedb,30,2.4,0.1);
     toast(S.house===3?'Your Villa is complete! The island is yours.':`Your new ${HOUSES[S.house]} is ready!`,'rare',THUMB['house'+S.house]);renderSheet();return;}
   if(d.snd!==undefined){S.sound=d.snd==='1';setWaveVol();if(S.sound)startWaves();renderSheet();return;}
   if(d.px!==undefined){S.pxAdj=Number(d.px);resize();renderSheet();return;}
   if(d.reset){el.textContent='Tap again to erase';el.dataset.reset='';el.dataset.really='1';return;}
-  if(d.really){try{localStorage.removeItem(SAVE_KEY);}catch(e){}S=freshState();setupNew();buildTerrain();syncObjs();rebuildSoil();syncAllCrops();fitZoom();applyCam();closeSheet();toast('A fresh sandbar, a fresh start.');return;}
+  if(d.really){try{localStorage.removeItem(SAVE_KEY);}catch(e){}if(fishing)endFishing();S=freshState();setupNew();buildTerrain();syncObjs();rebuildSoil();syncAllCrops();syncLife();fitZoom();applyCam();closeSheet();toast('A fresh sandbar, a fresh start.');return;}
 });
 $('sheetX').onclick=()=>{SFX.ui();closeSheet();};
 $('bSeed').onclick=()=>openSheet('seeds');
 $('bBag').onclick=()=>openSheet('bag');
 $('bShop').onclick=()=>openSheet('shop',sheet&&sheet.kind==='shop'?sheet.tab:'decor');
-$('bBook').onclick=()=>openSheet('book');
+$('bBook').onclick=()=>openSheet('book','crops');
+$('bTask').onclick=()=>openSheet('orders');
 $('lvlChip').onclick=()=>openSheet('settings');
 $('bMode').onclick=()=>{S.mode=S.mode==='farm'?'edit':'farm';SFX.ui();clearAction();updateHUD();toast(S.mode==='edit'?'Edit mode: tap decor to move or store it, tap soil to clear it.':'Farm mode: till, plant, water and harvest.','',S.mode==='edit'?ICON.hammer:ICON.sprout);};
 
@@ -1041,18 +1139,22 @@ $('bMode').onclick=()=>{S.mode=S.mode==='farm'?'edit':'farm';SFX.ui();clearActio
    ========================================================= */
 const ray=new T.Raycaster(),ndc=new T.Vector2();
 function pick(cx,cy){ndc.set(cx/window.innerWidth*2-1,-(cy/window.innerHeight)*2+1);ray.setFromCamera(ndc,camera);
-  const hits=ray.intersectObjects([grassIM,sandIM,soilIM,cropRoot,objRoot],true);
+  const hits=ray.intersectObjects([grassIM,sandIM,soilIM,cropRoot,objRoot,lifeRoot],true);
   for(const h of hits){const o=h.object;
     if(o===grassIM)return{x:grassIds[h.instanceId][0],z:grassIds[h.instanceId][1]};
     if(o===sandIM)return{x:sandIds[h.instanceId][0],z:sandIds[h.instanceId][1]};
     if(o===soilIM){const s=soilIds[h.instanceId];if(s)return{x:s[0],z:s[1]};continue;}
     let p=o;while(p&&!p.userData.tile)p=p.parent;if(p)return p.userData.tile;}
   return null;}
-function onTap(cx,cy){const hit=pick(cx,cy);
+function onTap(cx,cy){
+  if(fishing){reel();return;}
+  const hit=pick(cx,cy);
   if(placing){if(hit)moveGhost(hit.x,hit.z);return;}
-  if(!hit){clearAction();return;}
+  if(tapLife(cx,cy)){clearAction();updateHUD();return;}
+  if(!hit){clearAction();const w=waterPoint(cx,cy);if(w&&!isLand(Math.round(w.x),Math.round(w.z)))startFishing(w.x,w.z);return;}
   if(!$('actionBar').hidden)clearAction();
   cursorAt(hit.x,hit.z);
+  {const wd=weedAt(hit.x,hit.z);if(wd){pullWeed(wd);updateHUD();return;}const fd=findAt(hit.x,hit.z);if(fd){collectFind(fd);updateHUD();return;}}
   if(S.mode==='edit')editTap(hit.x,hit.z);else farmTap(hit.x,hit.z);
   updateHUD();}
 const ptrs=new Map();let drag=null,pinch=null;
@@ -1077,6 +1179,210 @@ function panBy(dx,dy){const s=cam.zoom*2/window.innerHeight;const fx=-Math.sin(c
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(placing)endPlace();else if(sheet)closeSheet();else clearAction();}});
 
 /* =========================================================
+   Island life: fishing, beachcombing, bugs, crows, weeds, orders
+   ========================================================= */
+const rarity=w=>w>=15?'Common':w>=6?'Uncommon':w>=2.5?'Rare':'Legendary';
+function pickW(table,filter=()=>true,wf=(k,v)=>v.w){let tot=0;const en=[];for(const k in table){if(!filter(k))continue;const w=wf(k,table[k]);if(w>0){en.push([k,w]);tot+=w;}}
+  let r=Math.random()*tot;for(const [k,w] of en){if((r-=w)<=0)return k;}return en.length?en[en.length-1][0]:null;}
+function itemInfo(key){if(key.startsWith('f:'))return FISH[key.slice(2)];if(key.startsWith('b:'))return BUGS[key.slice(2)];if(key.startsWith('g:'))return FINDS[key.slice(2)];return null;}
+function nameOf(key){const I=itemInfo(key);if(I)return I.name;if(key.startsWith('c:'))return CROPS[key.slice(2)].name;const [t,v]=key.split('|');return(VAR[v].name?VAR[v].name+' ':'')+CROPS[t].name;}
+function iconOf(key){if(key.startsWith('c:'))return seedIcon(key.slice(2));if(key.includes(':'))return ICON[key];return seedIcon(key.split('|')[0]);}
+function varOf(key){return key.includes(':')?'normal':key.split('|')[1];}
+function gain(key,n=1){S.inv[key]=(S.inv[key]||0)+n;const first=!S.alm[key];S.alm[key]=(S.alm[key]||0)+n;return first;}
+function screenOf(x,y,z){_pv.set(x,y,z).project(camera);return[(_pv.x+1)/2*window.innerWidth,(1-_pv.y)/2*window.innerHeight];}
+function hearts(x,y,z){for(let i=0;i<6;i++)emit(x+(Math.random()-0.5)*0.4,y+Math.random()*0.2,z+(Math.random()-0.5)*0.4,{vy:0.9+Math.random()*0.4,life:0.9,max:0.9,size:0.09,color:i%2?0xf39ab0:0xffc8d8,spin:1});}
+
+/* ---- beach finds & weeds (saved) ---- */
+const lifeRoot=new T.Group();scene.add(lifeRoot);
+function findGroup(k,seed){const p=[],g=new T.Group();
+  switch(k){
+    case'shell':p.push(P(ICO,0xf6d6d0,0,0.05,0,0,0,0,0.28,0.09,0.26),P(BOX,0xf0a0a8,0,0.09,0,0,0,0,0.04,0.03,0.24),P(BOX,0xf0a0a8,0.08,0.08,0,0,0.3,0,0.03,0.03,0.2),P(BOX,0xf0a0a8,-0.08,0.08,0,0,-0.3,0,0.03,0.03,0.2));break;
+    case'conch':p.push(P(CONE6,0xf0d8c0,0,0.1,0,0,0,Math.PI/2,0.24,0.4,0.24),P(ICO,0xf39ab0,-0.1,0.09,0,0,0,0,0.16,0.12,0.16));break;
+    case'dollar':p.push(P(CYL8,0xe8dcc0,0,0.02,0,0,0,0,0.32,0.03,0.32));for(let i=0;i<5;i++)p.push(P(BOX,0xc0ae88,Math.sin(i*1.256)*0.07,0.04,Math.cos(i*1.256)*0.07,0,i*1.256,0,0.03,0.01,0.08));break;
+    case'star':for(let i=0;i<5;i++){const a=i/5*6.28;p.push(P(BOX,0xf08a4a,Math.sin(a)*0.11,0.03,Math.cos(a)*0.11,0,a,0,0.08,0.05,0.2));}p.push(P(BOX,0xe8703a,0,0.04,0,0,0,0,0.12,0.06,0.12));break;
+    case'glass':p.push(P(OCT,0x7ae0c0,0,0.05,0,0.3,0.5,0,0.16,0.09,0.13),P(OCT,0x9ad8f0,0.12,0.04,0.07,0,1,0,0.11,0.07,0.09));break;
+    case'drift':p.push(P(BOX,0xa89070,0,0.05,0,0,0.4,0,0.66,0.09,0.11),P(BOX,0x8a7258,0.12,0.06,0.1,0,-0.5,0,0.26,0.07,0.08));break;
+    case'pearl':p.push(P(ICO,0xd0c0d0,0,0.03,0,0,0,0,0.3,0.05,0.28),P(ICO,0xd0c0d0,0,0.12,-0.1,-0.9,0,0,0.3,0.05,0.28),P(ICO,0xffffff,0,0.08,0.02,0,0,0,0.1,0.1,0.1));break;
+    case'bottle':p.push(P(CYL8,0x7ab8a0,0,0.07,0,0,0,Math.PI/2,0.15,0.34,0.15),P(CYL8,0x7ab8a0,0.22,0.07,0,0,0,Math.PI/2,0.07,0.12,0.07),P(CYL8,0xa07a4a,0.3,0.07,0,0,0,Math.PI/2,0.07,0.05,0.07),P(BOX,0xf4ecd8,-0.02,0.07,0,0,0,0,0.16,0.07,0.07));break;
+    case'weed':{const R=mulberry(seed);for(let i=0;i<6;i++)p.push(P(BOX,i%2?0x3d6e2c:0x4f8a34,(R()-0.5)*0.34,0.1,(R()-0.5)*0.34,(R()-0.5)*0.6,R()*3,(R()-0.5)*0.6,0.05,0.2+R()*0.14,0.1));
+      if(R()<0.4)p.push(P(BOX,0xf6d04a,(R()-0.5)*0.2,0.26,(R()-0.5)*0.2,0,0,0,0.07,0.05,0.07));break;}
+  }
+  g.add(M(p));return g;}
+function findAt(x,z){return S.finds.find(f=>f.x===x&&f.z===z)||null;}
+function weedAt(x,z){return S.weeds.find(f=>f.x===x&&f.z===z)||null;}
+let weedSlow=new Set();
+function syncLife(){
+  while(lifeRoot.children.length){const c=lifeRoot.children[0];lifeRoot.remove(c);c.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
+  S.finds=S.finds.filter(f=>isLand(f.x,f.z));S.weeds=S.weeds.filter(w=>isLand(w.x,w.z)&&!S.tiles[K(w.x,w.z)]);
+  for(const f of S.finds){const g=findGroup(f.k);g.position.set(f.x+(hash(f.x,f.z)-0.5)*0.3,topY(f.x,f.z),f.z+(hash(f.z,f.x)-0.5)*0.3);g.rotation.y=hash(f.x,f.z)*6.28;g.userData.tile={x:f.x,z:f.z};lifeRoot.add(g);}
+  weedSlow=new Set();
+  for(const w of S.weeds){const g=findGroup('weed',w.x*31+w.z*7+99);g.position.set(w.x,topY(w.x,w.z),w.z);g.userData.tile={x:w.x,z:w.z};lifeRoot.add(g);
+    for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)weedSlow.add(K(w.x+dx,w.z+dz));}
+}
+const free=(x,z)=>!objAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z)&&!S.tiles[K(x,z)];
+function spawnFind(quiet){if(S.finds.length>=6)return;const c=sandIds.filter(([x,z])=>free(x,z));if(!c.length)return;const [x,z]=pickR(c);
+  const k=pickW(FINDS,k=>FINDS[k].w>0);S.finds.push({k,x,z});if(!quiet){syncLife();for(let i=0;i<5;i++)sparkle(x,0.4,z,0xe8f4ff);}}
+function spawnWeed(quiet){if(S.weeds.length>=7)return;const c=grassIds.filter(([x,z])=>free(x,z));if(!c.length)return;const [x,z]=pickR(c);
+  S.weeds.push({x,z});if(!quiet){syncLife();burst(x,0.6,z,0x4f8a34,4,0.6,0.05);}}
+function pullWeed(w){S.weeds=S.weeds.filter(q=>q!==w);syncLife();walkTo(w.x,w.z);vil.hop=0.25;SFX.till();burst(w.x,0.6,w.z,0x4f8a34,10,1.3,0.07);addXP(1);
+  if(Math.random()<0.3){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+1;floatText(w.x,1.1,w.z,'+1 '+CROPS[id].name+' seed','gold');SFX.pop();}
+  else floatText(w.x,1,w.z,'pulled!');}
+function collectFind(f){S.finds=S.finds.filter(q=>q!==f);syncLife();walkTo(f.x,f.z);vil.hop=0.25;const I=FINDS[f.k];
+  if(f.k==='bottle'){S.alm['g:bottle']=(S.alm['g:bottle']||0)+1;openBottle();return;}
+  const first=gain('g:'+f.k);burst(f.x,0.5,f.z,0xfff6e2,8,1,0.06);floatText(f.x,0.9,f.z,'+ '+I.name,I.w<5?'gold':'');
+  if(I.w<5){SFX.rare();toast(`You found a <b>${I.name}</b>!`,'rare',ICON['g:'+f.k]);}else SFX.harvest();
+  if(first&&I.w>=5)toast(`New find: <b>${I.name}</b> added to your Almanac.`,'',ICON['g:'+f.k]);addXP(2);}
+function openBottle(){SFX.rare();const lv=level(),r=Math.random();let msg;
+  if(r<0.35){const n=60+lv*60+Math.floor(Math.random()*100);S.shells+=n;msg=`“Whoever finds this — buy yourself something nice.” Tucked inside: <b>${fmt(n)} shells</b>.`;}
+  else if(r<0.65){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=lv));S.free[id]=(S.free[id]||0)+3;msg=`“These grew beautifully on my island.” Inside: <b>3 ${CROPS[id].name} seeds</b>.`;}
+  else if(r<0.85){S.free.mystery=(S.free.mystery||0)+1;msg=`“Plant this under a full moon.” Inside: <b>a Mystery Seed</b>.`;}
+  else{gain('g:pearl');msg=`“The sea gave me two. One is yours.” Inside: <b>a Pearl</b>!`;}
+  setAction(`<b>Message in a Bottle</b><br>${msg}`,[{label:'Keep it',cls:'go',fn:clearAction}]);}
+
+/* ---- butterflies & moths (not saved) ---- */
+const bugs=[];
+function bugGroup(B,small){const g=new T.Group();const s=small?0.9:1.6;
+  const body=M([P(BOX,B.dk,0,0,0,0,0,0,0.04*s,0.04*s,0.18*s)]);
+  const wl=M([P(BOX,B.col,-0.1*s,0,0.02,0,0,0,0.18*s,0.02,0.18*s),P(BOX,B.dk,-0.17*s,0.001,0.08*s,0,0,0,0.05*s,0.021,0.05*s)]);
+  const wr=M([P(BOX,B.col,0.1*s,0,0.02,0,0,0,0.18*s,0.02,0.18*s),P(BOX,B.dk,0.17*s,0.001,0.08*s,0,0,0,0.05*s,0.021,0.05*s)]);
+  if(small){wl.material=wr.material=glowMat;}
+  g.add(body,wl,wr);g.userData={wl,wr};return g;}
+function spawnBug(){const night=isNight();if(S.rain&&!night)return;if(bugs.length>=(night?3:5))return;
+  const flowers=S.objs.filter(o=>o.k==='flowers');
+  const id=pickW(BUGS,k=>(BUGS[k].time==='night')===night,(k,v)=>v.w*(v.w<10?1+flowers.length*0.2:1));if(!id)return;
+  let hx,hz;if(flowers.length&&Math.random()<0.6){const f=pickR(flowers);hx=f.x;hz=f.z;}else if(grassIds.length){[hx,hz]=pickR(grassIds);}else return;
+  const g=bugGroup(BUGS[id],id==='firefly');scene.add(g);
+  bugs.push({id,g,hx,hz,t:0,life:28+Math.random()*20,ph:Math.random()*6.28,out:0});}
+function updateBugs(dt,tt){for(let i=bugs.length-1;i>=0;i--){const b=bugs[i];b.t+=dt;
+    if(b.t>b.life||(isNight()!==(BUGS[b.id].time==='night')&&!b.out))b.out=b.out||0.001;
+    const x=b.hx+Math.sin(b.t*0.7+b.ph)*1.2+Math.sin(b.t*1.9)*0.3,z=b.hz+Math.cos(b.t*0.55+b.ph)*1.2;
+    let y=(topY(Math.round(b.hx),Math.round(b.hz))||0.5)+0.6+Math.sin(b.t*2.3)*0.22;
+    if(b.out){b.out+=dt;y+=b.out*b.out*2;if(b.out>3){scene.remove(b.g);bugs.splice(i,1);continue;}}
+    const px=b.g.position.x,pz=b.g.position.z;b.g.position.set(x,y,z);if(Math.hypot(x-px,z-pz)>1e-4)b.g.rotation.y=Math.atan2(x-px,z-pz);
+    const f=Math.sin(tt*16+b.ph)*0.9;b.g.userData.wl.rotation.z=f;b.g.userData.wr.rotation.z=-f;}}
+function catchBug(b){const B=BUGS[b.id];scene.remove(b.g);bugs.splice(bugs.indexOf(b),1);walkTo(b.g.position.x,b.g.position.z);vil.hop=0.3;
+  const first=gain('b:'+b.id);burst(b.g.position.x,b.g.position.y,b.g.position.z,0xfff6e2,10,1.2,0.06,1);floatText(b.g.position.x,b.g.position.y+0.4,b.g.position.z,'+ '+B.name,B.w<5?'gold':'');
+  addXP(Math.round(B.price/15)+1);if(B.w<5){SFX.rare();toast(`You caught a <b>${B.name}</b>! (${rarity(B.w)})`,'rare',ICON['b:'+b.id]);}else if(first){SFX.catch();toast(`New critter: <b>${B.name}</b>!`,'',ICON['b:'+b.id]);}else SFX.catch();}
+
+/* ---- crows ---- */
+let crow=null;
+const crowG=new T.Group();
+{crowG.add(M([P(BOX,0x1e1a26,0,0.12,0,0,0,0,0.16,0.14,0.28),P(BOX,0x1e1a26,0,0.24,0.15,0,0,0,0.13,0.12,0.13),P(BOX,0xe8b040,0,0.22,0.25,0,0,0,0.05,0.04,0.09),
+  P(BOX,0xf4f0ea,0.066,0.26,0.18,0,0,0,0.01,0.03,0.03),P(BOX,0xf4f0ea,-0.066,0.26,0.18,0,0,0,0.01,0.03,0.03),P(BOX,0x2a2436,0,0.14,-0.2,0.3,0,0,0.12,0.03,0.14),
+  P(BOX,0xe8b040,0.04,0.03,0,0,0,0,0.02,0.06,0.02),P(BOX,0xe8b040,-0.04,0.03,0,0,0,0,0.02,0.06,0.02)]));
+  const wl=M([P(BOX,0x2a2436,-0.16,0,0,0,0,0,0.3,0.02,0.16)]),wr=M([P(BOX,0x2a2436,0.16,0,0,0,0,0,0.3,0.02,0.16)]);wl.position.y=wr.position.y=0.17;crowG.add(wl,wr);crowG.userData={wl,wr};crowG.scale.setScalar(1.4);crowG.visible=false;scene.add(crowG);}
+function scared(x,z){return S.objs.some(o=>o.k==='scarecrow'&&Math.abs(o.x-x)<=3&&Math.abs(o.z-z)<=3);}
+function spawnCrow(){if(crow||isNight()||fishing)return;
+  const c=Object.keys(S.tiles).filter(k=>{const t=S.tiles[k];if(!t.crop||t.crop.p>=1||t.crop.p<0.12)return false;const [x,z]=k.split(',').map(Number);return!scared(x,z);});
+  if(c.length<2)return;const k=pickR(c);const [x,z]=k.split(',').map(Number);const a=Math.random()*6.28;
+  crow={k,x,z,sx:x+Math.cos(a)*14,sz:z+Math.sin(a)*14,state:'in',t:0,warned:false};crowG.visible=true;SFX.caw();}
+function updateCrow(dt,tt){if(!crow)return;crow.t+=dt;const {wl,wr}=crowG.userData;const y0=TOP.grass+0.06;
+  if(crow.state==='in'){const u=Math.min(1,crow.t/2.4);crowG.position.set(lerp(crow.sx,crow.x+0.2,u),lerp(7,y0+0.35,u)-Math.sin(u*Math.PI)*0.8*(1-u),lerp(crow.sz,crow.z+0.1,u));
+    crowG.rotation.y=Math.atan2(crow.x-crow.sx,crow.z-crow.sz);const f=Math.sin(tt*14)*0.7;wl.rotation.z=f;wr.rotation.z=-f;if(u>=1){crow.state='peck';crow.t=0;}}
+  else if(crow.state==='peck'){wl.rotation.z=0.1;wr.rotation.z=-0.1;const t=S.tiles[crow.k];
+    crowG.position.y=y0+0.35+Math.abs(Math.sin(tt*9))*0.04;crowG.rotation.x=Math.sin(tt*9)>0.6?0.35:0;
+    if(!crow.warned){crow.warned=true;SFX.caw();toast(`A crow is pecking at your ${t&&t.crop?CROPS[t.crop.t].name:'crops'} — tap it!`,'',ICON['g:feather']);}
+    if(!t||!t.crop||t.crop.p>=1){crow.state='out';crow.t=0;}
+    else if(crow.t>9){t.crop.p=Math.max(0.12,t.crop.p-0.25);syncCrop(crow.k);floatText(crow.x,1.1,crow.z,'-25% growth');SFX.caw();crow.state='out';crow.t=0;}}
+  else{crowG.rotation.x=0;const u=crow.t/2.2;crowG.position.y+=dt*(2+u*6);crowG.position.x+=dt*4*Math.sin(crowG.rotation.y);crowG.position.z+=dt*4*Math.cos(crowG.rotation.y);
+    const f=Math.sin(tt*16)*0.8;wl.rotation.z=f;wr.rotation.z=-f;if(u>=1){crow=null;crowG.visible=false;}}}
+function shooCrow(){if(!crow||crow.state==='out')return;crow.state='out';crow.t=0;crowG.rotation.y+=Math.PI;SFX.caw();walkTo(crow.x,crow.z);vil.hop=0.3;
+  burst(crowG.position.x,crowG.position.y,crowG.position.z,0x2a2436,8,1.4,0.07);floatText(crow.x,1.2,crow.z,'Shoo!');addXP(3);
+  if(Math.random()<0.4){gain('g:feather');setTimeout(()=>floatText(crow.x,1.2,crow.z,'+ Crow Feather'),400);}}
+
+/* ---- fishing ---- */
+let fishing=null;
+const bobber=M([P(ICO,0xf4f0ea,0,0.03,0,0,0,0,0.16,0.12,0.16),P(ICO,0xd8453a,0,0.1,0,0,0,0,0.14,0.1,0.14),P(BOX,0x2b1e2e,0,0.18,0,0,0,0,0.02,0.08,0.02)]);
+bobber.castShadow=false;bobber.visible=false;scene.add(bobber);
+const lineGeo=new T.BufferGeometry();lineGeo.setAttribute('position',new T.BufferAttribute(new Float32Array(6),3));
+const fishLine=new T.Line(lineGeo,new T.LineBasicMaterial({color:0xf4f0ea}));fishLine.frustumCulled=false;fishLine.visible=false;scene.add(fishLine);
+const fishShadow=new T.Mesh(new T.CircleGeometry(0.5,10).rotateX(-Math.PI/2),new T.MeshBasicMaterial({color:0x0c1638,transparent:true,opacity:0.5,depthWrite:false}));
+fishShadow.visible=false;scene.add(fishShadow);
+const rod=M([P(BOX,0xffffff,0,0.5,0,0,0,0,0.035,1.0,0.035)]);rod.castShadow=false;rod.position.set(0.2,0.22,0.08);rod.rotation.x=0.95;rod.visible=false;villager.add(rod);
+const ROD_COL=[0x9a7a4a,0x6a4a8a,0xf5c542];
+const TIP=new T.Vector3();
+function fishWindow(F){return(F.w>=15?1.0:F.w>=6?0.82:F.w>=2.5?0.66:0.55)*(1+S.rod*0.22);}
+function chooseFish(deep){const night=isNight();
+  return pickW(FISH,k=>{const F=FISH[k];if(F.time==='day'&&night)return false;if(F.time==='night'&&!night)return false;if(F.rain&&!S.rain)return false;if(F.hab==='deep'&&!deep)return false;if(F.hab==='shore'&&deep)return false;return true;},
+    (k,F)=>F.junk?F.w*(1-S.rod*0.35):F.w<6?F.w*(1+S.rod*0.6):F.w);}
+function startFishing(px,pz){
+  let best=null,bd=1e9;for(const [k,t] of landMap){if(t!=='grass'&&t!=='sand')continue;const [x,z]=k.split(',').map(Number);if(objAt(x,z)||fixedAt(x,z))continue;const d=(x-px)**2+(z-pz)**2;if(d<bd){bd=d;best=[x,z];}}
+  if(!best)return;
+  let dist=Math.sqrt(bd);const dx=(px-best[0])/dist,dz=(pz-best[1])/dist;
+  if(dist>4.6){dist=4.6;px=best[0]+dx*dist;pz=best[1]+dz*dist;}
+  if(dist<0.9){dist=0.9;px=best[0]+dx*dist;pz=best[1]+dz*dist;}
+  fishing={px,pz,sx:best[0]+dx*0.38,sz:best[1]+dz*0.38,deep:dist>2.8,state:'walk',t:0};
+  vil.tx=fishing.sx;vil.tz=fishing.sz;vil.idle=0;rod.material=S.rod===2?goldMat:vcMat;if(S.rod<2)rod.material=new T.MeshBasicMaterial({color:ROD_COL[S.rod]});
+  setAction(`Fishing${fishing.deep?' in deep water':' by the shore'}… when the bobber plunges, <b>tap anywhere</b>!`,[{label:'Reel in',cls:'go',fn:reel},{label:'Stop',fn:()=>endFishing()}]);
+  if(S.tut<4){S.tut=4;}
+}
+function endFishing(msg){if(!fishing)return;bobber.visible=fishLine.visible=fishShadow.visible=rod.visible=false;fishing=null;clearAction();if(msg)toast(msg);}
+function reel(){const f=fishing;if(!f)return;
+  if(f.state==='bite'){catchFish();return;}
+  if(f.state==='wait'){SFX.no();endFishing(f.nib>0?'Too early — the fish darted away.':'You reeled in an empty line.');return;}
+  endFishing();}
+function catchFish(){const f=fishing,F=FISH[f.fish],key='f:'+f.fish;const first=gain(key);
+  const kg=Math.round((F.size*(0.5+Math.random()*0.9)+Math.random()*0.3)*F.size*10)/10;const rec=!F.junk&&kg>(S.rec[f.fish]||0);if(!F.junk)S.rec[f.fish]=Math.max(S.rec[f.fish]||0,kg);
+  burst(f.px,0.1,f.pz,0xe8f4ff,16,1.8,0.08,5);vil.hop=0.3;
+  floatText(f.px,0.9,f.pz,F.junk?'…an '+F.name:'+ '+F.name,F.w<6?'gold':'');
+  addXP(F.junk?1:Math.round(F.price/12)+2);
+  const msg=F.junk?`You fished up an <b>${F.name}</b>. Someone lost this.`:`You caught a <b>${F.name}</b>! ${kg} kg${rec&&!first?' · new record!':''}${F.w<6?' · '+rarity(F.w):''}`;
+  if(F.w<6&&!F.junk){SFX.rare();for(let i=0;i<12;i++)sparkle(f.px,0.3,f.pz,0xfff0a0);}else SFX.catch();
+  endFishing();toast(msg+(first&&!F.junk?' <b>New!</b>':''),F.w<6&&!F.junk?'rare':'',ICON[key]);
+  if(S.tut<5){S.tut=5;setTimeout(()=>toast('Fish, bugs and beach finds sell too — and fill out more Almanac pages.','',ICON.book),1500);}}
+function updateFishing(dt,tt){const f=fishing;if(!f)return;f.t+=dt;
+  if(f.state==='walk'){if(Math.hypot(vil.x-f.sx,vil.z-f.sz)<0.06){f.state='cast';f.t=0;rod.visible=true;villager.rotation.y=Math.atan2(f.px-f.sx,f.pz-f.sz);SFX.cast();}
+    else if(f.t>8)endFishing();return;}
+  rod.updateMatrixWorld(true);TIP.set(0,1,0);rod.localToWorld(TIP);
+  if(f.state==='cast'){const u=Math.min(1,f.t/0.55);bobber.visible=fishLine.visible=true;
+    bobber.position.set(lerp(TIP.x,f.px,u),lerp(TIP.y,0,u)+Math.sin(u*Math.PI)*1.1,lerp(TIP.z,f.pz,u));
+    if(u>=1){f.state='wait';f.t=0;SFX.plop();burst(f.px,0.05,f.pz,0xe8f4ff,6,0.8,0.05,4);
+      f.fish=chooseFish(f.deep);const F=FISH[f.fish];f.wait=2.5+Math.random()*5;f.nib=0;f.nibAt=[0.45,0.62,0.8].slice(0,1+Math.floor(Math.random()*3)).map(x=>x*f.wait);
+      const a=Math.random()*6.28;f.shx=f.px+Math.cos(a)*2.4;f.shz=f.pz+Math.sin(a)*2.4;f.win=fishWindow(F);
+      const s=0.3+F.size*0.16;fishShadow.scale.set(s,1,s*1.9);fishShadow.visible=true;fishShadow.position.set(f.shx,0.02,f.shz);fishShadow.rotation.y=Math.atan2(f.px-f.shx,f.pz-f.shz);}}
+  else if(f.state==='wait'){const u=Math.min(1,f.t/(f.wait*0.75));
+    fishShadow.position.set(lerp(f.shx,f.px,u*0.9)+Math.sin(tt*3)*0.05*(1-u),0.02,lerp(f.shz,f.pz,u*0.9));
+    let dip=0;if(f.nibAt.length&&f.t>=f.nibAt[0]){f.nibAt.shift();f.nib++;f.dipT=0.18;SFX.nibble();}
+    if(f.dipT>0){f.dipT-=dt;dip=0.05;}
+    bobber.position.set(f.px,Math.sin(tt*2.2)*0.015-dip,f.pz);
+    if(f.t>=f.wait){f.state='bite';f.t=0;SFX.bite();burst(f.px,0.05,f.pz,0xffffff,14,1.4,0.07,5);floatText(f.px,0.8,f.pz,'!','gold');}}
+  else if(f.state==='bite'){bobber.position.set(f.px+Math.sin(tt*40)*0.02,-0.13,f.pz);
+    if(f.t>f.win){fishShadow.visible=false;endFishing('It got away…');return;}}
+  const pa=lineGeo.attributes.position.array;pa[0]=TIP.x;pa[1]=TIP.y;pa[2]=TIP.z;pa[3]=bobber.position.x;pa[4]=bobber.position.y+0.18;pa[5]=bobber.position.z;lineGeo.attributes.position.needsUpdate=true;}
+const _plane=new T.Plane(new T.Vector3(0,1,0),0),_hit=new T.Vector3();
+function waterPoint(cx,cy){ndc.set(cx/window.innerWidth*2-1,-(cy/window.innerHeight)*2+1);ray.setFromCamera(ndc,camera);return ray.ray.intersectPlane(_plane,_hit)?_hit:null;}
+
+/* ---- daily orders ---- */
+function cropOrder(id){const C=CROPS[id],n=C.price<60?4:C.price<200?3:2;return{k:'c:'+id,n,reward:Math.round(C.price*n*1.8),xp:Math.round(C.price*n/20)+3};}
+function makeOrders(){const lv=level(),un=CROP_IDS.filter(id=>CROPS[id].lvl<=lv);const o=[cropOrder(pickR(un))];
+  if(Math.random()<0.5){let c=pickR(un);if(un.length>1)while('c:'+c===o[0].k)c=pickR(un);o.push(cropOrder(c));}
+  else{const k=pickW(FINDS,k=>FINDS[k].w>=7),n=FINDS[k].w>=14?3:2;o.push({k:'g:'+k,n,reward:Math.round(FINDS[k].price*n*2.4+40),xp:6});}
+  if(Math.random()<0.6){const k=pickW(FISH,k=>FISH[k].w>=6&&!FISH[k].junk&&!FISH[k].rain);o.push({k:'f:'+k,n:1,reward:Math.round(FISH[k].price*2.4+60),xp:10});}
+  else{const k=pickW(BUGS,k=>BUGS[k].w>=9);o.push({k:'b:'+k,n:1,reward:Math.round(BUGS[k].price*2.4+60),xp:10});}
+  S.orders=o;S.ordBonus=0;}
+const TAKE_ORDER=['normal','giant','moonlit','golden','crystal','rainbow'];
+function orderHave(o){if(o.k.startsWith('c:')){const t=o.k.slice(2);return TAKE_ORDER.reduce((s,v)=>s+(S.inv[t+'|'+v]||0),0);}return S.inv[o.k]||0;}
+function take(key,n){S.inv[key]-=n;if(S.inv[key]<=0)delete S.inv[key];}
+function deliver(i){const o=S.orders[i];if(!o||o.done||orderHave(o)<o.n)return;let n=o.n;
+  if(o.k.startsWith('c:')){const t=o.k.slice(2);for(const v of TAKE_ORDER){const key=t+'|'+v,h=Math.min(n,S.inv[key]||0);if(h){take(key,h);n-=h;}if(!n)break;}}else take(o.k,n);
+  o.done=1;S.shells+=o.reward;S.earned+=o.reward;addXP(o.xp);SFX.coin();toast(`Order delivered: +${fmt(o.reward)} shells`,'',ICON.shell);
+  if(S.orders.every(q=>q.done)&&!S.ordBonus){S.ordBonus=1;const b=100+level()*60;S.shells+=b;S.free.mystery=(S.free.mystery||0)+1;
+    setTimeout(()=>{SFX.level();toast(`All of today's orders done! Bonus +${fmt(b)} shells and a free Mystery Seed.`,'rare',ICON.mystery);},500);}}
+function ordersReady(){return S.orders.some(o=>!o.done&&orderHave(o)>=o.n);}
+
+let lifeT=4,bugT=2,crowT=40;
+function updateLife(dt,tt){
+  lifeT-=dt;if(lifeT<=0){lifeT=6;if(Math.random()<0.28)spawnFind();if(Math.random()<0.2)spawnWeed();}
+  bugT-=dt;if(bugT<=0){bugT=4+Math.random()*5;spawnBug();}
+  crowT-=dt;if(crowT<=0){crowT=55+Math.random()*50;spawnCrow();}
+  for(const f of S.finds)if(Math.random()<dt*0.4)sparkle(f.x,topY(f.x,f.z)+0.15,f.z,0xf4f8ff);
+  updateBugs(dt,tt);updateCrow(dt,tt);updateFishing(dt,tt);}
+function tapLife(cx,cy){
+  if(crow&&crow.state!=='out'){const [sx,sy]=screenOf(crowG.position.x,crowG.position.y+0.15,crowG.position.z);if(Math.hypot(sx-cx,sy-cy)<50){shooCrow();return true;}}
+  let best=null,bd=46;for(const b of bugs){if(b.out)continue;const [sx,sy]=screenOf(b.g.position.x,b.g.position.y,b.g.position.z);const d=Math.hypot(sx-cx,sy-cy);if(d<bd){bd=d;best=b;}}
+  if(best){catchBug(best);return true;}return false;}
+
+/* =========================================================
    New island setup
    ========================================================= */
 function setupNew(){
@@ -1087,6 +1393,7 @@ function setupNew(){
   add('pine',2,-3);add('pine',3,-2);add('flowers',2,1);add('rock',-3,-1);
   const sand=sandIds.filter(([x,z])=>x<-2&&z>0).slice(0,2);sand.forEach(([x,z])=>add('cattail',x,z));
   S.hour=7.2;S.demand='carrot';S.rain=false;
+  S.finds=[];S.weeds=[];for(let i=0;i<3;i++)spawnFind(true);for(let i=0;i<2;i++)spawnWeed(true);makeOrders();
 }
 
 /* =========================================================
@@ -1101,7 +1408,7 @@ function frame(now){
   // villager
   const dx=vil.tx-vil.x,dz=vil.tz-vil.z,d=Math.hypot(dx,dz);
   if(d>0.04){const sp=Math.min(d,dt*2.8);vil.x+=dx/d*sp;vil.z+=dz/d*sp;villager.rotation.y=Math.atan2(dx,dz);}
-  else{vil.idle+=dt;if(vil.idle>7+Math.random()*4){vil.idle=0;const tx=Math.round(vil.x+(Math.random()-0.5)*5),tz=Math.round(vil.z+(Math.random()-0.5)*5);if(isLand(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}
+  else if(!fishing){vil.idle+=dt;if(vil.idle>7+Math.random()*4){vil.idle=0;const tx=Math.round(vil.x+(Math.random()-0.5)*5),tz=Math.round(vil.z+(Math.random()-0.5)*5);if(isLand(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}
   const ty=topY(Math.round(vil.x),Math.round(vil.z))||0.3;vil.y=lerp(vil.y,ty,Math.min(1,dt*10));vil.hop=Math.max(0,vil.hop-dt);
   villager.position.set(vil.x,vil.y+(d>0.04?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.3*Math.PI)*0.25*(vil.hop>0),vil.z);
   // crops sway
@@ -1109,6 +1416,7 @@ function frame(now){
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);
   for(const a of anims)a(tt,dt);
+  updateLife(dt,tt);
   // sprinklers spray at dawn
   if(sprayT>0){sprayT-=dt;for(const o of S.objs)if(o.k==='sprinkler'&&Math.random()<0.8){const a=Math.random()*6.28;emit(o.x,topY(o.x,o.z)+0.4,o.z,{vx:Math.cos(a)*1.6,vy:1.6,vz:Math.sin(a)*1.6,life:0.6,max:0.6,size:0.05,color:0x9ad0ff,g:6});}}
   // clouds, gulls, boat
@@ -1145,9 +1453,9 @@ function frame(now){
 /* =========================================================
    Boot
    ========================================================= */
-$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoBook').src=ICON.book;
+$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoBook').src=ICON.book;$('icoTask').src=ICON.task;
 if(isNew)setupNew();
-buildTerrain();syncObjs();rebuildSoil();
+buildTerrain();syncObjs();rebuildSoil();if(!S.orders.length)makeOrders();syncLife();
 let away=[];if(!isNew){const el=clamp((Date.now()-S.t)/1000,0,3*3600);if(el>5)away=simulate(el);}
 syncAllCrops();resize();fitZoom();applyCam();
 try{makeThumbs();}catch(e){console.warn(e);}
@@ -1159,6 +1467,7 @@ window.addEventListener('pagehide',save);
 $('boot').remove();
 if(isNew){setTimeout(()=>toast('Welcome to Driftseed Isle! Tap empty soil to plant a turnip, and tap ripe crops to harvest.','',ICON.sprout),500);
   setTimeout(()=>toast('Tap grass to till it. Drag to spin, pinch to zoom.','',ICON.sprout),3800);}
+else if(S.tut<4)setTimeout(()=>toast('New: tap the sea to fish, pick up beach finds, catch butterflies, and check Orders!','',ICON.rod),800);
 else if(away.length)afterSim(away,'While you were away');
 requestAnimationFrame(t=>{last=t;frame(t);});
 })();
