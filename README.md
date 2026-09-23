@@ -9,6 +9,8 @@ A tiny 3D pixel-art island farming game. Open `index.html` in any modern browser
 - **Orders:** three new requests arrive each morning; finish them all for a bonus and a Mystery Seed.
 - **Explore:** board your sailboat at the dock and sail to procedurally generated islands (meadow, tropical, pine, autumn, snowy, volcanic and swamp). Each has its own bugs, wild plants, berries, beach treasures and fish. Use the Sea Chart to navigate; the world curves away at the horizon like a rolling log.
 - **Islandex:** the main goal: record every fish, bug, plant and find in the archipelago (100+ entries), plus rare crop variants at home.
+- **Fishing (Animal Crossing style):** fish shadows swim near every shore and out at sea. Their size hints at the species, and big ones show a fin. Cast near a shadow, wait while it nibbles, then tap the moment the bobber is pulled under. Tap too early and it gets spooked.
+- **Islands:** bigger islands with cliffs and raised plateaus, rounder trees and grass tufts, in the style of Wild World. Sailing uses real pathfinding, so the boat steers around islands.
 - **Build:** buy decor and useful buildings (sprinklers, beehives, lucky clover, windmill), expand the island, and upgrade your tent to a villa.
 - **Day/night:** a full day lasts 8 minutes, with sunrise, sunset, lantern light, fireflies and rainy days. Sleep in your home at night to skip ahead.
 - **Controls:** drag to spin, pinch to zoom, two fingers to pan. Progress saves on your device.
