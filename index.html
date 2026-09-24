@@ -263,16 +263,31 @@ const angDiff=(a,b)=>{let d=b-a;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+
    ========================================================= */
 const DAY_LEN=480;
 const CROPS={
-  turnip:    {name:'Turnip',    seed:10,  price:28,  grow:36,  lvl:1, kind:'root',  col:0xf3eef4, top:0xb46ad0},
-  carrot:    {name:'Carrot',    seed:15,  price:44,  grow:50,  lvl:1, kind:'root',  col:0xf08a2a},
-  potato:    {name:'Potato',    seed:22,  price:66,  grow:70,  lvl:2, kind:'root',  col:0xc9a06a},
-  strawberry:{name:'Strawberry',seed:30,  price:90,  grow:84,  lvl:2, kind:'bush',  col:0xe0303a},
-  tomato:    {name:'Tomato',    seed:42,  price:125, grow:105, lvl:3, kind:'bush',  col:0xe2472e, tall:true},
-  corn:      {name:'Corn',      seed:55,  price:170, grow:130, lvl:4, kind:'tall',  col:0xf6d04a},
-  sunflower: {name:'Sunflower', seed:50,  price:155, grow:110, lvl:4, kind:'flower',col:0xf6c230, center:0x6a4228, day:true},
-  pumpkin:   {name:'Pumpkin',   seed:85,  price:270, grow:170, lvl:5, kind:'ground',col:0xf08a2a},
-  moonflower:{name:'Moonflower',seed:120, price:390, grow:140, lvl:6, kind:'flower',col:0xeef4ff, center:0x9ab8ff, night:true},
-  starfruit: {name:'Starfruit', seed:200, price:720, grow:260, lvl:8, kind:'tree',  col:0xf6d84a},
+  turnip:    {name:'Turnip',     seed:10,  price:28,  grow:36,  lvl:1, kind:'root',  col:0xf3eef4, top:0xb46ad0},
+  radish:    {name:'Radish',     seed:12,  price:34,  grow:40,  lvl:1, kind:'root',  col:0xe8465a},
+  carrot:    {name:'Carrot',     seed:15,  price:44,  grow:50,  lvl:1, kind:'root',  col:0xf08a2a},
+  lettuce:   {name:'Lettuce',    seed:18,  price:52,  grow:55,  lvl:1, kind:'leafy', col:0x9ad060},
+  onion:     {name:'Red Onion',  seed:20,  price:60,  grow:62,  lvl:2, kind:'root',  col:0xa04a8a},
+  potato:    {name:'Potato',     seed:22,  price:66,  grow:70,  lvl:2, kind:'root',  col:0xc9a06a},
+  cabbage:   {name:'Cabbage',    seed:26,  price:78,  grow:76,  lvl:2, kind:'leafy', col:0xa8d890},
+  strawberry:{name:'Strawberry', seed:30,  price:90,  grow:84,  lvl:2, kind:'bush',  col:0xe0303a},
+  wheat:     {name:'Wheat',      seed:28,  price:92,  grow:80,  lvl:3, kind:'tall',  col:0xe8c060, day:true},
+  peas:      {name:'Sweet Peas', seed:36,  price:110, grow:95,  lvl:3, kind:'vine',  col:0x7cc458},
+  pepper:    {name:'Bell Pepper',seed:40,  price:118, grow:100, lvl:3, kind:'bush',  col:0xf07a22},
+  tomato:    {name:'Tomato',     seed:42,  price:125, grow:105, lvl:3, kind:'bush',  col:0xe2472e, tall:true},
+  tulip:     {name:'Tulip',      seed:45,  price:140, grow:100, lvl:4, kind:'flower',col:0xf2789a},
+  sunflower: {name:'Sunflower',  seed:50,  price:155, grow:110, lvl:4, kind:'flower',col:0xf6c230, center:0x6a4228, day:true},
+  corn:      {name:'Corn',       seed:55,  price:170, grow:130, lvl:4, kind:'tall',  col:0xf6d04a},
+  eggplant:  {name:'Eggplant',   seed:60,  price:185, grow:135, lvl:4, kind:'bush',  col:0x5a2a6a},
+  blueberry: {name:'Blueberry',  seed:70,  price:215, grow:140, lvl:5, kind:'bush',  col:0x4a6ad0},
+  pumpkin:   {name:'Pumpkin',    seed:85,  price:270, grow:170, lvl:5, kind:'ground',col:0xf08a2a},
+  lavender:  {name:'Lavender',   seed:100, price:320, grow:150, lvl:6, kind:'flower',col:0x9a7ae0, day:true},
+  watermelon:{name:'Watermelon', seed:110, price:350, grow:190, lvl:6, kind:'ground',col:0x3e8a3a},
+  moonflower:{name:'Moonflower', seed:120, price:390, grow:140, lvl:6, kind:'flower',col:0xeef4ff, center:0x9ab8ff, night:true},
+  grape:     {name:'Grapes',     seed:150, price:520, grow:220, lvl:7, kind:'vine',  col:0x7a4aa8},
+  peach:     {name:'Peach',      seed:170, price:600, grow:240, lvl:7, kind:'tree',  col:0xf6a882},
+  starfruit: {name:'Starfruit',  seed:200, price:720, grow:260, lvl:8, kind:'tree',  col:0xf6d84a},
+  dragonfruit:{name:'Dragon Fruit',seed:260,price:950,grow:300, lvl:9, kind:'cactus',col:0xe0307a, night:true},
 };
 const CROP_IDS=Object.keys(CROPS);
 const MYSTERY={name:'Mystery Seed',seed:150,lvl:5};
@@ -427,8 +442,8 @@ const FINDS={
 };
 const RODS=[{name:'Bamboo Rod'},{name:'Sturdy Rod',cost:900,lvl:3},{name:'Golden Rod',cost:6000,lvl:7}];
 const CANS=[{name:'Tin Can'},{name:'Copper Can',cost:700,lvl:2}];
-const LAND_R=[6.2,7.4,8.6,9.8,11.2];
-const LAND_UP=[{cost:700,lvl:2},{cost:2200,lvl:4},{cost:6000,lvl:6},{cost:15000,lvl:8}];
+const LAND_R=[6.2,7.4,8.6,9.8,11.2,12.4,13.6];
+const LAND_UP=[{cost:700,lvl:2},{cost:2200,lvl:4},{cost:6000,lvl:6},{cost:15000,lvl:8},{cost:32000,lvl:10},{cost:60000,lvl:12}];
 const HOUSES=['Tent','Cabin','Cottage','Villa'];
 const HOUSE_UP=[{cost:1200,lvl:3},{cost:5000,lvl:5},{cost:18000,lvl:7}];
 const LV=[0,40,120,280,550,950,1500,2300,3400,5000,7500,11000,16000,22000];
@@ -482,6 +497,21 @@ sunflower:['...y.yy.y...','..yyyyyyyy..','.yyyBBBByy..','yyyBBbBBByy.','.yyBbBbB
 pumpkin:['.....bB.....','....gb......','..oooOooo...','.ooOoOoOoo..','ooOooOooOoo.','ooOooOooOoO.','ooOooOooOoO.','ooOooOooOoO.','.oOooOooOO..','..OOOOOOO...'],
 moonflower:['.....c......','....cwc.....','..c.cwc.c...','.cwccwccwc..','..cwwwwwc...','cwwwwuwwwwc.','..cwwwwwc...','.cwccwccwc..','..c.cwc.c...','....cgc.....','.....g......','....Gg......'],
 starfruit:['.....y......','.....yy.....','....yyyy....','yyyyyYyyyyy.','.yyyyYyyyy..','..yyyYyyy...','...yyyYyy...','..yyyy.yyy..','.yyy....yyy.','.yy......yy.'],
+radish:['....g.g.....','...glglg....','....gGg.....','.....G......','....pppp....','...prrrrp...','..prrrrrrr..','..rwrrrrrR..','..rrrrrrrR..','...rrrrRR...','....rRR.....','.....w......'],
+lettuce:['....llll....','..llglllgl..','.lglllgllll.','lllgllllglll','lgllGllllgll','llllllGlllll','.lgllllllgl.','..GllgllGl..','...GGGGGG...'],
+onion:['.....g.g....','.....g.g....','.....gGg....','......g.....','.....mm.....','....mvmm....','...mvvvmm...','..mvvvvvmm..','..mvvvvvvm..','...mvvvvm...','....mmmm....','.....ss.....'],
+cabbage:['...gglgg....','..glllllg...','.glGllGllg..','gllGlGllllg.','glllGGllllg.','gllGllGlllg.','.gllllllllg.','..ggllllgg..','....gggg....'],
+wheat:['.y....y...y.','yYy..yYy.yYy','.y....y...y.','yYy..yYy.yYy','.y....y...y.','yYy..yYy.yYy','.Y....Y...Y.','.Y....Y...Y.','..Y...Y..Y..','...Y..Y.Y...','....YYYY....','....YYYY....'],
+peas:['.........G..','........G...','....lllGl...','..llgllgll..','.lgggggggl..','lgglgglggl..','lggggggggl..','.llgglggl...','..lllll.....'],
+pepper:['.....G......','.....gG.....','...oogGoo...','..oooooooo..','.owoooooooO.','.owoooooooO.','.ooooooooOO.','.oooOooOooO.','..ooOooOoO..','...OO..OO...'],
+tulip:['...p.p.p....','..ppppppp...','..prppprp...','..pppppppp..','...pppppp...','....pppp....','.....g......','..l..g..l...','..gl.g.lg...','...glglg....','....ggg.....','.....g......'],
+eggplant:['......gG....','.....gggG...','....VgggV...','...VVvVVV...','..VVvVVVVV..','..VvVVVVVV..','.VVvVVVVVV..','.VVVVVVVVV..','.VVVVVVVVV..','..VVVVVVV...','...VVVVV....'],
+blueberry:['....g.......','...gGg.gg...','..gg.uugg...','...uuuwuu...','..uwuuuuuu..','..uuuuUuuU..','...uuUuuUuu.','..uuuuuuwuU.','..uUuuuuuUu.','...uUUuUUU..'],
+lavender:['..v....v....','.vVv..vVv.v.','..v..v.v.vVv','.vVv.vVv..v.','..v...v..vVv','..g..vVv..v.','..g...g...g.','..g...g..g..','...g..g.g...','....g.g.g...','.....ggg....','......g.....'],
+watermelon:['...gGgGgG...','..gGgGgGgG..','.gGgGgGgGgG.','gGgGgGgGgGgG','gGlGgGgGgGgG','gGlGgGgGgGgG','.gGgGgGgGgG.','..gGgGgGgG..','...GGGGGG...'],
+grape:['.....B......','....gB.g....','...ggBggg...','...vVvVv....','..vVvVvVv...','...vVvVv....','....vVvV....','....vVv.....','.....vV.....','.....v......'],
+peach:['.....b.g....','.....bggl...','...pppgg....','..ppppppp...','.poopppppp..','.poooppppp..','.pooopppRp..','.ppopppppR..','..pppppRR...','...pRRRR....'],
+dragonfruit:['.....l......','...l.p.l....','..lpppppl...','...pppppp...','.lpppwppppl.','..ppppppp...','.lppppppppl.','..pppwpppp..','...ppppp....','..l.ppp.l...','.....l......'],
 mystery:['..nnnnnnnn..','..nwwwwwwn..','..nwvvvvwn..','..nwvwwvwn..','..nwwwwvwn..','..nwwwvvwn..','..nwwwvwwn..','..nwwwwwwn..','..nwwwvwwn..','..nwwwwwwn..','..nnnnnnnn..'],
 shell:['.....ww.....','...wpwwpw...','..wpwpwpwp..','.wpwpwpwpww.','.wpwpwpwpwp.','.wpwpwpwpwp.','..wpwpwpwp..','...wwwwww...','....pwwp....'],
 bag:['....BBBB....','...B....B...','..bnnnnnnb..','.bnnnnnnnnb.','.bnnnnnnnnb.','.bnnbbbbnnb.','.bnnnnnnnnb.','.bnnnnnnnnb.','.bnnnnnnnnb.','..bbbbbbbb..'],
@@ -717,10 +747,21 @@ function genIslands(){
     const biome=i<bl.length?bl[i]:bl[Math.floor(R()*bl.length)],B=BIOMES[biome];
     const r=5.2+R()*3.6;let cx=0,cz=0,ok=false;
     for(let t=0;t<60&&!ok;t++){const a=R()*6.283,d=44+i*13+R()*16;cx=Math.round(Math.cos(a)*d);cz=Math.round(Math.sin(a)*d);
-      ok=islands.every(o=>Math.hypot(o.cx-cx,o.cz-cz)>(o.home?17:o.r/0.7)+r/0.7+12);}
+      ok=islands.every(o=>Math.hypot(o.cx-cx,o.cz-cz)>(o.home?17:o.r0/0.7)+r/0.7+12);}
     if(!ok)continue;
     let name='';for(let t=0;t<30;t++){name=B.names[0][Math.floor(R()*B.names[0].length)]+' '+B.names[1][Math.floor(R()*B.names[1].length)];if(!used.has(name))break;}used.add(name);
-    islands.push({id:islands.length,cx,cz,r,biome,name,sx:0.78+R()*0.4,p1:R()*6.28,p2:R()*6.28,p3:R()*6.28,seed:Math.floor(R()*1e9)});
+    islands.push({id:islands.length,cx,cz,r:r*1.2,r0:r,biome,name,sx:0.78+R()*0.4,p1:R()*6.28,p2:R()*6.28,p3:R()*6.28,seed:Math.floor(R()*1e9)});
+  }
+  // grand isles: big, hilly islands out past the others (separate RNG so older worlds keep their layout)
+  const G=mulberry(S.worldSeed^0x5eed51);
+  const gb=shuffle(BIOME_IDS.slice(),G);
+  for(let i=0;i<5;i++){
+    const biome=gb[i],B=BIOMES[biome],r=10.5+G()*3.5;let cx=0,cz=0,ok=false;
+    for(let t=0;t<80&&!ok;t++){const a=G()*6.283,d=120+i*22+G()*40;cx=Math.round(Math.cos(a)*d);cz=Math.round(Math.sin(a)*d);
+      ok=islands.every(o=>Math.hypot(o.cx-cx,o.cz-cz)>(o.home?17:o.r/0.7)+r/0.7+14);}
+    if(!ok)continue;
+    let name='';for(let t=0;t<30;t++){name='Great '+B.names[0][Math.floor(G()*B.names[0].length)]+' '+B.names[1][Math.floor(G()*B.names[1].length)];if(!used.has(name))break;}used.add(name);
+    islands.push({id:islands.length,cx,cz,r,biome,name,grand:true,sx:0.8+G()*0.35,p1:G()*6.28,p2:G()*6.28,p3:G()*6.28,seed:Math.floor(G()*1e9)});
   }
 }
 function rebuildLandList(){landList=[];for(const [k,t] of landMap){if(!isLandT(t))continue;const [x,z]=k.split(',').map(Number);landList.push([x,z,t,islMap.get(k),topY(x,z)]);}}
@@ -785,7 +826,7 @@ function levelOf(isl,x,z){
   if(isl.biome==='swamp')return 0;
   if(isl.biome==='volcano'&&Math.hypot(x-isl.cx,z-isl.cz)<3.2)return 0;
   const d=islDist(isl,x,z),R=isl.r,n=vnoise(x,z,isl.seed);let l=0;
-  if(d<R*0.62&&n>0.45)l=1;if(R>6.4&&d<R*0.36&&n>0.52)l=2;return l;}
+  if(d<R*0.62&&n>0.45)l=1;if(R>6.4&&d<R*0.36&&n>0.52)l=2;if(R>9.5&&d<R*0.3&&n>0.5)l=3;if(R>9.5&&l===0&&d<R*0.5&&n>0.62)l=1;return l;}
 const GRASS_SLAB=new T.BoxGeometry(1,0.14,1);
 // fuzzy grass: clumps of thin tapered blades, instanced over every grass tile; they sway in the wind and part around the villager
 const grassU={uTime:{value:0},uWind:{value:1},uPl:{value:new T.Vector3(0,-99,0)}};
@@ -869,7 +910,7 @@ function buildIsland(isl){
     const sa=shuffle(isl.sand.slice(),R);for(let i=0;i<Math.min(4,sa.length);i++){const [x,z]=sa[i];parts.push(...shift(treeParts(isl.biome==='swamp'?'reeds':'rock',R,B.rock),x,TOP.sand,z,R()*6));blocked.add(K(x,z));}
     if(parts.length)g.add(M(parts));
     if(glowParts.length){const m=M(glowParts,lumMat);m.castShadow=false;g.add(m);}
-    isl.spots=gr.filter(([x,z])=>!blocked.has(K(x,z))).slice(0,Math.max(5,Math.min(16,Math.round(gr.length*0.18))));
+    isl.spots=gr.filter(([x,z])=>!blocked.has(K(x,z))).slice(0,Math.max(5,Math.min(isl.grand?30:18,Math.round(gr.length*0.18))));
   }
   isl.blocked=blocked;
   isl.edges=[];for(const [x,z] of [...isl.grass,...isl.sand])for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(!isLand(x+dx,z+dz))isl.edges.push([x+dx*0.5,z+dz*0.5,dx,dz,hash(x*3+dx,z*5+dz)*6.28]);
@@ -953,6 +994,48 @@ function cropParts(type,stage,seed=1){
         leaf.push(P(CYL6,0x6a4a2a,0,0.42,0,0,0,0.3,0.05,0.14,0.05));fruit.push(P(LEAF0,0xffffff,0.12,0.3,0.14,0,0,0,0.06,0.04,0.04));}break;
     case'moonflower':stemP(leaf,G1,0,0,0.6*b);for(let i=0;i<5;i++)lf(leaf,GREENS[i%4],0,0.08+i*0.1*b,0,i*2.4,0.2,0.2*b,0.17*b);
       if(ripe){const y=0.62;for(let k=0;k<5;k++)lf(fruit,C.col,0,y,0,k/5*6.283,0.3,0.2,0.13,0.03);fruit.push(P(ICO,C.center,0,y+0.02,0,0,0,0,0.08,0.05,0.08));}break;
+    case'radish':rosette(leaf,R,7,0.34*b,0.15*b,0.02,0.9);
+      if(ripe)fruit.push(P(ICO2,C.col,0,0.09,0,0,0,0,0.26,0.24,0.26),P(CONE8,0xf6f0f0,0,-0.03,0,Math.PI,0,0,0.07,0.12,0.07),P(ICO,0xffffff,0.07,0.15,0.08,0,0,0,0.05,0.04,0.04));break;
+    case'lettuce':rosette(leaf,R,10,0.3*b,0.24*b,0.02,0.35,[0x8cc85a,0x9ad060,0x7cc050,0xa8d870]);rosette(leaf,R,7,0.24*b,0.2*b,0.05,0.95,[0xa8d870,0x9ad060,0x8cc85a]);
+      if(ripe){leaf.push(P(ICO2,0xb8e080,0,0.14,0,0,0,0,0.24,0.2,0.24));rosette(leaf,R,6,0.16,0.16,0.1,1.25,[0xc0e490,0xa8d870]);}break;
+    case'onion':for(let i=0;i<6;i++)lf(leaf,GREENS[i%4],(R()-0.5)*0.04,0.1,(R()-0.5)*0.04,i/6*6.283+R()*0.4,1.25+R()*0.2,0.5*b,0.05);
+      if(ripe)fruit.push(P(ICO2,C.col,0,0.1,0,0,0,0,0.28,0.24,0.28),P(ICO2,0xc86aa8,-0.05,0.14,0.06,0,0,0,0.14,0.12,0.12),P(CONE8,C.col,0,0.24,0,0,0,0,0.08,0.1,0.08),P(ICO,0xffffff,0.07,0.15,0.08,0,0,0,0.04,0.04,0.04));break;
+    case'cabbage':rosette(leaf,R,9,0.36*b,0.28*b,0.02,0.2,[0x6ab84a,0x7cc458,0x5aa040]);
+      if(ripe){leaf.push(P(ICO2,C.col,0,0.18,0,0,R()*3,0,0.4,0.34,0.4));for(let i=0;i<7;i++)lf(leaf,i%2?0x9ad080:0xb8e0a0,0,0.06,0,i/7*6.283,1.05,0.28,0.26,0.03);}break;
+    case'wheat':{const col=ripe?0xd8b050:0x7cb84a,hd=ripe?C.col:0x9ad060;for(let i=0;i<11;i++){const a=R()*6.283,r=Math.sqrt(R())*0.24,x=Math.cos(a)*r,z=Math.sin(a)*r,h=(0.55+R()*0.2)*b;
+        leaf.push(P(CYL6,col,x,h/2,z,(R()-0.5)*0.12,0,(R()-0.5)*0.12,0.025,h,0.025));lf(leaf,col,x,h*0.4,z,R()*6.28,0.5,0.18*b,0.04);
+        if(stage>=2)for(let k=0;k<5;k++)(ripe?fruit:leaf).push(P(ICO,k%2?hd:0xf0d078,x+(k%2?0.018:-0.018),h+k*0.035,z,0,k,0.3,0.035,0.05,0.035));}break;}
+    case'peas':{for(const sx of [-0.2,0.2])leaf.push(P(BOX,0x9a7a4a,sx,0.4*b,0,0,0,0,0.03,0.8*b,0.03));leaf.push(P(BOX,0x9a7a4a,0,0.78*b,0,0,0,0,0.44,0.025,0.025));
+      for(let i=0;i<9;i++){const y=(0.1+i*0.08)*b,x=Math.sin(i*1.3)*0.14;leaf.push(P(CYL6,0x6ab84a,x,y,0.02,0,0,0.5*Math.cos(i),0.02,0.1,0.02));lf(leaf,GREENS[i%4],x,y,0.02,i*2.3,0.25,0.14*b,0.1*b);}
+      if(ripe){for(let i=0;i<5;i++){const x=-0.16+i*0.08,y=0.3+(i%3)*0.14;fruit.push(P(ICO2,C.col,x,y,0.07,0,0,0.25*(i%2?1:-1),0.07,0.2,0.07),P(ICO,0xa8e070,x,y+0.02,0.1,0,0,0,0.03,0.05,0.02));}
+        for(let i=0;i<3;i++)bloom(leaf,[0xf2a6c8,0xffffff,0xb8a8f2][i],0xf6d04a,-0.12+i*0.12,0.6+i*0.05,0.06,0.05);}break;}
+    case'pepper':stemP(leaf,G1,0,0,0.5*b);for(let i=0;i<9;i++)lf(leaf,GREENS[i%4],0,0.1+i*0.05*b,0,i*2.4,0.35,0.24*b,0.16*b);
+      if(ripe)for(let i=0;i<3;i++){const a=i*2.1+0.4,x=Math.sin(a)*0.15,z=Math.cos(a)*0.15,y=0.24+i*0.06;
+        fruit.push(P(ICO2,i===1?0xe8453a:C.col,x,y,z,0,a,0,0.17,0.2,0.17),P(ICO2,i===1?0xe8453a:C.col,x,y-0.07,z,0,a,0,0.12,0.1,0.12),P(LEAF0,0xffffff,x+0.05,y+0.05,z+0.04,0,0,0,0.04,0.035,0.035));leaf.push(P(CYL6,G3,x,y+0.11,z,0,0,0,0.03,0.06,0.03));}break;
+    case'tulip':for(let i=0;i<3;i++){const a=i*2.1+R(),x=Math.sin(a)*0.1,z=Math.cos(a)*0.1,h=(0.36+R()*0.1)*b;stemP(leaf,G1,x,z,h);lf(leaf,GREENS[i],x,0.02,z,a,1.0,0.28*b,0.1*b);lf(leaf,GREENS[i+1],x,0.02,z,a+2.8,1.1,0.24*b,0.09*b);
+        if(ripe){const c=[C.col,0xf6d04a,0xe8453a][i];for(let k=0;k<5;k++)lf(fruit,k%2?c:new T.Color(c).multiplyScalar(0.85).getHex(),x,h-0.03,z,k/5*6.283,1.2,0.2,0.12,0.035);fruit.push(P(ICO2,c,x,h+0.02,z,0,0,0,0.11,0.12,0.11));}}break;
+    case'eggplant':stemP(leaf,G1,0,0,0.5*b);for(let i=0;i<7;i++)lf(leaf,[0x4f8a3a,0x5f9a44,0x3e7a30][i%3],0,0.12+i*0.06*b,0,i*2.4,0.3,0.3*b,0.22*b);
+      if(ripe)for(let i=0;i<3;i++){const a=i*2.1+0.3,x=Math.sin(a)*0.17,z=Math.cos(a)*0.17,y=0.2+i*0.03;
+        fruit.push(P(ICO2,C.col,x,y,z,Math.cos(a)*0.4,0,-Math.sin(a)*0.4,0.13,0.3,0.13),P(LEAF0,0xffffff,x+0.04,y+0.06,z+0.04,0,0,0,0.035,0.05,0.03));leaf.push(P(ICO,0x3e7a30,x,y+0.14,z,0,a,0,0.1,0.05,0.1));}break;
+    case'blueberry':leaf.push(P(ICO2,0x3e7a30,0,0.26*b,0,0,0,0,0.5*b,0.42*b,0.5*b));for(let i=0;i<26;i++){const a=R()*6.283,e=R()*1.2;lf(leaf,GREENS[i%4],Math.sin(a)*0.22*b*Math.cos(e),(0.22+Math.sin(e)*0.2)*b,Math.cos(a)*0.22*b*Math.cos(e),a,0.2+e*0.5,0.14*b,0.09*b);}
+      if(ripe)for(let i=0;i<5;i++){const a=i*1.26;berries(fruit,C.col,0x2a3a8a,Math.sin(a)*0.24,0.22+R()*0.14,Math.cos(a)*0.24,0.045,4,R);}break;
+    case'lavender':for(let i=0;i<9;i++){const a=R()*6.283,r=Math.sqrt(R())*0.18,x=Math.cos(a)*r,z=Math.sin(a)*r,h=(0.34+R()*0.14)*b;leaf.push(P(CYL6,0x6a9a4a,x,h/2,z,(R()-0.5)*0.2,0,(R()-0.5)*0.2,0.02,h,0.02));
+        lf(leaf,0x7aa860,x,0.03,z,R()*6.28,0.9,0.18*b,0.05);if(ripe)spike(fruit,C.col,0x6a4ab0,x,h,z,0.05);}break;
+    case'watermelon':for(let i=0;i<7;i++){const a=i/7*6.283+R()*0.4,r=0.3+R()*0.1;lf(leaf,GREENS[i%4],Math.sin(a)*0.08,0.04,Math.cos(a)*0.08,a,0.15,0.3*b,0.24*b,0.04);
+        leaf.push(P(BOX,0x7ab84a,Math.sin(a+0.5)*r,0.03,Math.cos(a+0.5)*r,0,a,0,0.03,0.03,0.22));}
+      if(ripe){for(let i=0;i<10;i++){const a=i/10*6.283;fruit.push(P(ICO2,i%2?C.col:0x2a5a2a,Math.sin(a)*0.06,0.19,Math.cos(a)*0.06*1.3,0,a,0,0.2,0.36,0.44));}
+        fruit.push(P(LEAF0,0xffffff,0.1,0.34,0.14,0,0,0,0.07,0.04,0.05));leaf.push(P(CYL6,0x6a8a3a,0,0.38,0.05,0.4,0,0,0.03,0.1,0.03));}break;
+    case'grape':{for(const sx of [-0.34,0.34])leaf.push(P(CYL6,0x7a5a3a,sx,0.45*b,0,0,0,0,0.05,0.9*b,0.05));leaf.push(P(BOX,0x8a6a44,0,0.88*b,0,0,0,0,0.76,0.035,0.035),P(CYL6,0x6a4a30,0,0.45*b,0,0,0,0.12,0.05,0.9*b,0.05));
+      for(let i=0;i<14;i++){const x=-0.34+i/13*0.68;lf(leaf,GREENS[i%4],x,0.86*b,0,i*2.1,0.1,0.18*b,0.16*b);}
+      if(ripe)for(const bx of [-0.2,0.02,0.22]){for(let row=0;row<4;row++){const n=4-row;for(let k=0;k<n;k++){const a=k/n*6.283+row;fruit.push(P(ICO2,k%3===2?0x5a2a8a:C.col,bx+Math.cos(a)*0.02*n,0.72-row*0.075,Math.sin(a)*0.02*n+0.06,0,0,0,0.07,0.07,0.07));}}
+        fruit.push(P(LEAF0,0xffffff,bx+0.03,0.74,0.1,0,0,0,0.03,0.03,0.03));}break;}
+    case'peach':trunkP(leaf,R,0x7a5230,0.62*b,0.07);canopy(leaf,R,[0x7cc050,0x5f9e3a,0x467e2c],0,0.9*b,0,0.34*b,9,0.38*b);
+      if(ripe)for(const [x,y,z] of [[0.32,0.72,0.12],[-0.3,0.8,0.14],[0.06,0.66,0.36],[-0.1,0.86,-0.34],[0.24,0.96,-0.2]])fruit.push(P(ICO2,C.col,x,y,z,0,0,0,0.17,0.17,0.17),P(ICO2,0xe8604a,x+0.04,y+0.02,z+0.05,0,0,0,0.1,0.1,0.1),P(LEAF0,0xffffff,x+0.05,y+0.06,z+0.05,0,0,0,0.035,0.03,0.03));break;
+    case'dragonfruit':{const cc=[0x5aa84a,0x4a9040];leaf.push(P(CYL6,cc[0],0,0.3*b,0,0,0,0,0.13,0.6*b,0.13));
+      for(let i=0;i<3;i++){const a=i*2.1+R(),x=Math.sin(a)*0.16,z=Math.cos(a)*0.16;leaf.push(P(CYL6,cc[i%2],x*0.6,0.3*b,z*0.6,Math.cos(a)*0.9,0,-Math.sin(a)*0.9,0.09,0.3*b,0.09),P(CYL6,cc[(i+1)%2],x*1.4,0.52*b,z*1.4,0,0,0,0.09,0.36*b,0.09));
+        for(let k=0;k<3;k++)leaf.push(P(CONE4,0xf6f0d0,x*1.4+0.04,(0.38+k*0.1)*b,z*1.4,0,k,1.57,0.02,0.05,0.02));
+        if(ripe){const fy=0.76*b;fruit.push(P(ICO2,C.col,x*1.4,fy,z*1.4,0,0,0,0.17,0.2,0.17));for(let k=0;k<5;k++)lf(fruit,0x8ad050,x*1.4,fy-0.02,z*1.4,k/5*6.283,0.9,0.1,0.05,0.02);}
+        else if(stage===2)bloom(leaf,0xfff8e8,0xf6d04a,x*1.4,0.74*b,z*1.4,0.09,6,0.9);}break;}
     case'starfruit':leaf.push(P(TRUNK,0x7a5230,0,0.33*b,0,0,0,0,0.12,0.66*b,0.12));
       for(let i=0;i<6;i++){const a=i/6*6.283;leaf.push(P(ICO,GREENS[i%4],Math.sin(a)*0.22*b,(0.82+(i%2)*0.14)*b,Math.cos(a)*0.22*b,0,a,0,0.42*b,0.34*b,0.42*b));}
       leaf.push(P(ICO,G2,0,1.06*b,0,0,0,0,0.44*b,0.34*b,0.44*b));
