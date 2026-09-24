@@ -290,6 +290,8 @@ const CROPS={
   dragonfruit:{name:'Dragon Fruit',seed:260,price:950,grow:300, lvl:9, kind:'cactus',col:0xe0307a, night:true},
 };
 const CROP_IDS=Object.keys(CROPS);
+// building materials from clearing the farm and flotsam at sea (kept out of "Sell everything")
+const MATS={wood:{name:'Wood',price:5},stone:{name:'Stone',price:5},fiber:{name:'Fiber',price:3}};
 const MYSTERY={name:'Mystery Seed',seed:150,lvl:5};
 const VARIANTS=[
   {id:'normal', name:'',          mult:1,   chance:0},
@@ -458,7 +460,7 @@ const SAVE_KEY='driftseed-isle-v1';
 function freshState(){
   return {v:1,shells:150,xp:0,day:1,hour:7.2,land:0,house:0,tiles:{},objs:[],store:{},inv:{},alm:{},almR:{},
     seed:'turnip',rain:false,demand:'carrot',sound:true,pxAdj:0,nextId:1,t:Date.now(),mode:'farm',tut:0,harvested:0,earned:0,
-    finds:[],weeds:[],free:{},orders:[],ordBonus:0,rod:0,can:0,rec:{},
+    finds:[],weeds:[],free:{},orders:[],ordBonus:0,rod:0,can:0,rec:{},wv:0,farmInit:0,debris:[],farmClear:0,tipPaint:0,
     worldSeed:Math.floor(Math.random()*1e9),sea:false,px:0.3,pz:2.1,boat:null,disc:{0:1},picked:{},dexR:{},boatTip:0};
 }
 function load(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s&&s.v===1){const f=freshState();for(const k in f)if(s[k]===undefined)s[k]=f[k];return s;}}catch(e){}return null;}
@@ -527,6 +529,9 @@ rod:['..........E','.........E.','........b..','.......b..u','......b...u','....
 can:['....EEE.....','...E...E....','.OOOOOOOOE..','OOOOOOOOOOE.','.OoooooOO..O','.OOOOOOOOOOO','.OOOOOOOO...','..OOOOOO....'],
 };
 const ICON={};for(const k in SPR)ICON[k]=sprite(SPR[k]);
+ICON['m:wood']=sprite(['...bbbbbbb..','..bBBBBBBBn.','.bBbbbbbbBnn','.bBbbbbbbBnB','.bBbbbbbbBnn','..bBBBBBBBn.','...bbbbbbb..']);
+ICON['m:stone']=sprite(['....eeee....','..eewweeee..','.eewweeeEe..','eeweeeeeeEE.','eeeeeeeeeEE.','.eeeeeeEEE..','..EEEEEEE...']);
+ICON['m:fiber']=sprite(['.l...l...l..','.gl..gl..g..','..g..g..gl..','..gl.g.lg...','...ggggg....','...nBnBn....','...ggggg....','....ggg.....']);
 const TSPR={
 fish:['.....ff.....','....fAAf....','..aaaaaaa..f','.aeaaaaaaaff','aaaaaaaaaaf.','.AAaaaaaaaff','..AAAAAAA..f','....fAf.....'],
 puffer:['..f.f.f.....','.aaaaaaa....','aaaaaaaaa.f.','aeaAaAaaaff.','aaaaaaaaaaf.','aaAaAaAaa.f.','.aaaaaaa....','..f.f.f.....'],
@@ -726,10 +731,13 @@ const stars=new T.Points(starGeo,starMat);stars.frustumCulled=false;scene.add(st
 /* =========================================================
    World: home island + generated islands
    ========================================================= */
-const TOP={grass:0.5,sand:0.3};
+const TOP={grass:0.5,sand:0.3,bridge:0.32};
+// the farm field: a flat island just west of home, joined by a wooden bridge
+const FARM={x:-19,z:1};
+function farmQ(x,z){const dx=Math.abs(x-FARM.x)/7.6,dz=Math.abs(z-FARM.z)/6.6;return Math.pow(dx**4+dz**4,0.25)*(1+(hash(x*1.3,z*2.1)-0.5)*0.06);}
 const landMap=new Map(),islMap=new Map();let landList=[];
 let islands=[];
-const isLandT=t=>t==='grass'||t==='sand';
+const isLandT=t=>t==='grass'||t==='sand'||t==='bridge';
 function isLand(x,z){return isLandT(landMap.get(K(x,z)));}
 const lvlMap=new Map(),LVH=0.62;
 function topY(x,z){const k=K(x,z),t=landMap.get(k);return t==='grass'?TOP.grass+(lvlMap.get(k)||0)*LVH:TOP[t]||0;}
@@ -737,8 +745,11 @@ function homeD(x,z){const a=Math.atan2(z,x);const f=1+0.10*Math.sin(3*a+0.7)+0.0
 function islR(isl){return isl.home?LAND_R[S.land]:isl.r;}
 function islDist(isl,x,z){if(isl.home)return homeD(x,z);const dx=x-isl.cx,dz=z-isl.cz,a=Math.atan2(dz,dx);
   const f=1+0.12*Math.sin(3*a+isl.p1)+0.08*Math.sin(5*a+isl.p2)+0.06*Math.sin(2*a+isl.p3);return Math.hypot(dx*isl.sx,dz)/f;}
+const TRANK={grass:4,sand:3,s1:2,s2:1};
 function tileTypeI(isl,x,z){const R=islR(isl),d=islDist(isl,x,z),b=BIOMES[isl.biome].beach||1.25;
-  if(d<R-b)return'grass';if(d<R)return'sand';if(d<R+1.0)return's1';if(d<R+2.1)return's2';return null;}
+  let t=d<R-b?'grass':d<R?'sand':d<R+1.0?'s1':d<R+2.1?'s2':null;
+  if(isl.home){const q=farmQ(x,z),f=q<0.83?'grass':q<1?'sand':q<1.13?'s1':q<1.28?'s2':null;if(f&&(!t||TRANK[f]>TRANK[t]))t=f;}
+  return t;}
 function genIslands(){
   const R=mulberry(S.worldSeed);
   islands=[{id:0,cx:0,cz:0,biome:'home',name:'Home',home:true}];
@@ -746,8 +757,8 @@ function genIslands(){
   for(let i=0;i<13;i++){
     const biome=i<bl.length?bl[i]:bl[Math.floor(R()*bl.length)],B=BIOMES[biome];
     const r=5.2+R()*3.6;let cx=0,cz=0,ok=false;
-    for(let t=0;t<60&&!ok;t++){const a=R()*6.283,d=44+i*13+R()*16;cx=Math.round(Math.cos(a)*d);cz=Math.round(Math.sin(a)*d);
-      ok=islands.every(o=>Math.hypot(o.cx-cx,o.cz-cz)>(o.home?17:o.r0/0.7)+r/0.7+12);}
+    for(let t=0;t<90&&!ok;t++){const a=R()*6.283,d=36+i*6+R()*10+t*0.6;cx=Math.round(Math.cos(a)*d);cz=Math.round(Math.sin(a)*d);
+      ok=islands.every(o=>Math.hypot(o.cx-cx,o.cz-cz)>(o.home?24:o.r0/0.7)+r/0.7+9)&&Math.hypot(FARM.x-cx,FARM.z-cz)>13+r*1.2/0.7+7;}
     if(!ok)continue;
     let name='';for(let t=0;t<30;t++){name=B.names[0][Math.floor(R()*B.names[0].length)]+' '+B.names[1][Math.floor(R()*B.names[1].length)];if(!used.has(name))break;}used.add(name);
     islands.push({id:islands.length,cx,cz,r:r*1.2,r0:r,biome,name,sx:0.78+R()*0.4,p1:R()*6.28,p2:R()*6.28,p3:R()*6.28,seed:Math.floor(R()*1e9)});
@@ -757,8 +768,8 @@ function genIslands(){
   const gb=shuffle(BIOME_IDS.slice(),G);
   for(let i=0;i<5;i++){
     const biome=gb[i],B=BIOMES[biome],r=10.5+G()*3.5;let cx=0,cz=0,ok=false;
-    for(let t=0;t<80&&!ok;t++){const a=G()*6.283,d=120+i*22+G()*40;cx=Math.round(Math.cos(a)*d);cz=Math.round(Math.sin(a)*d);
-      ok=islands.every(o=>Math.hypot(o.cx-cx,o.cz-cz)>(o.home?17:o.r/0.7)+r/0.7+14);}
+    for(let t=0;t<120&&!ok;t++){const a=G()*6.283,d=92+i*14+G()*16+t*0.7;cx=Math.round(Math.cos(a)*d);cz=Math.round(Math.sin(a)*d);
+      ok=islands.every(o=>Math.hypot(o.cx-cx,o.cz-cz)>(o.home?24:o.r/0.7)+r/0.7+10);}
     if(!ok)continue;
     let name='';for(let t=0;t<30;t++){name='Great '+B.names[0][Math.floor(G()*B.names[0].length)]+' '+B.names[1][Math.floor(G()*B.names[1].length)];if(!used.has(name))break;}used.add(name);
     islands.push({id:islands.length,cx,cz,r,biome,name,grand:true,sx:0.8+G()*0.35,p1:G()*6.28,p2:G()*6.28,p3:G()*6.28,seed:Math.floor(G()*1e9)});
@@ -870,7 +881,7 @@ function buildIsland(isl){
   if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);}
   const g=new T.Group();isl.group=g;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
   const span=Math.ceil(islR(isl)/0.62+3),B=BIOMES[isl.biome];
-  for(let x=isl.cx-span;x<=isl.cx+span;x++)for(let z=isl.cz-span;z<=isl.cz+span;z++){
+  for(let x=isl.home?Math.min(isl.cx-span,FARM.x-11):isl.cx-span;x<=isl.cx+span;x++)for(let z=isl.cz-span;z<=isl.cz+span;z++){
     const t=tileTypeI(isl,x,z);if(!t)continue;const k=K(x,z);
     if(landMap.has(k)&&islMap.get(k)!==isl.id)continue;
     landMap.set(k,t);islMap.set(k,isl.id);isl.keys.push(k);
@@ -895,6 +906,13 @@ function buildIsland(isl){
     const p=[];
     for(let i=0;i<8;i++){const z=dz+0.2+i*0.5;p.push(P(BOX,i%2?0xa27a50:0x94704a,1,0.26,z,0,0,0,0.95,0.07,0.46));}
     for(let i=0;i<4;i++){const z=dz+0.6+i;p.push(P(CYL8,0x5a3a2a,0.5,0.12,z,0,0,0,0.12,0.5,0.12),P(CYL8,0x5a3a2a,1.5,0.12,z,0,0,0,0.12,0.5,0.12));}
+    // wooden bridge west to the farm field (two planks wide), wherever water separates them
+    isl.bridge=[];
+    for(const bz of [FARM.z-1,FARM.z]){let x=0,n=0;while(isLandT(landMap.get(K(x,bz)))&&n++<40)x--;
+      n=0;while(x>FARM.x&&n++<30){const k=K(x,bz),t=landMap.get(k);if(t==='grass'||t==='sand')break;
+        landMap.set(k,'bridge');islMap.set(k,0);if(!isl.keys.includes(k))isl.keys.push(k);isl.bridge.push([x,bz]);x--;}}
+    for(const [x,z] of isl.bridge){for(let j=0;j<2;j++)p.push(P(BOX,(x+j)%2?0xa27a50:0x94704a,x-0.25+j*0.5,0.28,z,0,0,0,0.46,0.07,1.02));
+      const edge=z===FARM.z-1?-0.5:z===FARM.z?0.5:0;if(edge){p.push(P(BOX,0x7a5230,x,0.52,z+edge*0.92,0,0,0,1.02,0.06,0.06),P(CYL8,0x5a3a2a,x,0.2,z+edge*0.92,0,0,0,0.1,0.72,0.1));}}
     g.add(M(p));
   }else{
     const R=mulberry(isl.seed),parts=[],glowParts=[];
@@ -1282,7 +1300,7 @@ function clockStr(h){let hh=Math.floor(h),mm=Math.floor((h-hh)*6)*10;const ap=hh
    ========================================================= */
 let sprayT=0;
 function dawn(quiet){
-  S.day++;for(const k in S.tiles)S.tiles[k].w=0;
+  S.day++;for(const k in S.tiles)S.tiles[k].w=0;regrowDebris();
   S.rain=Math.random()<0.18;S.rainUntil=S.rain&&Math.random()<0.6?11+Math.random()*5:0;S.meteor=false;
   const wishes=Math.min(4,S.wishes||0);S.wishes=0;for(let i=0;i<wishes;i++){const c=islands[0].sand.filter(([x,z])=>freeTile(x,z));if(c.length){const [x,z]=pickR(c);S.finds.push({k:'starfrag',x,z});}}
   if(wishes&&!quiet)setTimeout(()=>toast('Star fragments washed up on your beach overnight!','rare',ICON['g:starfrag']),1200);
@@ -1363,7 +1381,7 @@ function clearAction(){const ab=$('actionBar');ab.hidden=true;ab.onclick=null;ab
 let shownShells=S.shells;
 function dexCount(){let got=0,tot=0;for(const [,,pre,tab] of DEX_CATS){for(const k in tab){tot++;if(S.alm[pre+k])got++;}}return[got,tot];}
 function locName(){if(S.sea){const [isl,d]=nearestIsland(vil.x,vil.z);return d<9&&S.disc[isl.id]?'Near '+isl.name:d<9?'Uncharted waters':'Open sea';}
-  const isl=curIsl()||nearestIsland(vil.x,vil.z)[0];return isl?(isl.home?'Home':isl.name):'';}
+  const isl=curIsl()||nearestIsland(vil.x,vil.z)[0];return isl?(isl.home?(farmQ(vil.x,vil.z)<1.1?'Farm':'Home'):isl.name):'';}
 function updateHUD(){
   const lv=level();$('lvlTxt').textContent='Lv '+lv;
   const a=LV[lv-1]||0,b=LV[lv];$('xpFill').style.width=(b?clamp((S.xp-a)/(b-a),0,1)*100:100)+'%';
@@ -1404,7 +1422,7 @@ $('ctx').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b
    Items & dex helpers
    ========================================================= */
 const rarity=w=>w>=15?'Common':w>=6?'Uncommon':w>=2.5?'Rare':'Legendary';
-function itemInfo(key){const pre=key.slice(0,2),id=key.slice(2);if(pre==='f:')return FISH[id];if(pre==='b:')return BUGS[id];if(pre==='g:')return FINDS[id];if(pre==='p:')return PLANTS[id];return null;}
+function itemInfo(key){const pre=key.slice(0,2),id=key.slice(2);if(pre==='f:')return FISH[id];if(pre==='b:')return BUGS[id];if(pre==='g:')return FINDS[id];if(pre==='p:')return PLANTS[id];if(pre==='m:')return MATS[id];return null;}
 function nameOf(key){const I=itemInfo(key);if(I)return I.name;if(key.startsWith('c:'))return CROPS[key.slice(2)].name;const [t,v]=key.split('|');return(VAR[v].name?VAR[v].name+' ':'')+CROPS[t].name;}
 function iconOf(key){if(key.startsWith('c:'))return seedIcon(key.slice(2));if(key.includes(':'))return ICON[key];return seedIcon(key.split('|')[0]);}
 function varOf(key){return key.includes(':')?'normal':key.split('|')[1];}
@@ -1493,7 +1511,7 @@ function removeObj(o){S.objs=S.objs.filter(q=>q!==o);syncObjs();SFX.place();}
    ========================================================= */
 let placing=null,ghost=null;
 const ghostMat=new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0.7,depthWrite:false});
-function canPlace(x,z){return onHome(x,z)&&isLand(x,z)&&!S.tiles[K(x,z)]&&!objAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z);}
+function canPlace(x,z){return onHome(x,z)&&isLand(x,z)&&landMap.get(K(x,z))!=='bridge'&&!debrisAt(x,z)&&!S.tiles[K(x,z)]&&!objAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z);}
 function nearestValid(x0,z0){let best=null,bd=1e9;for(const [x,z] of [...islands[0].grass,...islands[0].sand]){if(!canPlace(x,z))continue;const d=(x-x0)**2+(z-z0)**2;if(d<bd){bd=d;best=[x,z];}}return best;}
 function startPlace(kind,fromStore,rot=0){
   closeSheet();clearAction();
@@ -1547,7 +1565,46 @@ function findGroup(k,seed){const p=[],g=new T.Group();
 function findAt(x,z){return S.finds.find(f=>f.x===x&&f.z===z)||null;}
 function weedAt(x,z){return S.weeds.find(f=>f.x===x&&f.z===z)||null;}
 let weedSlow=new Set();
-function syncLife(){
+/* ---- farm debris: weeds, twigs, bushes, rocks, stumps and boulders to clear (Stardew-style) ---- */
+const DEBRIS={weed:{hp:1},twig:{hp:1},bush:{hp:2},rock:{hp:2},stump:{hp:3},boulder:{hp:4}};
+const debGeo={},debMesh=new Map(),debrisRoot=new T.Group();scene.add(debrisRoot);
+function debrisAt(x,z){return S.debris.find(d=>d.x===x&&d.z===z)||null;}
+function debrisParts(k,R){const p=[];switch(k){
+  case'weed':for(let i=0;i<10;i++)lf(p,[0x5a8a34,0x6a9a3a,0x4a7a2a][i%3],(R()-0.5)*0.3,0,(R()-0.5)*0.3,R()*6.28,1.0+R()*0.4,0.3+R()*0.15,0.06,0.025);
+    if(R()<0.6)for(let i=0;i<2;i++)bloom(p,[0xf6d04a,0xffffff][i],0xf6d04a,(R()-0.5)*0.3,0.26,(R()-0.5)*0.3,0.05);break;
+  case'twig':for(let i=0;i<3;i++)p.push(P(CYL6,i%2?0x7a5230:0x6a4428,(R()-0.5)*0.3,0.03,(R()-0.5)*0.3,1.57,R()*3,0,0.04,0.4+R()*0.2,0.04));lf(p,0x6a9a3a,0.05,0.04,0,R()*6,0.2,0.12,0.07);break;
+  case'bush':p.push(P(ICO2,0x4a7a2e,0,0.22,0,0,R()*3,0,0.6,0.42,0.6));for(let i=0;i<20;i++){const a=R()*6.283,e=R()*1.1;lf(p,[0x4a7a2e,0x5a8a34,0x3a6a28][i%3],Math.sin(a)*0.28*Math.cos(e),0.2+Math.sin(e)*0.2,Math.cos(a)*0.28*Math.cos(e),a,0.2+e*0.5,0.2,0.12);}
+    for(let i=0;i<4;i++){const a=R()*6.28;p.push(P(CYL6,0x6a4a2a,Math.sin(a)*0.25,0.36,Math.cos(a)*0.25,Math.cos(a)*0.8,0,-Math.sin(a)*0.8,0.02,0.26,0.02));}break;
+  case'rock':rockP(p,R,0x9a9ea8,0.55);break;
+  case'boulder':rockP(p,R,0x8e929c,1.05);p.push(P(ICO2,0x5a8a44,0.05,0.42,0,0,R()*3,0,0.5,0.1,0.42));break;
+  case'stump':p.push(P(CYL12,0x7a5230,0,0.16,0,0,0,0,0.44,0.32,0.44),P(CYL12,0xd8b078,0,0.325,0,0,0,0,0.38,0.02,0.38),P(CYL12,0xb08a58,0,0.33,0,0,0,0,0.22,0.02,0.22),P(CYL12,0xd8b078,0,0.335,0,0,0,0,0.1,0.02,0.1));
+    for(let i=0;i<4;i++){const a=i*1.57+R()*0.4;p.push(P(CYL6,0x6a4428,Math.cos(a)*0.22,0.05,Math.sin(a)*0.22,Math.sin(a)*1.1,0,-Math.cos(a)*1.1,0.08,0.26,0.08));}
+    if(R()<0.5)p.push(P(CYL6,0xf2ead8,0.2,0.08,0.18,0,0,0,0.04,0.12,0.04),P(ICO2,0xd8453a,0.2,0.15,0.18,0,0,0,0.12,0.06,0.12));break;}
+  return p;}
+function debrisGeo(k,v){const id=k+v;if(!debGeo[id])debGeo[id]=merge(debrisParts(k,mulberry(hi(k.length,v,77))));return debGeo[id];}
+function syncDebris(){while(debrisRoot.children.length)debrisRoot.remove(debrisRoot.children[0]);debMesh.clear();
+  for(const d of S.debris){const m=new T.Mesh(debrisGeo(d.k,d.v),vcMat);m.castShadow=true;m.receiveShadow=true;m.frustumCulled=false;
+    m.position.set(d.x,topY(d.x,d.z),d.z);m.rotation.y=d.r;m.userData.shake=0;debrisRoot.add(m);debMesh.set(K(d.x,d.z),m);}}
+function newDebris(x,z,k){return{x,z,k,v:Math.floor(Math.random()*3),r:Math.random()*6.28,hp:DEBRIS[k].hp};}
+function genDebris(){const R=mulberry(S.worldSeed^0xfa12);
+  for(const [x,z] of islands[0].grass){if(farmQ(x,z)>1||Math.hypot(x-(FARM.x+5),z-(FARM.z-0.5))<2.4||!freeTile(x,z))continue;if(R()>0.68)continue;
+    const r=R(),k=r<0.34?'weed':r<0.46?'twig':r<0.6?'bush':r<0.8?'rock':r<0.94?'stump':'boulder';const d=newDebris(x,z,k);d.v=Math.floor(R()*3);S.debris.push(d);}}
+function regrowDebris(){if(!S.farmInit)return;const c=islands[0].grass.filter(([x,z])=>farmQ(x,z)<1&&freeTile(x,z));
+  for(let i=0;i<3&&c.length&&S.debris.length<80;i++){const [x,z]=c.splice(Math.floor(Math.random()*c.length),1)[0];const r=Math.random();S.debris.push(newDebris(x,z,r<0.55?'weed':r<0.8?'twig':'rock'));}}
+function hitDebris(d){walkTo(d.x,d.z);vil.hop=0.2;d.hp--;const m=debMesh.get(K(d.x,d.z));if(m)m.userData.shake=0.3;
+  const wood=d.k==='stump'||d.k==='twig'||d.k==='bush',stone=d.k==='rock'||d.k==='boulder',y=topY(d.x,d.z)+0.3;
+  if(stone){tone(190,0.06,'square',0.05);noise(0.05,0.05,2600);}else if(wood){tone(140,0.07,'triangle',0.06);noise(0.06,0.04,900);}else noise(0.1,0.04,1600);
+  burst(d.x,y,d.z,stone?0xa4a4b4:wood?0x9a6a3a:0x6a9a3a,6,1.1,0.06);
+  if(d.hp>0)return;
+  S.debris=S.debris.filter(q=>q!==d);syncDebris();const got=[];const add=(k,n)=>{if(n>0){gain('m:'+k,n);got.push('+'+n+' '+MATS[k].name);}};const c=()=>Math.random()<0.5?1:0;
+  switch(d.k){case'weed':add('fiber',1+c());break;case'twig':add('wood',1);break;case'bush':add('fiber',1);add('wood',1+c());break;
+    case'rock':add('stone',1+c());break;case'stump':add('wood',3+c());break;case'boulder':add('stone',4+c());break;}
+  if(Math.random()<(d.k==='boulder'?0.3:d.k==='rock'?0.06:0)){const n=40+Math.floor(Math.random()*(d.k==='boulder'?160:60));S.shells+=n;got.push('+'+n+' shells (an old coin!)');}
+  if(Math.random()<(d.k==='weed'||d.k==='bush'?0.08:0)){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+1;got.push('+1 '+CROPS[id].name+' seed');}
+  floatText(d.x,1.1,d.z,got.join(' · '),'gold');SFX.pop();addXP(d.k==='boulder'||d.k==='stump'?2:1);burst(d.x,y,d.z,stone?0xc4c4d0:wood?0xb08050:0x8aba5a,14,1.8,0.08);
+  if(!S.farmClear&&!S.debris.some(q=>farmQ(q.x,q.z)<1.05)){S.farmClear=1;SFX.level();toast('The whole farm field is cleared. Room for a proper harvest!','rare',ICON.sprout);}}
+function updateDebris(dt,tt){for(const m of debrisRoot.children){const u=m.userData;if(u.shake>0){u.shake-=dt;m.rotation.z=Math.sin(tt*60)*u.shake*0.35;if(u.shake<=0)m.rotation.z=0;}}}
+function syncLife(){syncDebris();
   while(lifeRoot.children.length){const c=lifeRoot.children[0];lifeRoot.remove(c);c.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
   S.finds=S.finds.filter(f=>isLand(f.x,f.z)&&FINDS[f.k]);S.weeds=S.weeds.filter(w=>isLand(w.x,w.z)&&!S.tiles[K(w.x,w.z)]);
   for(const f of S.finds){const g=findGroup(f.k);g.position.set(f.x+(hash(f.x,f.z)-0.5)*0.3,topY(f.x,f.z),f.z+(hash(f.z,f.x)-0.5)*0.3);g.rotation.y=hash(f.x,f.z)*6.28;lifeRoot.add(g);}
@@ -1555,7 +1612,7 @@ function syncLife(){
   for(const w of S.weeds){const g=findGroup('weed',w.x*31+w.z*7+99);g.position.set(w.x,topY(w.x,w.z),w.z);lifeRoot.add(g);
     for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)weedSlow.add(K(w.x+dx,w.z+dz));}
 }
-const freeTile=(x,z)=>!objAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z)&&!S.tiles[K(x,z)];
+const freeTile=(x,z)=>!debrisAt(x,z)&&!objAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z)&&!S.tiles[K(x,z)];
 function spawnFind(quiet,isl){if(!isl)return;const here=S.finds.filter(f=>islMap.get(K(f.x,f.z))===isl.id);if(here.length>=5)return;
   if(S.finds.length>=16)S.finds.shift();
   const c=isl.sand.filter(([x,z])=>freeTile(x,z)&&!(isl.blocked&&isl.blocked.has(K(x,z))));if(!c.length)return;const [x,z]=pickR(c);
@@ -1875,6 +1932,48 @@ function planPath(sx,sz,tx,tz){
 function sailTo(x,z,land,name){const b=S.boat;const path=planPath(b.x,b.z,x,z)||[[x,z]];
   sail={dx:x,dz:z,land:land===undefined?null:land,name:name||'',path,idx:0,chk:0,lx:b.x,lz:b.z,replans:0};ctxSig='';updateCtx();}
 
+const floaters=[];let floatT=6;
+function floaterModel(k){const p=[];
+  if(k==='crate'){p.push(P(BOX,0xa87444,0,0,0,0,0,0,0.5,0.4,0.5));for(const y of [-0.12,0.12])p.push(P(BOX,0x7a5230,0,y,0,0,0,0,0.52,0.06,0.52));p.push(P(BOX,0x7a5230,0,0,0,0,0,0.78,0.06,0.62,0.52));}
+  else if(k==='bottle'){p.push(P(CYL12,0x7ac8a8,0,0,0,0,0,1.57,0.14,0.36,0.14),P(CYL12,0x7ac8a8,0.24,0,0,0,0,1.57,0.06,0.12,0.06),P(CYL12,0x9a6a3a,0.32,0,0,0,0,1.57,0.05,0.06,0.05),P(BOX,0xf6ecd0,0,0,0,0,0,0,0.2,0.06,0.07));}
+  else{p.push(P(CYL12,0x8a6a44,0,0,0,0,0.3,1.57,0.16,0.9,0.16),P(CYL12,0xd8b078,0.45,0,0,0,0.3,1.57,0.14,0.02,0.14),P(CYL6,0x7a5a3a,0.1,0.08,0.1,0.6,0.3,0.4,0.04,0.3,0.04));lf(p,0x5aa050,-0.2,0.08,0,0.4,0.2,0.16,0.1);}
+  const g=new T.Group();g.add(M(p));return g;}
+function floaterAt(cx,cy){for(const f of floaters){const s=toScreen(f.x,0.1,f.z);if(Math.hypot(s[0]-cx,s[1]-cy)<44)return f;}return null;}
+function collectFloater(f){scene.remove(f.g);floaters.splice(floaters.indexOf(f),1);SFX.splash();burst(f.x,0.2,f.z,0xbfe4ff,10,1.4,0.06);
+  if(f.k==='bottle'){openBottle();return;}
+  if(f.k==='drift'){const n=2+Math.floor(Math.random()*2);gain('m:wood',n);floatText(f.x,0.9,f.z,'+'+n+' Wood (driftwood)','gold');SFX.pop();return;}
+  const r=Math.random();if(r<0.45){const n=40+Math.floor(Math.random()*120);S.shells+=n;floatText(f.x,0.9,f.z,'+'+n+' shells','gold');SFX.coin();}
+  else if(r<0.75){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+2;floatText(f.x,0.9,f.z,'+2 '+CROPS[id].name+' seeds','gold');SFX.pop();}
+  else{gain('m:stone',2);gain('m:fiber',2);floatText(f.x,0.9,f.z,'+2 Stone · +2 Fiber','gold');SFX.pop();}
+  addXP(2);updateHUD();}
+const dolphins=[];let dolph=null,dolphT=18;
+for(let i=0;i<2;i++){const g=new T.Group();g.add(M([P(ICO2,0x6a8ab0,0,0,0,0,0,0,0.26,0.24,0.8),P(ICO2,0xe4ecf4,0,-0.06,0.04,0,0,0,0.2,0.14,0.64),P(ICO2,0x6a8ab0,0,-0.02,0.42,0,0,0,0.1,0.09,0.2),
+  P(CONE4,0x5a7aa0,0,0.16,-0.05,-0.5,Math.PI/4,0,0.12,0.2,0.05),P(BOX,0x5a7aa0,0,0,-0.42,0,0,0,0.4,0.03,0.12),P(ICO2,0x1a1420,0.1,0.04,0.28,0,0,0,0.03,0.03,0.03),P(ICO2,0x1a1420,-0.1,0.04,0.28,0,0,0,0.03,0.03,0.03)]));
+  g.visible=false;scene.add(g);dolphins.push(g);}
+function updateSeaLife(dt,tt){
+  const b=S.boat;
+  if(S.sea&&b&&sail){floatT-=dt;if(floatT<=0&&floaters.length<4){floatT=8+Math.random()*9;
+      for(let t=0;t<6;t++){const a=b.r+(Math.random()-0.5)*1.3,d=8+Math.random()*7,x=b.x+Math.sin(a)*d,z=b.z+Math.cos(a)*d;
+        if(seaMargin.has(K(Math.round(x),Math.round(z))))continue;const r=Math.random(),k=r<0.2?'bottle':r<0.55?'crate':'drift';const g=floaterModel(k);scene.add(g);floaters.push({k,x,z,g,ph:Math.random()*6});break;}}
+    dolphT-=dt;if(dolphT<=0&&!dolph){dolphT=22+Math.random()*20;dolph={t:0,side:Math.random()<0.5?-1:1};}}
+  for(const f of [...floaters]){f.g.position.set(f.x,0.04+Math.sin(tt*2+f.ph)*0.04,f.z);f.g.rotation.set(Math.sin(tt*1.3+f.ph)*0.12,f.ph+tt*0.2,Math.cos(tt*1.1+f.ph)*0.1);
+    if(Math.random()<dt*1.5)emit(f.x+(Math.random()-0.5)*0.6,0.03,f.z+(Math.random()-0.5)*0.6,{vy:0.1,life:0.6,max:0.6,size:0.05,color:0xf4fbff});
+    if(S.sea&&b&&Math.hypot(b.x-f.x,b.z-f.z)<1.3)collectFloater(f);else if(Math.hypot(f.x-cam.tx,f.z-cam.tz)>45){scene.remove(f.g);floaters.splice(floaters.indexOf(f),1);}}
+  if(dolph&&b){dolph.t+=dt;const T2=3.2,fx=Math.sin(b.r),fz=Math.cos(b.r),rx=fz*dolph.side,rz=-fx*dolph.side;
+    dolphins.forEach((g,i)=>{const t=dolph.t-i*0.35,ph=(t%1.3)/1.3,leap=Math.sin(ph*Math.PI);const along=-1.5+t*1.4+i*0.5,off=1.7+i*0.55;
+      g.visible=t>0&&t<T2&&leap>0.05;g.position.set(b.x+fx*along+rx*off,-0.25+leap*0.95,b.z+fz*along+rz*off);g.rotation.set(-Math.cos(ph*Math.PI)*0.9,b.r,0);
+      if(t>0&&t<T2&&(ph<0.04||ph>0.96)&&Math.random()<0.5)burst(g.position.x,0.05,g.position.z,0xe4f4ff,5,1.1,0.06,6);});
+    if(dolph.t>T2+0.4){dolph=null;dolphins.forEach(g=>g.visible=false);}}}
+// instant travel to an island you've already found: the boat drops you off on its near shore
+function fastTravel(isl){sail=null;$('fade').classList.add('on');SFX.horn();
+  setTimeout(()=>{let bx,bz;
+    if(isl.home){bx=2.05;bz=isl.dockZ+2.4;}
+    else{const L=Math.hypot(isl.cx,isl.cz)||1,ux=-isl.cx/L,uz=-isl.cz/L;let best=null,bs=-1e9;for(const [x,z] of isl.sand){const q=(x-isl.cx)*ux+(z-isl.cz)*uz;if(q>bs){bs=q;best=[x,z];}}
+      if(!best)best=isl.grass[0];bx=best[0];bz=best[1];for(let i=0;i<16;i++){bx+=ux*0.5;bz+=uz*0.5;if(!seaMargin.has(K(Math.round(bx),Math.round(bz))))break;}}
+    for(const f of floaters)scene.remove(f.g);floaters.length=0;
+    S.boat={x:bx,z:bz,r:Math.atan2(isl.cx-bx,isl.cz-bz)};S.sea=true;vil.x=vil.tx=bx;vil.z=vil.tz=bz;
+    disembark(isl.id);cam.tx=vil.x;cam.tz=vil.z;ctxSig='';updateCtx();updateHUD();save();
+    setTimeout(()=>$('fade').classList.remove('on'),180);},650);}
 function sailHome(){const isl=islands[0];sailTo(2.05,isl.dockZ+2.4,0,'Home');}
 function sailToIsland(isl){if(!S.sea){boardBoat(()=>sailToIsland(isl));return;}
   let best=null,bd=1e9;for(const [x,z] of [...isl.sand,...isl.grass]){const d=(x-S.boat.x)**2+(z-S.boat.z)**2;if(d<bd){bd=d;best=[x,z];}}
@@ -1900,7 +1999,7 @@ function updateBoat(dt,tt){
     sail.chk+=dt;if(sail.chk>2){const moved=Math.hypot(b.x-sail.lx,b.z-sail.lz);sail.chk=0;sail.lx=b.x;sail.lz=b.z;
       if(moved<0.5&&!nearLand){if(sail.replans++<3){const p=planPath(b.x,b.z,sail.dx,sail.dz);if(p){sail.path=p;sail.idx=0;}}else head=null;}}
     if((fin&&d<0.5)||head===null||nearLand){const tgt=sail.land;sail=null;ctxSig='';if(tgt!==null)disembark(tgt);updateCtx();}
-    else{b.r+=angDiff(b.r,head)*Math.min(1,dt*3.5);const sp=fin?Math.min(6,1.5+d*1.5):6;
+    else{b.r+=angDiff(b.r,head)*Math.min(1,dt*3.5);const sp=fin?Math.min(7.5,1.5+d*1.5):7.5;
       const nx=b.x+Math.sin(b.r)*sp*dt,nz=b.z+Math.cos(b.r)*sp*dt;if(!blockedAt(nx+Math.sin(b.r)*0.5,nz+Math.cos(b.r)*0.5)){b.x=nx;b.z=nz;}
       if(Math.random()<dt*14)emit(b.x-Math.sin(b.r)*0.7+(Math.random()-0.5)*0.3,0.03,b.z-Math.cos(b.r)*0.7+(Math.random()-0.5)*0.3,{life:1.6,max:1.6,size:0.13,color:0xe8f0ff});}
   }
@@ -2005,8 +2104,8 @@ function renderSheet(){
       h+=`<button class="card ${S.seed===id?'sel':''} ${lock?'lock':''}" data-seed="${id}" ${lock?'disabled':''}><img class="px" src="${seedIcon(id)}" alt=""><span class="grow"><span class="nm">${C.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+C.lvl:sub}</span></span><span class="price">${S.free[id]?`<span class="done">${S.free[id]} free</span>`:sh(C.seed)}</span></button>`;}
     h+='</div>';}
   else if(sheet.kind==='bag'){$('sheetTitle').textContent='Bag';tabs([]);
-    const keys=Object.keys(S.inv).sort((a,b)=>priceOf(b)-priceOf(a));const total=keys.reduce((s,k)=>s+priceOf(k)*S.inv[k],0);
-    h+=`<p class="note">Today the market pays <b>1.5×</b> for <b>${CROPS[S.demand].name}</b>. Everything you find stays in your Islandex forever, even after you sell it.</p>`;
+    const keys=Object.keys(S.inv).sort((a,b)=>priceOf(b)-priceOf(a));const total=keys.filter(k=>!k.startsWith('m:')).reduce((s,k)=>s+priceOf(k)*S.inv[k],0);
+    h+=`<p class="note">Today the market pays <b>1.5×</b> for <b>${CROPS[S.demand].name}</b>. Everything you find stays in your Islandex forever, even after you sell it. Wood, stone and fiber aren't included in Sell everything, so you keep them for building.</p>`;
     if(!keys.length)h+=`<p class="note">Your bag is empty. Harvest, fish, catch bugs, forage and beachcomb to fill it.</p>`;
     else{h+=`<div class="sellall"><button class="pbtn go" data-sellall="1">Sell everything · ${fmt(total)} shells</button></div><div class="list">`;
       for(const k of keys){const t=k.split('|')[0];const inOrder=S.orders.some(o=>!o.done&&(o.k===k||o.k==='c:'+t));
@@ -2053,7 +2152,7 @@ function renderSheet(){
       h+='</div>';}}
   else if(sheet.kind==='chart'){$('sheetTitle').textContent='Sea Chart';tabs([]);
     const disc=islands.filter(i=>S.disc[i.id]);
-    h+=`<canvas id="chart" width="320" height="320"></canvas><p class="note">${S.sea?'Tap an island to set sail.':'Tap an island to board your boat and sail there.'} Question marks are rumours of islands you haven't found yet.</p><div class="isles">`;
+    h+=`<canvas id="chart" width="320" height="320"></canvas><p class="note">Tap an island you've found to travel there instantly. To discover new ones, sail out and tap the sea. Question marks are rumours of islands you haven't found yet.</p><div class="isles">`;
     for(const isl of disc){const d=Math.round(Math.hypot(isl.cx-vil.x,isl.cz-vil.z));const bio=isl.biome;
       let got=0,tot=0;if(!isl.home){for(const k in PLANTS)if(PLANTS[k].bio.includes(bio)){tot++;if(S.alm['p:'+k])got++;}for(const k in BUGS)if(BUGS[k].bio.includes(bio)){tot++;if(S.alm['b:'+k])got++;}}
       h+=`<button class="card" data-isle="${isl.id}"><img class="px" src="${isl.home?ICON.sprout:ICON.chart}" alt=""><span class="grow"><span class="nm">${isl.name}</span><br><span class="sub">${isl.home?'Your island':BIOMES[bio].name+' island'} · ${d<4?'you are here':d+' leagues away'}${tot?` · ${got}/${tot} local plants & bugs`:''}</span></span></button>`;}
@@ -2082,23 +2181,24 @@ function drawChart(){const cv=$('chart');if(!cv)return;const g=cv.getContext('2d
   g.fillStyle='#3565cc';g.fillRect(0,0,N,N);g.fillStyle='rgba(255,255,255,.12)';for(let x=0;x<N;x+=20)for(let y=0;y<N;y+=20)g.fillRect(x,y,2,2);
   const px=2,hex=c=>'#'+c.toString(16).padStart(6,'0');
   for(const isl of disc){const R=islR(isl)/0.62+2.2;const B=BIOMES[isl.biome];
-    for(let wx=-R;wx<=R;wx+=px/sc)for(let wz=-R;wz<=R;wz+=px/sc){const t=tileTypeI(isl,Math.round(isl.cx+wx),Math.round(isl.cz+wz));if(!t)continue;
+    for(let wx=isl.home?Math.min(-R,FARM.x-11):-R;wx<=R;wx+=px/sc)for(let wz=-R;wz<=R;wz+=px/sc){const t=tileTypeI(isl,Math.round(isl.cx+wx),Math.round(isl.cz+wz));if(!t)continue;
       g.fillStyle=t==='grass'?hex(B.grass[0]):t==='sand'?hex(B.sand[0]):t==='s1'?'#7ea6e8':'#5584da';
       g.fillRect(Math.round(X(isl.cx+wx)/px)*px,Math.round(Y(isl.cz+wz)/px)*px,px,px);}}
+  g.fillStyle='#a27a50';for(const [x,z] of islands[0].bridge||[])g.fillRect(Math.round(X(x-0.5)),Math.round(Y(z-0.5)),Math.max(2,Math.ceil(sc)),Math.max(2,Math.ceil(sc)));
   g.font='12px "Fredoka", sans-serif';g.textAlign='center';
   for(const isl of disc){const R=islR(isl)/0.7;const y=Math.max(12,Y(isl.cz)-R*sc-5);g.fillStyle='#2b1e2e';g.fillText(isl.name,X(isl.cx)+1,y+1);g.fillStyle='#fff6e2';g.fillText(isl.name,X(isl.cx),y);}
   g.font='bold 16px "Fredoka", sans-serif';for(const i of und){const jx=(hash(i.id,1)-0.5)*16,jz=(hash(1,i.id)-0.5)*16;g.fillStyle='#2b1e2e';g.fillText('?',X(i.cx+jx)+1,Y(i.cz+jz)+6);g.fillStyle='#fff3c4';g.fillText('?',X(i.cx+jx),Y(i.cz+jz)+5);}
   g.fillStyle='#2b1e2e';g.fillRect(Math.round(X(vil.x))-4,Math.round(Y(vil.z))-4,8,8);g.fillStyle=S.sea?'#f6d04a':'#d8453a';g.fillRect(Math.round(X(vil.x))-2,Math.round(Y(vil.z))-2,4,4);
   cv.onclick=e=>{const r=cv.getBoundingClientRect();const wx=((e.clientX-r.left)/r.width*N-N/2)/sc,wz=((e.clientY-r.top)/r.height*N-N/2)/sc;
     let best=null,bd=1e9;for(const isl of disc){const d=Math.hypot(isl.cx-wx,isl.cz-wz);if(d<bd){bd=d;best=isl;}}if(best&&bd<18/sc+islR(best)){chartGo(best);}};}
-function chartGo(isl){const here=curIsl();if(here&&here.id===isl.id){toast(`You're already on ${isl.name}.`);return;}closeSheet();SFX.horn();sailToIsland(isl);}
+function chartGo(isl){const here=curIsl();if(here&&here.id===isl.id){toast(`You're already on ${isl.name}.`);return;}closeSheet();fastTravel(isl);}
 $('sheetBody').addEventListener('input',e=>{if(e.target.id==='devHour'){const prev=S.hour;S.hour=Number(e.target.value);if(prev<6&&S.hour>=6&&S.hour-prev<3)dawn(false);$('devHourLbl').textContent=clockStr(S.hour);applyTime();updateHUD();}});
 $('sheetTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;sheet.tab=b.dataset.tab;SFX.ui();renderSheet();});
 $('sheetBody').addEventListener('click',e=>{
   const el=e.target.closest('button');if(!el||el.disabled)return;const d=el.dataset;
   if(d.seed){S.seed=d.seed;SFX.ui();updateHUD();closeSheet();return;}
   if(d.sell){const g=sell(d.sell,1);if(g){SFX.coin();floatText(vil.x,1.2,vil.z,'+'+fmt(g),'gold');}renderSheet();return;}
-  if(d.sellall){let g=0;for(const k of Object.keys(S.inv))g+=sell(k,S.inv[k]);if(g){SFX.coin();setTimeout(SFX.coin,120);toast(`Sold everything for ${fmt(g)} shells.`,'',ICON.shell);}renderSheet();return;}
+  if(d.sellall){let g=0;for(const k of Object.keys(S.inv))if(!k.startsWith('m:'))g+=sell(k,S.inv[k]);if(g){SFX.coin();setTimeout(SFX.coin,120);toast(`Sold everything for ${fmt(g)} shells.`,'',ICON.shell);}renderSheet();return;}
   if(d.buy){const k=d.buy;if(S.store[k]){startPlace(k,true);return;}if(S.shells<BUILD[k].cost){toast(`${BUILD[k].name} costs ${fmt(BUILD[k].cost)} shells.`);SFX.no();return;}startPlace(k,false);return;}
   if(d.edit){S.mode='edit';closeSheet();toast('Edit mode: tap decor to move or store it, tap empty soil to clear it.','',ICON.hammer);return;}
   if(d.isle){chartGo(islands[Number(d.isle)]);return;}
@@ -2154,6 +2254,7 @@ function onTap(cx,cy){
   const hit=pick(cx,cy);
   if(placing){if(hit)moveGhost(hit.x,hit.z);return;}
   if(S.sea){clearAction();
+    {const fl=floaterAt(cx,cy);if(fl){sailTo(fl.x,fl.z,null,'');return;}}
     if(hit){const isl=islandAt(hit.x,hit.z);if(isl){cursorAt(hit.x,hit.z);if(landDist(S.boat.x,S.boat.z,isl)<2.4)disembark(isl.id);
         else{const d=Math.hypot(hit.x-S.boat.x,hit.z-S.boat.z)||1,ux=(S.boat.x-hit.x)/d,uz=(S.boat.z-hit.z)/d;sailTo(hit.x+ux*1.2,hit.z+uz*1.2,isl.id,isl.home?'Home':(S.disc[isl.id]?isl.name:''));}}}
     else{const w=waterPoint(cx,cy);if(w)sailTo(w.x,w.z,null,'');}
@@ -2164,7 +2265,7 @@ function onTap(cx,cy){
   const here=curIsl(),there=islandAt(hit.x,hit.z);
   if(here&&there&&here.id!==there.id){toast(`That's ${S.disc[there.id]?there.name:'another island'} — take your boat to get there.`);return;}
   cursorAt(hit.x,hit.z);
-  {const wd=weedAt(hit.x,hit.z);if(wd){pullWeed(wd);updateHUD();return;}const fd=findAt(hit.x,hit.z);if(fd){collectFind(fd);updateHUD();return;}const pl=plantAt(hit.x,hit.z);if(pl){pickPlant(pl);updateHUD();return;}}
+  {const db=there&&there.home&&S.mode!=='edit'?debrisAt(hit.x,hit.z):null;if(db){hitDebris(db);updateHUD();return;}const wd=weedAt(hit.x,hit.z);if(wd){pullWeed(wd);updateHUD();return;}const fd=findAt(hit.x,hit.z);if(fd){collectFind(fd);updateHUD();return;}const pl=plantAt(hit.x,hit.z);if(pl){pickPlant(pl);updateHUD();return;}}
   if(there&&!there.home){goTo(hit.x,hit.z);return;}
   if(S.mode==='edit')editTap(hit.x,hit.z);else farmTap(hit.x,hit.z);
   updateHUD();}
@@ -2172,18 +2273,35 @@ function tapLife(cx,cy){
   if(crow&&crow.state!=='out'){const s=toScreen(crowG.position.x,crowG.position.y+0.15,crowG.position.z);if(Math.hypot(s[0]-cx,s[1]-cy)<50){shooCrow();return true;}}
   let best=null,bd=46;for(const b of bugs){if(b.out)continue;const s=toScreen(b.g.position.x,b.g.position.y,b.g.position.z);const d=Math.hypot(s[0]-cx,s[1]-cy);if(d<bd){bd=d;best=b;}}
   if(best){catchBug(best);return true;}return false;}
-const ptrs=new Map();let drag=null,pinch=null;
+const ptrs=new Map();let drag=null,pinch=null,paint=null,holdT=null;
+function paintMode(x,z){if(!onHome(x,z))return null;if(debrisAt(x,z))return'clear';if(fixedAt(x,z)||objAt(x,z))return null;
+  const t=S.tiles[K(x,z)];if(!t)return landMap.get(K(x,z))==='grass'?'till':null;if(!t.crop)return'plant';if(t.crop.p>=1)return'harvest';return t.w?'tend':'water';}
+const PAINT_LBL={till:'Tilling',plant:'Planting',water:'Watering',harvest:'Harvesting',tend:'Tending',clear:'Clearing'};
+function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!onHome(x,z))return;paint.done.add(k);const t=S.tiles[k];let did=false;
+  switch(paint.mode){
+    case'till':if(!t&&landMap.get(k)==='grass'&&freeTile(x,z)){S.tiles[k]={w:S.rain?1:0,crop:null};burst(x,0.6,z,0x8a5a3a,6,1.1,0.06);SFX.till();paint.soil=did=true;}break;
+    case'plant':if(t&&!t.crop){const sh=S.shells,fr=S.free[S.seed];plant(k,x,z);did=!!t.crop;if(!did)paint.stop=true;}break;
+    case'water':if(t&&!t.w){t.w=1;for(let i=0;i<5;i++)emit(x+(Math.random()-0.5)*0.5,1.2,z+(Math.random()-0.5)*0.5,{vy:-1,life:0.5,max:0.5,size:0.06,color:0x8ac4ff,g:6});if(paint.n%3===0)SFX.water();paint.soil=did=true;}break;
+    case'harvest':if(t&&t.crop&&t.crop.p>=1){harvest(k,x,z);did=true;}break;
+    case'tend':if(t&&t.crop&&t.crop.p<1&&t.crop.td!==S.day){const c=t.crop,s0=stageOf(c.p);c.td=S.day;c.p=Math.min(0.995,c.p+0.08);if(stageOf(c.p)!==s0)syncCrop(k);hearts(x,0.9,z);tone(880+paint.n*40,0.06,'triangle',0.03);did=true;}break;
+    case'clear':{const d=debrisAt(x,z);if(d){hitDebris(d);did=true;}break;}}
+  if(did){paint.n++;cursorAt(x,z);walkTo(x,z);if(paint.soil){rebuildSoil();paint.soil=false;}}}
+function endPaint(){if(!paint)return;const n=paint.n,m=paint.mode;paint=null;clearAction();updateHUD();if(n>1)floatText(vil.x,1.3,vil.z,PAINT_LBL[m]+' ×'+n);}
 function pinchDist(){const [a,b]=[...ptrs.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1;}
 canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(ptrs.size===1)drag={sx:e.clientX,sy:e.clientY,lx:e.clientX,ly:e.clientY,moved:false};
-  else if(ptrs.size===2){if(drag)drag.moved=true;pinch={d0:pinchDist(),z0:cam.dist};}
+  if(ptrs.size===1){drag={sx:e.clientX,sy:e.clientY,lx:e.clientX,ly:e.clientY,moved:false};clearTimeout(holdT);
+    if(!S.sea&&!placing&&!fishing&&!caught&&S.mode!=='edit'){const x0=e.clientX,y0=e.clientY;
+      holdT=setTimeout(()=>{if(!drag||drag.moved||ptrs.size!==1)return;const hit=pick(x0,y0);if(!hit)return;const mode=paintMode(hit.x,hit.z);if(!mode)return;
+        paint={mode,done:new Set(),n:0};drag.moved=true;drag.paint=true;SFX.ui();setAction(`<b>${PAINT_LBL[mode]}…</b> keep your finger down and drag across tiles`,[],'Farming');paintAt(hit.x,hit.z);},300);}}
+  else if(ptrs.size===2){clearTimeout(holdT);if(paint)endPaint();if(drag)drag.moved=true;pinch={d0:pinchDist(),z0:cam.dist};}
   if(!AC||!waves){ac();if(S.sound)startWaves();}});
 canvas.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===2&&pinch){cam.dist=clamp(pinch.z0*pinch.d0/pinchDist(),8,60);return;}
+  if(paint&&ptrs.size===1){const hit=pick(e.clientX,e.clientY);if(hit)paintAt(hit.x,hit.z);return;}
   if(ptrs.size===1&&drag){const dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;
     if(!drag.moved&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>9)drag.moved=true;
     if(drag.moved){cam.yaw-=dx*0.009;cam.pitch=clamp(cam.pitch+dy*0.005,0.35,1.2);}}});
-function endPtr(e){if(!ptrs.has(e.pointerId))return;const wasOne=ptrs.size===1;ptrs.delete(e.pointerId);
+function endPtr(e){if(!ptrs.has(e.pointerId))return;const wasOne=ptrs.size===1;ptrs.delete(e.pointerId);clearTimeout(holdT);if(paint&&ptrs.size===0)endPaint();
   if(wasOne&&drag&&!drag.moved&&e.type==='pointerup')onTap(e.clientX,e.clientY);
   if(ptrs.size<2)pinch=null;if(ptrs.size===1){const p=[...ptrs.values()][0];drag={sx:p.x,sy:p.y,lx:p.x,ly:p.y,moved:true};}if(ptrs.size===0)drag=null;}
 canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
@@ -2356,7 +2474,7 @@ function frame(now){
   }
   updateBoat(dt,tt);
   if(S.sea){vil.hop=Math.max(0,vil.hop-dt);villager.position.set(vil.x,0.14+Math.sin(tt*1.5)*0.04+Math.sin(vil.hop/0.35*Math.PI)*0.3*(vil.hop>0),vil.z);if(!fishing)villager.rotation.y=S.boat.r;}
-  const k=Math.min(1,dt*3);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();
+  const k=paint?0:Math.min(1,dt*3);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam(); // hold the view still while drag-farming so tiles stay under the finger
   applyTime();
   water.position.set(Math.round(cam.tx/10)*10,0,Math.round(cam.tz/10)*10);
   scene.fog.near=cam.dist+18-fogBoost*14;scene.fog.far=cam.dist+95-fogBoost*45;
@@ -2364,7 +2482,7 @@ function frame(now){
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);
   for(const a of anims)a(tt,dt);
-  updateLife(dt,tt);updateAtmos(dt,tt);
+  updateLife(dt,tt);updateAtmos(dt,tt);updateSeaLife(dt,tt);updateDebris(dt,tt);
   if(sprayT>0){sprayT-=dt;for(const o of S.objs)if(o.k==='sprinkler'&&Math.random()<0.8){const a=Math.random()*6.28;emit(o.x,topY(o.x,o.z)+0.4,o.z,{vx:Math.cos(a)*1.6,vy:1.6,vz:Math.sin(a)*1.6,life:0.6,max:0.6,size:0.05,color:0x9ad0ff,g:6});}}
   for(const c of clouds){const u=c.userData;u.ox+=dt*u.sp;const rx=((u.ox-cam.tx)%80+120)%80-40,rz=((u.oz-cam.tz)%80+120)%80-40;c.position.set(cam.tx+rx,11,cam.tz+rz);}
   const day=1-nightF;
@@ -2395,8 +2513,10 @@ function frame(now){
    ========================================================= */
 $('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
 genIslands();for(const isl of islands)buildIsland(isl);rebuildSeaGrid();
+if(S.wv!==2){if(!isNew){S.sea=false;S.boat=null;S.picked={};vil.x=vil.tx=0.3;vil.z=vil.tz=2.1;}S.wv=2;}
 ensureBoat(true);if(S.sea&&isLand(Math.round(S.boat.x),Math.round(S.boat.z))){S.sea=false;S.boat=null;ensureBoat(false);}
 if(isNew)setupNew();
+const farmNew=!S.farmInit;if(farmNew){genDebris();S.farmInit=1;}
 if(!S.sea&&!isLand(Math.round(vil.x),Math.round(vil.z))){vil.x=vil.tx=0.3;vil.z=vil.tz=2.1;}
 if(S.sea){vil.x=vil.tx=S.boat.x;vil.z=vil.tz=S.boat.z;}
 syncObjs();rebuildSoil();if(!S.orders.length)makeOrders();syncLife();setRod();
@@ -2408,6 +2528,7 @@ window.addEventListener('resize',()=>{resize();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{const el=clamp((Date.now()-S.t)/1000,0,3*3600);if(el>5){const out=simulate(el);afterSim(out,'While you were away');}last=performance.now();}});
 window.addEventListener('pagehide',save);
 $('boot').remove();
+if(farmNew)setTimeout(()=>toast('Across the bridge to the west is your farm field, overgrown with weeds, rocks and stumps. Clear it to make room for crops. Tip: press and hold, then drag, to till, plant, water or harvest a whole row.','',ICON.sprout),isNew?9000:1500);
 if(isNew){setTimeout(()=>toast('Welcome to Driftseed Isle! Tap soil to plant, and tap ripe crops to harvest.','',ICON.sprout),500);
   setTimeout(()=>toast('Your boat waits at the dock. Sail to other islands to fill your Islandex!','',ICON.boat),4200);}
 else if(!S.boatTip)setTimeout(()=>toast('New: your boat waits at the dock! Sail to new islands and fill your Islandex.','',ICON.boat),800);

@@ -4,11 +4,14 @@ A tiny 3D pixel-art island farming game. Open `index.html` in any modern browser
 
 - **Farm:** tap grass to till, tap soil to plant the selected seed, tap to water, tap ripe crops to harvest.
 - **25 crops:** turnip, radish, carrot, lettuce, red onion, potato, cabbage, strawberry, wheat, sweet peas, bell pepper, tomato, tulip, sunflower, corn, eggplant, blueberry, pumpkin, lavender, watermelon, moonflower, grapes, peach, starfruit and night-blooming dragon fruit. They unlock as you level up.
+- **Farm field:** across a wooden bridge west of home lies a big flat field, overgrown with weeds, twigs, bushes, rocks, stumps and boulders. Tap them to clear the land (stumps and boulders take several hits). Clearing gives wood, stone and fiber, plus the odd old coin or seed packet. A few weeds and twigs creep back each morning.
+- **Drag-farming:** press and hold a tile, then drag across others to till, plant, water, tend, harvest or clear a whole row in one motion. The action is chosen from the first tile you touch.
 - **Sell:** tap the shipping bin by your home, or open the Bag. One crop sells for 1.5× each day.
 - **Rare variants:** crops can ripen as Giant, Moonlit (only at night), Golden, Crystal or Prismatic. Collect them all in the Almanac.
 - **Between harvests:** tap the sea to fish (wait for the bobber to plunge, then tap), pick up beach finds and messages in bottles, catch butterflies and moths, pull weeds, shoo crows off your crops, and tend each crop once a day for a growth boost.
 - **Orders:** three new requests arrive each morning; finish them all for a bonus and a Mystery Seed.
 - **Explore:** board your sailboat at the dock and sail to procedurally generated islands (meadow, tropical, pine, autumn, snowy, volcanic and swamp). Each has its own bugs, wild plants, berries, beach treasures and fish. Use the Sea Chart to navigate; the world curves away at the horizon like a rolling log.
+- **Travel:** the islands sit close together, a few seconds' sail apart. Tap any island you've already found on the Sea Chart to travel there instantly. Sail out to discover new ones. At sea, scoop up floating crates, driftwood and bottles, and watch dolphins leap alongside the boat.
 - **Islandex:** the main goal: record every fish, bug, plant and find in the archipelago (100+ entries), plus rare crop variants at home.
 - **Fishing (Animal Crossing style):** fish shadows swim near every shore and out at sea. Their size hints at the species, and big ones show a fin. Cast near a shadow, wait while it nibbles, then tap the moment the bobber is pulled under. Tap too early and it gets spooked.
 - **Islands:** wild islands are 20% bigger, and five Great Isles lie far out at sea: huge, terraced islands with three levels of cliffs, one per biome. Your home island can now be expanded twice more.
