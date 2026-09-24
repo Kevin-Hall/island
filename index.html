@@ -1417,7 +1417,7 @@ function talkTo(n){if(n.state==='home')return;n.state='talk';n.t=0;n.path=null;w
 function showTalk(n,line){const d=S.npc[n.i],w=npcWish(n),btns=[];
   let msg=`<b>${n.name}:</b> ${line}`;
   if(!w.done){const have=invFor(w.k);msg+=`<br><small>${n.name} is hoping for ${/^[aeiou]/i.test(nameOf(w.k))?'an':'a'} <b>${nameOf(w.k)}</b> today.</small>`;
-    btns.push({label:have?'Give '+nameOf(have):'Don’t have one',cls:'go',disabled:!have,fn:()=>giveWish(n,have)});}
+    btns.push({label:have?'Give '+nameOf(have):'Need one',cls:'go',disabled:!have,fn:()=>giveWish(n,have)});}
   btns.push({label:'Chat',fn:()=>{SFX.ui();showTalk(n,npcLine(n));}},{label:'Bye',fn:()=>{clearAction();n.state='idle';n.wait=1.5;}});
   setAction(msg,btns,`${n.name} · ${n.pers} ${n.sp} · ♥ ${d.f}/10`);}
 function giveWish(n,key){const d=S.npc[n.i];if(!key||!S.inv[key])return;S.inv[key]--;if(!S.inv[key])delete S.inv[key];d.wish.done=true;d.f=Math.min(10,d.f+3);
