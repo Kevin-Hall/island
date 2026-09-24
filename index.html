@@ -337,6 +337,16 @@ const BIOMES={
 };
 const BIOME_IDS=['meadow','tropic','pine','autumn','snow','volcano','swamp'];
 const FISH={
+  trout:{name:'Rainbow Trout',price:90,w:18,size:2,hab:'river',bio:['meadow','pine','autumn','snow'],col:'#c8a8b8',dk:'#6a7a5a',fin:'#e8a0a8'},
+  ayu:{name:'Sweetfish',price:70,w:20,size:1,hab:'river',bio:['meadow','tropic'],time:'day',col:'#c8d0a0',dk:'#6a7a4a',fin:'#e8e090'},
+  koi:{name:'Koi',price:160,w:10,size:3,hab:'river',bio:['meadow','tropic'],col:'#f4f0e8',dk:'#e0602a',fin:'#f4a060'},
+  catfish:{name:'Catfish',price:120,w:14,size:3,hab:'river',bio:['swamp','meadow','autumn'],time:'night',col:'#6a6a5a',dk:'#3a3a30',fin:'#8a8a70'},
+  crawfish:{name:'Crawfish',price:60,w:14,size:1,hab:'river',bio:['swamp','meadow'],col:'#c85a3a',dk:'#8a3a2a',fin:'#e07a5a'},
+  pike:{name:'Pike',price:150,w:10,size:4,hab:'river',bio:['swamp','autumn'],col:'#7a9a5a',dk:'#3a5a2a',fin:'#a8b870'},
+  salmon:{name:'Salmon',price:180,w:10,size:4,hab:'river',bio:['pine','snow','autumn'],col:'#d88a6a',dk:'#6a5a6a',fin:'#e8a08a'},
+  char:{name:'Stream Char',price:140,w:12,size:2,hab:'river',bio:['snow','pine'],col:'#8a9ab0',dk:'#3a4a6a',fin:'#f0a060'},
+  arowana:{name:'Arowana',price:520,w:3,size:4,hab:'river',bio:['tropic'],col:'#e8d070',dk:'#a8702a',fin:'#f0b050'},
+  goldtrout:{name:'Golden Trout',price:900,w:1.5,size:2,hab:'river',bio:['pine','snow'],col:'#f0c040',dk:'#b08020',fin:'#f8e080'},
   sardine:{name:'Sardine',price:35,w:30,size:1,hab:'any',bio:['any'],col:'#9fb6d0',dk:'#5a7090',fin:'#c8d8e8'},
   mackerel:{name:'Mackerel',price:70,w:20,size:2,hab:'any',bio:['any'],time:'day',col:'#6aa8b8',dk:'#2a5a70',fin:'#a8d0d8'},
   boot:{name:'Old Boot',price:5,w:4,size:2,hab:'any',bio:['any'],junk:true,spr:'boot'},
@@ -740,7 +750,10 @@ let islands=[];
 const isLandT=t=>t==='grass'||t==='sand'||t==='bridge';
 function isLand(x,z){return isLandT(landMap.get(K(x,z)));}
 const lvlMap=new Map(),LVH=0.62;
-function topY(x,z){const k=K(x,z),t=landMap.get(k);return t==='grass'?TOP.grass+(lvlMap.get(k)||0)*LVH:TOP[t]||0;}
+function topY(x,z){const k=K(x,z),t=landMap.get(k);return t==='grass'?TOP.grass+(lvlMap.get(k)||0)*LVH:t==='bridge'&&bridgeY.has(k)?bridgeY.get(k):t==='river'?riverSurf.get(k):TOP[t]||0;}
+// rivers: water surface height per tile (bridges over a river keep theirs), and bridge deck heights
+const riverSurf=new Map(),bridgeY=new Map();let riverList=[];
+const waterY=(x,z)=>riverSurf.get(K(Math.round(x),Math.round(z)))||0;
 function homeD(x,z){const a=Math.atan2(z,x);const f=1+0.10*Math.sin(3*a+0.7)+0.07*Math.sin(5*a+2.1)+0.05*Math.sin(7*a+4.0);return Math.hypot(x*0.82,z)/f;}
 function islR(isl){return isl.home?LAND_R[S.land]:isl.r;}
 function islDist(isl,x,z){if(isl.home)return homeD(x,z);const dx=x-isl.cx,dz=z-isl.cz,a=Math.atan2(dz,dx);
@@ -761,21 +774,21 @@ function genIslands(){
       ok=islands.every(o=>Math.hypot(o.cx-cx,o.cz-cz)>(o.home?24:o.r0/0.7)+r/0.7+9)&&Math.hypot(FARM.x-cx,FARM.z-cz)>13+r*1.2/0.7+7;}
     if(!ok)continue;
     let name='';for(let t=0;t<30;t++){name=B.names[0][Math.floor(R()*B.names[0].length)]+' '+B.names[1][Math.floor(R()*B.names[1].length)];if(!used.has(name))break;}used.add(name);
-    islands.push({id:islands.length,cx,cz,r:r*1.2,r0:r,biome,name,sx:0.78+R()*0.4,p1:R()*6.28,p2:R()*6.28,p3:R()*6.28,seed:Math.floor(R()*1e9)});
+    islands.push({id:islands.length,cx,cz,r:r*1.2,r0:r,riverN:r*1.2>=9.4&&biome!=='volcano'?1:0,rw:1,biome,name,sx:0.78+R()*0.4,p1:R()*6.28,p2:R()*6.28,p3:R()*6.28,seed:Math.floor(R()*1e9)});
   }
   // grand isles: big, hilly islands out past the others (separate RNG so older worlds keep their layout)
   const G=mulberry(S.worldSeed^0x5eed51);
   const gb=shuffle(BIOME_IDS.slice(),G);
   for(let i=0;i<5;i++){
-    const biome=gb[i],B=BIOMES[biome],r=10.5+G()*3.5;let cx=0,cz=0,ok=false;
+    const biome=gb[i],B=BIOMES[biome],r=15+G()*4;let cx=0,cz=0,ok=false;
     for(let t=0;t<120&&!ok;t++){const a=G()*6.283,d=92+i*14+G()*16+t*0.7;cx=Math.round(Math.cos(a)*d);cz=Math.round(Math.sin(a)*d);
       ok=islands.every(o=>Math.hypot(o.cx-cx,o.cz-cz)>(o.home?24:o.r/0.7)+r/0.7+10);}
     if(!ok)continue;
     let name='';for(let t=0;t<30;t++){name='Great '+B.names[0][Math.floor(G()*B.names[0].length)]+' '+B.names[1][Math.floor(G()*B.names[1].length)];if(!used.has(name))break;}used.add(name);
-    islands.push({id:islands.length,cx,cz,r,biome,name,grand:true,sx:0.8+G()*0.35,p1:G()*6.28,p2:G()*6.28,p3:G()*6.28,seed:Math.floor(G()*1e9)});
+    islands.push({id:islands.length,cx,cz,r,biome,name,grand:true,riverN:biome==='volcano'?1:1+(G()<0.5?1:0),rw:2,sx:0.8+G()*0.35,p1:G()*6.28,p2:G()*6.28,p3:G()*6.28,seed:Math.floor(G()*1e9)});
   }
 }
-function rebuildLandList(){landList=[];for(const [k,t] of landMap){if(!isLandT(t))continue;const [x,z]=k.split(',').map(Number);landList.push([x,z,t,islMap.get(k),topY(x,z)]);}}
+function rebuildLandList(){landList=[];riverList=[];for(const [k,t] of landMap){if(t==='river'){const [x,z]=k.split(',').map(Number);riverList.push([x,z,riverSurf.get(k)]);continue;}if(!isLandT(t))continue;const [x,z]=k.split(',').map(Number);landList.push([x,z,t,islMap.get(k),topY(x,z)]);}}
 
 // canopy of many leafy puffs (lighter on top) with little leaves poking out for a fuzzy silhouette
 function canopy(p,R,cols,cx,cy,cz,rad,n,puff){
@@ -876,9 +889,69 @@ function refreshHomeGrass(){const isl=islands&&islands[0];if(!isl||!isl.gIM)retu
     for(let j=0;j<per;j++){if(hide)im.setMatrixAt(i0+j,_m.makeScale(0,0,0));else im.setMatrixAt(i0+j,clumpMat(x,z,j));}}
   im.instanceMatrix.needsUpdate=true;}
 const TUFT_GEO=merge([P(BOX,0xffffff,0,0.07,0,0.25,0,0.2,0.035,0.16,0.05),P(BOX,0xdddddd,0.06,0.06,0.03,-0.2,0.6,-0.3,0.035,0.13,0.05),P(BOX,0xeeeeee,-0.05,0.05,-0.03,0.3,1.2,0.4,0.035,0.11,0.05),P(BOX,0xd4d4d4,0.02,0.05,-0.06,-0.35,2,0.1,0.035,0.1,0.05)]);
+const riverU={uTime:{value:0}};
+// flowing water (or lava): a toon material whose colour shimmers with world position and time
+function flowMat(col,hi,emi,fall){const m=toon({color:col,emissive:emi||0,emissiveIntensity:emi?0.9:0,side:fall?T.DoubleSide:T.FrontSide});
+  m.onBeforeCompile=sh=>{sh.uniforms.uTime=riverU.uTime;
+    sh.vertexShader='varying vec3 vRW;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n  vec4 rw=vec4(transformed,1.);\n  #ifdef USE_INSTANCING\n  rw=instanceMatrix*rw;\n  #endif\n  vRW=(modelMatrix*rw).xyz;');
+    sh.fragmentShader='uniform float uTime;varying vec3 vRW;\n'+sh.fragmentShader.replace('vec4 diffuseColor = vec4( diffuse, opacity );',fall?
+      `vec4 diffuseColor = vec4( diffuse, opacity );
+      float st=fract(vRW.y*2.4+uTime*2.6+sin(vRW.x*7.+vRW.z*7.)*0.7);diffuseColor.rgb=mix(diffuseColor.rgb,vec3(${hi}),step(0.62,st)*0.85);`:
+      `vec4 diffuseColor = vec4( diffuse, opacity );
+      float w=sin(vRW.x*2.6+uTime*1.4)+sin(vRW.z*3.1-uTime*1.8)+sin((vRW.x-vRW.z)*1.7+uTime*0.9);
+      diffuseColor.rgb=mix(diffuseColor.rgb,vec3(${hi}),smoothstep(1.7,2.5,w)*0.8);diffuseColor.rgb*=0.93+0.07*sin(vRW.x*1.3+vRW.z*0.7+uTime*0.6);`);};
+  return m;}
+const RIVER_MATS={water:flowMat(0x4f9ae0,'0.86,0.95,1.0'),swamp:flowMat(0x4a8070,'0.7,0.86,0.78'),snow:flowMat(0x72b4e8,'0.92,0.98,1.0'),lava:flowMat(0xe0582a,'1.0,0.86,0.3',0xb03a10)};
+const FALL_MATS={water:flowMat(0x7ab8f0,'0.95,0.99,1.0',0,1),swamp:flowMat(0x6a9a88,'0.85,0.95,0.9',0,1),snow:flowMat(0x9accf4,'1.0,1.0,1.0',0,1),lava:flowMat(0xf0782a,'1.0,0.92,0.4',0xc04a10,1)};
+const FALL_PLANE=new T.PlaneGeometry(1,1);
+// carve rivers from an inland pond down to the sea; they drop a tier at a time as waterfalls and get wooden bridges
+function carveRivers(isl,g){const R=mulberry(isl.seed^0x71e5),B=BIOMES[isl.biome],lava=isl.biome==='volcano',wide=isl.rw||1,mk=lava?'lava':isl.biome==='swamp'?'swamp':isl.biome==='snow'?'snow':'water';
+  const typeAt=(x,z)=>islMap.get(K(x,z))===isl.id?landMap.get(K(x,z)):null;
+  const lvl=(x,z)=>{const t=typeAt(x,z);return t==='grass'?(lvlMap.get(K(x,z))||0):t==='sand'?-1:-9;};
+  const tiles=new Map(),mains=[];const a0=R()*6.283,off=lava?4.6:isl.r*0.08;
+  const addT=(x,z,L,fx,fz)=>{const k=K(x,z);if(lvl(x,z)<-1)return false;const o=tiles.get(k);if(o){o.L=Math.min(o.L,L);return true;}tiles.set(k,{x,z,L,fx,fz});return true;};
+  for(let r=0;r<(isl.riverN||0);r++){const ang=r===0?a0:a0+Math.PI+(R()-0.5)*1.2;let a=ang,x=isl.cx+Math.cos(ang)*off,z=isl.cz+Math.sin(ang)*off,px=Math.round(x),pz=Math.round(z);
+    let L=lvl(px,pz);if(L<0)continue;const path=[[px,pz]],ph=R()*6;
+    for(let s=0;s<300;s++){a+=(R()-0.5)*0.3+Math.sin(s*0.13+ph)*0.05;a+=(ang-a)*0.04;x+=Math.cos(a)*0.5;z+=Math.sin(a)*0.5;const nx=Math.round(x),nz=Math.round(z);if(nx===px&&nz===pz)continue;
+      if(nx!==px&&nz!==pz)path.push([nx,pz]);path.push([nx,nz]);px=nx;pz=nz;const t=typeAt(nx,nz);if(t!=='grass'&&t!=='sand')break;}
+    if(r===0)for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++)if(dx*dx+dz*dz<=(wide>1?4:2)&&lvl(path[0][0]+dx,path[0][1]+dz)>=L)addT(path[0][0]+dx,path[0][1]+dz,L,1,0);
+    const main=[];
+    for(let i=0;i<path.length;i++){const [x0,z0]=path[i],nx=path[Math.min(i+1,path.length-1)],pv=path[Math.max(i-1,0)],fx=nx[0]-pv[0],fz=nx[1]-pv[1];
+      const l0=lvl(x0,z0);if(l0<-1)break;const side=Math.abs(fx)>=Math.abs(fz)?[x0,z0+1]:[x0+1,z0];
+      let Li=Math.min(L,l0);if(wide>1&&lvl(side[0],side[1])>=-1)Li=Math.min(Li,lvl(side[0],side[1]));L=Li;
+      addT(x0,z0,Li,fx,fz);if(wide>1)addT(side[0],side[1],Li,fx,fz);main.push({x:x0,z:z0,fx,fz,L:Li});}
+    mains.push(main);}
+  if(!tiles.size)return;
+  const list=[...tiles.values()];
+  for(const q of list){const k=K(q.x,q.z);q.surf=q.L<0?0.07:TOP.grass+q.L*LVH-0.2;landMap.set(k,'river');riverSurf.set(k,q.surf);lvlMap.set(k,Math.max(0,q.L));}
+  isl.grass=isl.grass.filter(([x,z])=>!tiles.has(K(x,z)));isl.sand=isl.sand.filter(([x,z])=>!tiles.has(K(x,z)));isl.rtiles=list;isl.lava=lava;
+  // bridges: across the flow where both banks are at the same height and there's no waterfall
+  const pb=[];isl.bridges=0;
+  for(const main of mains){const want=wide>1?[0.3,0.62]:[0.5];
+    for(const fr of want){for(let d=0;d<main.length*0.2;d++){const j=Math.floor(main.length*fr)+(d%2?-1:1)*Math.ceil(d/2);const m=main[j];if(!m||m.L<0)continue;
+      const along=Math.abs(m.fx)>=Math.abs(m.fz),[ux,uz]=along?[0,1]:[1,0];let a=0,b=0;while(tiles.has(K(m.x-ux*(a+1),m.z-uz*(a+1)))&&a<3)a++;while(tiles.has(K(m.x+ux*(b+1),m.z+uz*(b+1)))&&b<3)b++;
+      const e1=[m.x-ux*(a+1),m.z-uz*(a+1)],e2=[m.x+ux*(b+1),m.z+uz*(b+1)];if(typeAt(...e1)!=='grass'||typeAt(...e2)!=='grass')continue;const bl=lvlMap.get(K(...e1))||0;if(bl!==(lvlMap.get(K(...e2))||0))continue;
+      const row=[];for(let t=-a;t<=b;t++)row.push([m.x+ux*t,m.z+uz*t]);if(row.some(([x,z])=>{const q=tiles.get(K(x,z));return !q||q.L!==m.L||landMap.get(K(x,z))!=='river';}))continue;
+      const fl=[[m.x+(along?1:0),m.z+(along?0:1)],[m.x-(along?1:0),m.z-(along?0:1)]];if(fl.some(([x,z])=>riverSurf.has(K(x,z))&&Math.abs(riverSurf.get(K(x,z))-riverSurf.get(K(m.x,m.z)))>0.05))continue;
+      const y=TOP.grass+bl*LVH-0.02;
+      for(const [x,z] of row){const k=K(x,z);landMap.set(k,'bridge');bridgeY.set(k,y);
+        for(let i=0;i<4;i++){const o=-0.36+i*0.24;pb.push(along?P(BOX,i%2?0xa27a50:0x94704a,x+o,y-0.04,z,0,0,0,0.22,0.07,1.0):P(BOX,i%2?0xa27a50:0x94704a,x,y-0.04,z+o,0,0,0,1.0,0.07,0.22));}
+        for(const sd of [-1,1]){const rx=along?x+sd*0.47:x,rz=along?z:z+sd*0.47;
+          pb.push(P(BOX,0x7a5230,rx,y+0.2,rz,0,0,0,along?0.06:1.02,0.06,along?1.02:0.06),P(CYL8,0x5a3a2a,rx,y-0.12,rz,0,0,0,0.09,0.7,0.09));}}
+      isl.bridges++;break;}}}
+  // river beds, water, waterfalls
+  const bed=new T.InstancedMesh(BOX,vcMatFlat,list.length),wat=new T.InstancedMesh(TILE_PLANE,RIVER_MATS[mk],list.length);
+  list.forEach((q,i)=>{const bt=q.surf-0.14,h=bt+0.6;_m.compose(_v.set(q.x,-0.6+h/2,q.z),_q.identity(),_s.set(1,h,1));bed.setMatrixAt(i,_m);bed.setColorAt(i,_c.set(lava?0x3a2a2a:B.cliff||0x9a7050).multiplyScalar(0.72));
+    _m.makeTranslation(q.x,q.surf,q.z);wat.setMatrixAt(i,_m);});
+  for(const m of [bed,wat]){m.frustumCulled=false;m.receiveShadow=true;g.add(m);}
+  const fp=[];isl.falls=[];
+  for(const q of list)for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const k2=K(q.x+dx,q.z+dz);if(!riverSurf.has(k2))continue;const s2=riverSurf.get(k2);
+    if(s2<q.surf-0.05){const h=q.surf-s2+0.02;fp.push(P(FALL_PLANE,0xffffff,q.x+dx*0.5,s2+h/2,q.z+dz*0.5,0,Math.atan2(dx,dz),0,1,h,1));isl.falls.push([q.x+dx*0.62,s2,q.z+dz*0.62]);}}
+  if(fp.length){const m=new T.Mesh(merge(fp),FALL_MATS[mk]);m.frustumCulled=false;g.add(m);}
+  if(pb.length)g.add(M(pb.filter(Boolean)));}
 function buildIsland(isl){
   if(isl.group){scene.remove(isl.group);isl.group.traverse(o=>{if(o.isInstancedMesh)o.dispose();else if(o.geometry&&o.geometry!==TILE_PLANE&&o.geometry!==BOX&&o.geometry!==POOL_GEO&&o.geometry!==BLADES)o.geometry.dispose();});}
-  if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);}
+  if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);riverSurf.delete(k);bridgeY.delete(k);}
   const g=new T.Group();isl.group=g;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
   const span=Math.ceil(islR(isl)/0.62+3),B=BIOMES[isl.biome];
   for(let x=isl.home?Math.min(isl.cx-span,FARM.x-11):isl.cx-span;x<=isl.cx+span;x++)for(let z=isl.cz-span;z<=isl.cz+span;z++){
@@ -887,6 +960,7 @@ function buildIsland(isl){
     landMap.set(k,t);islMap.set(k,isl.id);isl.keys.push(k);
     if(t==='grass'){const l=levelOf(isl,x,z);if(l)lvlMap.set(k,l);}
     (t==='grass'?isl.grass:t==='sand'?isl.sand:t==='s1'?a1:a2).push([x,z]);}
+  if(!isl.home&&isl.riverN)carveRivers(isl,g);
   // grass tiles: a grassy slab on top of a dirt or rock cliff, like the tiers of Wild World
   if(isl.grass.length){const n=isl.grass.length,body=new T.InstancedMesh(BOX,vcMatFlat,n),top=new T.InstancedMesh(GRASS_SLAB,vcMatFlat,n);
     isl.grass.forEach(([x,z],i)=>{const ty=topY(x,z),h=ty-0.14+0.6;
@@ -922,7 +996,7 @@ function buildIsland(isl){
       for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++)if(dx*dx+dz*dz<=5)blocked.add(K(isl.cx+dx,isl.cz+dz));
       isl.vent=[isl.cx,3,isl.cz];
     }
-    const gr=shuffle(isl.grass.slice(),R),n=Math.round(gr.length*0.15);
+    const gr=shuffle(isl.grass.slice(),R),n=Math.round(gr.length*(isl.grand?0.08:0.15));
     let placed=0;for(const [x,z] of gr){if(placed>=n)break;if(blocked.has(K(x,z)))continue;
       parts.push(...shift(treeParts(B.trees[Math.floor(R()*B.trees.length)],R,B.rock),x+(R()-0.5)*0.3,topY(x,z),z+(R()-0.5)*0.3,R()*6.28));blocked.add(K(x,z));placed++;}
     const sa=shuffle(isl.sand.slice(),R);for(let i=0;i<Math.min(4,sa.length);i++){const [x,z]=sa[i];parts.push(...shift(treeParts(isl.biome==='swamp'?'reeds':'rock',R,B.rock),x,TOP.sand,z,R()*6));blocked.add(K(x,z));}
@@ -931,7 +1005,7 @@ function buildIsland(isl){
     isl.spots=gr.filter(([x,z])=>!blocked.has(K(x,z))).slice(0,Math.max(5,Math.min(isl.grand?30:18,Math.round(gr.length*0.18))));
   }
   isl.blocked=blocked;
-  isl.edges=[];for(const [x,z] of [...isl.grass,...isl.sand])for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(!isLand(x+dx,z+dz))isl.edges.push([x+dx*0.5,z+dz*0.5,dx,dz,hash(x*3+dx,z*5+dz)*6.28]);
+  isl.edges=[];for(const [x,z] of [...isl.grass,...isl.sand])for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(!isLand(x+dx,z+dz)&&!riverSurf.has(K(x+dx,z+dz)))isl.edges.push([x+dx*0.5,z+dz*0.5,dx,dz,hash(x*3+dx,z*5+dz)*6.28]);
   // little grass tufts scattered on the wild islands
   if(!isl.home&&B.tuft){const pts=[];for(const [x,z] of isl.grass){if(blocked.has(K(x,z)))continue;const h=hash(x*3.1,z*1.7);if(h<0.45){pts.push([x+(hash(z,x*2)-0.5)*0.7,topY(x,z),z+(hash(x+5,z)-0.5)*0.7]);if(h<0.15)pts.push([x+(hash(z*3,x)-0.5)*0.7,topY(x,z),z+(hash(x,z*7)-0.5)*0.7]);}}
     if(pts.length){const im=new T.InstancedMesh(TUFT_GEO,grassMat,pts.length);pts.forEach(([x,y,z],i)=>{_e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x,y,z),_q,_s.set(1,0.8+hash(z,x)*0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.set(B.tuft));});
@@ -1436,8 +1510,23 @@ function sell(key,n){const have=S.inv[key]||0;n=Math.min(n,have);if(!n)return 0;
 /* =========================================================
    Farming & island actions
    ========================================================= */
-function walkTo(x,z){const dx=x-vil.x,dz=z-vil.z,d=Math.hypot(dx,dz)||1;vil.tx=x-dx/d*0.62;vil.tz=z-dz/d*0.62;vil.idle=0;vil.cb=null;}
-function goTo(x,z,cb){vil.tx=x;vil.tz=z;vil.idle=0;vil.cb=cb||null;}
+function walkTo(x,z){const dx=x-vil.x,dz=z-vil.z,d=Math.hypot(dx,dz)||1;routeVil(x-dx/d*0.62,z-dz/d*0.62);vil.idle=0;vil.cb=null;}
+function goTo(x,z,cb){routeVil(x,z);vil.idle=0;vil.cb=cb||null;}
+// only rivers block walking (the villager hops up cliffs); detour over a bridge with a small A* when needed
+const walkable=(x,z)=>{const t=landMap.get(K(x,z));return t==='grass'||t==='sand'||t==='bridge';};
+function lineClear(x0,z0,x1,z1){const n=Math.ceil(Math.hypot(x1-x0,z1-z0)/0.2);for(let i=1;i<=n;i++){if(landMap.get(K(Math.round(x0+(x1-x0)*i/n),Math.round(z0+(z1-z0)*i/n)))==='river')return false;}return true;}
+function landPath(sx,sz,tx,tz){if(!walkable(tx,tz))return null;const open=[[sx,sz,0,0]],g=new Map([[K(sx,sz),0]]),from=new Map();let it=0;
+  while(open.length&&it++<5000){let bi=0;for(let i=1;i<open.length;i++)if(open[i][3]<open[bi][3])bi=i;const [x,z,gc]=open.splice(bi,1)[0];
+    if(x===tx&&z===tz){const p=[[x,z]];let k=K(x,z);while(from.has(k)){const q=from.get(k);p.unshift(q);k=K(q[0],q[1]);}return p;}
+    for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){const nx=x+dx,nz=z+dz;if(!walkable(nx,nz))continue;if(dx&&dz&&(!walkable(x+dx,z)||!walkable(x,z+dz)))continue;
+      const ng=gc+(dx&&dz?1.414:1),k=K(nx,nz);if(g.has(k)&&g.get(k)<=ng)continue;g.set(k,ng);from.set(k,[x,z]);open.push([nx,nz,ng,ng+Math.hypot(tx-nx,tz-nz)]);}}
+  return null;}
+function routeVil(tx,tz){vil.path=null;const sx=Math.round(vil.x),sz=Math.round(vil.z);
+  if(!S.sea&&walkable(sx,sz)&&riverList.length&&!lineClear(vil.x,vil.z,tx,tz)){const p=landPath(sx,sz,Math.round(tx),Math.round(tz));
+    if(p){const all=[...p.slice(1,-1),[tx,tz]],pts=[];let cx=vil.x,cz=vil.z,i=0;
+      while(i<all.length){let j=all.length-1;while(j>i&&!lineClear(cx,cz,all[j][0],all[j][1]))j--;pts.push(all[j]);cx=all[j][0];cz=all[j][1];i=j+1;}
+      const f=pts.shift();vil.tx=f[0];vil.tz=f[1];vil.path=pts;return;}}
+  vil.tx=tx;vil.tz=tz;}
 function plant(k,x,z){
   const id=S.seed,info=id==='mystery'?MYSTERY:CROPS[id];
   if(S.free[id]){S.free[id]--;if(!S.free[id])delete S.free[id];}
@@ -1768,8 +1857,8 @@ const rod=M([P(BOX,0xffffff,0,0.5,0,0,0,0,0.035,1.0,0.035)]);rod.castShadow=fals
 const ROD_COL=[0x9a7a4a,0x6a4a8a,0xf5c542];
 const TIP=new T.Vector3();
 function fishWindow(F){return(F.w>=15?1.0:F.w>=6?0.82:F.w>=2.5?0.66:0.55)*(1+S.rod*0.22);}
-function chooseFish(region,deep){const night=isNight();
-  return pickW(FISH,k=>{const F=FISH[k];if(!(F.bio.includes('any')||F.bio.includes(region)))return false;if(F.time==='day'&&night)return false;if(F.time==='night'&&!night)return false;if(F.rain&&!S.rain)return false;if(F.hab==='deep'&&!deep)return false;if(F.hab==='shore'&&deep)return false;return true;},
+function chooseFish(region,deep,river){const night=isNight();
+  return pickW(FISH,k=>{const F=FISH[k];if(F.hab==='river'?!river:(river&&!F.junk))return false;if(!(F.bio.includes('any')||F.bio.includes(region)))return false;if(F.time==='day'&&night)return false;if(F.time==='night'&&!night)return false;if(F.rain&&!S.rain)return false;if(!river&&F.hab==='deep'&&!deep)return false;if(!river&&F.hab==='shore'&&deep)return false;return true;},
     (k,F)=>F.junk?F.w*(1-S.rod*0.35):F.w<6?F.w*(1+S.rod*0.6):F.w);}
 function setRod(){rod.material=S.rod===2?goldMat:new T.MeshBasicMaterial({color:ROD_COL[S.rod]});}
 
@@ -1782,14 +1871,18 @@ function spawnShadow(){
   if(shadows.filter(s=>!s.out).length>=5)return;
   let px,pz;
   if(S.sea){const a=Math.random()*6.283,r=3+Math.random()*7;px=vil.x+Math.sin(a)*r;pz=vil.z+Math.cos(a)*r;}
-  else{const isl=curIsl();if(!isl||!isl.sand.length)return;const [sx,sz]=pickR(isl.sand);if(Math.hypot(sx-vil.x,sz-vil.z)>13)return;
+  else{const isl=curIsl();if(!isl||!isl.sand.length)return;
+    if(isl.rtiles&&!isl.lava&&Math.random()<0.5){const q=pickR(isl.rtiles);if(Math.hypot(q.x-vil.x,q.z-vil.z)>13||landMap.get(K(q.x,q.z))!=='river')return;
+      spawnShadowAt(q.x+(Math.random()-0.5)*0.4,q.z+(Math.random()-0.5)*0.4,chooseFish(isl.biome,false,true),q.surf);return;}
+    const [sx,sz]=pickR(isl.sand);if(Math.hypot(sx-vil.x,sz-vil.z)>13)return;
     const cx=isl.home?0:isl.cx,cz=isl.home?0:isl.cz,d0=Math.hypot(sx-cx,sz-cz)||1,r=1.8+Math.random()*2.6;px=sx+(sx-cx)/d0*r;pz=sz+(sz-cz)/d0*r;}
   if(landMap.has(K(Math.round(px),Math.round(pz)))&&isLand(Math.round(px),Math.round(pz)))return;
-  const deep=landDist(px,pz)>2.8,region=regionAt(px,pz),fish=chooseFish(region,deep);if(!fish)return;
+  const deep=landDist(px,pz)>2.8,region=regionAt(px,pz);spawnShadowAt(px,pz,chooseFish(region,deep),0);}
+function spawnShadowAt(px,pz,fish,wy){if(!fish)return;
   const F=FISH[fish],g=new T.Group(),m=new T.Mesh(SHADOW_GEO,shadowMat);m.frustumCulled=false;const sz=0.24+F.size*0.13;m.scale.set(sz,1,sz*2.1);g.add(m);
   if(F.size>=5||F.fin){const fin=new T.Mesh(FIN_GEO,vcMat);fin.frustumCulled=false;fin.scale.setScalar(0.7+F.size*0.1);g.add(fin);}
   g.position.set(px,0.015,pz);const h=Math.random()*6.28;g.rotation.y=h;scene.add(g);
-  shadows.push({g,fish,ax:px,az:pz,x:px,z:pz,t:0,life:45+Math.random()*40,out:0,hooked:false,heading:h,tx:px,tz:pz});
+  shadows.push({g,fish,ax:px,az:pz,x:px,z:pz,t:0,life:45+Math.random()*40,out:0,hooked:false,heading:h,tx:px,tz:pz,wy,riv:wy>0});
 }
 function nearestShadow(x,z,r){let best=null,bd=r;for(const s of shadows){if(s.out||s.hooked)continue;const d=Math.hypot(s.x-x,s.z-z);if(d<bd){bd=d;best=s;}}return best;}
 function fleeShadow(s,fx,fz){if(!s)return;s.hooked=false;s.out=0.001;s.heading=Math.atan2(s.x-fx,s.z-fz);}
@@ -1800,13 +1893,13 @@ function updateShadows(dt){
     else if(!s.hooked){
       if(Math.random()<dt*0.5){const a=Math.random()*6.28;s.tx=s.ax+Math.cos(a)*1.8;s.tz=s.az+Math.sin(a)*1.8;}
       const dx=s.tx-s.x,dz=s.tz-s.z,d=Math.hypot(dx,dz);
-      if(d>0.05){const nx=s.x+dx/d*0.4*dt,nz=s.z+dz/d*0.4*dt;if(!isLand(Math.round(nx),Math.round(nz))){s.x=nx;s.z=nz;}s.heading=Math.atan2(dx,dz);}
+      if(d>0.05){const nx=s.x+dx/d*0.4*dt,nz=s.z+dz/d*0.4*dt;if(s.riv?landMap.get(K(Math.round(nx),Math.round(nz)))==='river':!isLand(Math.round(nx),Math.round(nz))){s.x=nx;s.z=nz;}s.heading=Math.atan2(dx,dz);}
       if(s.t>s.life||Math.hypot(s.x-vil.x,s.z-vil.z)>24)s.out=0.001;}
-    s.g.position.set(s.x,0.015,s.z);s.g.rotation.y+=angDiff(s.g.rotation.y,s.heading)*Math.min(1,dt*4);}}
+    s.g.position.set(s.x,0.015+(s.wy||0),s.z);s.g.rotation.y+=angDiff(s.g.rotation.y,s.heading)*Math.min(1,dt*4);}}
 
 // ---- ripples ----
 const rings=[];const RING_GEO=new T.RingGeometry(0.28,0.36,24).rotateX(-Math.PI/2);
-function ripple(x,z,big){const m=new T.Mesh(RING_GEO,new T.MeshBasicMaterial({color:0xf4f8ff,transparent:true,opacity:0.9,depthWrite:false}));m.frustumCulled=false;m.position.set(x,0.03,z);scene.add(m);rings.push({m,t:0,big:big?1.8:1});}
+function ripple(x,z,big){const m=new T.Mesh(RING_GEO,new T.MeshBasicMaterial({color:0xf4f8ff,transparent:true,opacity:0.9,depthWrite:false}));m.frustumCulled=false;m.position.set(x,0.03+waterY(x,z),z);scene.add(m);rings.push({m,t:0,big:big?1.8:1});}
 function updateRings(dt){for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.t+=dt;const u=r.t/0.9;r.m.scale.setScalar(1+u*2.2*r.big);r.m.material.opacity=0.9*(1-u);if(u>=1){scene.remove(r.m);r.m.material.dispose();rings.splice(i,1);}}}
 
 // ---- the catch: fish leaps out and is held up high ----
@@ -1845,8 +1938,8 @@ function startFishing(px,pz){
   let dist=Math.sqrt(bd)||1;const dx=(px-best[0])/dist,dz=(pz-best[1])/dist;
   if(dist>4.8){dist=4.8;px=best[0]+dx*dist;pz=best[1]+dz*dist;}
   if(dist<0.9){dist=0.9;px=best[0]+dx*dist;pz=best[1]+dz*dist;}
-  fishing={px,pz,sx:best[0]+dx*0.38,sz:best[1]+dz*0.38,state:'walk',t:0};
-  vil.tx=fishing.sx;vil.tz=fishing.sz;vil.idle=0;vil.cb=null;setRod();fishingBar();
+  fishing={px,pz,sx:best[0]+dx*0.38,sz:best[1]+dz*0.38,state:'walk',t:0,wy:waterY(px,pz)};
+  routeVil(fishing.sx,fishing.sz);vil.idle=0;vil.cb=null;setRod();fishingBar();
 }
 function startBoatFishing(){if(!S.sea||fishing)return;sail=null;const b=S.boat;
   const sh=nearestShadow(b.x,b.z,9);let px,pz;
@@ -1873,7 +1966,7 @@ function catchFish(){const f=fishing,id=f.target.fish,F=FISH[id],key='f:'+id;con
 function updateFishing(dt,tt){updateShadows(dt);updateRings(dt);updateCaught(dt,tt);
   const f=fishing;if(!f)return;f.t+=dt;
   if(f.state==='walk'){if(Math.hypot(vil.x-f.sx,vil.z-f.sz)<0.06){f.state='cast';f.t=0;rod.visible=true;villager.rotation.y=Math.atan2(f.px-f.sx,f.pz-f.sz);SFX.cast();}
-    else if(f.t>8)endFishing();return;}
+    else if(f.t>14)endFishing();return;}
   if(f.fromBoat)villager.rotation.y=S.boat.r;
   villager.updateMatrixWorld(true);TIP.set(0,1,0);rod.localToWorld(TIP);
   if(f.state==='cast'){const u=Math.min(1,f.t/0.55);rod.rotation.x=u<0.35?lerp(0.95,-0.7,u/0.35):lerp(-0.7,0.95,(u-0.35)/0.65);bobber.visible=fishLine.visible=true;
@@ -1896,6 +1989,7 @@ function updateFishing(dt,tt){updateShadows(dt);updateRings(dt);updateCaught(dt,
   else if(f.state==='bite'){bobber.position.set(f.px+Math.sin(tt*40)*0.02,-0.16,f.pz);
     if(f.t>f.win){endFishing('It got away…');return;}}
   if(!fishing)return;
+  if(f.wy)bobber.position.y+=f.wy;
   const pa=lineGeo.attributes.position.array;pa[0]=TIP.x;pa[1]=TIP.y;pa[2]=TIP.z;pa[3]=bobber.position.x;pa[4]=bobber.position.y+0.18;pa[5]=bobber.position.z;lineGeo.attributes.position.needsUpdate=true;}
 
 /* =========================================================
@@ -2184,6 +2278,7 @@ function drawChart(){const cv=$('chart');if(!cv)return;const g=cv.getContext('2d
     for(let wx=isl.home?Math.min(-R,FARM.x-11):-R;wx<=R;wx+=px/sc)for(let wz=-R;wz<=R;wz+=px/sc){const t=tileTypeI(isl,Math.round(isl.cx+wx),Math.round(isl.cz+wz));if(!t)continue;
       g.fillStyle=t==='grass'?hex(B.grass[0]):t==='sand'?hex(B.sand[0]):t==='s1'?'#7ea6e8':'#5584da';
       g.fillRect(Math.round(X(isl.cx+wx)/px)*px,Math.round(Y(isl.cz+wz)/px)*px,px,px);}}
+  for(const isl of disc)if(isl.rtiles){g.fillStyle=isl.lava?'#e0582a':'#5a9ae8';for(const q of isl.rtiles)g.fillRect(Math.round(X(q.x-0.5)),Math.round(Y(q.z-0.5)),Math.max(2,Math.ceil(sc)),Math.max(2,Math.ceil(sc)));}
   g.fillStyle='#a27a50';for(const [x,z] of islands[0].bridge||[])g.fillRect(Math.round(X(x-0.5)),Math.round(Y(z-0.5)),Math.max(2,Math.ceil(sc)),Math.max(2,Math.ceil(sc)));
   g.font='12px "Fredoka", sans-serif';g.textAlign='center';
   for(const isl of disc){const R=islR(isl)/0.7;const y=Math.max(12,Y(isl.cz)-R*sc-5);g.fillStyle='#2b1e2e';g.fillText(isl.name,X(isl.cx)+1,y+1);g.fillStyle='#fff6e2';g.fillText(isl.name,X(isl.cx),y);}
@@ -2244,6 +2339,8 @@ function pick(cx,cy){
   hot.push([HOUSE_AT.x,HOUSE_AT.z+1,1.0],[HOUSE_AT.x+1,HOUSE_AT.z+1,1.0]);
   let hb=null,hd=Math.max(22,tp*0.5);for(const [x,z,y] of hot){const s=toScreen(x,y,z);const d=Math.hypot(s[0]-cx,s[1]-cy);if(d<hd){hd=d;hb={x,z};}}
   if(hb)return hb;
+  let rb=null,rd=1e9;for(const L of riverList){const dx=L[0]-cam.tx,dz=L[1]-cam.tz;if(dx*dx+dz*dz>2500)continue;const s=toScreen(L[0],L[2],L[1]);if(s[2]>1)continue;const d=(s[0]-cx)**2+(s[1]-cy)**2;if(d<rd){rd=d;rb=L;}}
+  if(rb&&rd<bd&&Math.sqrt(rd)<tp*0.8)return{x:rb[0],z:rb[1],river:true};
   if(best&&Math.sqrt(bd)<tp*0.8)return{x:best[0],z:best[1]};
   return null;}
 function onTap(cx,cy){
@@ -2260,6 +2357,8 @@ function onTap(cx,cy){
     else{const w=waterPoint(cx,cy);if(w)sailTo(w.x,w.z,null,'');}
     return;}
   if(tapLife(cx,cy)){clearAction();updateHUD();return;}
+  if(hit&&hit.river){clearAction();const ri=islandAt(hit.x,hit.z),here0=curIsl();if(!ri||!here0||ri.id!==here0.id)return;
+    if(ri.lava){toast('That lava is far too hot to fish in!');return;}startFishing(hit.x,hit.z);return;}
   if(!hit){clearAction();const w=waterPoint(cx,cy);if(w&&!isLand(Math.round(w.x),Math.round(w.z)))startFishing(w.x,w.z);return;}
   if(!$('actionBar').hidden)clearAction();
   const here=curIsl(),there=islandAt(hit.x,hit.z);
@@ -2462,13 +2561,17 @@ function frame(now){
   const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;
   advance(dt*devSpeed);
   rainMix=clamp(rainMix+(S.rain?dt:-dt)*0.5,0,1);
-  grassU.uTime.value=tt;grassU.uWind.value=1+rainMix*1.3;grassU.uPl.value.set(vil.x,S.sea?-99:vil.y,vil.z);
+  grassU.uTime.value=tt;riverU.uTime.value=tt;
+  {const ci=S.sea?null:curIsl();if(ci&&ci.falls)for(const [x,y,z] of ci.falls){if(Math.random()<dt*3&&Math.abs(x-cam.tx)<16&&Math.abs(z-cam.tz)<16)emit(x+(Math.random()-0.5)*0.8,y+0.05,z+(Math.random()-0.5)*0.3,{vy:0.5+Math.random()*0.5,life:0.6,max:0.6,size:0.07,color:ci.lava?0xffc070:0xf4fbff,g:2});}}grassU.uWind.value=1+rainMix*1.3;grassU.uPl.value.set(vil.x,S.sea?-99:vil.y,vil.z);
   if(!S.sea){
     const dx=vil.tx-vil.x,dz=vil.tz-vil.z,d=Math.hypot(dx,dz);
-    if(d>0.04){const sp=Math.min(d,dt*3);vil.x+=dx/d*sp;vil.z+=dz/d*sp;villager.rotation.y=Math.atan2(dx,dz);}
+    if(d>0.04){const sp=Math.min(d,dt*3),nx=vil.x+dx/d*sp,nz=vil.z+dz/d*sp;
+      if(landMap.get(K(Math.round(nx),Math.round(nz)))==='river'&&landMap.get(K(Math.round(vil.x),Math.round(vil.z)))!=='river'){vil.tx=vil.x;vil.tz=vil.z;vil.path=null;}
+      else{vil.x=nx;vil.z=nz;villager.rotation.y=Math.atan2(dx,dz);}}
+    else if(vil.path&&vil.path.length){const p=vil.path.shift();vil.tx=p[0];vil.tz=p[1];}
     else{if(vil.cb){const cb=vil.cb;vil.cb=null;cb();}
       else if(!fishing){vil.idle+=dt;if(vil.idle>7+Math.random()*4){vil.idle=0;const isl=curIsl();if(isl){const tx=Math.round(vil.x+(Math.random()-0.5)*5),tz=Math.round(vil.z+(Math.random()-0.5)*5);
-        if(islMap.get(K(tx,tz))===isl.id&&isLand(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}}}
+        if(islMap.get(K(tx,tz))===isl.id&&isLand(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)&&lineClear(vil.x,vil.z,tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}}}
     if(!S.sea){const ty=topY(Math.round(vil.x),Math.round(vil.z))||0.15;if(ty-vil.y>0.3&&vil.hop<=0)vil.hop=0.4;vil.y=lerp(vil.y,ty,Math.min(1,dt*10));vil.hop=Math.max(0,vil.hop-dt);
       villager.position.set(vil.x,vil.y+(d>0.04?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.4*Math.PI)*0.3*(vil.hop>0),vil.z);}
   }
@@ -2513,7 +2616,7 @@ function frame(now){
    ========================================================= */
 $('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
 genIslands();for(const isl of islands)buildIsland(isl);rebuildSeaGrid();
-if(S.wv!==2){if(!isNew){S.sea=false;S.boat=null;S.picked={};vil.x=vil.tx=0.3;vil.z=vil.tz=2.1;}S.wv=2;}
+if(S.wv!==3){if(!isNew){S.sea=false;S.boat=null;S.picked={};vil.x=vil.tx=0.3;vil.z=vil.tz=2.1;}S.wv=3;}
 ensureBoat(true);if(S.sea&&isLand(Math.round(S.boat.x),Math.round(S.boat.z))){S.sea=false;S.boat=null;ensureBoat(false);}
 if(isNew)setupNew();
 const farmNew=!S.farmInit;if(farmNew){genDebris();S.farmInit=1;}
