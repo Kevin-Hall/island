@@ -28,4 +28,34 @@ function worldMat(tex,scale){const m=toon({color:0xffffff,map:tex});
     sh.fragmentShader='uniform float uWS;varying vec3 vWP;varying vec3 vWN;\n'+sh.fragmentShader.replace('#include <map_fragment>',
       'vec3 an_=abs(vWN);vec2 wuv_=an_.y>0.6?vWP.xz:(an_.x>an_.z?vec2(vWP.z,vWP.y):vWP.xy);vec4 texelColor=texture2D(map,wuv_*uWS);diffuseColor*=texelColor;');};
   return m;}
-const grassTopMat=worldMat(GRASS_TEX,0.36),pathMat=worldMat(PATH_TEX,0.42),sandMat=worldMat(SAND_TEX,0.5),cliffMat=worldMat(CLIFF_TEX,0.55);
+/* ---- dirt paths, painted into the grass ----
+   The path tiles are rasterised into a soft mask (PATH_RES texels per tile, then blurred) that the grass shader samples
+   with a gentle wobble and noise. Edges curve and fray like worn trails, and corners round off, instead of
+   following tile squares. Gameplay still treats paths as whole tiles (TOWN.path). */
+const PATH_RES=4;
+const NOISE_TEX=(()=>{const n=32,R=mulberry(91),d=new Uint8Array(n*n*4);for(let i=0;i<n*n;i++){const v=Math.floor(R()*256);d[i*4]=d[i*4+1]=d[i*4+2]=v;d[i*4+3]=255;}
+  const t=new T.DataTexture(d,n,n,T.RGBAFormat);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=t.minFilter=T.LinearFilter;t.needsUpdate=true;return t;})();
+const EMPTY_MASK=(()=>{const t=new T.DataTexture(new Uint8Array(4),1,1,T.RGBAFormat);t.needsUpdate=true;return t;})();
+const pathU={uPM:{value:EMPTY_MASK},uPMo:{value:new T.Vector4(0,0,1,1)},uPTex:{value:PATH_TEX},uNoise:{value:NOISE_TEX}};
+function boxBlur(a,W,H,r){const t=new Float32Array(a.length),n=r*2+1;
+  for(let y=0;y<H;y++){let s=0;for(let x=-r;x<=r;x++)s+=a[y*W+clamp(x,0,W-1)];for(let x=0;x<W;x++){t[y*W+x]=s/n;s+=a[y*W+Math.min(W-1,x+r+1)]-a[y*W+Math.max(0,x-r)];}}
+  for(let x=0;x<W;x++){let s=0;for(let y=-r;y<=r;y++)s+=t[clamp(y,0,H-1)*W+x];for(let y=0;y<H;y++){a[y*W+x]=s/n;s+=t[Math.min(H-1,y+r+1)*W+x]-t[Math.max(0,y-r)*W+x];}}}
+function setPathMask(tiles){
+  if(pathU.uPM.value!==EMPTY_MASK)pathU.uPM.value.dispose();pathU.uPM.value=EMPTY_MASK;if(!tiles.size)return;
+  let x0=1e9,z0=1e9,x1=-1e9,z1=-1e9;const list=[];for(const [k,v] of tiles){const [x,z]=k.split(',').map(Number);list.push([x,z,v]);x0=Math.min(x0,x);z0=Math.min(z0,z);x1=Math.max(x1,x);z1=Math.max(z1,z);}
+  const pad=2;x0-=pad;z0-=pad;x1+=pad;z1+=pad;const W=(x1-x0+1)*PATH_RES,H=(z1-z0+1)*PATH_RES,a=new Float32Array(W*H),b=new Float32Array(W*H);
+  for(const [x,z,v] of list)for(let j=0;j<PATH_RES;j++)for(let i=0;i<PATH_RES;i++){const o=((z-z0)*PATH_RES+j)*W+(x-x0)*PATH_RES+i;a[o]=1;if(v===2)b[o]=1;}
+  boxBlur(a,W,H,2);boxBlur(a,W,H,1);boxBlur(b,W,H,2);
+  const d=new Uint8Array(W*H*4);for(let i=0;i<W*H;i++){d[i*4]=Math.round(a[i]*255);d[i*4+1]=Math.round(b[i]*255);d[i*4+3]=255;}
+  const t=new T.DataTexture(d,W,H,T.RGBAFormat);t.magFilter=t.minFilter=T.LinearFilter;t.needsUpdate=true;
+  pathU.uPM.value=t;pathU.uPMo.value.set(x0-0.5,z0-0.5,1/(x1-x0+1),1/(z1-z0+1));}
+function pathGrassMat(){const m=worldMat(GRASS_TEX,0.36),base=m.onBeforeCompile;
+  m.onBeforeCompile=function(sh){base(sh);Object.assign(sh.uniforms,pathU);
+    sh.fragmentShader='uniform sampler2D uPM;uniform vec4 uPMo;uniform sampler2D uPTex;uniform sampler2D uNoise;\n'+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+    if(an_.y>0.6){vec2 q_=vWP.xz;vec2 wob_=vec2(sin(q_.y*1.3+sin(q_.x*0.7)*1.6),sin(q_.x*1.1+cos(q_.y*0.6)*1.6))*0.13;
+      vec4 pm_=texture2D(uPM,(q_+wob_-uPMo.xy)*uPMo.zw);
+      if(pm_.r>0.004){float m_=pm_.r+(texture2D(uNoise,q_*0.6).r-0.5)*0.24;float e_=step(0.46,m_);
+        vec3 pc_=mix(vec3(0.80,0.643,0.416),vec3(0.847,0.714,0.502),clamp(pm_.g/max(pm_.r,0.01),0.,1.))*texture2D(uPTex,q_*0.42).rgb;
+        float rim_=smoothstep(0.3,0.46,m_)*(1.-e_);diffuseColor.rgb=mix(diffuseColor.rgb*(1.-rim_*0.16),pc_,e_);}}`);};
+  return m;}
+const grassTopMat=pathGrassMat(),sandMat=worldMat(SAND_TEX,0.5),cliffMat=worldMat(CLIFF_TEX,0.55);

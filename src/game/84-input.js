@@ -32,34 +32,38 @@ function onTap(cx,cy){
     return;}
   if(tapLife(cx,cy)){clearAction();updateHUD();return;}
   if(hit&&hit.river){clearAction();const ri=islandAt(hit.x,hit.z),here0=curIsl();if(!ri||!here0||ri.id!==here0.id)return;
+    if(S.tool!=='rod'){goTo(hit.x,hit.z);toolHint('Equip the <b>fishing rod</b> to fish here.','rod');return;}
     if(ri.lava){toast('That lava is far too hot to fish in!');return;}startFishing(hit.x,hit.z);return;}
-  if(!hit){clearAction();const w=waterPoint(cx,cy);if(w&&!isLand(Math.round(w.x),Math.round(w.z)))startFishing(w.x,w.z);return;}
+  if(!hit){clearAction();const w=waterPoint(cx,cy);if(w&&!isLand(Math.round(w.x),Math.round(w.z))){if(S.tool==='rod')startFishing(w.x,w.z);else toolHint('Equip the <b>fishing rod</b>, then tap the water to cast.','rod');}return;}
   if(!$('actionBar').hidden)clearAction();
   const here=curIsl(),there=islandAt(hit.x,hit.z);
   if(here&&there&&here.id!==there.id){toast(`That's ${S.disc[there.id]?there.name:'another island'} — take your boat to get there.`);return;}
   cursorAt(hit.x,hit.z);
-  {const db=there&&there.home&&S.mode!=='edit'?debrisAt(hit.x,hit.z):null;if(db){hitDebris(db);updateHUD();return;}const wd=weedAt(hit.x,hit.z);if(wd){pullWeed(wd);updateHUD();return;}const fd=findAt(hit.x,hit.z);if(fd){collectFind(fd);updateHUD();return;}const pl=plantAt(hit.x,hit.z);if(pl){pickPlant(pl);updateHUD();return;}}
-  if(there&&!there.home){goTo(hit.x,hit.z);return;}
-  if(S.mode==='edit')editTap(hit.x,hit.z);else farmTap(hit.x,hit.z);
+  if(S.mode==='edit')editTap(hit.x,hit.z);else toolTap(hit.x,hit.z,there);
   updateHUD();}
 function tapLife(cx,cy){
   {let bn=null,bd=48;for(const n of npcs){if(!n.g.visible)continue;const s=toScreen(n.x,n.y+0.5,n.z);const d=Math.hypot(s[0]-cx,s[1]-cy);if(d<bd){bd=d;bn=n;}}if(bn){talkTo(bn);return true;}}
   if(crow&&crow.state!=='out'){const s=toScreen(crowG.position.x,crowG.position.y+0.15,crowG.position.z);if(Math.hypot(s[0]-cx,s[1]-cy)<50){shooCrow();return true;}}
   let best=null,bd=46;for(const b of bugs){if(b.out)continue;const s=toScreen(b.g.position.x,b.g.position.y,b.g.position.z);const d=Math.hypot(s[0]-cx,s[1]-cy);if(d<bd){bd=d;best=b;}}
-  if(best){catchBug(best);return true;}return false;}
+  if(best){if(S.tool==='net'){swingTool();catchBug(best);return true;}toolHint('Equip the <b>net</b> to catch bugs.','net');}return false;}
 const ptrs=new Map();let drag=null,pinch=null,paint=null,holdT=null;
-function paintMode(x,z){if(!onHome(x,z))return null;if(debrisAt(x,z))return'clear';if(fixedAt(x,z)||objAt(x,z))return null;
-  const t=S.tiles[K(x,z)];if(!t)return landMap.get(K(x,z))==='grass'&&!TOWN.path.has(K(x,z))?'till':null;if(!t.crop)return'plant';if(t.crop.p>=1)return'harvest';return t.w?'tend':'water';}
+// long-press and drag repeats the equipped tool's action across tiles
+function paintMode(x,z){if(!onHome(x,z))return null;const tool=S.tool,d=debrisAt(x,z);
+  if(d)return !DEBRIS_TOOL[d.k]||DEBRIS_TOOL[d.k]===tool?'clear':null;
+  if(fixedAt(x,z)||objAt(x,z))return null;const t=S.tiles[K(x,z)];
+  switch(tool){case'shovel':return canTill(x,z)?'till':null;case'can':return t?'water':null;case'seeds':return t&&!t.crop?'plant':null;
+    case'hand':return t&&t.crop?(t.crop.p>=1?'harvest':'tend'):null;}
+  return null;}
 const PAINT_LBL={till:'Tilling',plant:'Planting',water:'Watering',harvest:'Harvesting',tend:'Tending',clear:'Clearing'};
 function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!onHome(x,z))return;paint.done.add(k);const t=S.tiles[k];let did=false;
   switch(paint.mode){
-    case'till':if(!t&&landMap.get(k)==='grass'&&freeTile(x,z)&&!fixedAt(x,z)){S.tiles[k]={w:S.rain?1:0,crop:null};burst(x,0.6,z,0x8a5a3a,6,1.1,0.06);SFX.till();paint.soil=did=true;}break;
+    case'till':if(canTill(x,z)){S.tiles[k]={w:S.rain?1:0,crop:null};burst(x,0.6,z,0x8a5a3a,6,1.1,0.06);SFX.till();paint.soil=did=true;}break;
     case'plant':if(t&&!t.crop){const sh=S.shells,fr=S.free[S.seed];plant(k,x,z);did=!!t.crop;if(!did)paint.stop=true;}break;
     case'water':if(t&&!t.w){t.w=1;for(let i=0;i<5;i++)emit(x+(Math.random()-0.5)*0.5,1.2,z+(Math.random()-0.5)*0.5,{vy:-1,life:0.5,max:0.5,size:0.06,color:0x8ac4ff,g:6});if(paint.n%3===0)SFX.water();paint.soil=did=true;}break;
     case'harvest':if(t&&t.crop&&t.crop.p>=1){harvest(k,x,z);did=true;}break;
     case'tend':if(t&&t.crop&&t.crop.p<1&&t.crop.td!==S.day){const c=t.crop,s0=stageOf(c.p);c.td=S.day;c.p=Math.min(0.995,c.p+0.08);if(stageOf(c.p)!==s0)syncCrop(k);hearts(x,0.9,z);tone(880+paint.n*40,0.06,'triangle',0.03);did=true;}break;
-    case'clear':{const d=debrisAt(x,z);if(d){hitDebris(d);did=true;}break;}}
-  if(did){paint.n++;cursorAt(x,z);walkTo(x,z);if(paint.soil){rebuildSoil();paint.soil=false;}}}
+    case'clear':{const d=debrisAt(x,z);if(d&&(!DEBRIS_TOOL[d.k]||DEBRIS_TOOL[d.k]===S.tool)){hitDebris(d);did=true;}break;}}
+  if(did){paint.n++;cursorAt(x,z);walkTo(x,z);swingTool();if(paint.soil){rebuildSoil();paint.soil=false;}}}
 function endPaint(){if(!paint)return;const n=paint.n,m=paint.mode;paint=null;clearAction();updateHUD();if(n>1)floatText(vil.x,1.3,vil.z,PAINT_LBL[m]+' ×'+n);}
 function pinchDist(){const [a,b]=[...ptrs.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1;}
 canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});

@@ -27,7 +27,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 10-data | **Data registries:** `CROPS`, `VARIANTS`, `BUILD`, `BIOMES`, `FISH`, `BUGS`, `PLANTS`, `FINDS`, `MATS`/`CONSUM`, rods, cans, house tiers, level curve |
 | 20-state, 21-sprites | Save state (`S`, `freshState`, `load`, `save`); pixel-art UI icons (`SPR`, `ICON`) |
 | 30-render | Renderer, pixel post-pass, geometry helpers (`P`, `PG` gradient parts, `merge`, `M`), shared materials, lights, sea, sky |
-| 31-ground | Painted ground textures (grass, path, sand, cliff) and `worldMat`, which maps them in world space so tiles join up without seams |
+| 31-ground | Painted ground textures (grass, path, sand, cliff) and `worldMat`, which maps them in world space so tiles join up without seams. Dirt paths are painted into the grass from a blurred mask (`setPathMask`), so their edges curve instead of following tiles |
 | 40–44 world | Island generation (`genIslands`); trees (`treeParts`, `canopy`, gradient leaf `card`s); grass tufts (off by default, see `GRASS_DENS`); rivers and waterfalls (`carveRivers`); terrain meshes with rounded corners (`buildIsland`, `rtileGeo`); island culling |
 | 45-crops | Soil and crop models (`cropParts`) |
 | 50-objects | Decor, house and bin models (`objGroup`, `houseGroup`, `roof`) |
@@ -36,7 +36,8 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 57-villagers | Species, personalities, models (`npcModel`), routines, chat, wishes, friendship |
 | 58-crafting | `RECIPES`, crafting, consumables |
 | 60–64 | Ambient life (villager, boat, gulls, particles); time of day and offline simulation; synth audio |
-| 70–80 | UI helpers and items; farming and drag-farming; finds, weeds, wild plants, bugs and crows; fishing; sailing and fast travel; orders |
+| 71-tools | Tool bar and held tools (`TOOLS`, `equip`); `toolTap` decides what a tap does with the equipped tool; `actAt` walks up, faces the tile and swings |
+| 70–80 | UI helpers and items; farming actions (`tillAt`, `waterAt`, `tendAt`, `useFixed`) and drag-farming; finds, weeds, wild plants, bugs and crows; fishing; sailing and fast travel; orders |
 | 82-sheets | Bottom sheets: Pockets (inventory and crafting), shop, seeds, orders, Islandex, chart, settings |
 | 84-input | Tap, drag, pinch and picking (`pick`, `onTap`) |
 | 86–87 | New-game setup; atmosphere (foam, footprints, sky events, motes, music) |
@@ -67,6 +68,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | A flower species | `FLOWER_SP` + `FLOWER_H` + a `case` in `flowerHead` (55-town) |
 | Ground detail | Draw it in a `patternTex` in 31-ground. Don't add geometry. |
 | A biome | `BIOMES` entry (colours, trees, names) + any new tree kinds in `treeParts` |
+| A tool | Entry in `TOOLS` + icon in `SPR` + held model in `HELD_PARTS` + a case in `toolTap` (and in `paintMode` for drag) (71-tools) |
 | A sheet tab | A branch in `renderSheet` + data-attribute handlers in the `#sheetBody` click listener (82-sheets) |
 
 ## Performance rules
@@ -82,6 +84,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 
 ## Gotchas
 
+- **Taps go through tools:** a tap on open ground only walks. Actions come from the equipped tool (`S.tool`), and debris names the tool that clears it (`DEBRIS_TOOL`). Buildings, NPCs and placed decor respond whatever you hold.
 - **Rivers are not sea:** boats must use `seaBlocked(x,z)` (land or river), never `isLand`. Rivers cross islands, so treating them as water lets routes cut straight through a town.
 
 - **One-line functions and comments:** a lot of code is packed onto single lines, so use `/* … */` for inline comments there. A `//` comments out the rest of the line.

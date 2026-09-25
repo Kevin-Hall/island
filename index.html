@@ -62,8 +62,18 @@ img.px{image-rendering:crisp-edges;image-rendering:pixelated}
   display:grid;place-items:center;box-shadow:0 2px 0 var(--rose-d);animation:bob 1.2s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(-3px)}}
 
+/* ---------- Tool bar: the equipped tool decides what a tap does ---------- */
+.tools{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 98px);
+  display:flex;gap:5px;padding:5px 6px;background:var(--paper);border-radius:20px;box-shadow:var(--shadow);max-width:calc(100vw - 20px)}
+.tools[hidden]{display:none}
+.tool{width:40px;height:40px;border-radius:14px;background:#f1e8d6;display:grid;place-items:center;padding:0;border:0;transition:transform .12s,background .12s;box-shadow:inset 0 -3px 0 rgba(0,0,0,.08)}
+.tool img{width:26px;height:26px}
+.tool.on{background:#fbe39a;transform:translateY(-4px);box-shadow:inset 0 -3px 0 rgba(0,0,0,.1),0 0 0 2.5px #e0a93a}
+.tool:active{transform:scale(.9)}
+@media (max-width:370px){.tools{gap:3px}.tool{width:37px;height:37px}}
+
 /* ---------- Context buttons ---------- */
-.ctx{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 100px);
+.ctx{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 156px);
   display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;width:max-content;max-width:calc(100vw - 32px);pointer-events:none}
 .ctx > *{pointer-events:auto}
 .ctx .msg{background:var(--paper);border-radius:999px;padding:8px 14px;font-size:13.5px;font-weight:600;color:var(--ink2);box-shadow:var(--shadow)}
@@ -85,7 +95,7 @@ img.px{image-rendering:crisp-edges;image-rendering:pixelated}
 @keyframes rise{to{transform:translate(-50%,-200%);opacity:0}}
 
 /* ---------- Dialog (speech bubble) ---------- */
-.actionbar{position:fixed;z-index:7;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 100px);width:min(440px,calc(100vw - 28px));box-sizing:border-box;
+.actionbar{position:fixed;z-index:7;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 156px);width:min(440px,calc(100vw - 28px));box-sizing:border-box;
   background:var(--paper);border-radius:34px;box-shadow:var(--shadow);padding:20px 20px 14px;display:flex;flex-direction:column;gap:12px;animation:pop .3s cubic-bezier(.3,1.5,.5,1) both}
 @keyframes pop{from{transform:translateX(-50%) scale(.92);opacity:0}to{transform:translateX(-50%);opacity:1}}
 .actionbar .tag{position:absolute;top:-14px;left:24px;background:var(--yellow);color:var(--ink);font-weight:700;font-size:14px;padding:4px 14px;border-radius:999px;transform:rotate(-4deg);box-shadow:0 3px 0 var(--yellow-d)}
@@ -211,6 +221,8 @@ input[type=range]{width:100%;accent-color:var(--teal);height:28px}
 <div id="toasts"></div>
 <div id="ctx" class="ctx"></div>
 <div id="actionBar" class="actionbar" hidden><div class="tag" id="abTag"></div><div class="msg" id="abMsg"></div><div class="row" id="abRow"></div></div>
+
+<nav class="tools" id="tools" aria-label="Tools"></nav>
 
 <nav class="dock" aria-label="Apps">
   <button class="btn" id="bSeed" style="--c:#fbe39a" aria-label="Choose seed"><span class="ico"><img class="px" id="seedImg" alt=""></span><span class="lb" id="seedTxt">Seeds</span></button>
@@ -499,7 +511,7 @@ const DEX_CATS=[['fish','Fish','f:',FISH],['bugs','Bugs','b:',BUGS],['plants','P
 const SAVE_KEY='driftseed-town-v1'; // the town branch keeps its own save so it never touches the main game's
 function freshState(){
   return {v:1,shells:150,xp:0,day:1,hour:7.2,land:0,house:0,tiles:{},objs:[],store:{},inv:{},alm:{},almR:{},
-    seed:'turnip',rain:false,demand:'carrot',sound:true,pxAdj:0,nextId:1,t:Date.now(),mode:'farm',tut:0,harvested:0,earned:0,
+    seed:'turnip',rain:false,demand:'carrot',sound:true,pxAdj:0,nextId:1,t:Date.now(),mode:'farm',tool:'hand',tipTools:0,tipSeed:0,tut:0,harvested:0,earned:0,
     finds:[],weeds:[],free:{},orders:[],ordBonus:0,rod:0,can:0,rec:{},npc:{},shook:{},wv:0,farmInit:0,debris:[],farmClear:0,tipPaint:0,
     worldSeed:Math.floor(Math.random()*1e9),sea:false,px:0.3,pz:2.1,boat:null,disc:{0:1},picked:{},dexR:{},boatTip:0};
 }
@@ -566,6 +578,10 @@ star:['.....y.....','.....y.....','....yyy....','yyyyyyyyyyy','.yyyyyyyyy.','..y
 boat:['.....w......','.....ww.....','.....wwr....','.....wwww...','.....b......','bbbbbbbbbbbb','.bnnnnnnnnb.','..bbbbbbbb..'],
 task:['.nnnnnnnn.','nbwwwwwwbn','.nwEEEEwn.','.nwwwwwwn.','.nwEEEwwn.','.nwwwwwwn.','.nwEEEEwn.','nbwwwwwwbn','.nnnnnnnn.'],
 rod:['..........E','.........E.','........b..','.......b..u','......b...u','.....b....u','....b.....r','...B.......','..B........'],
+hand:['.pp......pp.','pppp....pppp','pppp.pp.pppp','.pp.pppp.pp.','.....pp.....','...pppppp...','..pppppppp..','.pppppppppp.','.pppppppppp.','..pppppppp..','...pp..pp...'],
+shovel:['....bbbb....','....b..b....','.....bb.....','.....bb.....','.....bb.....','.....bb.....','.....Bb.....','...eeeeee...','...eeeeee...','...eeeeeE...','....eeeE....','.....eE.....'],
+axe:['....EEEb....','...EeeEbb...','..EeeeEbb...','..EeeeEbb...','...EeeEbb...','....EE.bb...','.......bb...','.......bb...','.......bb...','.......bb...','.......BB...'],
+net:['...wwwww....','..wWwWwWw...','.wWwWwWwWw..','.wwWwWwWww..','.wWwWwWwWw..','..wWwWwWw...','...wwwww....','.....bb.....','.....bb.....','.....bb.....','.....bb.....','.....BB.....'],
 can:['....EEE.....','...E...E....','.OOOOOOOOE..','OOOOOOOOOOE.','.OoooooOO..O','.OOOOOOOOOOO','.OOOOOOOO...','..OOOOOO....'],
 };
 const ICON={};for(const k in SPR)ICON[k]=sprite(SPR[k]);
@@ -805,7 +821,37 @@ function worldMat(tex,scale){const m=toon({color:0xffffff,map:tex});
     sh.fragmentShader='uniform float uWS;varying vec3 vWP;varying vec3 vWN;\n'+sh.fragmentShader.replace('#include <map_fragment>',
       'vec3 an_=abs(vWN);vec2 wuv_=an_.y>0.6?vWP.xz:(an_.x>an_.z?vec2(vWP.z,vWP.y):vWP.xy);vec4 texelColor=texture2D(map,wuv_*uWS);diffuseColor*=texelColor;');};
   return m;}
-const grassTopMat=worldMat(GRASS_TEX,0.36),pathMat=worldMat(PATH_TEX,0.42),sandMat=worldMat(SAND_TEX,0.5),cliffMat=worldMat(CLIFF_TEX,0.55);
+/* ---- dirt paths, painted into the grass ----
+   The path tiles are rasterised into a soft mask (PATH_RES texels per tile, then blurred) that the grass shader samples
+   with a gentle wobble and noise. Edges curve and fray like worn trails, and corners round off, instead of
+   following tile squares. Gameplay still treats paths as whole tiles (TOWN.path). */
+const PATH_RES=4;
+const NOISE_TEX=(()=>{const n=32,R=mulberry(91),d=new Uint8Array(n*n*4);for(let i=0;i<n*n;i++){const v=Math.floor(R()*256);d[i*4]=d[i*4+1]=d[i*4+2]=v;d[i*4+3]=255;}
+  const t=new T.DataTexture(d,n,n,T.RGBAFormat);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=t.minFilter=T.LinearFilter;t.needsUpdate=true;return t;})();
+const EMPTY_MASK=(()=>{const t=new T.DataTexture(new Uint8Array(4),1,1,T.RGBAFormat);t.needsUpdate=true;return t;})();
+const pathU={uPM:{value:EMPTY_MASK},uPMo:{value:new T.Vector4(0,0,1,1)},uPTex:{value:PATH_TEX},uNoise:{value:NOISE_TEX}};
+function boxBlur(a,W,H,r){const t=new Float32Array(a.length),n=r*2+1;
+  for(let y=0;y<H;y++){let s=0;for(let x=-r;x<=r;x++)s+=a[y*W+clamp(x,0,W-1)];for(let x=0;x<W;x++){t[y*W+x]=s/n;s+=a[y*W+Math.min(W-1,x+r+1)]-a[y*W+Math.max(0,x-r)];}}
+  for(let x=0;x<W;x++){let s=0;for(let y=-r;y<=r;y++)s+=t[clamp(y,0,H-1)*W+x];for(let y=0;y<H;y++){a[y*W+x]=s/n;s+=t[Math.min(H-1,y+r+1)*W+x]-t[Math.max(0,y-r)*W+x];}}}
+function setPathMask(tiles){
+  if(pathU.uPM.value!==EMPTY_MASK)pathU.uPM.value.dispose();pathU.uPM.value=EMPTY_MASK;if(!tiles.size)return;
+  let x0=1e9,z0=1e9,x1=-1e9,z1=-1e9;const list=[];for(const [k,v] of tiles){const [x,z]=k.split(',').map(Number);list.push([x,z,v]);x0=Math.min(x0,x);z0=Math.min(z0,z);x1=Math.max(x1,x);z1=Math.max(z1,z);}
+  const pad=2;x0-=pad;z0-=pad;x1+=pad;z1+=pad;const W=(x1-x0+1)*PATH_RES,H=(z1-z0+1)*PATH_RES,a=new Float32Array(W*H),b=new Float32Array(W*H);
+  for(const [x,z,v] of list)for(let j=0;j<PATH_RES;j++)for(let i=0;i<PATH_RES;i++){const o=((z-z0)*PATH_RES+j)*W+(x-x0)*PATH_RES+i;a[o]=1;if(v===2)b[o]=1;}
+  boxBlur(a,W,H,2);boxBlur(a,W,H,1);boxBlur(b,W,H,2);
+  const d=new Uint8Array(W*H*4);for(let i=0;i<W*H;i++){d[i*4]=Math.round(a[i]*255);d[i*4+1]=Math.round(b[i]*255);d[i*4+3]=255;}
+  const t=new T.DataTexture(d,W,H,T.RGBAFormat);t.magFilter=t.minFilter=T.LinearFilter;t.needsUpdate=true;
+  pathU.uPM.value=t;pathU.uPMo.value.set(x0-0.5,z0-0.5,1/(x1-x0+1),1/(z1-z0+1));}
+function pathGrassMat(){const m=worldMat(GRASS_TEX,0.36),base=m.onBeforeCompile;
+  m.onBeforeCompile=function(sh){base(sh);Object.assign(sh.uniforms,pathU);
+    sh.fragmentShader='uniform sampler2D uPM;uniform vec4 uPMo;uniform sampler2D uPTex;uniform sampler2D uNoise;\n'+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+    if(an_.y>0.6){vec2 q_=vWP.xz;vec2 wob_=vec2(sin(q_.y*1.3+sin(q_.x*0.7)*1.6),sin(q_.x*1.1+cos(q_.y*0.6)*1.6))*0.13;
+      vec4 pm_=texture2D(uPM,(q_+wob_-uPMo.xy)*uPMo.zw);
+      if(pm_.r>0.004){float m_=pm_.r+(texture2D(uNoise,q_*0.6).r-0.5)*0.24;float e_=step(0.46,m_);
+        vec3 pc_=mix(vec3(0.80,0.643,0.416),vec3(0.847,0.714,0.502),clamp(pm_.g/max(pm_.r,0.01),0.,1.))*texture2D(uPTex,q_*0.42).rgb;
+        float rim_=smoothstep(0.3,0.46,m_)*(1.-e_);diffuseColor.rgb=mix(diffuseColor.rgb*(1.-rim_*0.16),pc_,e_);}}`);};
+  return m;}
+const grassTopMat=pathGrassMat(),sandMat=worldMat(SAND_TEX,0.5),cliffMat=worldMat(CLIFF_TEX,0.55);
 /* =========================================================
    World: home island + generated islands
    ========================================================= */
@@ -1061,7 +1107,7 @@ function buildIsland(isl){
     if(t==='grass'){const l=levelOf(isl,x,z);if(l)lvlMap.set(k,l);}
     (t==='grass'?isl.grass:t==='sand'?isl.sand:t==='s1'?a1:a2).push([x,z]);}
   if(isl.riverN)carveRivers(isl,g);
-  if(isl.home)layoutTown(isl);
+  if(isl.home){layoutTown(isl);setPathMask(TOWN.path);}
   // grass tiles: a grassy slab on top of a dirt or rock cliff, like the tiers of Wild World
   // grass and sand tiles, drawn with rounded outer corners; the notch shows whatever lies just below (sand, lower grass, or the sea)
   const byMask=new Map(),under=[];const put=(mask,e)=>{if(!byMask.has(mask))byMask.set(mask,{g:[],s:[]});byMask.get(mask)[e.kind].push(e);};
@@ -1077,11 +1123,9 @@ function buildIsland(isl){
     if(gl.length){const body=new T.InstancedMesh(geo,cliffMat,gl.length);
       gl.forEach(({x,z},i)=>{const ty=topY(x,z),h=ty-0.14+0.6;_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,h,1));body.setMatrixAt(i,_m);body.setColorAt(i,_c.set(B.cliff).multiplyScalar(0.92+hash(z,x)*0.12));});
       body.receiveShadow=true;body.castShadow=true;body.frustumCulled=false;g.add(body);
-      // grass tops and dirt-path tops share the rounded geometry but use different ground textures
-      const pathOf=({x,z})=>isl.home&&TOWN.path.get(K(x,z));
-      for(const [list,mat] of [[gl.filter(e=>!pathOf(e)),grassTopMat],[gl.filter(pathOf),pathMat]]){if(!list.length)continue;const top=new T.InstancedMesh(geo,mat,list.length);
-        list.forEach(({x,z},i)=>{const ty=topY(x,z);_m.compose(_v.set(x,ty-0.14,z),_q.identity(),_s.set(1,0.14,1));top.setMatrixAt(i,_m);const pk=pathOf({x,z});
-          top.setColorAt(i,pk?_c.set(pk===2?0xd8b680:0xcca46a).multiplyScalar(0.96+hash(x*3,z)*0.06):_c.setHex(groundCol(B.grass,x,z,isl.seed)));});
+      // grass tops (dirt paths are painted into this material from the path mask, see 31-ground)
+      {const top=new T.InstancedMesh(geo,grassTopMat,gl.length);
+        gl.forEach(({x,z},i)=>{const ty=topY(x,z);_m.compose(_v.set(x,ty-0.14,z),_q.identity(),_s.set(1,0.14,1));top.setMatrixAt(i,_m);top.setColorAt(i,_c.setHex(groundCol(B.grass,x,z,isl.seed)));});
         top.receiveShadow=true;top.castShadow=true;top.frustumCulled=false;g.add(top);}}
     if(sl.length){const im=new T.InstancedMesh(geo,sandMat,sl.length);sl.forEach(({x,z},i)=>{_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,TOP.sand+0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(sandCol(x,z)));});
       im.receiveShadow=true;im.castShadow=true;im.frustumCulled=false;g.add(im);}}
@@ -1168,7 +1212,7 @@ function bloom(p,col,cc,x,y,z,r,n=5,tilt=0.25){for(let i=0;i<n;i++)lf(p,i%2&&n>5
 function spike(p,col,dk,x,y,z,r){for(let k=0;k<6;k++){const rr=r*(1-k*0.13);p.push(P(ICO,k%2?dk:col,x+(k%2?0.015:-0.015),y+k*r*0.75,z,0,k,0,rr,rr*0.9,rr));}}
 function berries(p,col,dk,x,y,z,r,n,R){for(let i=0;i<n;i++){const bx=x+(R()-0.5)*r*2.2,by=y+(R()-0.5)*r*1.6,bz=z+(R()-0.5)*r*2.2;
   p.push(P(ICO,i%3===2?dk:col,bx,by,bz,0,R()*3,0,r,r,r),P(LEAF0,0xffffff,bx+r*0.28,by+r*0.3,bz+r*0.28,0,0,0,r*0.32,r*0.28,r*0.32));}}
-function wildflowers(p,R,cols,n,spread=0.32){for(let s=0;s<n;s++){const x=(R()-0.5)*spread*2,z=(R()-0.5)*spread*2,h=0.16+R()*0.24,c=cols[Math.floor(R()*cols.length)];
+function wildflowers(p,R,cols,n,spread=0.32){for(let s=0;s<n;s++){const x=(R()-0.5)*spread*2,z=(R()-0.5)*spread*2,h=0.08+R()*0.12,c=cols[Math.floor(R()*cols.length)];
   stemP(p,0x4f8a34,x,z,h);lf(p,GREENS[s%4],x,h*0.35,z,R()*6.28,0.35,0.12,0.07);lf(p,GREENS[(s+1)%4],x,h*0.6,z,R()*6.28,0.4,0.1,0.06);
   if(R()<0.3)spike(p,c,0xffffff,x,h,z,0.04);else bloom(p,c,R()<0.5?0xf6d04a:0xffffff,x,h,z,0.085);}}
 
@@ -1393,7 +1437,8 @@ function flowerHead(p,sp,c,x,y,z,R){
     case'lily':for(let k=0;k<6;k++)lf(p,k%2?c:dkc(c,0.92),x,y,z,k/6*6.283,0.75,0.17,0.06,0.03);for(let k=0;k<3;k++)p.push(P(BOX,0xe8903a,x+Math.cos(k*2.1)*0.02,y+0.07,z+Math.sin(k*2.1)*0.02,0.3*Math.cos(k),k,0.3*Math.sin(k),0.008,0.1,0.008));break;
     case'hyacinth':for(let k=0;k<14;k++){const a=k*2.4,h=y+k*0.012,r=0.035-k*0.0012;p.push(P(ICO2,k%3?c:dkc(c,0.85),x+Math.cos(a)*r,h,z+Math.sin(a)*r,0,a,0,0.045,0.04,0.045));}break;
     default:bloom(p,c,0xf6d04a,x,y,z,0.1,10,0.15);}}
-const FLOWER_H={tulip:0.26,rose:0.24,cosmos:0.34,pansy:0.1,lily:0.3,hyacinth:0.14,daisy:0.2};
+// stem heights: ankle-high next to the villager (~0.9 tall), like Animal Crossing flowers
+const FLOWER_H={tulip:0.15,rose:0.14,cosmos:0.19,pansy:0.07,lily:0.17,hyacinth:0.09,daisy:0.12};
 const FLORA_KEYS=[],FLORA_GEOS=[];
 for(const sp in FLOWER_SP)FLOWER_SP[sp].forEach((c,ci)=>{const R=mulberry(hi(sp.length,ci,31)),p=[];
   for(let s=0;s<3;s++){const a=s*2.1+R(),r=s?0.14+R()*0.06:0.02,x=Math.cos(a)*r,z=Math.sin(a)*r,h=FLOWER_H[sp]*(0.85+R()*0.3);stemP(p,0x4f8a34,x,z,h);
@@ -1478,7 +1523,7 @@ function layoutTown(isl){
       if(h<0.34)lists[floraIndex(x,z)].push([x,z]);else if(h<0.43)clov.push([x,z]);}
     for(const [k,v] of TOWN.path){if(v!==1)continue;const [x,z]=k.split(',').map(Number);for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(G(x+dx,z+dz)&&!TOWN.path.has(K(x+dx,z+dz))&&hash(x*7+dx,z*5+dz)<0.35)peb.push([x+dx*0.46,z+dz*0.46,x,z]);}
     const mk=(geo,list,mat,track)=>{if(!list.length)return;const im=new T.InstancedMesh(geo,mat,list.length);list.forEach(([x,z,tx,tz],i)=>{const tile=tx===undefined?[x,z]:[tx,tz];
-        _e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x+(tx===undefined?(hash(z,x)-0.5)*0.4:0),y0(...tile),z+(tx===undefined?(hash(x+1,z)-0.5)*0.4:0)),_q,_s.set(1.15,1.0+hash(z*2,x)*0.35,1.15));im.setMatrixAt(i,_m);
+        _e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x+(tx===undefined?(hash(z,x)-0.5)*0.4:0),y0(...tile),z+(tx===undefined?(hash(x+1,z)-0.5)*0.4:0)),_q,_s.set(0.9,0.9+hash(z*2,x)*0.2,0.9));im.setMatrixAt(i,_m);
         if(track){const k=K(x,z);if(!TOWN.flora.has(k))TOWN.flora.set(k,[]);TOWN.flora.get(k).push([im,i,_m.toArray()]);}});
       im.frustumCulled=false;im.receiveShadow=true;isl.group.add(im);};
     FLORA_GEOS.forEach((g0,i)=>mk(g0,lists[i],flowerMat,true));mk(CLOVER_GEO,clov,flowerMat,true);mk(PEBBLE_GEO,peb,vcMat,false);}
@@ -1985,6 +2030,7 @@ function addXP(n){const before=level();S.xp+=n;const after=level();if(after>befo
 
 let ctxSig='';
 function updateCtx(){
+  $('tools').hidden=!!(inside||S.sea||S.mode==='edit'||placing);
   const box=$('ctx');let st='';
   if(!sheet&&$('actionBar').hidden){
     if(inside)st='inside';else if(S.mode==='edit')st='edit';else if(fishing)st='';else if(S.sea)st=sail?'sailing':'sea';else if(boatNear())st='board';}
@@ -2022,6 +2068,83 @@ function priceOf(key){const I=itemInfo(key);if(I)return I.price;const [t,v]=key.
 function sell(key,n){const have=S.inv[key]||0;n=Math.min(n,have);if(!n)return 0;const g=priceOf(key)*n;S.inv[key]=have-n;if(!S.inv[key])delete S.inv[key];S.shells+=g;S.earned+=g;return g;}
 
 /* =========================================================
+   Tools. Tap anywhere to walk there. The equipped tool decides what a tap on a tile does,
+   Animal Crossing style: the villager walks up, faces the tile and swings.
+   To add a tool: an entry in TOOLS, an icon in SPR, a held model in HELD_PARTS, and a case in toolTap (and paintMode for drag).
+   ========================================================= */
+const TOOLS=[
+  {k:'hand',  name:'Hands',        tip:'Walk, pick up, harvest, tend crops and shake trees'},
+  {k:'shovel',name:'Shovel',       tip:'Dig grass into soil, fill soil back in and break rocks'},
+  {k:'can',   name:'Watering Can', tip:'Water your soil'},
+  {k:'seeds', name:'Seeds',        tip:'Plant in dug soil (tap again to choose a seed)'},
+  {k:'axe',   name:'Axe',          tip:'Chop trees, stumps, bushes and twigs for wood'},
+  {k:'net',   name:'Net',          tip:'Catch bugs'},
+  {k:'rod',   name:'Fishing Rod',  tip:'Tap the water to cast'}];
+const TOOL_OF={};for(const t of TOOLS)TOOL_OF[t.k]=t;
+// which tool clears each kind of farm debris (weeds come up with any tool)
+const DEBRIS_TOOL={weed:null,twig:'axe',bush:'axe',stump:'axe',rock:'shovel',boulder:'shovel'};
+const toolIcon=k=>k==='seeds'?seedIcon(S.seed):ICON[k];
+
+/* ---- tool bar ---- */
+function renderTools(){$('tools').innerHTML=TOOLS.map((t,i)=>`<button class="tool${S.tool===t.k?' on':''}" data-tool="${t.k}" aria-label="${t.name}" title="${t.name} (${i+1})"><img class="px" src="${toolIcon(t.k)}" alt=""></button>`).join('');}
+function equip(k){if(!TOOL_OF[k])return;if(S.tool===k&&k==='seeds'){openSheet('seeds');return;}
+  S.tool=k;SFX.ui();renderTools();showHeld();floatText(vil.x,1.25,vil.z,TOOL_OF[k].name);save();}
+$('tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(b)equip(b.dataset.tool);});
+window.addEventListener('keydown',e=>{if(sheet||inside||e.target.tagName==='INPUT')return;const i=+e.key-1;if(i>=0&&i<TOOLS.length)equip(TOOLS[i].k);});
+let hintAt=0;function toolHint(msg,k){const now=performance.now();if(now-hintAt<2500)return;hintAt=now;toast(msg,'',k?toolIcon(k):undefined);}
+
+/* ---- the tool in the villager's hand (models point along +y from the grip; +z is forward) ---- */
+const HELD_PARTS={
+  shovel:[P(CYL6,0x9a6a3a,0,0.2,0,0,0,0,0.035,0.44,0.035),P(BOX,0x6a4a2a,0,0.0,0,0,0,0,0.1,0.03,0.03),P(BOX,0xb8bcc8,0,0.48,0,0,0,0,0.13,0.16,0.025),P(BOX,0x9a9ea8,0,0.4,0,0,0,0,0.13,0.02,0.03)],
+  axe:[P(CYL6,0x9a6a3a,0,0.18,0,0,0,0,0.035,0.4,0.035),P(BOX,0x8e929c,0,0.34,0.06,0,0,0,0.035,0.11,0.13),P(BOX,0xd8dce4,0,0.34,0.13,0,0,0,0.037,0.12,0.025)],
+  can:[P(CYL12,0xe0883a,0,0.02,0.1,0,0,0,0.17,0.15,0.15),P(CYL12,0xb8662a,0,0.1,0.1,0,0,0,0.12,0.02,0.1),P(CYL6,0xe0883a,0,0.06,0.23,1.0,0,0,0.03,0.18,0.03),P(BOX,0xb8662a,0,0.13,0.07,0,0,0,0.03,0.08,0.1)],
+  seeds:[P(ICO2,0xd8b078,0,0.0,0.06,0,0,0,0.12,0.14,0.11),P(BOX,0x8a5a3a,0,0.07,0.06,0,0,0,0.07,0.02,0.07)],
+  net:[P(CYL6,0x9a6a3a,0,0.26,0,0,0,0,0.03,0.56,0.03),P(CYL12,0x8a6a44,0,0.62,0,1.57,0,0,0.26,0.02,0.26),P(CYL12,0xf4f4ee,0,0.62,0.005,1.57,0,0,0.22,0.02,0.22)],
+  rod:[P(CYL6,0x9a7a4a,0,0.45,0,0,0,0,0.025,0.95,0.025),P(CYL12,0x5a5a6a,0,0.08,0.03,0,0,1.57,0.06,0.03,0.06)]};
+const HELD_TILT={shovel:0.55,axe:0.35,can:0.1,seeds:0,net:0.45,rod:0.85};
+const toolHold=new T.Group();toolHold.position.set(0.3,0.22,0.08);toolHold.scale.setScalar(1.35);villager.add(toolHold);
+const heldMesh={};for(const k in HELD_PARTS){const m=M(HELD_PARTS[k]);m.castShadow=true;m.visible=false;toolHold.add(m);heldMesh[k]=m;}
+function showHeld(){for(const k in heldMesh)heldMesh[k].visible=S.tool===k;}
+let swingT=0;const SWING=0.38;
+function swingTool(){swingT=SWING;}
+function updateTool(dt){toolHold.visible=!S.sea&&!fishing;const base=HELD_TILT[S.tool]||0;let off=0;
+  if(swingT>0){swingT=Math.max(0,swingT-dt);const u=1-swingT/SWING;
+    off=S.tool==='can'||S.tool==='seeds'?Math.sin(u*Math.PI)*0.9:/* pour or scatter */u<0.35?-1.1*u/0.35:-1.1+2.3*Math.sin((u-0.35)/0.65*Math.PI/2);/* raise, then strike */
+    if(swingT===0)off=0;}
+  toolHold.rotation.x=base+off;}
+
+/* ---- tapping the world ---- */
+// walk up to a tile, face it, swing, then do the action
+function actAt(x,z,fn){const run=()=>{villager.rotation.y=Math.atan2(x-vil.x,z-vil.z);swingTool();fn();updateHUD();};
+  if(Math.hypot(x-vil.x,z-vil.z)<1.1){vil.tx=vil.x;vil.tz=vil.z;vil.path=null;vil.cb=null;run();return;}
+  walkTo(x,z);vil.cb=run;}
+function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
+  {const fd=findAt(x,z);if(fd){actAt(x,z,()=>collectFind(fd));return;}const pl=plantAt(x,z);if(pl){actAt(x,z,()=>pickPlant(pl));return;}}
+  if(!isl||!isl.home){goTo(x,z);return;}
+  // town trees and rocks: shake or chop a tree, break a rock with the shovel
+  const res=fixedAt(x,z)==='decor'&&TOWN.res.get(k);
+  if(res==='tree'){actAt(x,z,tool==='axe'?()=>chopTree(x,z):()=>gatherRes(x,z));return;}
+  if(res){if(tool==='shovel'||tool==='axe')actAt(x,z,()=>gatherRes(x,z));else{walkTo(x,z);toolHint('Break rocks with the <b>shovel</b> to get stone.','shovel');}return;}
+  if(useFixed(x,z))return;
+  const db=debrisAt(x,z);
+  if(db){const need=DEBRIS_TOOL[db.k];if(!need||tool===need)actAt(x,z,()=>hitDebris(db));else{walkTo(x,z);toolHint(`Clear that ${db.k} with the <b>${TOOL_OF[need].name.toLowerCase()}</b>.`,need);}return;}
+  {const wd=weedAt(x,z);if(wd){actAt(x,z,()=>pullWeed(wd));return;}}
+  const t=S.tiles[k];
+  if(t&&t.crop&&t.crop.p>=1&&tool!=='shovel'){actAt(x,z,()=>harvest(k,x,z));return;}
+  switch(tool){
+    case'shovel':if(canTill(x,z)){actAt(x,z,()=>tillAt(x,z));return;}if(t&&!t.crop){actAt(x,z,()=>fillAt(x,z));return;}
+      if(t)toolHint('Something is growing there.');else if(TOWN.path.has(k))toolHint('Better not dig up the town path!');break;
+    case'can':actAt(x,z,()=>waterAt(x,z));return;
+    case'seeds':if(t&&!t.crop){actAt(x,z,()=>plant(k,x,z));return;}if(!t&&landMap.get(k)==='grass')toolHint('Dig the ground with the <b>shovel</b> first.','shovel');break;
+    case'hand':if(t&&t.crop){actAt(x,z,()=>tendAt(x,z));return;}break;
+    case'axe':case'net':actAt(x,z,()=>{});return;}
+  goTo(x,z);}
+// chop a town tree for wood: a few logs a day per tree, and the tree stays
+function chopTree(x,z){const k=K(x,z),sh=S.shook[k]||{d:0,n:0,c:0};if(sh.d!==S.day){sh.d=S.day;sh.n=0;sh.c=0;}sh.c=sh.c||0;S.shook[k]=sh;const y=topY(x,z);
+  tone(150,0.06,'triangle',0.07);noise(0.07,0.05,900);burst(x,y+0.5,z,0x9a6a3a,8,1.2,0.06);burst(x,y+1.5,z,0x6ab84a,6,1.0,0.07,3);
+  if(sh.c>=3){toast('This tree has given all the wood it can today.');return;}sh.c++;
+  const n=sh.c===3?2:1;gain('m:wood',n);floatText(x,y+1.2,z,'+'+n+' Wood','gold');SFX.pop();addXP(1);}
+/* =========================================================
    Farming & island actions
    ========================================================= */
 function walkTo(x,z){const dx=x-vil.x,dz=z-vil.z,d=Math.hypot(dx,dz)||1;routeVil(x-dx/d*0.62,z-dz/d*0.62);vil.idle=0;vil.cb=null;}
@@ -2052,7 +2175,7 @@ function plant(k,x,z){
   const type=id==='mystery'?pickR(CROP_IDS):id;
   S.tiles[k].crop={t:type,p:0,v:null,m:id==='mystery'?1:0};syncCrop(k);SFX.plant();burst(x,0.6,z,0x6a4a30,6,0.8,0.06);walkTo(x,z);
   if(id==='mystery')floatText(x,1.2,z,'? '+CROPS[type].name);
-  if(S.tut===0){S.tut=1;setTimeout(()=>toast(`Seeds only grow on days they're watered — tap the planted soil to water it.`,'',ICON.sprout),600);}
+  if(S.tut===0){S.tut=1;setTimeout(()=>toast(`Seeds only grow on days they're watered — switch to the <b>watering can</b> and tap the soil.`,'',ICON.sprout),600);}
 }
 function harvest(k,x,z){
   const t=S.tiles[k],c=t.crop,C=CROPS[c.t],V=VAR[c.v||'normal'];const key=c.t+'|'+V.id;
@@ -2069,27 +2192,29 @@ function harvest(k,x,z){
 function checkRow(type){if(S.almR[type])return;if(VARIANTS.every(v=>S.alm[type+'|'+v.id])){S.almR[type]=1;const r=CROPS[type].price*6;S.shells+=r;SFX.level();
   toast(`Crop page complete: ${CROPS[type].name}! Reward +${fmt(r)} shells`,'rare',seedIcon(type),'rainbow');}}
 
-function farmTap(x,z){
+// buildings, the bin and placed decor respond to a tap whatever tool you hold; returns true if it handled the tap
+function useFixed(x,z){
   const f=fixedAt(x,z);
-  if(f==='bin'){walkTo(x,z);openSheet('bag');return;}
-  if(f==='house'){goTo(HOUSE_AT.x+0.5,HOUSE_AT.z+2.2,()=>enterHouse('home'));return;}
-  if(f&&townTap(f,x,z))return;
-  const o=objAt(x,z);if(o){const B=BUILD[o.k];toast(`<b>${B.name}</b> — ${B.desc}`);return;}
-  const type=landMap.get(K(x,z));if(!isLandT(type))return;
-  const k=K(x,z),t=S.tiles[k];
-  if(!t){if(type!=='grass'||TOWN.path.has(K(x,z))){goTo(x,z);return;}
-    S.tiles[k]={w:S.rain?1:0,crop:null};rebuildSoil();SFX.till();burst(x,0.6,z,0x8a5a3a,8,1.2,0.07);walkTo(x,z);vil.hop=0.25;return;}
-  if(!t.crop){plant(k,x,z);return;}
-  const c=t.crop,C=CROPS[c.t];
-  if(c.p>=1){harvest(k,x,z);return;}
-  if(!t.w){const r=S.can?1:0;for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const q=S.tiles[K(x+dx,z+dz)];if(!q)continue;q.w=1;for(let i=0;i<6;i++)emit(x+dx+(Math.random()-0.5)*0.5,1.2,z+dz+(Math.random()-0.5)*0.5,{vy:-1,life:0.5,max:0.5,size:0.06,color:0x8ac4ff,g:6});}
-    rebuildSoil();SFX.water();walkTo(x,z);
-    if(S.tut===1){S.tut=1.5;setTimeout(()=>toast('Watered soil stays wet until the next dawn. Crops ripen while you explore.','',ICON.sprout),600);}return;}
-  if(c.td!==S.day){c.td=S.day;const s0=stageOf(c.p);c.p=Math.min(0.995,c.p+0.08);if(stageOf(c.p)!==s0)syncCrop(k);hearts(x,0.9,z);tone(880,0.08,'triangle',0.04);setTimeout(()=>tone(1175,0.1,'triangle',0.035),70);walkTo(x,z);vil.hop=0.25;
-    floatText(x,1.2,z,'tended +8%');return;}
-  let hint='';if(C.night&&!isNight())hint=' · blooms only at night';if(C.day&&isNight())hint=' · slow at night';
-  toast(`${C.name} · ${Math.floor(c.p*100)}% grown · already tended today${hint}`,'',seedIcon(c.t));
-}
+  if(f==='bin'){walkTo(x,z);openSheet('bag');return true;}
+  if(f==='house'){goTo(HOUSE_AT.x+0.5,HOUSE_AT.z+2.2,()=>enterHouse('home'));return true;}
+  if(f&&townTap(f,x,z))return true;
+  const o=objAt(x,z);if(o){const B=BUILD[o.k];walkTo(x,z);toast(`<b>${B.name}</b> — ${B.desc}`);return true;}
+  return false;}
+// the farming actions tools perform (71-tools decides which one a tap means)
+function canTill(x,z){const k=K(x,z);return !S.tiles[k]&&landMap.get(k)==='grass'&&!TOWN.path.has(k)&&freeTile(x,z)&&!fixedAt(x,z)&&!objAt(x,z)&&!debrisAt(x,z);}
+function tillAt(x,z){if(!canTill(x,z))return false;S.tiles[K(x,z)]={w:S.rain?1:0,crop:null};rebuildSoil();SFX.till();burst(x,0.6,z,0x8a5a3a,8,1.2,0.07);vil.hop=0.25;
+  if(!S.tipSeed){S.tipSeed=1;setTimeout(()=>toast('Nice soil! Pick <b>Seeds</b> from your tools and tap it to plant.','',seedIcon(S.seed)),600);}return true;}
+function fillAt(x,z){const k=K(x,z),t=S.tiles[k];if(!t||t.crop)return false;delete S.tiles[k];rebuildSoil();noise(0.08,0.04,700);burst(x,0.5,z,0x6ab84a,8,1.0,0.06);return true;}
+function waterAt(x,z){const r=S.can?1:0;let n=0;for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const q=S.tiles[K(x+dx,z+dz)];if(q&&!q.w){q.w=1;n++;}}
+  for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)for(let i=0;i<5;i++)emit(x+dx+(Math.random()-0.5)*0.5,1.2,z+dz+(Math.random()-0.5)*0.5,{vy:-1,life:0.5,max:0.5,size:0.06,color:0x8ac4ff,g:6});
+  SFX.water();if(!n)return false;rebuildSoil();
+  if(S.tut===1){S.tut=1.5;setTimeout(()=>toast('Watered soil stays wet until the next dawn. Crops ripen while you explore.','',ICON.sprout),600);}return true;}
+function tendAt(x,z){const k=K(x,z),t=S.tiles[k];if(!t||!t.crop)return false;const c=t.crop,C=CROPS[c.t];
+  if(c.p>=1){harvest(k,x,z);return true;}
+  if(c.td!==S.day){c.td=S.day;const s0=stageOf(c.p);c.p=Math.min(0.995,c.p+0.08);if(stageOf(c.p)!==s0)syncCrop(k);hearts(x,0.9,z);tone(880,0.08,'triangle',0.04);setTimeout(()=>tone(1175,0.1,'triangle',0.035),70);vil.hop=0.25;
+    floatText(x,1.2,z,'tended +8%');return true;}
+  let hint='';if(C.night&&!isNight())hint=' · blooms only at night';if(C.day&&isNight())hint=' · slow at night';if(!t.w)hint+=' · needs water';
+  toast(`${C.name} · ${Math.floor(c.p*100)}% grown · already tended today${hint}`,'',seedIcon(c.t));return true;}
 function houseTap(){
   if(S.hour>=19||S.hour<5){setAction(`It's getting late… sleep until morning in your ${HOUSES[S.house].toLowerCase()}?`,[{label:'Sleep',cls:'go',fn:sleep},{label:'Stay up',fn:clearAction}],'Home');}
   else toast(`Your ${HOUSES[S.house].toLowerCase()}.${S.house<3?' Upgrade it in Shop → Island.':' Home sweet villa.'}`);
@@ -2255,7 +2380,7 @@ function plantGroup(id,seed){const Pd=PLANTS[id],R=mulberry(seed),g=new T.Group(
       for(let c=0;c<4;c++){const a=c*1.57+R()*0.5;berries(f,col,dk,Math.sin(a)*0.28,0.24+R()*0.12,Math.cos(a)*0.28,0.06,3,R);}break;
     case'flower':
       if(id==='waterlily'){p.push(P(CYL8,0x4f9a3a,0,0.02,0,0,0,0,0.6,0.02,0.6),P(CYL8,0x6ab84a,0.28,0.025,0.15,0,0,0,0.34,0.02,0.34));bloom(f,col,cc,0,0.07,0,0.17,8,0.45);bloom(f,dk,cc,0.28,0.06,0.15,0.08,6,0.5);break;}
-      for(let s=0;s<6;s++){const x=(R()-0.5)*0.5,z=(R()-0.5)*0.5,h=0.2+R()*0.25;stemP(p,0x4f8a34,x,z,h);lf(p,GREENS[s%4],x,h*0.3,z,R()*6.28,0.3,0.14,0.08);lf(p,GREENS[(s+2)%4],x,h*0.6,z,R()*6.28,0.35,0.12,0.07);
+      for(let s=0;s<6;s++){const x=(R()-0.5)*0.5,z=(R()-0.5)*0.5,h=0.1+R()*0.12;stemP(p,0x4f8a34,x,z,h);lf(p,GREENS[s%4],x,h*0.3,z,R()*6.28,0.3,0.14,0.08);lf(p,GREENS[(s+2)%4],x,h*0.6,z,R()*6.28,0.35,0.12,0.07);
         if(['honeyclover','firelily','phoenixbloom'].includes(id))spike(f,col,dk,x,h,z,0.045);else bloom(f,s%2?col:dk,cc,x,h,z,0.1,id==='hibiscus'||id==='icelily'?5:6);}
       for(let i=0;i<6;i++)lf(p,GREENS[i%4],0,0.02,0,i*1.05+R(),0.25,0.22,0.1);break;
     case'clover':for(let i=0;i<16;i++){const cx=(R()-0.5)*0.75,cz=(R()-0.5)*0.75,y=0.04+R()*0.06,r0=R()*6.28;
@@ -2845,7 +2970,7 @@ $('sheetBody').addEventListener('input',e=>{if(e.target.id==='devHour'){const pr
 $('sheetTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;sheet.tab=b.dataset.tab;SFX.ui();renderSheet();});
 $('sheetBody').addEventListener('click',e=>{
   const el=e.target.closest('button');if(!el||el.disabled)return;const d=el.dataset;
-  if(d.seed){S.seed=d.seed;SFX.ui();updateHUD();closeSheet();return;}
+  if(d.seed){S.seed=d.seed;S.tool='seeds';SFX.ui();updateHUD();renderTools();showHeld();closeSheet();return;}
   if(d.pick){sheet.sel=d.pick;SFX.ui();renderSheet();return;}
   if(d.craft!==undefined){craft(Number(d.craft));renderSheet();return;}
   if(d.place){startPlace(d.place,true);return;}
@@ -2918,34 +3043,38 @@ function onTap(cx,cy){
     return;}
   if(tapLife(cx,cy)){clearAction();updateHUD();return;}
   if(hit&&hit.river){clearAction();const ri=islandAt(hit.x,hit.z),here0=curIsl();if(!ri||!here0||ri.id!==here0.id)return;
+    if(S.tool!=='rod'){goTo(hit.x,hit.z);toolHint('Equip the <b>fishing rod</b> to fish here.','rod');return;}
     if(ri.lava){toast('That lava is far too hot to fish in!');return;}startFishing(hit.x,hit.z);return;}
-  if(!hit){clearAction();const w=waterPoint(cx,cy);if(w&&!isLand(Math.round(w.x),Math.round(w.z)))startFishing(w.x,w.z);return;}
+  if(!hit){clearAction();const w=waterPoint(cx,cy);if(w&&!isLand(Math.round(w.x),Math.round(w.z))){if(S.tool==='rod')startFishing(w.x,w.z);else toolHint('Equip the <b>fishing rod</b>, then tap the water to cast.','rod');}return;}
   if(!$('actionBar').hidden)clearAction();
   const here=curIsl(),there=islandAt(hit.x,hit.z);
   if(here&&there&&here.id!==there.id){toast(`That's ${S.disc[there.id]?there.name:'another island'} — take your boat to get there.`);return;}
   cursorAt(hit.x,hit.z);
-  {const db=there&&there.home&&S.mode!=='edit'?debrisAt(hit.x,hit.z):null;if(db){hitDebris(db);updateHUD();return;}const wd=weedAt(hit.x,hit.z);if(wd){pullWeed(wd);updateHUD();return;}const fd=findAt(hit.x,hit.z);if(fd){collectFind(fd);updateHUD();return;}const pl=plantAt(hit.x,hit.z);if(pl){pickPlant(pl);updateHUD();return;}}
-  if(there&&!there.home){goTo(hit.x,hit.z);return;}
-  if(S.mode==='edit')editTap(hit.x,hit.z);else farmTap(hit.x,hit.z);
+  if(S.mode==='edit')editTap(hit.x,hit.z);else toolTap(hit.x,hit.z,there);
   updateHUD();}
 function tapLife(cx,cy){
   {let bn=null,bd=48;for(const n of npcs){if(!n.g.visible)continue;const s=toScreen(n.x,n.y+0.5,n.z);const d=Math.hypot(s[0]-cx,s[1]-cy);if(d<bd){bd=d;bn=n;}}if(bn){talkTo(bn);return true;}}
   if(crow&&crow.state!=='out'){const s=toScreen(crowG.position.x,crowG.position.y+0.15,crowG.position.z);if(Math.hypot(s[0]-cx,s[1]-cy)<50){shooCrow();return true;}}
   let best=null,bd=46;for(const b of bugs){if(b.out)continue;const s=toScreen(b.g.position.x,b.g.position.y,b.g.position.z);const d=Math.hypot(s[0]-cx,s[1]-cy);if(d<bd){bd=d;best=b;}}
-  if(best){catchBug(best);return true;}return false;}
+  if(best){if(S.tool==='net'){swingTool();catchBug(best);return true;}toolHint('Equip the <b>net</b> to catch bugs.','net');}return false;}
 const ptrs=new Map();let drag=null,pinch=null,paint=null,holdT=null;
-function paintMode(x,z){if(!onHome(x,z))return null;if(debrisAt(x,z))return'clear';if(fixedAt(x,z)||objAt(x,z))return null;
-  const t=S.tiles[K(x,z)];if(!t)return landMap.get(K(x,z))==='grass'&&!TOWN.path.has(K(x,z))?'till':null;if(!t.crop)return'plant';if(t.crop.p>=1)return'harvest';return t.w?'tend':'water';}
+// long-press and drag repeats the equipped tool's action across tiles
+function paintMode(x,z){if(!onHome(x,z))return null;const tool=S.tool,d=debrisAt(x,z);
+  if(d)return !DEBRIS_TOOL[d.k]||DEBRIS_TOOL[d.k]===tool?'clear':null;
+  if(fixedAt(x,z)||objAt(x,z))return null;const t=S.tiles[K(x,z)];
+  switch(tool){case'shovel':return canTill(x,z)?'till':null;case'can':return t?'water':null;case'seeds':return t&&!t.crop?'plant':null;
+    case'hand':return t&&t.crop?(t.crop.p>=1?'harvest':'tend'):null;}
+  return null;}
 const PAINT_LBL={till:'Tilling',plant:'Planting',water:'Watering',harvest:'Harvesting',tend:'Tending',clear:'Clearing'};
 function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!onHome(x,z))return;paint.done.add(k);const t=S.tiles[k];let did=false;
   switch(paint.mode){
-    case'till':if(!t&&landMap.get(k)==='grass'&&freeTile(x,z)&&!fixedAt(x,z)){S.tiles[k]={w:S.rain?1:0,crop:null};burst(x,0.6,z,0x8a5a3a,6,1.1,0.06);SFX.till();paint.soil=did=true;}break;
+    case'till':if(canTill(x,z)){S.tiles[k]={w:S.rain?1:0,crop:null};burst(x,0.6,z,0x8a5a3a,6,1.1,0.06);SFX.till();paint.soil=did=true;}break;
     case'plant':if(t&&!t.crop){const sh=S.shells,fr=S.free[S.seed];plant(k,x,z);did=!!t.crop;if(!did)paint.stop=true;}break;
     case'water':if(t&&!t.w){t.w=1;for(let i=0;i<5;i++)emit(x+(Math.random()-0.5)*0.5,1.2,z+(Math.random()-0.5)*0.5,{vy:-1,life:0.5,max:0.5,size:0.06,color:0x8ac4ff,g:6});if(paint.n%3===0)SFX.water();paint.soil=did=true;}break;
     case'harvest':if(t&&t.crop&&t.crop.p>=1){harvest(k,x,z);did=true;}break;
     case'tend':if(t&&t.crop&&t.crop.p<1&&t.crop.td!==S.day){const c=t.crop,s0=stageOf(c.p);c.td=S.day;c.p=Math.min(0.995,c.p+0.08);if(stageOf(c.p)!==s0)syncCrop(k);hearts(x,0.9,z);tone(880+paint.n*40,0.06,'triangle',0.03);did=true;}break;
-    case'clear':{const d=debrisAt(x,z);if(d){hitDebris(d);did=true;}break;}}
-  if(did){paint.n++;cursorAt(x,z);walkTo(x,z);if(paint.soil){rebuildSoil();paint.soil=false;}}}
+    case'clear':{const d=debrisAt(x,z);if(d&&(!DEBRIS_TOOL[d.k]||DEBRIS_TOOL[d.k]===S.tool)){hitDebris(d);did=true;}break;}}
+  if(did){paint.n++;cursorAt(x,z);walkTo(x,z);swingTool();if(paint.soil){rebuildSoil();paint.soil=false;}}}
 function endPaint(){if(!paint)return;const n=paint.n,m=paint.mode;paint=null;clearAction();updateHUD();if(n>1)floatText(vil.x,1.3,vil.z,PAINT_LBL[m]+' ×'+n);}
 function pinchDist(){const [a,b]=[...ptrs.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1;}
 canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -3145,7 +3274,7 @@ function frame(now){
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);
   for(const a of anims)a(tt,dt);
-  updateLife(dt,tt);updateAtmos(dt,tt);updateNPCs(dt,tt);updateSeaLife(dt,tt);updateDebris(dt,tt);
+  updateLife(dt,tt);updateAtmos(dt,tt);updateNPCs(dt,tt);updateSeaLife(dt,tt);updateDebris(dt,tt);updateTool(dt);
   if(sprayT>0){sprayT-=dt;for(const o of S.objs)if(o.k==='sprinkler'&&Math.random()<0.8){const a=Math.random()*6.28;emit(o.x,topY(o.x,o.z)+0.4,o.z,{vx:Math.cos(a)*1.6,vy:1.6,vz:Math.sin(a)*1.6,life:0.6,max:0.6,size:0.05,color:0x9ad0ff,g:6});}}
   for(const c of clouds){const u=c.userData;u.ox+=dt*u.sp;const rx=((u.ox-cam.tx)%80+120)%80-40,rz=((u.oz-cam.tz)%80+120)%80-40;c.position.set(cam.tx+rx,11,cam.tz+rz);}
   const day=1-nightF;
@@ -3185,7 +3314,7 @@ syncObjs();rebuildSoil();if(!S.orders.length)makeOrders();syncLife();setRod();in
 let away=[];if(!isNew){const el=clamp((Date.now()-S.t)/1000,0,3*3600);if(el>5)away=simulate(el);}
 syncAllCrops();fitZoom();cam.tx=vil.x;cam.tz=vil.z;resize();
 try{makeThumbs();}catch(e){console.warn(e);}
-shownShells=S.shells;$('shellTxt').textContent=fmt(S.shells);applyTime();updateHUD();
+renderTools();showHeld();if(!S.tipTools){S.tipTools=1;setTimeout(()=>toast('Tap anywhere to walk. Pick a <b>tool</b> from the bar above the dock, then tap to dig, water, plant, chop, catch bugs or fish.','',ICON.shovel),5000);}shownShells=S.shells;$('shellTxt').textContent=fmt(S.shells);applyTime();updateHUD();
 window.addEventListener('resize',()=>{resize();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{const el=clamp((Date.now()-S.t)/1000,0,3*3600);if(el>5){const out=simulate(el);afterSim(out,'While you were away');}last=performance.now();}});
 window.addEventListener('pagehide',save);
@@ -3211,7 +3340,7 @@ if(/[?&]debug\b/.test(location.search)){
     islands:()=>islands.map(i=>({id:i.id,biome:i.biome,name:i.name,x:i.cx,z:i.cz,r:Math.round(islR(i)),grand:!!i.grand,river:(i.rtiles||[]).length})),
     screen:(x,z)=>toScreen(x,topY(x,z),z),
     npcScreen:i=>{const n=npcs[i];return toScreen(n.x,n.y+0.5,n.z);},
-    freeRow:(len=5)=>{for(const [x,z] of tileKeys()){let ok=true;for(let i=0;i<len&&ok;i++){const k=K(x+i,z);ok=landMap.get(k)==='grass'&&freeTile(x+i,z)&&!fixedAt(x+i,z)&&farmQ(x+i,z)>1.3&&(lvlMap.get(k)||0)===(lvlMap.get(K(x,z))||0);}if(ok)return[x,z];}return null;},
+    freeRow:(len=5)=>{for(const [x,z] of tileKeys()){let ok=true;for(let i=0;i<len&&ok;i++){const k=K(x+i,z);ok=canTill(x+i,z)&&farmQ(x+i,z)>1.3&&(lvlMap.get(k)||0)===(lvlMap.get(K(x,z))||0);}if(ok)return[x,z];}return null;},
     give:(items)=>{Object.assign(S.inv,items||{'m:wood':14,'m:stone':11,'m:fiber':9,'g:shell':4,'f:sardine':2,'tomato|normal':3,'tomato|golden':1});updateHUD();},
     craft:i=>craft(i),sheet:(k,tab)=>openSheet(k,tab),closeSheet:()=>closeSheet(),
     enterHome:()=>enterHouse('home'),enterNpc:i=>{const n=npcs[i];enterHouse('vh',n.b,n);},leave:()=>leaveHouse(),
@@ -3220,6 +3349,7 @@ if(/[?&]debug\b/.test(location.search)){
     fastTravel:id=>fastTravel(islands[id]),
     npcRouteOnLand:()=>{updateNpcBoat(0,0);const R=npcRoute;if(!R.pts)return -1;let n=0;for(let d=0;d<R.total;d+=0.25){R.d=d;updateNpcBoat(0,0);if(seaBlocked(Math.round(npcBoat.position.x),Math.round(npcBoat.position.z)))n++;}return n;},
     sailTo:id=>{const isl=islands[id];if(!S.sea){S.sea=true;const b=S.boat;vil.x=b.x;vil.z=b.z;}sailToIsland(isl);return !!sail;},
+    pick:(cx,cy)=>pick(cx,cy),tool:k=>{equip(k);return S.tool;},tile:(x,z)=>S.tiles[K(x,z)]||null,vil:()=>({x:vil.x,z:vil.z}),
     boat:()=>({x:S.boat.x,z:S.boat.z,onLand:seaBlocked(Math.round(S.boat.x),Math.round(S.boat.z)),sailing:!!sail}),
   };
   console.info('Driftseed debug API ready: window.DS');

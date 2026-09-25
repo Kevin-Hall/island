@@ -29,7 +29,7 @@ function plant(k,x,z){
   const type=id==='mystery'?pickR(CROP_IDS):id;
   S.tiles[k].crop={t:type,p:0,v:null,m:id==='mystery'?1:0};syncCrop(k);SFX.plant();burst(x,0.6,z,0x6a4a30,6,0.8,0.06);walkTo(x,z);
   if(id==='mystery')floatText(x,1.2,z,'? '+CROPS[type].name);
-  if(S.tut===0){S.tut=1;setTimeout(()=>toast(`Seeds only grow on days they're watered — tap the planted soil to water it.`,'',ICON.sprout),600);}
+  if(S.tut===0){S.tut=1;setTimeout(()=>toast(`Seeds only grow on days they're watered — switch to the <b>watering can</b> and tap the soil.`,'',ICON.sprout),600);}
 }
 function harvest(k,x,z){
   const t=S.tiles[k],c=t.crop,C=CROPS[c.t],V=VAR[c.v||'normal'];const key=c.t+'|'+V.id;
@@ -46,27 +46,29 @@ function harvest(k,x,z){
 function checkRow(type){if(S.almR[type])return;if(VARIANTS.every(v=>S.alm[type+'|'+v.id])){S.almR[type]=1;const r=CROPS[type].price*6;S.shells+=r;SFX.level();
   toast(`Crop page complete: ${CROPS[type].name}! Reward +${fmt(r)} shells`,'rare',seedIcon(type),'rainbow');}}
 
-function farmTap(x,z){
+// buildings, the bin and placed decor respond to a tap whatever tool you hold; returns true if it handled the tap
+function useFixed(x,z){
   const f=fixedAt(x,z);
-  if(f==='bin'){walkTo(x,z);openSheet('bag');return;}
-  if(f==='house'){goTo(HOUSE_AT.x+0.5,HOUSE_AT.z+2.2,()=>enterHouse('home'));return;}
-  if(f&&townTap(f,x,z))return;
-  const o=objAt(x,z);if(o){const B=BUILD[o.k];toast(`<b>${B.name}</b> — ${B.desc}`);return;}
-  const type=landMap.get(K(x,z));if(!isLandT(type))return;
-  const k=K(x,z),t=S.tiles[k];
-  if(!t){if(type!=='grass'||TOWN.path.has(K(x,z))){goTo(x,z);return;}
-    S.tiles[k]={w:S.rain?1:0,crop:null};rebuildSoil();SFX.till();burst(x,0.6,z,0x8a5a3a,8,1.2,0.07);walkTo(x,z);vil.hop=0.25;return;}
-  if(!t.crop){plant(k,x,z);return;}
-  const c=t.crop,C=CROPS[c.t];
-  if(c.p>=1){harvest(k,x,z);return;}
-  if(!t.w){const r=S.can?1:0;for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const q=S.tiles[K(x+dx,z+dz)];if(!q)continue;q.w=1;for(let i=0;i<6;i++)emit(x+dx+(Math.random()-0.5)*0.5,1.2,z+dz+(Math.random()-0.5)*0.5,{vy:-1,life:0.5,max:0.5,size:0.06,color:0x8ac4ff,g:6});}
-    rebuildSoil();SFX.water();walkTo(x,z);
-    if(S.tut===1){S.tut=1.5;setTimeout(()=>toast('Watered soil stays wet until the next dawn. Crops ripen while you explore.','',ICON.sprout),600);}return;}
-  if(c.td!==S.day){c.td=S.day;const s0=stageOf(c.p);c.p=Math.min(0.995,c.p+0.08);if(stageOf(c.p)!==s0)syncCrop(k);hearts(x,0.9,z);tone(880,0.08,'triangle',0.04);setTimeout(()=>tone(1175,0.1,'triangle',0.035),70);walkTo(x,z);vil.hop=0.25;
-    floatText(x,1.2,z,'tended +8%');return;}
-  let hint='';if(C.night&&!isNight())hint=' · blooms only at night';if(C.day&&isNight())hint=' · slow at night';
-  toast(`${C.name} · ${Math.floor(c.p*100)}% grown · already tended today${hint}`,'',seedIcon(c.t));
-}
+  if(f==='bin'){walkTo(x,z);openSheet('bag');return true;}
+  if(f==='house'){goTo(HOUSE_AT.x+0.5,HOUSE_AT.z+2.2,()=>enterHouse('home'));return true;}
+  if(f&&townTap(f,x,z))return true;
+  const o=objAt(x,z);if(o){const B=BUILD[o.k];walkTo(x,z);toast(`<b>${B.name}</b> — ${B.desc}`);return true;}
+  return false;}
+// the farming actions tools perform (71-tools decides which one a tap means)
+function canTill(x,z){const k=K(x,z);return !S.tiles[k]&&landMap.get(k)==='grass'&&!TOWN.path.has(k)&&freeTile(x,z)&&!fixedAt(x,z)&&!objAt(x,z)&&!debrisAt(x,z);}
+function tillAt(x,z){if(!canTill(x,z))return false;S.tiles[K(x,z)]={w:S.rain?1:0,crop:null};rebuildSoil();SFX.till();burst(x,0.6,z,0x8a5a3a,8,1.2,0.07);vil.hop=0.25;
+  if(!S.tipSeed){S.tipSeed=1;setTimeout(()=>toast('Nice soil! Pick <b>Seeds</b> from your tools and tap it to plant.','',seedIcon(S.seed)),600);}return true;}
+function fillAt(x,z){const k=K(x,z),t=S.tiles[k];if(!t||t.crop)return false;delete S.tiles[k];rebuildSoil();noise(0.08,0.04,700);burst(x,0.5,z,0x6ab84a,8,1.0,0.06);return true;}
+function waterAt(x,z){const r=S.can?1:0;let n=0;for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const q=S.tiles[K(x+dx,z+dz)];if(q&&!q.w){q.w=1;n++;}}
+  for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)for(let i=0;i<5;i++)emit(x+dx+(Math.random()-0.5)*0.5,1.2,z+dz+(Math.random()-0.5)*0.5,{vy:-1,life:0.5,max:0.5,size:0.06,color:0x8ac4ff,g:6});
+  SFX.water();if(!n)return false;rebuildSoil();
+  if(S.tut===1){S.tut=1.5;setTimeout(()=>toast('Watered soil stays wet until the next dawn. Crops ripen while you explore.','',ICON.sprout),600);}return true;}
+function tendAt(x,z){const k=K(x,z),t=S.tiles[k];if(!t||!t.crop)return false;const c=t.crop,C=CROPS[c.t];
+  if(c.p>=1){harvest(k,x,z);return true;}
+  if(c.td!==S.day){c.td=S.day;const s0=stageOf(c.p);c.p=Math.min(0.995,c.p+0.08);if(stageOf(c.p)!==s0)syncCrop(k);hearts(x,0.9,z);tone(880,0.08,'triangle',0.04);setTimeout(()=>tone(1175,0.1,'triangle',0.035),70);vil.hop=0.25;
+    floatText(x,1.2,z,'tended +8%');return true;}
+  let hint='';if(C.night&&!isNight())hint=' · blooms only at night';if(C.day&&isNight())hint=' · slow at night';if(!t.w)hint+=' · needs water';
+  toast(`${C.name} · ${Math.floor(c.p*100)}% grown · already tended today${hint}`,'',seedIcon(c.t));return true;}
 function houseTap(){
   if(S.hour>=19||S.hour<5){setAction(`It's getting late… sleep until morning in your ${HOUSES[S.house].toLowerCase()}?`,[{label:'Sleep',cls:'go',fn:sleep},{label:'Stay up',fn:clearAction}],'Home');}
   else toast(`Your ${HOUSES[S.house].toLowerCase()}.${S.house<3?' Upgrade it in Shop → Island.':' Home sweet villa.'}`);

@@ -19,10 +19,16 @@ await ev(()=>DS.hour(10));
 check((await ev(()=>DS.state())).perfPx===0,'no automatic pixel scaling');
 // drag-farming across a free row
 const row=await ev(()=>DS.freeRow(5));check(!!row,'found a free row of grass');
-if(row){await ev(r=>DS.tp(r[0]+2,r[1]+1.5),row);await wait(2000);const pts=[];for(let i=0;i<5;i++)pts.push(await ev(([x,z])=>DS.screen(x,z),[row[0]+i,row[1]]));
-  const before=(await ev(()=>DS.state())).tiles;await pg.mouse.move(pts[0][0],pts[0][1]);await pg.mouse.down();await wait(450);
+if(row){await ev(r=>DS.tp(r[0]+2,r[1]+1.5),row);check(await ev(()=>DS.tool('shovel'))==='shovel','equipped the shovel');await wait(2000);const pts=[];for(let i=0;i<5;i++)pts.push(await ev(([x,z])=>DS.screen(x,z),[row[0]+i,row[1]]));
+  const before=(await ev(()=>DS.state())).tiles;await pg.mouse.move(pts[0][0],pts[0][1]);await pg.mouse.down();await wait(800);
   for(let i=1;i<5;i++)for(let k=1;k<=4;k++){await pg.mouse.move(pts[i-1][0]+(pts[i][0]-pts[i-1][0])*k/4,pts[i-1][1]+(pts[i][1]-pts[i-1][1])*k/4);await wait(30);}
-  await pg.mouse.up();await wait(500);const after=(await ev(()=>DS.state())).tiles;check(after-before>=3,`drag-tilled ${after-before} tiles`);}
+  await pg.mouse.up();await wait(500);const after=(await ev(()=>DS.state())).tiles;check(after-before>=3,`drag-tilled ${after-before} tiles`);
+  // tools: tap soil with the watering can (the villager walks over, then waters)
+  await ev(()=>DS.tool('can'));const p0=await ev(([x,z])=>DS.screen(x,z),[row[0]+4,row[1]]);await pg.mouse.click(p0[0],p0[1]);let wet=false;for(let i=0;i<16&&!wet;i++){await wait(500);wet=!!(await ev(([x,z])=>DS.tile(x,z),[row[0]+4,row[1]]))?.w;}
+  check(wet,'watering can watered the tapped soil');
+  // hands: a tap on open ground just walks there
+  await ev(()=>DS.tool('hand'));const v0=await ev(()=>DS.vil());const p1=await ev(([x,z])=>DS.screen(x,z),[row[0],row[1]]);await pg.mouse.click(p1[0],p1[1]);let v1=v0;for(let i=0;i<16&&Math.hypot(v1.x-row[0],v1.z-row[1])>1;i++){await wait(500);v1=await ev(()=>DS.vil());}
+  check(Math.hypot(v1.x-row[0],v1.z-row[1])<=1,`tap to walk moved the villager ${Math.hypot(v1.x-v0.x,v1.z-v0.z).toFixed(1)} tiles to the tapped tile`);}
 await pg.screenshot({path:join(shots,'1-town.png')});
 // inventory + crafting
 await ev(()=>{DS.give();DS.sheet('bag');});await wait(500);check(await pg.locator('.cell').count()>=5,'inventory grid shows items');

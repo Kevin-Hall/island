@@ -27,7 +27,7 @@ function bloom(p,col,cc,x,y,z,r,n=5,tilt=0.25){for(let i=0;i<n;i++)lf(p,i%2&&n>5
 function spike(p,col,dk,x,y,z,r){for(let k=0;k<6;k++){const rr=r*(1-k*0.13);p.push(P(ICO,k%2?dk:col,x+(k%2?0.015:-0.015),y+k*r*0.75,z,0,k,0,rr,rr*0.9,rr));}}
 function berries(p,col,dk,x,y,z,r,n,R){for(let i=0;i<n;i++){const bx=x+(R()-0.5)*r*2.2,by=y+(R()-0.5)*r*1.6,bz=z+(R()-0.5)*r*2.2;
   p.push(P(ICO,i%3===2?dk:col,bx,by,bz,0,R()*3,0,r,r,r),P(LEAF0,0xffffff,bx+r*0.28,by+r*0.3,bz+r*0.28,0,0,0,r*0.32,r*0.28,r*0.32));}}
-function wildflowers(p,R,cols,n,spread=0.32){for(let s=0;s<n;s++){const x=(R()-0.5)*spread*2,z=(R()-0.5)*spread*2,h=0.16+R()*0.24,c=cols[Math.floor(R()*cols.length)];
+function wildflowers(p,R,cols,n,spread=0.32){for(let s=0;s<n;s++){const x=(R()-0.5)*spread*2,z=(R()-0.5)*spread*2,h=0.08+R()*0.12,c=cols[Math.floor(R()*cols.length)];
   stemP(p,0x4f8a34,x,z,h);lf(p,GREENS[s%4],x,h*0.35,z,R()*6.28,0.35,0.12,0.07);lf(p,GREENS[(s+1)%4],x,h*0.6,z,R()*6.28,0.4,0.1,0.06);
   if(R()<0.3)spike(p,c,0xffffff,x,h,z,0.04);else bloom(p,c,R()<0.5?0xf6d04a:0xffffff,x,h,z,0.085);}}
 

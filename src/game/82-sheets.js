@@ -147,7 +147,7 @@ $('sheetBody').addEventListener('input',e=>{if(e.target.id==='devHour'){const pr
 $('sheetTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;sheet.tab=b.dataset.tab;SFX.ui();renderSheet();});
 $('sheetBody').addEventListener('click',e=>{
   const el=e.target.closest('button');if(!el||el.disabled)return;const d=el.dataset;
-  if(d.seed){S.seed=d.seed;SFX.ui();updateHUD();closeSheet();return;}
+  if(d.seed){S.seed=d.seed;S.tool='seeds';SFX.ui();updateHUD();renderTools();showHeld();closeSheet();return;}
   if(d.pick){sheet.sel=d.pick;SFX.ui();renderSheet();return;}
   if(d.craft!==undefined){craft(Number(d.craft));renderSheet();return;}
   if(d.place){startPlace(d.place,true);return;}

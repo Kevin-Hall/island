@@ -16,7 +16,8 @@ function flowerHead(p,sp,c,x,y,z,R){
     case'lily':for(let k=0;k<6;k++)lf(p,k%2?c:dkc(c,0.92),x,y,z,k/6*6.283,0.75,0.17,0.06,0.03);for(let k=0;k<3;k++)p.push(P(BOX,0xe8903a,x+Math.cos(k*2.1)*0.02,y+0.07,z+Math.sin(k*2.1)*0.02,0.3*Math.cos(k),k,0.3*Math.sin(k),0.008,0.1,0.008));break;
     case'hyacinth':for(let k=0;k<14;k++){const a=k*2.4,h=y+k*0.012,r=0.035-k*0.0012;p.push(P(ICO2,k%3?c:dkc(c,0.85),x+Math.cos(a)*r,h,z+Math.sin(a)*r,0,a,0,0.045,0.04,0.045));}break;
     default:bloom(p,c,0xf6d04a,x,y,z,0.1,10,0.15);}}
-const FLOWER_H={tulip:0.26,rose:0.24,cosmos:0.34,pansy:0.1,lily:0.3,hyacinth:0.14,daisy:0.2};
+// stem heights: ankle-high next to the villager (~0.9 tall), like Animal Crossing flowers
+const FLOWER_H={tulip:0.15,rose:0.14,cosmos:0.19,pansy:0.07,lily:0.17,hyacinth:0.09,daisy:0.12};
 const FLORA_KEYS=[],FLORA_GEOS=[];
 for(const sp in FLOWER_SP)FLOWER_SP[sp].forEach((c,ci)=>{const R=mulberry(hi(sp.length,ci,31)),p=[];
   for(let s=0;s<3;s++){const a=s*2.1+R(),r=s?0.14+R()*0.06:0.02,x=Math.cos(a)*r,z=Math.sin(a)*r,h=FLOWER_H[sp]*(0.85+R()*0.3);stemP(p,0x4f8a34,x,z,h);
@@ -101,7 +102,7 @@ function layoutTown(isl){
       if(h<0.34)lists[floraIndex(x,z)].push([x,z]);else if(h<0.43)clov.push([x,z]);}
     for(const [k,v] of TOWN.path){if(v!==1)continue;const [x,z]=k.split(',').map(Number);for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(G(x+dx,z+dz)&&!TOWN.path.has(K(x+dx,z+dz))&&hash(x*7+dx,z*5+dz)<0.35)peb.push([x+dx*0.46,z+dz*0.46,x,z]);}
     const mk=(geo,list,mat,track)=>{if(!list.length)return;const im=new T.InstancedMesh(geo,mat,list.length);list.forEach(([x,z,tx,tz],i)=>{const tile=tx===undefined?[x,z]:[tx,tz];
-        _e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x+(tx===undefined?(hash(z,x)-0.5)*0.4:0),y0(...tile),z+(tx===undefined?(hash(x+1,z)-0.5)*0.4:0)),_q,_s.set(1.15,1.0+hash(z*2,x)*0.35,1.15));im.setMatrixAt(i,_m);
+        _e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x+(tx===undefined?(hash(z,x)-0.5)*0.4:0),y0(...tile),z+(tx===undefined?(hash(x+1,z)-0.5)*0.4:0)),_q,_s.set(0.9,0.9+hash(z*2,x)*0.2,0.9));im.setMatrixAt(i,_m);
         if(track){const k=K(x,z);if(!TOWN.flora.has(k))TOWN.flora.set(k,[]);TOWN.flora.get(k).push([im,i,_m.toArray()]);}});
       im.frustumCulled=false;im.receiveShadow=true;isl.group.add(im);};
     FLORA_GEOS.forEach((g0,i)=>mk(g0,lists[i],flowerMat,true));mk(CLOVER_GEO,clov,flowerMat,true);mk(PEBBLE_GEO,peb,vcMat,false);}

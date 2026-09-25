@@ -109,7 +109,7 @@ function plantGroup(id,seed){const Pd=PLANTS[id],R=mulberry(seed),g=new T.Group(
       for(let c=0;c<4;c++){const a=c*1.57+R()*0.5;berries(f,col,dk,Math.sin(a)*0.28,0.24+R()*0.12,Math.cos(a)*0.28,0.06,3,R);}break;
     case'flower':
       if(id==='waterlily'){p.push(P(CYL8,0x4f9a3a,0,0.02,0,0,0,0,0.6,0.02,0.6),P(CYL8,0x6ab84a,0.28,0.025,0.15,0,0,0,0.34,0.02,0.34));bloom(f,col,cc,0,0.07,0,0.17,8,0.45);bloom(f,dk,cc,0.28,0.06,0.15,0.08,6,0.5);break;}
-      for(let s=0;s<6;s++){const x=(R()-0.5)*0.5,z=(R()-0.5)*0.5,h=0.2+R()*0.25;stemP(p,0x4f8a34,x,z,h);lf(p,GREENS[s%4],x,h*0.3,z,R()*6.28,0.3,0.14,0.08);lf(p,GREENS[(s+2)%4],x,h*0.6,z,R()*6.28,0.35,0.12,0.07);
+      for(let s=0;s<6;s++){const x=(R()-0.5)*0.5,z=(R()-0.5)*0.5,h=0.1+R()*0.12;stemP(p,0x4f8a34,x,z,h);lf(p,GREENS[s%4],x,h*0.3,z,R()*6.28,0.3,0.14,0.08);lf(p,GREENS[(s+2)%4],x,h*0.6,z,R()*6.28,0.35,0.12,0.07);
         if(['honeyclover','firelily','phoenixbloom'].includes(id))spike(f,col,dk,x,h,z,0.045);else bloom(f,s%2?col:dk,cc,x,h,z,0.1,id==='hibiscus'||id==='icelily'?5:6);}
       for(let i=0;i<6;i++)lf(p,GREENS[i%4],0,0.02,0,i*1.05+R(),0.25,0.22,0.1);break;
     case'clover':for(let i=0;i<16;i++){const cx=(R()-0.5)*0.75,cz=(R()-0.5)*0.75,y=0.04+R()*0.06,r0=R()*6.28;

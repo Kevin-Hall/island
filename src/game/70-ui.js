@@ -33,6 +33,7 @@ function addXP(n){const before=level();S.xp+=n;const after=level();if(after>befo
 
 let ctxSig='';
 function updateCtx(){
+  $('tools').hidden=!!(inside||S.sea||S.mode==='edit'||placing);
   const box=$('ctx');let st='';
   if(!sheet&&$('actionBar').hidden){
     if(inside)st='inside';else if(S.mode==='edit')st='edit';else if(fishing)st='';else if(S.sea)st=sail?'sailing':'sea';else if(boatNear())st='board';}

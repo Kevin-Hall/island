@@ -27,7 +27,7 @@ function buildIsland(isl){
     if(t==='grass'){const l=levelOf(isl,x,z);if(l)lvlMap.set(k,l);}
     (t==='grass'?isl.grass:t==='sand'?isl.sand:t==='s1'?a1:a2).push([x,z]);}
   if(isl.riverN)carveRivers(isl,g);
-  if(isl.home)layoutTown(isl);
+  if(isl.home){layoutTown(isl);setPathMask(TOWN.path);}
   // grass tiles: a grassy slab on top of a dirt or rock cliff, like the tiers of Wild World
   // grass and sand tiles, drawn with rounded outer corners; the notch shows whatever lies just below (sand, lower grass, or the sea)
   const byMask=new Map(),under=[];const put=(mask,e)=>{if(!byMask.has(mask))byMask.set(mask,{g:[],s:[]});byMask.get(mask)[e.kind].push(e);};
@@ -43,11 +43,9 @@ function buildIsland(isl){
     if(gl.length){const body=new T.InstancedMesh(geo,cliffMat,gl.length);
       gl.forEach(({x,z},i)=>{const ty=topY(x,z),h=ty-0.14+0.6;_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,h,1));body.setMatrixAt(i,_m);body.setColorAt(i,_c.set(B.cliff).multiplyScalar(0.92+hash(z,x)*0.12));});
       body.receiveShadow=true;body.castShadow=true;body.frustumCulled=false;g.add(body);
-      // grass tops and dirt-path tops share the rounded geometry but use different ground textures
-      const pathOf=({x,z})=>isl.home&&TOWN.path.get(K(x,z));
-      for(const [list,mat] of [[gl.filter(e=>!pathOf(e)),grassTopMat],[gl.filter(pathOf),pathMat]]){if(!list.length)continue;const top=new T.InstancedMesh(geo,mat,list.length);
-        list.forEach(({x,z},i)=>{const ty=topY(x,z);_m.compose(_v.set(x,ty-0.14,z),_q.identity(),_s.set(1,0.14,1));top.setMatrixAt(i,_m);const pk=pathOf({x,z});
-          top.setColorAt(i,pk?_c.set(pk===2?0xd8b680:0xcca46a).multiplyScalar(0.96+hash(x*3,z)*0.06):_c.setHex(groundCol(B.grass,x,z,isl.seed)));});
+      // grass tops (dirt paths are painted into this material from the path mask, see 31-ground)
+      {const top=new T.InstancedMesh(geo,grassTopMat,gl.length);
+        gl.forEach(({x,z},i)=>{const ty=topY(x,z);_m.compose(_v.set(x,ty-0.14,z),_q.identity(),_s.set(1,0.14,1));top.setMatrixAt(i,_m);top.setColorAt(i,_c.setHex(groundCol(B.grass,x,z,isl.seed)));});
         top.receiveShadow=true;top.castShadow=true;top.frustumCulled=false;g.add(top);}}
     if(sl.length){const im=new T.InstancedMesh(geo,sandMat,sl.length);sl.forEach(({x,z},i)=>{_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,TOP.sand+0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(sandCol(x,z)));});
       im.receiveShadow=true;im.castShadow=true;im.frustumCulled=false;g.add(im);}}

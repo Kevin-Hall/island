@@ -50,8 +50,18 @@ img.px{image-rendering:crisp-edges;image-rendering:pixelated}
   display:grid;place-items:center;box-shadow:0 2px 0 var(--rose-d);animation:bob 1.2s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(-3px)}}
 
+/* ---------- Tool bar: the equipped tool decides what a tap does ---------- */
+.tools{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 98px);
+  display:flex;gap:5px;padding:5px 6px;background:var(--paper);border-radius:20px;box-shadow:var(--shadow);max-width:calc(100vw - 20px)}
+.tools[hidden]{display:none}
+.tool{width:40px;height:40px;border-radius:14px;background:#f1e8d6;display:grid;place-items:center;padding:0;border:0;transition:transform .12s,background .12s;box-shadow:inset 0 -3px 0 rgba(0,0,0,.08)}
+.tool img{width:26px;height:26px}
+.tool.on{background:#fbe39a;transform:translateY(-4px);box-shadow:inset 0 -3px 0 rgba(0,0,0,.1),0 0 0 2.5px #e0a93a}
+.tool:active{transform:scale(.9)}
+@media (max-width:370px){.tools{gap:3px}.tool{width:37px;height:37px}}
+
 /* ---------- Context buttons ---------- */
-.ctx{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 100px);
+.ctx{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 156px);
   display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;width:max-content;max-width:calc(100vw - 32px);pointer-events:none}
 .ctx > *{pointer-events:auto}
 .ctx .msg{background:var(--paper);border-radius:999px;padding:8px 14px;font-size:13.5px;font-weight:600;color:var(--ink2);box-shadow:var(--shadow)}
@@ -73,7 +83,7 @@ img.px{image-rendering:crisp-edges;image-rendering:pixelated}
 @keyframes rise{to{transform:translate(-50%,-200%);opacity:0}}
 
 /* ---------- Dialog (speech bubble) ---------- */
-.actionbar{position:fixed;z-index:7;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 100px);width:min(440px,calc(100vw - 28px));box-sizing:border-box;
+.actionbar{position:fixed;z-index:7;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 156px);width:min(440px,calc(100vw - 28px));box-sizing:border-box;
   background:var(--paper);border-radius:34px;box-shadow:var(--shadow);padding:20px 20px 14px;display:flex;flex-direction:column;gap:12px;animation:pop .3s cubic-bezier(.3,1.5,.5,1) both}
 @keyframes pop{from{transform:translateX(-50%) scale(.92);opacity:0}to{transform:translateX(-50%);opacity:1}}
 .actionbar .tag{position:absolute;top:-14px;left:24px;background:var(--yellow);color:var(--ink);font-weight:700;font-size:14px;padding:4px 14px;border-radius:999px;transform:rotate(-4deg);box-shadow:0 3px 0 var(--yellow-d)}

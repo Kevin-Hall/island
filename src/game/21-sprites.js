@@ -52,6 +52,10 @@ star:['.....y.....','.....y.....','....yyy....','yyyyyyyyyyy','.yyyyyyyyy.','..y
 boat:['.....w......','.....ww.....','.....wwr....','.....wwww...','.....b......','bbbbbbbbbbbb','.bnnnnnnnnb.','..bbbbbbbb..'],
 task:['.nnnnnnnn.','nbwwwwwwbn','.nwEEEEwn.','.nwwwwwwn.','.nwEEEwwn.','.nwwwwwwn.','.nwEEEEwn.','nbwwwwwwbn','.nnnnnnnn.'],
 rod:['..........E','.........E.','........b..','.......b..u','......b...u','.....b....u','....b.....r','...B.......','..B........'],
+hand:['.pp......pp.','pppp....pppp','pppp.pp.pppp','.pp.pppp.pp.','.....pp.....','...pppppp...','..pppppppp..','.pppppppppp.','.pppppppppp.','..pppppppp..','...pp..pp...'],
+shovel:['....bbbb....','....b..b....','.....bb.....','.....bb.....','.....bb.....','.....bb.....','.....Bb.....','...eeeeee...','...eeeeee...','...eeeeeE...','....eeeE....','.....eE.....'],
+axe:['....EEEb....','...EeeEbb...','..EeeeEbb...','..EeeeEbb...','...EeeEbb...','....EE.bb...','.......bb...','.......bb...','.......bb...','.......bb...','.......BB...'],
+net:['...wwwww....','..wWwWwWw...','.wWwWwWwWw..','.wwWwWwWww..','.wWwWwWwWw..','..wWwWwWw...','...wwwww....','.....bb.....','.....bb.....','.....bb.....','.....bb.....','.....BB.....'],
 can:['....EEE.....','...E...E....','.OOOOOOOOE..','OOOOOOOOOOE.','.OoooooOO..O','.OOOOOOOOOOO','.OOOOOOOO...','..OOOOOO....'],
 };
 const ICON={};for(const k in SPR)ICON[k]=sprite(SPR[k]);
