@@ -89,6 +89,17 @@ const BOX=new T.BoxGeometry(1,1,1),ICO=new T.IcosahedronGeometry(0.5,1),CONE6=ne
   OCT=new T.OctahedronGeometry(0.5),TOWER=new T.CylinderGeometry(0.32,0.5,1,12),TRUNK=new T.CylinderGeometry(0.34,0.5,1,9),
   PRISM=new T.CylinderGeometry(1,1,1,3).rotateX(-Math.PI/2),ICO2=new T.IcosahedronGeometry(0.5,2),CONE12=new T.ConeGeometry(0.5,1,14),CYL12=new T.CylinderGeometry(0.5,0.5,1,14);
 const _m=new T.Matrix4(),_q=new T.Quaternion(),_e=new T.Euler(),_v=new T.Vector3(),_s=new T.Vector3(),_c=new T.Color();
+/* level of detail for small parts: an eye, a berry or a petal only covers a few pixels, so merge() swaps in a lighter
+   version of the same shape (a 180-triangle sphere becomes 20 or 80 triangles, a 14-sided stem becomes 6-sided).
+   This keeps flowers, crops and critters cheap enough to scatter by the thousand. */
+const ICO0=new T.IcosahedronGeometry(0.5,0),CYL5=new T.CylinderGeometry(0.5,0.5,1,5),CONE5=new T.ConeGeometry(0.5,1,5);
+function lodGeo(p){const g=p.geo,big=Math.max(p.sx,p.sy,p.sz),rad=Math.max(p.sx,p.sz);
+  if(g===ICO2)return big<0.13?ICO0:big<0.4?ICO:g;
+  if(g===ICO)return big<0.13?ICO0:g;
+  if(g===CYL12||g===CYL8)return rad<0.07?CYL5:rad<0.2?CYL6:g;
+  if(g===CYL6)return rad<0.07?CYL5:g;
+  if(g===CONE12||g===CONE8||g===CONE6)return rad<0.2?CONE5:g;
+  return g;}
 function P(geo,color,x=0,y=0,z=0,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1){return{geo,color,x,y,z,rx,ry,rz,sx,sy,sz};}
 // like P, but shaded from cBot (local bottom) to cTop (local top) — used for leaf cards
 function PG(geo,cTop,cBot,...rest){return Object.assign(P(geo,cTop,...rest),{c2:cBot});}
@@ -96,7 +107,7 @@ function shift(parts,x,y,z,ry=0){const c=Math.cos(ry),s=Math.sin(ry);return part
 function merge(parts){
   const gs=[];let total=0;
   for(const p of parts){
-    const g=p.geo.index?p.geo.toNonIndexed():p.geo.clone();
+    const g0=lodGeo(p),g=g0.index?g0.toNonIndexed():g0.clone();
     g.computeVertexNormals();
     let ys=null;if(p.c2!==undefined){const a=g.attributes.position.array;ys=new Float32Array(a.length/3);let y0=1e9,y1=-1e9;for(let i=0;i<ys.length;i++){ys[i]=a[i*3+1];y0=Math.min(y0,ys[i]);y1=Math.max(y1,ys[i]);}for(let i=0;i<ys.length;i++)ys[i]=(ys[i]-y0)/((y1-y0)||1);}
     _e.set(p.rx,p.ry,p.rz,'YXZ');_q.setFromEuler(_e);_v.set(p.x,p.y,p.z);_s.set(p.sx,p.sy,p.sz);_m.compose(_v,_q,_s);

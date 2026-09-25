@@ -2,6 +2,7 @@
    Main loop
    ========================================================= */
 let last=performance.now(),tt=0,saveT=0,hudT=0;
+const FRAME_STAT={calls:0,tris:0,logic:0,render:0};/* read by DS.perf() */
 function frame(now){
   const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;
   advance(dt*devSpeed);
@@ -24,14 +25,15 @@ function frame(now){
   updateBoat(dt,tt);
   if(S.sea){vil.hop=Math.max(0,vil.hop-dt);villager.position.set(vil.x,0.14+Math.sin(tt*1.5)*0.04+Math.sin(vil.hop/0.35*Math.PI)*0.3*(vil.hop>0),vil.z);if(!fishing)villager.rotation.y=S.boat.r;}
   const k=paint?0:Math.min(1,dt*3);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();cullIslands(); // hold the view still while drag-farming so tiles stay under the finger
-  applyTime();
+  {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   water.position.set(Math.round(cam.tx/10)*10,0,Math.round(cam.tz/10)*10);
   scene.fog.near=cam.dist+18-fogBoost*14;scene.fog.far=cam.dist+95-fogBoost*45;
   for(const {g} of cropMeshes.values())g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);
   for(const a of anims)a(tt,dt);
-  updateLife(dt,tt);updateAtmos(dt,tt);updateNPCs(dt,tt);updateSeaLife(dt,tt);updateDebris(dt,tt);updateTool(dt);updateMuseumShow(dt,tt);
+  {let t0=performance.now();const lap=k=>{const t=performance.now();FRAME_STAT[k]=(FRAME_STAT[k]||0)*0.9+(t-t0)*0.1;t0=t;};/* smoothed per-system timings, read by DS.perf() */
+    updateLife(dt,tt);lap('life');updateAtmos(dt,tt);lap('atmos');updateNPCs(dt,tt);lap('npcs');updateSeaLife(dt,tt);lap('sea');updateDebris(dt,tt);updateTool(dt);updateMuseumShow(dt,tt);lap('misc');}
   if(sprayT>0){sprayT-=dt;for(const o of S.objs)if(o.k==='sprinkler'&&Math.random()<0.8){const a=Math.random()*6.28;emit(o.x,topY(o.x,o.z)+0.4,o.z,{vx:Math.cos(a)*1.6,vy:1.6,vz:Math.sin(a)*1.6,life:0.6,max:0.6,size:0.05,color:0x9ad0ff,g:6});}}
   for(const c of clouds){const u=c.userData;u.ox+=dt*u.sp;const rx=((u.ox-cam.tx)%80+120)%80-40,rz=((u.oz-cam.tz)%80+120)%80-40;c.position.set(cam.tx+rx,11,cam.tz+rz);}
   const day=1-nightF;
@@ -52,7 +54,8 @@ function frame(now){
   hudT-=dt;if(hudT<=0){hudT=0.5;updateHUD();}
   tickShells(dt);
   saveT+=dt;if(saveT>5){saveT=0;save();}
-  updateSkyDome();renderer.setRenderTarget(rt);if(inside){updateRoom(dt,tt);renderer.render(roomScene,roomCam);}else{renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;}renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);
+  const tLogic=performance.now();
+  updateSkyDome();renderer.setRenderTarget(rt);if(inside){updateRoom(dt,tt);renderer.render(roomScene,roomCam);}else{renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.render(scene,camera);FRAME_STAT.calls=renderer.info.render.calls;FRAME_STAT.tris=renderer.info.render.triangles;renderer.autoClear=true;}FRAME_STAT.logic=tLogic-now;FRAME_STAT.render=performance.now()-tLogic;renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);
   requestAnimationFrame(frame);
 }
 

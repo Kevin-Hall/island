@@ -18,14 +18,14 @@ function flowerHead(p,sp,c,x,y,z,R){
     default:bloom(p,c,0xf6d04a,x,y,z,0.1,10,0.15);}}
 // stem heights: ankle-high next to the villager (~0.9 tall), like Animal Crossing flowers
 const FLOWER_H={tulip:0.15,rose:0.14,cosmos:0.19,pansy:0.07,lily:0.17,hyacinth:0.09,daisy:0.12};
-const FLORA_KEYS=[],FLORA_GEOS=[];
+const FLORA_KEYS=[],FLORA_GEOS=[],FLORA_LO=[];/* FLORA_LO: the far version (no stems, a third of the leaves and petals) */
 for(const sp in FLOWER_SP)FLOWER_SP[sp].forEach((c,ci)=>{const R=mulberry(hi(sp.length,ci,31)),p=[];
   for(let s=0;s<3;s++){const a=s*2.1+R(),r=s?0.14+R()*0.06:0.02,x=Math.cos(a)*r,z=Math.sin(a)*r,h=FLOWER_H[sp]*(0.85+R()*0.3);stemP(p,0x4f8a34,x,z,h);
     if(sp==='tulip'){lf(p,GREENS[s%4],x,0.01,z,a,1.15,0.2,0.08);lf(p,GREENS[(s+1)%4],x,0.01,z,a+3,1.05,0.18,0.07);}
     else if(sp==='pansy'||sp==='hyacinth')for(let k=0;k<3;k++)lf(p,GREENS[k%4],x,0.01,z,a+k*2.1,0.35,0.1,0.07);
     else{lf(p,GREENS[s%4],x,h*0.35,z,a,0.45,0.12,0.06);lf(p,GREENS[(s+2)%4],x,h*0.55,z,a+2.6,0.45,0.1,0.05);}
     flowerHead(p,sp,c,x,h,z,R);}
-  FLORA_KEYS.push(sp+ci);FLORA_GEOS.push(merge(p));});
+  FLORA_KEYS.push(sp+ci);FLORA_GEOS.push(merge(p));FLORA_LO.push(merge(p.filter((q,i)=>q.geo!==CYL6&&q.geo!==CYL12&&(q.geo!==LEAF0||i%3===0))));});
 function floraIndex(x,z){const sps=Object.keys(FLOWER_SP),sp=sps[Math.floor(hash(Math.floor(x/5)+11,Math.floor(z/5)-3)*sps.length)],cols=FLOWER_SP[sp];
   const ci=Math.floor(hash(Math.floor(x/3)-5,Math.floor(z/3)+9)*cols.length);return FLORA_KEYS.indexOf(sp+ci);}
 const CLOVER_GEO=(()=>{const R=mulberry(5),p=[];for(let i=0;i<7;i++){const cx=(R()-0.5)*0.55,cz=(R()-0.5)*0.55,y=0.03+R()*0.04,r0=R()*6.28;for(let j=0;j<3;j++)lf(p,GREENS[(i+j)%4],cx,y,cz,r0+j*2.09,0.12,0.09,0.08);if(i===2)bloom(p,0xffffff,0xf2c8d8,cx,y+0.05,cz,0.04,6,0.9);}return merge(p);})();
@@ -68,9 +68,9 @@ function layoutTown(isl){
   for(const [ox,oz] of [[-4,0],[3,0],[-4,2],[3,2],[0,4]]){const x0=home.x+ox,z0=home.z+oz;if(fits(x0,z0,3,2,0)){for(let dx=0;dx<3;dx++)for(let dz=0;dz<2;dz++)TOWN.plot.push([x0+dx,z0+dz]);break;}}
   const plotSet=new Set(TOWN.plot.map(([x,z])=>K(x,z)));
   // static town meshes
-  const p=[],gl=[],y0=(x,z)=>topY(x,z);
+  const p=[],gl=[],tp=[]/* trees, meshed with a far LOD (addVeg) */,y0=(x,z)=>topY(x,z);
   // town tree + benches + bulletin board
-  p.push(...shift(scaleParts(treeParts('oak',mulberry(7),0x9a9ea8),1.55),pc[0],y0(...pc),pc[1],0.4));
+  tp.push(...shift(scaleParts(treeParts('oak',mulberry(7),0x9a9ea8),1.55),pc[0],y0(...pc),pc[1],0.4));
   for(let i=0;i<10;i++){const a=i/10*6.283;bloom(p,[0xf2a6c8,0xffffff,0xf6d04a][i%3],0xf6d04a,pc[0]+Math.cos(a)*0.85,y0(...pc)+0.05,pc[1]+Math.sin(a)*0.85,0.07);}
   for(const [bx,bz,r] of [[pc[0]-2,pc[1]+2,0],[pc[0]+2,pc[1]+2,0]]){const q=[];for(const [x,z] of [[-0.38,-0.1],[0.38,-0.1],[-0.38,0.12],[0.38,0.12]])q.push(P(BOX,0x5a3a2a,x,0.12,z,0,0,0,0.06,0.24,0.06));
     q.push(P(BOX,0xb07a44,0,0.26,0,0,0,0,0.9,0.06,0.34),P(BOX,0xb07a44,0,0.52,-0.16,0,0,0,0.9,0.18,0.05));p.push(...shift(q,bx,y0(bx,bz),bz,r));TOWN.fixed.set(K(bx,bz),'decor');}
@@ -88,7 +88,7 @@ function layoutTown(isl){
   for(const [x,z] of isl.grass){const k=K(x,z);if(!G(x,z)||taken(k)||plotSet.has(k)||farmQ(x,z)<1.4)continue;
     if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>TOWN.path.has(K(x+dx,z+dz))||TOWN.fixed.has(K(x+dx,z+dz))&&TOWN.fixed.get(K(x+dx,z+dz))!=='decor'))continue;
     const h=hash(x*1.7+3,z*2.3-1);if(h>0.11)continue;const kd=h<0.1?kinds[Math.floor(hash(z,x)*4)]:kinds[4+Math.floor(hash(x,z)*4)];
-    p.push(...shift(treeParts(kd,mulberry(hi(x,z,5)),0x9a9ea8),x+(hash(z,x+1)-0.5)*0.2,y0(x,z),z+(hash(x+2,z)-0.5)*0.2,hash(x,z)*6.28));TOWN.fixed.set(k,'decor');if(['oak','pine','maple'].includes(kd))TOWN.res.set(k,'tree');}
+    tp.push(...shift(treeParts(kd,mulberry(hi(x,z,5)),0x9a9ea8),x+(hash(z,x+1)-0.5)*0.2,y0(x,z),z+(hash(x+2,z)-0.5)*0.2,hash(x,z)*6.28));TOWN.fixed.set(k,'decor');if(['oak','pine','maple'].includes(kd))TOWN.res.set(k,'tree');}
   // town rocks to chip stone from, and a flower planter in the plaza's free corner
   {let n=0;for(const [x,z] of shuffle(isl.grass.slice(),R)){if(n>=7)break;const k=K(x,z);if(!G(x,z)||taken(k)||plotSet.has(k)||farmQ(x,z)<1.4)continue;
     if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>TOWN.path.has(K(x+dx,z+dz))))continue;rockP(p,mulberry(hi(x,z,9)),0x9a9ea8,0.75);const rp=p.splice(p.length-7,7);p.push(...shift(rp,x,y0(x,z),z,hash(x,z)*6));
@@ -97,18 +97,20 @@ function layoutTown(isl){
     p.push(...shift(q.slice(0,2),px,y0(px,pz),pz,0),...shift(q.slice(2),px,y0(px,pz)+0.31,pz,0));TOWN.fixed.set(K(px,pz),'decor');}
   // palms along the town beach (shake or chop them like the other trees), clear of the dock and your boat
   for(const [x,z] of palmSpots(isl,R,8,(x,z)=>!taken(K(x,z))&&Math.hypot(x-DOCK.x,z-DOCK.z)>3.5&&!(S.boat&&Math.hypot(x-S.boat.x,z-S.boat.z)<2.5))){const k=K(x,z);
-    p.push(...shift(treeParts(PALMS[Math.floor(hash(x,z)*PALMS.length)],mulberry(hi(x,z,13)),0x9a9ea8),x,y0(x,z),z,hash(z,x)*6.28));TOWN.fixed.set(k,'decor');TOWN.res.set(k,'tree');}
-  isl.group.add(M(p));if(gl.length){const m=M(gl,glowMat);m.castShadow=false;isl.group.add(m);}
+    tp.push(...shift(treeParts(PALMS[Math.floor(hash(x,z)*PALMS.length)],mulberry(hi(x,z,13)),0x9a9ea8),x,y0(x,z),z,hash(z,x)*6.28));TOWN.fixed.set(k,'decor');TOWN.res.set(k,'tree');}
+  isl.group.add(M(p));addVeg(isl,isl.group,tp);if(gl.length){const m=M(gl,glowMat);m.castShadow=false;isl.group.add(m);}
   // flowers, clover and pebbles: instanced over the open grass (hidden again wherever you till or build)
   {const lists=FLORA_GEOS.map(()=>[]),clov=[],peb=[];
     for(const [x,z] of isl.grass){const k=K(x,z);if(!G(x,z)||taken(k)||farmQ(x,z)<1.3)continue;const h=hash(x*4.1-2,z*3.3+7);
       if(h<0.34)lists[floraIndex(x,z)].push([x,z]);else if(h<0.43)clov.push([x,z]);}
     for(const [k,v] of TOWN.path){if(v!==1)continue;const [x,z]=k.split(',').map(Number);for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(G(x+dx,z+dz)&&!TOWN.path.has(K(x+dx,z+dz))&&hash(x*7+dx,z*5+dz)<0.35)peb.push([x+dx*0.46,z+dz*0.46,x,z]);}
-    const mk=(geo,list,mat,track)=>{if(!list.length)return;const im=new T.InstancedMesh(geo,mat,list.length);list.forEach(([x,z,tx,tz],i)=>{const tile=tx===undefined?[x,z]:[tx,tz];
+    const mk=(geo,list,mat,track)=>{if(!list.length)return null;const im=new T.InstancedMesh(geo,mat,list.length);list.forEach(([x,z,tx,tz],i)=>{const tile=tx===undefined?[x,z]:[tx,tz];
         _e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x+(tx===undefined?(hash(z,x)-0.5)*0.4:0),y0(...tile),z+(tx===undefined?(hash(x+1,z)-0.5)*0.4:0)),_q,_s.set(0.9,0.9+hash(z*2,x)*0.2,0.9));im.setMatrixAt(i,_m);
         if(track){const k=K(x,z);if(!TOWN.flora.has(k))TOWN.flora.set(k,[]);TOWN.flora.get(k).push([im,i,_m.toArray()]);}});
-      im.frustumCulled=false;im.receiveShadow=true;isl.group.add(im);};
-    FLORA_GEOS.forEach((g0,i)=>mk(g0,lists[i],flowerMat,true));mk(CLOVER_GEO,clov,flowerMat,true);mk(PEBBLE_GEO,peb,vcMat,false);}
+      im.frustumCulled=false;im.receiveShadow=true;isl.group.add(im);return im;};
+    // each flower batch also gets a light twin for when you're zoomed out (cullIslands swaps them; clover just hides)
+    isl.floraLod=[];FLORA_GEOS.forEach((g0,i)=>{const hi=mk(g0,lists[i],flowerMat,true);if(!hi)return;const lo=mk(FLORA_LO[i],lists[i],flowerMat,true);lo.visible=false;isl.floraLod.push([hi,lo]);});
+    {const c=mk(CLOVER_GEO,clov,flowerMat,true);if(c)isl.floraLod.push([c,null]);}mk(PEBBLE_GEO,peb,vcMat,false);}
   for(const [x,y,z] of TOWN.lamps){const pm=pool(y+0.03,1);pm.position.x=x;pm.position.z=z;isl.group.add(pm);}}
 // one building's parts, centred on its 2x2 footprint, door facing +z
 function townBuilding(b,R){const p=[],gl=[];let lit=true;

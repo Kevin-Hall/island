@@ -80,6 +80,9 @@ index.html            GENERATED. It's committed so the game stays a single file 
 
 ## Performance rules
 
+- **Terrain is baked:** each island's tiles become one mesh per material (`makeBake` in 44-terrain). Faces nobody can see are dropped: bottoms, cliff tops under the grass slab, and sides against an equally tall neighbour. Tile colours go in vertex colours and beach slopes in the vertices. Don't add per-tile instanced batches back.
+- **Level of detail:** `merge()` swaps small parts to lighter shapes automatically (`lodGeo`). Tree meshes have a far twin (`addVeg`/`lowParts`), and town flowers have one too (`FLORA_LO`). `cullIslands` swaps them by zoom and distance, hides wild plants far away, and only lets islands near the sun's shadow box cast shadows.
+- **Measure:** with `?debug`, `DS.perf()` gives draw calls, triangles and per-system timings, `DS.tris()` the heaviest objects and `DS.calls()` draw calls by owner. For reference, zoomed all the way out it's about 360 calls and about 1M triangles.
 - **Merge static things:** build models from parts with `P()` and merge them into one mesh with `M()`.
 - **Instance repeated things:** grass, flowers, tiles and terrain use `InstancedMesh`. Never create one mesh per tile.
 - **Texture, don't model:** ground detail (grass pattern, path pebbles, sand speckle, cliff strata) comes from the `31-ground` textures, not geometry. Trees are a core blob plus a few gradient leaf cards (`PG`), not many separate puffs.

@@ -1,6 +1,6 @@
 // a leaf card: a flattened four-sided blade from (x,y,z) along direction d, dark at its base and light at its tip
 const lerpHex=(a,b,t)=>_a.set(a).lerp(_b.set(b),t).getHex();
-const LEAF_CARD=new T.SphereGeometry(0.5,6,3); // a rounded, low-poly leaf blade (36 triangles)
+const LEAF_CARD=new T.SphereGeometry(0.5,6,3),LEAF_CARD_LO=new T.SphereGeometry(0.5,4,2); // a rounded, low-poly leaf blade (36 triangles)
 function card(p,x,y,z,d,len,wid,cTip,cBase){const tilt=Math.acos(clamp(d[1],-1,1)),ry=Math.atan2(d[0],d[2]);
   p.push(PG(LEAF_CARD,cTip,cBase,x+d[0]*len/2,y+d[1]*len/2,z+d[2]*len/2,tilt,ry,0,wid,len,wid*0.3));}
 // a round canopy shingled with leaf cards that droop outward; tips lighten toward the top, like Animal Crossing's trees
@@ -15,6 +15,14 @@ function trunkP(p,R,col,h,w=0.13,dk){p.push(P(TRUNK,col,0,(h+0.45)/2,0,0,R()*3,0
   for(let i=0;i<3;i++){const a=i/3*6.283+R(),y=h*(0.62+R()*0.25);p.push(P(CYL6,col,Math.cos(a)*0.16,y+0.1,Math.sin(a)*0.16,Math.sin(a)*0.8,0,-Math.cos(a)*0.8,0.06,0.42,0.06));}
   for(let i=0;i<3;i++)p.push(P(BOX,dk||col,Math.cos(i*2.1)*w*0.95,0.2+i*0.18,Math.sin(i*2.1)*w*0.95,0,i*2.1,0,0.03,0.12,0.03));}
 const PALMS=['palm','palmtall','palmfan','palmtwin'];
+// the far-away version of a batch of tree parts: a third of the leaf cards and palm leaflets (a bit bigger, so the silhouette holds)
+function lowParts(parts){let n=0,m=0;const out=[];for(const p of parts){
+  if(p.geo===LEAF_CARD){if(n++%3)continue;out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.4,sy:p.sy*1.15,sz:p.sz*1.4}));}
+  else if(p.geo===LEAF0&&p.sx<0.16){if(m++%3)continue;out.push(Object.assign({},p,{sx:p.sx*1.7}));}
+  else if(p.geo===BOX&&p.sx<0.06&&p.sz>0.1){if(m++%2)continue;out.push(Object.assign({},p,{sz:p.sz*2}));}/* palm frond stems: every other, doubled */
+  else out.push(p);}return out;}
+// adds an island's trees as a detailed mesh plus a light one; cullIslands shows one or the other by viewing distance
+function addVeg(isl,g,parts){if(!parts.length)return;const hi=M(parts),lo=M(lowParts(parts));lo.visible=false;g.add(hi,lo);(isl.veg||(isl.veg=[])).push([hi,lo]);}
 // beach tiles a palm can stand on: flat sand (not the slope into the water), spread a few tiles apart
 function palmSpots(isl,R,n,ok){const out=[];for(const [x,z] of shuffle(isl.sand.slice(),R)){if(out.length>=n)break;const c=SAND_CH.get(K(x,z));if(!c||Math.min(...c)<0.17||!ok(x,z))continue;
   if(out.some(([a,b])=>Math.abs(a-x)+Math.abs(b-z)<3))continue;out.push([x,z]);}return out;}

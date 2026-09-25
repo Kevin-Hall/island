@@ -58,12 +58,6 @@ function pathGrassMat(){const m=worldMat(GRASS_TEX,0.36),base=m.onBeforeCompile;
         vec3 pc_=mix(vec3(0.80,0.643,0.416),vec3(0.847,0.714,0.502),clamp(pm_.g/max(pm_.r,0.01),0.,1.))*texture2D(uPTex,q_*0.42).rgb;
         float rim_=smoothstep(0.3,0.46,m_)*(1.-e_);diffuseColor.rgb=mix(diffuseColor.rgb*(1.-rim_*0.16),pc_,e_);}}`);};
   return m;}
-// sand whose top follows per-instance corner heights (aCH, world y) instead of the flat tile top
-function beachMat(){const m=worldMat(SAND_TEX,0.5),base=m.onBeforeCompile;
-  m.onBeforeCompile=function(sh){base(sh);sh.vertexShader='attribute vec4 aCH;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
-    #ifdef USE_INSTANCING
-    if(transformed.y>0.99&&aCH.x+aCH.y+aCH.z+aCH.w>0.){float u_=clamp(transformed.x+0.5,0.,1.),v_=clamp(transformed.z+0.5,0.,1.);
-      transformed.y=(mix(mix(aCH.x,aCH.y,u_),mix(aCH.w,aCH.z,u_),v_)+0.6)/instanceMatrix[1][1];}
-    #endif`);};
-  return m;}
-const grassTopMat=pathGrassMat(),sandMat=beachMat(),cliffMat=worldMat(CLIFF_TEX,0.55);
+const grassTopMat=pathGrassMat(),sandMat=worldMat(SAND_TEX,0.5),cliffMat=worldMat(CLIFF_TEX,0.55);
+// terrain is baked with per-vertex tile colours (44-terrain makeBake)
+for(const m of [grassTopMat,sandMat,cliffMat])m.vertexColors=true;

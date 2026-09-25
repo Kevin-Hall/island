@@ -13,8 +13,34 @@ const _gc1=new T.Color(),_gc2=new T.Color();
 function groundCol(list,x,z,seed){const n=vnoise(x*0.7+11,z*0.7-5,seed|0),m=vnoise(x*2.1-3,z*2.1+8,(seed|0)+7);_gc1.set(list[0]).lerp(_gc2.set(list[1%list.length]),n);if(list[2])_gc1.lerp(_gc2.set(list[2]),Math.max(0,m-0.55));return _gc1.getHex();}
 function islandBounds(isl){let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const k of isl.keys){const [x,z]=k.split(',').map(Number);if(x<x0)x0=x;if(x>x1)x1=x;if(z<z0)z0=z;if(z>z1)z1=z;}
   isl.bc={x:(x0+x1)/2,z:(z0+z1)/2,r:Math.hypot(x1-x0,z1-z0)/2+2};}
-function cullIslands(){const view=cam.dist+70;for(const isl of islands){const b=isl.bc;if(!b)continue;const vis=Math.hypot(b.x-cam.tx,b.z-cam.tz)-b.r<view;
-    if(isl.group)isl.group.visible=vis;if(isl.pgroup)isl.pgroup.visible=vis;}}
+// hide islands out of view; and only islands near the sun's shadow box (±18 around the camera target) render into the
+// shadow map, since shadows further out are never drawn: this halves the triangles when zoomed out
+function cullIslands(){const view=cam.dist+70;for(const isl of islands){const b=isl.bc;if(!b)continue;const d=Math.hypot(b.x-cam.tx,b.z-cam.tz)-b.r,vis=d<view;
+    // wild plants are small: only draw them when you're reasonably close (each one is its own mesh)
+    if(isl.group)isl.group.visible=vis;if(isl.pgroup)isl.pgroup.visible=vis&&cam.dist+Math.max(0,d)<46;
+    // level of detail for trees: light meshes when the island is far away or you're zoomed well out (with a little hysteresis)
+    const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>42:far>47;if(isl.veg&&low!==isl.lowOn){isl.lowOn=low;for(const [hi,lo] of [...isl.veg,...(isl.floraLod||[])]){hi.visible=!low;if(lo)lo.visible=low;}}
+    const sh=vis&&d<26;if(isl.group&&isl.shadowOn!==sh){isl.shadowOn=sh;if(!isl.casters){isl.casters=[];isl.group.traverse(o=>{if(o.castShadow)isl.casters.push(o);});}for(const o of isl.casters)o.castShadow=sh;}}}
+// terrain baker: collects tiles (a geometry scaled and placed without rotation, a colour, optional sand corner heights) into one mesh
+const _flatGeo=new Map();const flatGeo=g=>{let n=_flatGeo.get(g);if(!n){n=g.index?g.toNonIndexed():g;_flatGeo.set(g,n);}return n;};
+const bilerp4=(c,lx,lz)=>{const u=clamp(lx+0.5,0,1),v=clamp(lz+0.5,0,1);return lerp(lerp(c[0],c[1],u),lerp(c[3],c[2],u),v);};
+// hide(dx,dz) says whether a side facing that neighbour is covered; bottoms are never visible, and cap:false drops the top too
+function makeBake(){const L=[];let n=0;return{
+  add(geo,x,y,z,sx,sy,sz,col=0xffffff,ch=null,hide=null,cap=true){const g=flatGeo(geo);L.push([g,x,y,z,sx,sy,sz,col,ch,hide,cap]);n+=g.attributes.position.count;},
+  mesh(mat,colors=true){if(!n)return null;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=colors?new Float32Array(n*3):null;let o=0;
+    for(const [g,x,y,z,sx,sy,sz,c,ch,hide,cap] of L){const P0=g.attributes.position.array,N0=g.attributes.normal.array,cnt=g.attributes.position.count;if(colors)_c.setHex(c);
+      for(let t=0;t<cnt;t+=3){const a=t*3;
+        // face normal from the local triangle: skip bottoms, covered tops, and sides that butt against a neighbour as tall
+        const ux=P0[a+3]-P0[a],uy=P0[a+4]-P0[a+1],uz=P0[a+5]-P0[a+2],vx=P0[a+6]-P0[a],vy=P0[a+7]-P0[a+1],vz=P0[a+8]-P0[a+2];
+        let fx=uy*vz-uz*vy,fy=uz*vx-ux*vz,fz=ux*vy-uy*vx;const fl=Math.hypot(fx,fy,fz)||1;fx/=fl;fy/=fl;fz/=fl;
+        if(fy<-0.5)continue;if(fy>0.5&&!cap)continue;
+        if(hide&&Math.abs(fy)<0.5){const ax=Math.abs(fx),az=Math.abs(fz);if((ax>0.9||az>0.9)&&hide(ax>az?Math.sign(fx):0,ax>az?0:Math.sign(fz)))continue;}
+        for(let k=0;k<3;k++){const i3=(t+k)*3,j=o*3,lx=P0[i3],ly=P0[i3+1],lz=P0[i3+2];
+          pos[j]=x+lx*sx;pos[j+1]=ch&&ly>0.99?bilerp4(ch,lx,lz):y+ly*sy;pos[j+2]=z+lz*sz;
+          const nx=N0[i3]/sx,ny=N0[i3+1]/sy,nz=N0[i3+2]/sz,l=Math.hypot(nx,ny,nz)||1;nor[j]=nx/l;nor[j+1]=ny/l;nor[j+2]=nz/l;
+          if(col){col[j]=_c.r;col[j+1]=_c.g;col[j+2]=_c.b;}o++;}}}
+    const bg=new T.BufferGeometry();bg.setAttribute('position',new T.BufferAttribute(pos.subarray(0,o*3),3));bg.setAttribute('normal',new T.BufferAttribute(nor.subarray(0,o*3),3));if(col)bg.setAttribute('color',new T.BufferAttribute(col.subarray(0,o*3),3));
+    const m=new T.Mesh(bg,mat);m.frustumCulled=false;m.receiveShadow=true;return m;}};}
 // sand corner heights from distance to open water: the waterline, halfway, then the full beach height
 const isSeaT=t=>!isLandT(t)&&t!=='river';
 function shapeBeach(isl){const d=new Map(),H=[0.03,0.17,TOP.sand,TOP.sand];let q=[];
@@ -25,7 +51,7 @@ function shapeBeach(isl){const d=new Map(),H=[0.03,0.17,TOP.sand,TOP.sand];let q
 function buildIsland(isl){
   if(isl.group){scene.remove(isl.group);isl.group.traverse(o=>{if(o.isInstancedMesh)o.dispose();else if(o.geometry&&!Object.values(RTILE).includes(o.geometry)&&o.geometry!==TILE_PLANE&&o.geometry!==BOX&&o.geometry!==POOL_GEO&&o.geometry!==BLADES)o.geometry.dispose();});}
   if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);riverSurf.delete(k);bridgeY.delete(k);}
-  const g=new T.Group();isl.group=g;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
+  const g=new T.Group();isl.group=g;isl.veg=[];isl.lowOn=false;isl.casters=null;isl.shadowOn=undefined;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
   const span=Math.ceil(islR(isl)/0.62+3),B=BIOMES[isl.biome];
   for(let x=isl.home?Math.min(isl.cx-span,FARM.x-11):isl.cx-span;x<=isl.cx+span;x++)for(let z=isl.cz-span;z<=isl.cz+span;z++){
     const t=tileTypeI(isl,x,z);if(!t)continue;const k=K(x,z);
@@ -47,26 +73,22 @@ function buildIsland(isl){
       else if(hm===-1)under.push([x+dx*0.25,z+dz*0.25,topY(x+dx,z+dz),sandCol(x+dx,z+dz),sandMat]);});
     CMASK.set(K(x,z),mask);put(mask,{kind:'g',x,z});}
   for(const [x,z] of isl.sand){let mask=0;CORNERS.forEach(([dx,dz],b)=>{if([hclass(x+dx,z),hclass(x,z+dz),hclass(x+dx,z+dz)].every(v=>v===-9))mask|=1<<b;});put(mask,{kind:'s',x,z});}
+  // all of an island's tiles are baked into one mesh per material (tile colours in vertex colours, the beach slope in the
+  // vertices), so the whole island costs a handful of draw calls instead of an instanced batch per corner shape
+  const cliffB=makeBake(),topB=makeBake(),sandB=makeBake(),underG=makeBake(),underS=makeBake(),s1B=makeBake(),s2B=makeBake();
   for(const [mask,{g:gl,s:sl}] of byMask){const geo=rtileGeo(mask);
-    if(gl.length){const body=new T.InstancedMesh(geo,cliffMat,gl.length);
-      gl.forEach(({x,z},i)=>{const ty=topY(x,z),h=ty-0.14+0.6;_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,h,1));body.setMatrixAt(i,_m);body.setColorAt(i,_c.set(B.cliff).multiplyScalar(0.92+hash(z,x)*0.12));});
-      body.receiveShadow=true;body.castShadow=true;body.frustumCulled=false;g.add(body);
-      // grass tops (dirt paths are painted into this material from the path mask, see 31-ground)
-      {const top=new T.InstancedMesh(geo,grassTopMat,gl.length);
-        gl.forEach(({x,z},i)=>{const ty=topY(x,z);_m.compose(_v.set(x,ty-0.14,z),_q.identity(),_s.set(1,0.14,1));top.setMatrixAt(i,_m);top.setColorAt(i,_c.setHex(groundCol(B.grass,x,z,isl.seed)));});
-        top.receiveShadow=true;top.castShadow=true;top.frustumCulled=false;g.add(top);}}
-    // sand: the shader slopes each tile's top between its corner heights (aCH), so beaches run down into the water
-    if(sl.length){const sg=geo.clone(),ch=new Float32Array(sl.length*4);sl.forEach(({x,z},i)=>ch.set(SAND_CH.get(K(x,z))||[TOP.sand,TOP.sand,TOP.sand,TOP.sand],i*4));sg.setAttribute('aCH',new T.InstancedBufferAttribute(ch,4));
-      const im=new T.InstancedMesh(sg,sandMat,sl.length);sl.forEach(({x,z},i)=>{_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,TOP.sand+0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(sandCol(x,z)));});
-      im.receiveShadow=true;im.castShadow=false;im.frustumCulled=false;g.add(im);}}
-  for(const mat of [grassTopMat,sandMat]){const list=under.filter(u=>u[4]===mat);if(!list.length)continue;const im=new T.InstancedMesh(BOX,mat,list.length);list.forEach(([x,z,ty,col],i)=>{_m.compose(_v.set(x,(ty-0.6)/2,z),_q.identity(),_s.set(0.5,ty+0.6,0.5));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(col));});
-    im.receiveShadow=true;im.frustumCulled=false;g.add(im);}
+    for(const {x,z} of gl){const ty=topY(x,z),hid=(dx,dz)=>landMap.get(K(x+dx,z+dz))==='grass'&&topY(x+dx,z+dz)>=ty-1e-3;
+      cliffB.add(geo,x,-0.6,z,1,ty-0.14+0.6,1,_c.set(B.cliff).multiplyScalar(0.92+hash(z,x)*0.12).getHex(),null,hid,false);
+      topB.add(geo,x,ty-0.14,z,1,0.14,1,groundCol(B.grass,x,z,isl.seed),null,hid);}
+    for(const {x,z} of sl)sandB.add(geo,x,-0.6,z,1,TOP.sand+0.6,1,sandCol(x,z),SAND_CH.get(K(x,z)),(dx,dz)=>{const t=landMap.get(K(x+dx,z+dz));return t==='sand'||t==='grass';});}
+  for(const [x,z,ty,col,mat] of under)(mat===sandMat?underS:underG).add(BOX,x,(ty-0.6)/2,z,0.5,ty+0.6,0.5,col);
+  for(const [B0,mat,cast] of [[cliffB,cliffMat,true],[topB,grassTopMat,true],[sandB,sandMat,false],[underG,grassTopMat,false],[underS,sandMat,false]]){const m=B0.mesh(mat);if(m){m.castShadow=cast;g.add(m);}}
   if(isl.grass.length)buildGrass(isl,g);
   // shallow-water bands, with rounded outer corners so the coast doesn't step in squares
   const shc=(x,z)=>{const t=landMap.get(K(x,z));return t==='s1'?1:t==='s2'?2:t?0:3;};
   const flat=(list,mat,y,lvl)=>{const groups=new Map();for(const [x,z] of list){let mask=0;CORNERS.forEach(([dx,dz],b)=>{if([shc(x+dx,z),shc(x,z+dz),shc(x+dx,z+dz)].every(v=>v>lvl))mask|=1<<b;});
       if(!groups.has(mask))groups.set(mask,[]);groups.get(mask).push([x,z]);}
-    for(const [mask,l] of groups){const im=new T.InstancedMesh(rtileGeo(mask),mat,l.length);im.frustumCulled=false;l.forEach(([x,z],i)=>{_m.compose(_v.set(x,y,z),_q.identity(),_s.set(1,0.002,1));im.setMatrixAt(i,_m);});g.add(im);}};
+    const bk=makeBake();for(const [mask,l] of groups)for(const [x,z] of l)bk.add(rtileGeo(mask),x,y,z,1,0.002,1,0xffffff,null,()=>true);const m=bk.mesh(mat,false);if(m){m.receiveShadow=false;g.add(m);}};
   flat(a1,s1Mat,0.012,1);flat(a2,s2Mat,0.006,2);
   const blocked=new Set();
   if(isl.home){
@@ -83,7 +105,7 @@ function buildIsland(isl){
       const edge=z===FARM.z-1?-0.5:z===FARM.z?0.5:0;if(edge){p.push(P(BOX,0x7a5230,x,0.52,z+edge*0.92,0,0,0,1.02,0.06,0.06),P(CYL8,0x5a3a2a,x,0.2,z+edge*0.92,0,0,0,0.1,0.72,0.1));}}
     g.add(M(p));
   }else{
-    const R=mulberry(isl.seed),parts=[],glowParts=[];
+    const R=mulberry(isl.seed),parts=[],tp=[],glowParts=[];
     if(isl.biome==='volcano'){
       parts.push(P(CONE8,0x4a4048,isl.cx,1.4,isl.cz,0,0,0,4.6,2.8,4.6),P(CYL8,0x3a3238,isl.cx,2.75,isl.cz,0,0,0,1.3,0.14,1.3));
       glowParts.push(P(CYL8,0xf06a2a,isl.cx,2.8,isl.cz,0,0,0,1.0,0.1,1.0));
@@ -92,12 +114,12 @@ function buildIsland(isl){
     }
     const gr=shuffle(isl.grass.slice(),R),n=Math.round(gr.length*(isl.grand?0.08:0.15));
     let placed=0;for(const [x,z] of gr){if(placed>=n)break;if(blocked.has(K(x,z)))continue;
-      parts.push(...shift(treeParts(B.trees[Math.floor(R()*B.trees.length)],R,B.rock),x+(R()-0.5)*0.3,topY(x,z),z+(R()-0.5)*0.3,R()*6.28));blocked.add(K(x,z));placed++;}
+      tp.push(...shift(treeParts(B.trees[Math.floor(R()*B.trees.length)],R,B.rock),x+(R()-0.5)*0.3,topY(x,z),z+(R()-0.5)*0.3,R()*6.28));blocked.add(K(x,z));placed++;}
     const sa=shuffle(isl.sand.slice(),R);for(let i=0;i<Math.min(4,sa.length);i++){const [x,z]=sa[i];parts.push(...shift(treeParts(isl.biome==='swamp'?'reeds':'rock',R,B.rock),x,topY(x,z),z,R()*6));blocked.add(K(x,z));}
     {const pn=({tropic:0.12,meadow:0.04,autumn:0.03,volcano:0.04})[isl.biome]||0;
       if(pn)for(const [x,z] of palmSpots(isl,R,Math.min(isl.grand?10:6,Math.ceil(isl.sand.length*pn)),(x,z)=>!blocked.has(K(x,z)))){
-        parts.push(...shift(treeParts(PALMS[Math.floor(R()*PALMS.length)],R,B.rock),x+(R()-0.5)*0.2,topY(x,z),z+(R()-0.5)*0.2,R()*6.28));blocked.add(K(x,z));}}
-    if(parts.length)g.add(M(parts));
+        tp.push(...shift(treeParts(PALMS[Math.floor(R()*PALMS.length)],R,B.rock),x+(R()-0.5)*0.2,topY(x,z),z+(R()-0.5)*0.2,R()*6.28));blocked.add(K(x,z));}}
+    if(parts.length)g.add(M(parts));addVeg(isl,g,tp);
     if(glowParts.length){const m=M(glowParts,lumMat);m.castShadow=false;g.add(m);}
     isl.spots=gr.filter(([x,z])=>!blocked.has(K(x,z))).slice(0,Math.max(5,Math.min(isl.grand?30:18,Math.round(gr.length*0.18))));
   }
