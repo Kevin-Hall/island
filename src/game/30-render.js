@@ -55,11 +55,7 @@ function updateSkyDome(){const u=skyMat.uniforms;u.zen.value.copy(skyZen);u.hz.v
   u.sunP.value.set((_sp.x+1)/2,(_sp.y+1)/2);if(!ok)u.ga.value*=0.25;
   u.disc.value=nightF>0.5?0:(ok?clamp((skyGA-0.5)*2.5,0,1)*(1-rainMix):0);}
 
-const PERF={px:0,acc:0,n:0,slow:0,fast:0,t0:0,js:0};
-function perfTick(dt){PERF.acc+=dt;PERF.n++;if(PERF.acc<1)return;const avg=PERF.acc/PERF.n;PERF.acc=PERF.n=0;
-  if(tt<6)return; // ignore loading hitches
-  if(avg>1/28){PERF.fast=0;if(++PERF.slow>=3&&PERF.px<2){PERF.px++;PERF.slow=0;resize();}}
-  else if(avg<1/55){PERF.slow=0;if(++PERF.fast>=6&&PERF.px>0){PERF.px--;PERF.fast=0;resize();}}else PERF.slow=PERF.fast=0;}
+const PERF={px:0}; // reserved for future auto-quality; automatic pixel scaling is off (it compounded after the app was backgrounded)
 function resize(){
   const cw=window.innerWidth,ch=window.innerHeight;
   const base=clamp(Math.round(Math.min(cw,ch)/190),2,6);

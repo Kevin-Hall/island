@@ -675,11 +675,7 @@ function updateSkyDome(){const u=skyMat.uniforms;u.zen.value.copy(skyZen);u.hz.v
   u.sunP.value.set((_sp.x+1)/2,(_sp.y+1)/2);if(!ok)u.ga.value*=0.25;
   u.disc.value=nightF>0.5?0:(ok?clamp((skyGA-0.5)*2.5,0,1)*(1-rainMix):0);}
 
-const PERF={px:0,acc:0,n:0,slow:0,fast:0,t0:0,js:0};
-function perfTick(dt){PERF.acc+=dt;PERF.n++;if(PERF.acc<1)return;const avg=PERF.acc/PERF.n;PERF.acc=PERF.n=0;
-  if(tt<6)return; // ignore loading hitches
-  if(avg>1/28){PERF.fast=0;if(++PERF.slow>=3&&PERF.px<2){PERF.px++;PERF.slow=0;resize();}}
-  else if(avg<1/55){PERF.slow=0;if(++PERF.fast>=6&&PERF.px>0){PERF.px--;PERF.fast=0;resize();}}else PERF.slow=PERF.fast=0;}
+const PERF={px:0}; // reserved for future auto-quality; automatic pixel scaling is off (it compounded after the app was backgrounded)
 function resize(){
   const cw=window.innerWidth,ch=window.innerHeight;
   const base=clamp(Math.round(Math.min(cw,ch)/190),2,6);
@@ -2487,20 +2483,22 @@ function boardBoat(then){if(S.sea)return;const b=S.boat,isl=curIsl();if(!isl)ret
 // ---- sea pathfinding (A* over the tile grid, keeping a one-tile margin from every shore) ----
 let seaMargin=new Set();
 function rebuildSeaGrid(){seaMargin=new Set();for(const L of landList)for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)seaMargin.add(K(L[0]+dx,L[1]+dz));}
+// boats may not enter land or rivers (rivers cross islands, so treating them as sea opened shortcuts through the town)
+function seaBlocked(x,z){const t=landMap.get(K(x,z));return isLandT(t)||t==='river';}
 function planPath(sx,sz,tx,tz){
   let gx=Math.round(tx),gz=Math.round(tz);
-  if(isLand(gx,gz)){let f=null;for(let r=1;r<6&&!f;r++)for(let dx=-r;dx<=r&&!f;dx++)for(let dz=-r;dz<=r;dz++){if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;if(!isLand(gx+dx,gz+dz)){f=[gx+dx,gz+dz];break;}}if(!f)return null;[gx,gz]=f;}
+  if(seaBlocked(gx,gz)){let f=null;for(let r=1;r<6&&!f;r++)for(let dx=-r;dx<=r&&!f;dx++)for(let dz=-r;dz<=r;dz++){if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;if(!seaBlocked(gx+dx,gz+dz)){f=[gx+dx,gz+dz];break;}}if(!f)return null;[gx,gz]=f;}
   const x0=Math.round(sx),z0=Math.round(sz),hh=(x,z)=>{const dx=Math.abs(x-gx),dz=Math.abs(z-gz);return Math.max(dx,dz)+0.414*Math.min(dx,dz);};
   const heap=[],push=n=>{heap.push(n);let i=heap.length-1;while(i>0){const p=(i-1)>>1;if(heap[p].f<=heap[i].f)break;[heap[p],heap[i]]=[heap[i],heap[p]];i=p;}},
     pop=()=>{const top=heap[0],last=heap.pop();if(heap.length){heap[0]=last;let i=0;for(;;){const l=i*2+1,r=l+1;let m=i;if(l<heap.length&&heap[l].f<heap[m].f)m=l;if(r<heap.length&&heap[r].f<heap[m].f)m=r;if(m===i)break;[heap[m],heap[i]]=[heap[i],heap[m]];i=m;}}return top;};
   const gs=new Map(),came=new Map(),sk=K(x0,z0);gs.set(sk,0);push({x:x0,z:z0,f:hh(x0,z0)});let n=0,found=false;
   while(heap.length&&n<60000){const c=pop(),ck=K(c.x,c.z);n++;if(c.x===gx&&c.z===gz){found=true;break;}const cg=gs.get(ck);
-    for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){if(!dx&&!dz)continue;const nx=c.x+dx,nz=c.z+dz;if(Math.abs(nx)>300||Math.abs(nz)>300)continue;if(isLand(nx,nz))continue;
-      if(dx&&dz&&(isLand(c.x+dx,c.z)||isLand(c.x,c.z+dz)))continue;
+    for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){if(!dx&&!dz)continue;const nx=c.x+dx,nz=c.z+dz;if(Math.abs(nx)>300||Math.abs(nz)>300)continue;if(seaBlocked(nx,nz))continue;
+      if(dx&&dz&&(seaBlocked(c.x+dx,c.z)||seaBlocked(c.x,c.z+dz)))continue;
       const nk=K(nx,nz),cost=(dx&&dz?1.414:1)*(seaMargin.has(nk)?4:1),ng=cg+cost;if(ng<(gs.get(nk)??1e9)){gs.set(nk,ng);came.set(nk,ck);push({x:nx,z:nz,f:ng+hh(nx,nz)});}}}
   if(!found)return null;
   const cells=[];let k=K(gx,gz);while(k){const [x,z]=k.split(',').map(Number);cells.push([x,z]);k=came.get(k);}cells.reverse();
-  const clear=(a,b)=>{const d=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.ceil(d/0.35);for(let i=1;i<n;i++){const t=i/n,x=lerp(a[0],b[0],t),z=lerp(a[1],b[1],t);if(isLand(Math.round(x),Math.round(z))||(seaMargin.has(K(Math.round(x),Math.round(z)))&&!seaMargin.has(K(Math.round(a[0]),Math.round(a[1])))&&!seaMargin.has(K(Math.round(b[0]),Math.round(b[1])))))return false;}return true;};
+  const clear=(a,b)=>{const d=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.ceil(d/0.35);for(let i=1;i<n;i++){const t=i/n,x=lerp(a[0],b[0],t),z=lerp(a[1],b[1],t);if(seaBlocked(Math.round(x),Math.round(z))||(seaMargin.has(K(Math.round(x),Math.round(z)))&&!seaMargin.has(K(Math.round(a[0]),Math.round(a[1])))&&!seaMargin.has(K(Math.round(b[0]),Math.round(b[1])))))return false;}return true;};
   const out=[];let cur=[sx,sz],i=0;
   while(i<cells.length-1){let j=cells.length-1;while(j>i+1&&!clear(cur,cells[j]))j--;out.push(cells[j]);cur=cells[j];i=j;}
   out.push([tx,tz]);return out;}
@@ -2560,7 +2558,7 @@ function disembark(islId){const isl=islands[islId];if(!isl)return false;const b=
   sail=null;S.sea=false;vil.hop=0.4;vil.y=0.15;SFX.splash();goTo(best[0],best[1]);ctxSig='';
   if(!isl.home){S.disc[isl.id]=1;toast(`Welcome to <b>${isl.name}</b>. Look for wild plants, bugs and shells, and fish from the shore.`,'',ICON.boat);}
   updateHUD();return true;}
-const blockedAt=(x,z)=>isLand(Math.round(x),Math.round(z));
+const blockedAt=(x,z)=>seaBlocked(Math.round(x),Math.round(z));
 function updateBoat(dt,tt){
   const b=S.boat;if(!b)return;
   if(S.sea&&sail){
@@ -2596,6 +2594,20 @@ function updateFlotsam(dt,tt){
 function checkDiscovery(){const x=vil.x,z=vil.z;for(const isl of islands){if(S.disc[isl.id])continue;if(Math.hypot(x-isl.cx,z-isl.cz)<isl.r/0.7+16){S.disc[isl.id]=1;SFX.discover();
   toast(`Discovered <b>${isl.name}</b> — a ${BIOMES[isl.biome].name.toLowerCase()} island!`,'rare',ICON.chart);addXP(20);}}}
 
+
+// ---- the villager sailboat: loops a sea route planned around the home island and farm field (never through land) ----
+const npcRoute={pts:null,len:[],total:0,d:0};
+function buildNpcRoute(){const b=islands[0].bc||{x:0,z:0,r:30},R=b.r+6;const out=[];
+  const corners=[[1,-1],[1,1],[-1,1],[-1,-1]].map(([sx,sz])=>{let x=Math.round(b.x+sx*R),z=Math.round(b.z+sz*R*0.8);for(let i=0;i<20&&seaMargin.has(K(x,z));i++){x+=sx;z+=sz;}return[x,z];});
+  for(let i=0;i<4;i++){const a=corners[i],c=corners[(i+1)%4],p=planPath(a[0],a[1],c[0],c[1]);if(p)out.push(...(out.length?p.slice(1):p));}
+  if(out.length<4)return;npcRoute.pts=out;npcRoute.len=[0];for(let i=1;i<out.length;i++)npcRoute.len.push(npcRoute.len[i-1]+Math.hypot(out[i][0]-out[i-1][0],out[i][1]-out[i-1][1]));
+  npcRoute.total=npcRoute.len[npcRoute.len.length-1]+Math.hypot(out[0][0]-out[out.length-1][0],out[0][1]-out[out.length-1][1]);}
+function updateNpcBoat(dt,tt){if(!npcRoute.pts){buildNpcRoute();if(!npcRoute.pts){npcBoat.visible=false;return;}}
+  const R=npcRoute;R.d=(R.d+dt*1.6)%R.total;let i=R.len.findIndex(l=>l>R.d)-1;if(i<0)i=R.len[R.len.length-1]<=R.d?R.pts.length-1:0;
+  const a=R.pts[i],b=R.pts[(i+1)%R.pts.length],seg=Math.hypot(b[0]-a[0],b[1]-a[1])||1,u=clamp((R.d-R.len[i])/seg,0,1);
+  const x=a[0]+(b[0]-a[0])*u,z=a[1]+(b[1]-a[1])*u,h=Math.atan2(b[0]-a[0],b[1]-a[1]);
+  npcBoat.visible=true;npcBoat.position.set(x,Math.sin(tt*1.3)*0.03,z);npcBoat.rotation.y+=angDiff(npcBoat.rotation.y,h)*Math.min(1,dt*1.5);npcBoat.rotation.z=Math.sin(tt*0.9)*0.04;
+  if(Math.random()<dt*9&&Math.hypot(x-cam.tx,z-cam.tz)<50)emit(x-Math.sin(npcBoat.rotation.y)*0.9+(Math.random()-0.5)*0.3,0.03,z-Math.cos(npcBoat.rotation.y)*0.9+(Math.random()-0.5)*0.3,{life:2.2,max:2.2,size:0.14,color:0xe8f0ff});}
 /* =========================================================
    Daily orders
    ========================================================= */
@@ -3060,7 +3072,7 @@ let fogBoost=0;
    ========================================================= */
 let last=performance.now(),tt=0,saveT=0,hudT=0;
 function frame(now){
-  const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;perfTick(dt);
+  const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;
   advance(dt*devSpeed);
   rainMix=clamp(rainMix+(S.rain?dt:-dt)*0.5,0,1);
   grassU.uTime.value=tt;riverU.uTime.value=tt;
@@ -3093,8 +3105,7 @@ function frame(now){
   const day=1-nightF;
   for(const g of gulls){const u=g.userData,a=tt*u.sp+u.ph;g.visible=day>0.3;g.position.set(cam.tx+Math.cos(a)*u.r,u.y+Math.sin(tt*0.7+u.ph)*0.3,cam.tz+Math.sin(a)*u.r*0.8);g.rotation.y=-a;g.rotation.z=0.25;
     const f=Math.sin(tt*7+u.ph)*0.5;u.wl.rotation.z=f;u.wr.rotation.z=-f;}
-  {const a=tt*0.03,r=21;npcBoat.position.set(Math.cos(a)*r,Math.sin(tt*1.3)*0.03,Math.sin(a)*r*0.8);npcBoat.rotation.y=-a;npcBoat.rotation.z=Math.sin(tt*0.9)*0.04;
-    if(Math.random()<dt*9&&Math.hypot(npcBoat.position.x-cam.tx,npcBoat.position.z-cam.tz)<50)emit(npcBoat.position.x-Math.cos(a+1.57)*0.9+(Math.random()-0.5)*0.3,0.03,npcBoat.position.z-Math.sin(a+1.57)*0.72+(Math.random()-0.5)*0.3,{life:2.2,max:2.2,size:0.14,color:0xe8f0ff});}
+  updateNpcBoat(dt,tt);
   _e.set(0,cam.yaw,0);_q.setFromEuler(_e);
   for(let i=0;i<GLINTS;i++){const g=glintData[i];const s=Math.pow(Math.max(0,Math.sin(tt*g.sp+g.ph)),6);const gx=cam.tx+((g.x-cam.tx)%70+105)%70-35,gz=cam.tz+((g.z-cam.tz)%70+105)%70-35;
     _m.compose(_v.set(gx,0.02,gz),_q,_s.set(s,1,s));glints.setMatrixAt(i,_m);}
@@ -3161,6 +3172,9 @@ if(/[?&]debug\b/.test(location.search)){
     ripen:()=>{for(const k in S.tiles){const t=S.tiles[k];if(t.crop)t.crop.p=1;}syncAllCrops();},
     fish:()=>{const isl=curIsl();if(!isl)return false;const [x,z]=isl.sand[0];DS.tp(x,z);startFishing(x+3,z+3);return !!fishing;},
     fastTravel:id=>fastTravel(islands[id]),
+    npcRouteOnLand:()=>{updateNpcBoat(0,0);const R=npcRoute;if(!R.pts)return -1;let n=0;for(let d=0;d<R.total;d+=0.25){R.d=d;updateNpcBoat(0,0);if(seaBlocked(Math.round(npcBoat.position.x),Math.round(npcBoat.position.z)))n++;}return n;},
+    sailTo:id=>{const isl=islands[id];if(!S.sea){S.sea=true;const b=S.boat;vil.x=b.x;vil.z=b.z;}sailToIsland(isl);return !!sail;},
+    boat:()=>({x:S.boat.x,z:S.boat.z,onLand:seaBlocked(Math.round(S.boat.x),Math.round(S.boat.z)),sailing:!!sail}),
   };
   console.info('Driftseed debug API ready: window.DS');
 }

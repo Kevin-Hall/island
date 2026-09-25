@@ -16,6 +16,7 @@ await pg.goto(pathToFileURL(join(root,'index.html')).href+'?debug');await wait(3
 check(await ev(()=>!!window.DS),'boots and exposes the debug API');
 let st=await ev(()=>DS.state());check(st.buildings.length>=8,`town "${st.town}" has ${st.buildings.length} buildings`);check(st.npcs.length>=5,`${st.npcs.length} villagers`);
 await ev(()=>DS.hour(10));
+check((await ev(()=>DS.state())).perfPx===0,'no automatic pixel scaling');
 // drag-farming across a free row
 const row=await ev(()=>DS.freeRow(5));check(!!row,'found a free row of grass');
 if(row){await ev(r=>DS.tp(r[0]+2,r[1]+1.5),row);await wait(2000);const pts=[];for(let i=0;i<5;i++)pts.push(await ev(([x,z])=>DS.screen(x,z),[row[0]+i,row[1]]));
@@ -34,5 +35,10 @@ await ev(()=>DS.leave());await wait(900);await ev(()=>DS.enterNpc(0));await wait
 const isl=await ev(()=>DS.islands().find(i=>!i.grand&&i.id>0));await ev(id=>DS.visit(id),isl.id);await wait(1500);
 st=await ev(()=>DS.state());check(st.loc===isl.name,`visited ${isl.name}`);check(await ev(()=>DS.fish()),'started fishing');await wait(1500);
 await pg.screenshot({path:join(shots,'4-island.png')});await ev(()=>DS.fastTravel(0));await wait(1800);st=await ev(()=>DS.state());check(!st.sea,'fast-travelled home');
+const onLand=await ev(()=>DS.npcRouteOnLand());check(onLand===0,`villager sailboat route stays at sea (${onLand} samples on land)`);
+// sail your own boat to the farthest regular island and make sure it never crosses land
+const far=await ev(()=>DS.islands().filter(i=>!i.grand&&i.id>0).sort((a,b)=>Math.hypot(b.x,b.z)-Math.hypot(a.x,a.z))[0]);
+check(await ev(id=>DS.sailTo(id),far.id),`set sail for ${far.name}`);let hits=0;for(let t=0;t<40;t++){await wait(500);const bt=await ev(()=>DS.boat());if(bt.onLand)hits++;if(!bt.sailing)break;}
+check(hits===0,`boat never crossed land while sailing (${hits} samples on land)`);
 check(errors.length===0,errors.length?`page errors: ${errors.join(' | ')}`:'no page errors');
 await b.close();console.log(fails?`\n${fails} check(s) failed`:'\nall checks passed');process.exit(fails?1:0);

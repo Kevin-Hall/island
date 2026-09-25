@@ -20,6 +20,9 @@ if(/[?&]debug\b/.test(location.search)){
     ripen:()=>{for(const k in S.tiles){const t=S.tiles[k];if(t.crop)t.crop.p=1;}syncAllCrops();},
     fish:()=>{const isl=curIsl();if(!isl)return false;const [x,z]=isl.sand[0];DS.tp(x,z);startFishing(x+3,z+3);return !!fishing;},
     fastTravel:id=>fastTravel(islands[id]),
+    npcRouteOnLand:()=>{updateNpcBoat(0,0);const R=npcRoute;if(!R.pts)return -1;let n=0;for(let d=0;d<R.total;d+=0.25){R.d=d;updateNpcBoat(0,0);if(seaBlocked(Math.round(npcBoat.position.x),Math.round(npcBoat.position.z)))n++;}return n;},
+    sailTo:id=>{const isl=islands[id];if(!S.sea){S.sea=true;const b=S.boat;vil.x=b.x;vil.z=b.z;}sailToIsland(isl);return !!sail;},
+    boat:()=>({x:S.boat.x,z:S.boat.z,onLand:seaBlocked(Math.round(S.boat.x),Math.round(S.boat.z)),sailing:!!sail}),
   };
   console.info('Driftseed debug API ready: window.DS');
 }

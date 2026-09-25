@@ -3,7 +3,7 @@
    ========================================================= */
 let last=performance.now(),tt=0,saveT=0,hudT=0;
 function frame(now){
-  const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;perfTick(dt);
+  const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;
   advance(dt*devSpeed);
   rainMix=clamp(rainMix+(S.rain?dt:-dt)*0.5,0,1);
   grassU.uTime.value=tt;riverU.uTime.value=tt;
@@ -36,8 +36,7 @@ function frame(now){
   const day=1-nightF;
   for(const g of gulls){const u=g.userData,a=tt*u.sp+u.ph;g.visible=day>0.3;g.position.set(cam.tx+Math.cos(a)*u.r,u.y+Math.sin(tt*0.7+u.ph)*0.3,cam.tz+Math.sin(a)*u.r*0.8);g.rotation.y=-a;g.rotation.z=0.25;
     const f=Math.sin(tt*7+u.ph)*0.5;u.wl.rotation.z=f;u.wr.rotation.z=-f;}
-  {const a=tt*0.03,r=21;npcBoat.position.set(Math.cos(a)*r,Math.sin(tt*1.3)*0.03,Math.sin(a)*r*0.8);npcBoat.rotation.y=-a;npcBoat.rotation.z=Math.sin(tt*0.9)*0.04;
-    if(Math.random()<dt*9&&Math.hypot(npcBoat.position.x-cam.tx,npcBoat.position.z-cam.tz)<50)emit(npcBoat.position.x-Math.cos(a+1.57)*0.9+(Math.random()-0.5)*0.3,0.03,npcBoat.position.z-Math.sin(a+1.57)*0.72+(Math.random()-0.5)*0.3,{life:2.2,max:2.2,size:0.14,color:0xe8f0ff});}
+  updateNpcBoat(dt,tt);
   _e.set(0,cam.yaw,0);_q.setFromEuler(_e);
   for(let i=0;i<GLINTS;i++){const g=glintData[i];const s=Math.pow(Math.max(0,Math.sin(tt*g.sp+g.ph)),6);const gx=cam.tx+((g.x-cam.tx)%70+105)%70-35,gz=cam.tz+((g.z-cam.tz)%70+105)%70-35;
     _m.compose(_v.set(gx,0.02,gz),_q,_s.set(s,1,s));glints.setMatrixAt(i,_m);}

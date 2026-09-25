@@ -26,7 +26,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 00-core | three.js check, curved-world vertex shader, tiny utilities (`clamp`, `hash`, `mulberry`, `K`) |
 | 10-data | **Data registries:** `CROPS`, `VARIANTS`, `BUILD`, `BIOMES`, `FISH`, `BUGS`, `PLANTS`, `FINDS`, `MATS`/`CONSUM`, rods, cans, house tiers, level curve |
 | 20-state, 21-sprites | Save state (`S`, `freshState`, `load`, `save`); pixel-art UI icons (`SPR`, `ICON`) |
-| 30-render | Renderer, pixel post-pass, adaptive resolution (`PERF`), geometry helpers (`P`, `merge`, `M`), shared materials, lights, sea, sky |
+| 30-render | Renderer, pixel post-pass, geometry helpers (`P`, `merge`, `M`), shared materials, lights, sea, sky |
 | 40–44 world | Island generation (`genIslands`); trees (`treeParts`, `canopy`); swaying grass; rivers and waterfalls (`carveRivers`); terrain meshes with rounded corners (`buildIsland`, `rtileGeo`); island culling |
 | 45-crops | Soil and crop models (`cropParts`) |
 | 50-objects | Decor, house and bin models (`objGroup`, `houseGroup`, `roof`) |
@@ -75,9 +75,11 @@ index.html            GENERATED. It's committed so the game stays a single file 
 - **Culling:** every island's meshes live in `isl.group`. `cullIslands()` hides groups that are out of view, which removes their draw calls and shadow casting. Put new per-island meshes in that group.
 - **No allocation in `frame()`:** reuse the scratch objects (`_m`, `_v`, `_q`, `_c`, `_pv`). Throttle anything that doesn't need to run every frame, like the HUD, which updates every 0.5 s.
 - **Incremental updates:** `refreshHomeGrass` only rewrites tiles whose hidden state changed, and `objAt` uses an index. Follow the same pattern for new per-tile systems.
-- **Adaptive resolution:** `PERF` raises the pixel size by up to 2 steps when frames run slower than about 28 fps, and lowers it again when there's headroom.
+- **No automatic resolution changes:** a frame-rate-based pixel scaler was tried and removed. Backgrounding the app and brief hitches kept pushing it up, so the game got more and more pixelated. Pixel size is the player's setting only.
 
 ## Gotchas
+
+- **Rivers are not sea:** boats must use `seaBlocked(x,z)` (land or river), never `isLand`. Rivers cross islands, so treating them as water lets routes cut straight through a town.
 
 - **One-line functions and comments:** a lot of code is packed onto single lines, so use `/* … */` for inline comments there. A `//` comments out the rest of the line.
 - **World curve:** the curved-world shader bends everything by distance from the camera. That includes thumbnail and room cameras, so keep special cameras close to their subject. For picking and screen positions, use `toScreen`, `waterPoint` and `roomPoint`, which account for the curve.
