@@ -4,14 +4,27 @@
 const PAL={k:'#2b1e2e',g:'#5f9e3a',G:'#3d6e2c',l:'#9fd060',r:'#dc4034',R:'#962a2e',p:'#f39ab0',o:'#f08a2a',O:'#b85a1e',
   y:'#f6d04a',Y:'#c8952a',w:'#f7f2e6',W:'#c9c4d8',b:'#8a5a3a',B:'#5a3a2a',n:'#cfa46e',u:'#5a8ae0',U:'#3a5ab0',
   c:'#a8e6f4',v:'#9a6ad0',V:'#6a3a9a',m:'#d4b2f2',e:'#a4a4b4',E:'#5c5c6c',s:'#e8d4a8'};
+/* Sprites are authored as small character grids, then upgraded when drawn, to match cute 16-bit item icons:
+   Scale2x smooths the stair-steps, each shape gets a light rim along its top-left and a shaded bottom-right,
+   and the outline takes a dark tint of the colour it wraps instead of flat black. The result is painted
+   at 3× so the browser can scale it down smoothly (icons read as fine pixel art, not chunky blocks). */
+const rgbOf=h=>{const n=parseInt(h.slice(1),16);return[n>>16&255,n>>8&255,n&255];};
+function scale2x(g,w,h){const at=(x,y)=>x<0||y<0||x>=w||y>=h?null:g[y][x],o=[];
+  for(let y=0;y<h;y++){const r1=[],r2=[];for(let x=0;x<w;x++){const P=g[y][x],A=at(x,y-1),B=at(x+1,y),C=at(x-1,y),D=at(x,y+1);let e1=P,e2=P,e3=P,e4=P;
+    if(C===A&&C!==D&&A!==B)e1=A;if(A===B&&A!==C&&B!==D)e2=B;if(D===C&&D!==B&&C!==A)e3=C;if(B===D&&B!==A&&D!==C)e4=D;r1.push(e1,e2);r2.push(e3,e4);}o.push(r1,r2);}
+  return o;}
+const SPRITE_PX=3;
 function sprite(rows,pal={}){
-  const h=rows.length,w=Math.max(...rows.map(r=>r.length));
-  const cv=document.createElement('canvas');cv.width=w+2;cv.height=h+2;const cx=cv.getContext('2d');
-  const on=(x,y)=>{const r=rows[y-1];if(!r)return false;const ch=r[x-1];return ch&&ch!=='.';};
-  for(let y=0;y<h+2;y++)for(let x=0;x<w+2;x++){
-    if(on(x,y)){const ch=rows[y-1][x-1];cx.fillStyle=pal[ch]||PAL[ch]||'#f0f';cx.fillRect(x,y,1,1);}
-    else if(on(x+1,y)||on(x-1,y)||on(x,y+1)||on(x,y-1)){cx.fillStyle=PAL.k;cx.fillRect(x,y,1,1);}
-  }
+  const h0=rows.length,w0=Math.max(...rows.map(r=>r.length));
+  const g0=rows.map(r=>[...Array(w0)].map((_,x)=>{const ch=r[x];return ch&&ch!=='.'?(pal[ch]||PAL[ch]||'#f0f'):null;}));
+  const g=scale2x(g0,w0,h0),W=w0*2,H=h0*2,at=(x,y)=>x<0||y<0||x>=W||y>=H?null:g[y][x];
+  const cv=document.createElement('canvas');cv.width=(W+2)*SPRITE_PX;cv.height=(H+2)*SPRITE_PX;const cx=cv.getContext('2d');
+  const put=(x,y,[r,gg,b])=>{cx.fillStyle=`rgb(${r|0},${gg|0},${b|0})`;cx.fillRect((x+1)*SPRITE_PX,(y+1)*SPRITE_PX,SPRITE_PX,SPRITE_PX);};
+  for(let y=-1;y<=H;y++)for(let x=-1;x<=W;x++){const c=at(x,y);
+    if(c){let rgb=rgbOf(c);const lum=rgb[0]*0.3+rgb[1]*0.59+rgb[2]*0.11,tl=!at(x,y-1)||!at(x-1,y),br=!at(x,y+1)||!at(x+1,y);
+      if(lum>70){if(tl&&!br)rgb=rgb.map(v=>v+(255-v)*0.28);else if(br&&!tl)rgb=rgb.map(v=>v*0.84);}
+      put(x,y,rgb);}
+    else{const n=at(x,y-1)||at(x-1,y)||at(x+1,y)||at(x,y+1);if(n){const rgb=rgbOf(n);put(x,y,rgb.map((v,i)=>v*0.3+[43,30,46][i]*0.55));}}}
   return cv.toDataURL();
 }
 const SPR={
@@ -52,9 +65,10 @@ star:['.....y.....','.....y.....','....yyy....','yyyyyyyyyyy','.yyyyyyyyy.','..y
 boat:['.....w......','.....ww.....','.....wwr....','.....wwww...','.....b......','bbbbbbbbbbbb','.bnnnnnnnnb.','..bbbbbbbb..'],
 task:['.nnnnnnnn.','nbwwwwwwbn','.nwEEEEwn.','.nwwwwwwn.','.nwEEEwwn.','.nwwwwwwn.','.nwEEEEwn.','nbwwwwwwbn','.nnnnnnnn.'],
 rod:['..........E','.........E.','........b..','.......b..u','......b...u','.....b....u','....b.....r','...B.......','..B........'],
-hand:['.pp......pp.','pppp....pppp','pppp.pp.pppp','.pp.pppp.pp.','.....pp.....','...pppppp...','..pppppppp..','.pppppppppp.','.pppppppppp.','..pppppppp..','...pp..pp...'],
+menu:['.rrr...uuu.','rrrrr.uuuuu','rrrrr.uuuuu','rrrrr.uuuuu','.rrr...uuu.','...........','.ggg...yyy.','ggggg.yyyyy','ggggg.yyyyy','ggggg.yyyyy','.ggg...yyy.'],
+hand:['.pp...pp...pp.','pppp.pppp.pppp','pppp.pppp.pppp','.pp...pp...pp.','..............','....pppppp....','...pppppppp...','..pppppppppp..','..pppppppppp..','..ppppp.pppp..','...ppp...ppp..'],
 shovel:['....bbbb....','....b..b....','.....bb.....','.....bb.....','.....bb.....','.....bb.....','.....Bb.....','...eeeeee...','...eeeeee...','...eeeeeE...','....eeeE....','.....eE.....'],
-axe:['....EEEb....','...EeeEbb...','..EeeeEbb...','..EeeeEbb...','...EeeEbb...','....EE.bb...','.......bb...','.......bb...','.......bb...','.......bb...','.......BB...'],
+axe:['.......eee..','......eeeee.','.....bbeeeeE','....bb.eeeE.','...bb...eE..','..bb........','.bb.........','bb..........','B...........'],
 net:['...wwwww....','..wWwWwWw...','.wWwWwWwWw..','.wwWwWwWww..','.wWwWwWwWw..','..wWwWwWw...','...wwwww....','.....bb.....','.....bb.....','.....bb.....','.....bb.....','.....BB.....'],
 can:['....EEE.....','...E...E....','.OOOOOOOOE..','OOOOOOOOOOE.','.OoooooOO..O','.OOOOOOOOOOO','.OOOOOOOO...','..OOOOOO....'],
 };

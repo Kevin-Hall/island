@@ -26,10 +26,12 @@
 <div id="ctx" class="ctx"></div>
 <div id="actionBar" class="actionbar" hidden><div class="tag" id="abTag"></div><div class="msg" id="abMsg"></div><div class="row" id="abRow"></div></div>
 
-<nav class="tools" id="tools" aria-label="Tools"></nav>
-
-<nav class="dock" aria-label="Apps">
-  <button class="btn" id="bSeed" style="--c:#fbe39a" aria-label="Choose seed"><span class="ico"><img class="px" id="seedImg" alt=""></span><span class="lb" id="seedTxt">Seeds</span></button>
+<!-- one bottom bar: your tools, plus a menu button that pops up the apps -->
+<nav class="bar" id="bar" aria-label="Tools">
+  <div class="tools" id="tools"></div>
+  <button class="menubtn" id="bMenu" aria-label="Menu" aria-expanded="false"><img class="px" id="icoMenu" alt=""></button>
+</nav>
+<nav class="dock apps" id="apps" aria-label="Menu" hidden>
   <button class="btn" id="bBag" style="--c:#f3d3a8"><span class="ico"><img class="px" id="icoBag" alt=""></span><span class="lb">Bag</span></button>
   <button class="btn" id="bShop" style="--c:#a6e3d8"><span class="ico"><img class="px" id="icoShop" alt=""></span><span class="lb">Shop</span></button>
   <button class="btn" id="bTask" style="--c:#ffc9a3"><span class="ico"><img class="px" id="icoTask" alt=""></span><span class="lb">Orders</span></button>

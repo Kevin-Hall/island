@@ -59,7 +59,7 @@ function frame(now){
 /* =========================================================
    Boot
    ========================================================= */
-$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
+$('icoMenu').src=ICON.menu;$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
 genIslands();for(const isl of islands)buildIsland(isl);rebuildSeaGrid();
 if(S.wv!==3){if(!isNew){S.sea=false;S.boat=null;S.picked={};vil.x=vil.tx=0.3;vil.z=vil.tz=2.1;}S.wv=3;}
 ensureBoat(true);if(S.sea&&isLand(Math.round(S.boat.x),Math.round(S.boat.z))){S.sea=false;S.boat=null;ensureBoat(false);}

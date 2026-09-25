@@ -25,7 +25,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 |---|---|
 | 00-core | three.js check, curved-world vertex shader, tiny utilities (`clamp`, `hash`, `mulberry`, `K`) |
 | 10-data | **Data registries:** `CROPS`, `VARIANTS`, `BUILD`, `BIOMES`, `FISH`, `BUGS`, `PLANTS`, `FINDS`, `MATS`/`CONSUM`, rods, cans, house tiers, level curve |
-| 20-state, 21-sprites | Save state (`S`, `freshState`, `load`, `save`); pixel-art UI icons (`SPR`, `ICON`) |
+| 20-state, 21-sprites | Save state (`S`, `freshState`, `load`, `save`); UI icons (`SPR`, `ICON`). Sprites are small character grids that `sprite()` upgrades when drawn: Scale2x smoothing, rim light and shade, a tinted outline, painted at 3× |
 | 30-render | Renderer, pixel post-pass, geometry helpers (`P`, `PG` gradient parts, `merge`, `M`), shared materials, lights, sea, sky |
 | 31-ground | Painted ground textures (grass, path, sand, cliff) and `worldMat`, which maps them in world space so tiles join up without seams. Dirt paths are painted into the grass from a blurred mask (`setPathMask`), so their edges curve instead of following tiles |
 | 40–44 world | Island generation (`genIslands`); trees (`treeParts`, `canopy`, gradient leaf `card`s); grass tufts (off by default, see `GRASS_DENS`); rivers and waterfalls (`carveRivers`); terrain meshes with rounded corners (`buildIsland`, `rtileGeo`); island culling |
@@ -39,7 +39,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 60–64 | Ambient life (villager, boat, gulls, particles); time of day and offline simulation; synth audio |
 | 71-tools | Tool bar and held tools (`TOOLS`, `equip`); `toolTap` decides what a tap does with the equipped tool; `actAt` walks up, faces the tile and swings |
 | 70–80 | UI helpers and items; farming actions (`tillAt`, `waterAt`, `tendAt`, `useFixed`) and drag-farming; finds, weeds, wild plants, bugs and crows; fishing; sailing and fast travel; orders |
-| 82-sheets | Bottom sheets: Pockets (inventory and crafting), shop, seeds, orders, Islandex, chart, settings |
+| 82-sheets | The bottom bar's menu (`showApps`) and bottom sheets: Pockets (inventory and crafting), shop, seeds, orders, Islandex, chart, settings |
 | 84-input | Tap, drag, pinch and picking (`pick`, `onTap`) |
 | 86–87 | New-game setup; atmosphere (foam, footprints, sky events, motes, music) |
 | 90-main | Main loop (`frame`) and boot |

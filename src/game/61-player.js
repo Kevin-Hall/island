@@ -20,5 +20,5 @@ function applyLook(){const L=S.look,b=playerBody(L);villager.remove(villager.chi
   playerLimbs=L.sp==='bunny'?null:limbsOf(b);}
 // preview thumbnails for the look picker, cached per species + colours
 const lookThumbs={};
-function lookThumb(sp,fur,shirt){const k=sp+'|'+fur+'|'+shirt;return lookThumbs[k]||(lookThumbs[k]=snapThumb(playerBody({sp,fur,shirt}),72));}
+function lookThumb(sp,fur,shirt){const k=sp+'|'+fur+'|'+shirt;return lookThumbs[k]||(lookThumbs[k]=snapThumb(playerBody({sp,fur,shirt}),128));}
 function setLook(ch){Object.assign(S.look,ch);if(ch.sp&&!ch.fur)S.look.fur=LOOKS[ch.sp].fur[0];applyLook();hearts(vil.x,1.1,vil.z);SFX.pop();save();}

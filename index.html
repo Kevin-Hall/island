@@ -28,7 +28,7 @@ body{
 button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;border:0}
 button:focus-visible{outline:3px solid var(--teal);outline-offset:3px}
 #c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;image-rendering:crisp-edges;image-rendering:pixelated;}
-img.px{image-rendering:crisp-edges;image-rendering:pixelated}
+img.px{image-rendering:auto}
 
 /* ---------- HUD ---------- */
 .hud{position:fixed;left:0;right:0;top:0;z-index:5;pointer-events:none;
@@ -50,7 +50,7 @@ img.px{image-rendering:crisp-edges;image-rendering:pixelated}
 .xpbar b{display:block;height:100%;width:0;background:var(--green);border-radius:99px}
 
 /* ---------- Dock: a little phone of apps ---------- */
-.dock{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
+.dock{position:fixed;z-index:6;right:max(10px,calc(50% - 184px));bottom:calc(env(safe-area-inset-bottom,0px) + 82px);animation:appsIn .22s cubic-bezier(.3,1.4,.5,1) both;transform-origin:90% 100%;
   display:flex;gap:2px;padding:8px 8px 6px;background:var(--paper);border-radius:30px;box-shadow:var(--shadow);max-width:calc(100vw - 20px)}
 .btn{position:relative;width:58px;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;padding:0;font-size:11.5px;font-weight:600;color:var(--ink2);line-height:1.05}
 .btn .ico{width:46px;height:46px;border-radius:16px;background:var(--c,#eee);display:grid;place-items:center;box-shadow:inset 0 -4px 0 rgba(0,0,0,.1);transition:transform .12s}
@@ -62,29 +62,37 @@ img.px{image-rendering:crisp-edges;image-rendering:pixelated}
   display:grid;place-items:center;box-shadow:0 2px 0 var(--rose-d);animation:bob 1.2s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(-3px)}}
 
-/* ---------- Tool bar: the equipped tool decides what a tap does ---------- */
-.tools{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 98px);
-  display:flex;gap:5px;padding:5px 6px;background:var(--paper);border-radius:20px;box-shadow:var(--shadow);max-width:calc(100vw - 20px)}
+/* ---------- Bottom bar: tools, plus the menu button ---------- */
+.bar{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
+  display:flex;align-items:center;gap:6px;padding:6px;background:var(--paper);border-radius:24px;box-shadow:var(--shadow);max-width:calc(100vw - 16px)}
+.tools{display:flex;gap:4px}
 .tools[hidden]{display:none}
-.tool{width:40px;height:40px;border-radius:14px;background:#f1e8d6;display:grid;place-items:center;padding:0;border:0;transition:transform .12s,background .12s;box-shadow:inset 0 -3px 0 rgba(0,0,0,.08)}
-.tool img{width:26px;height:26px}
-.tool.on{background:#fbe39a;transform:translateY(-4px);box-shadow:inset 0 -3px 0 rgba(0,0,0,.1),0 0 0 2.5px #e0a93a}
+.tool{width:40px;height:44px;border-radius:14px;background:#f1e8d6;display:grid;place-items:center;padding:0;border:0;transition:transform .12s,background .12s;box-shadow:inset 0 -3px 0 rgba(0,0,0,.08)}
+.tool img{width:30px;height:30px}
+.tool.on{background:#fbe39a;transform:translateY(-3px);box-shadow:inset 0 -3px 0 rgba(0,0,0,.1),0 0 0 2.5px #e0a93a}
 .tool:active{transform:scale(.9)}
-@media (max-width:370px){.tools{gap:3px}.tool{width:37px;height:37px}}
+.menubtn{position:relative;width:46px;height:46px;border-radius:16px;background:#a6e3d8;display:grid;place-items:center;padding:0;border:0;box-shadow:inset 0 -4px 0 rgba(0,0,0,.1);margin-left:2px;transition:transform .12s,background .12s}
+.menubtn img{width:30px;height:30px}
+.menubtn.on{background:#7fd0c2;transform:scale(.94)}
+.menubtn.ready::after{content:'!';position:absolute;top:-5px;right:-4px;width:18px;height:18px;border-radius:50%;background:var(--rose);color:#fff;font-size:12px;font-weight:700;
+  display:grid;place-items:center;box-shadow:0 2px 0 var(--rose-d);animation:bob 1.2s ease-in-out infinite}
+.apps[hidden]{display:none}
+@keyframes appsIn{from{transform:translateY(10px) scale(.9);opacity:0}}
+@media (max-width:374px){.tools{gap:2px}.tool{width:36px}.tool img{width:27px;height:27px}.bar{gap:4px;padding:5px}}
 
 /* ---------- Look picker ---------- */
 .looks{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .lk{display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--paper);border-radius:18px;padding:6px 2px 7px;box-shadow:0 2px 0 var(--line);font-size:13px;font-weight:600;color:var(--ink2)}
-.lk img{width:64px;height:64px;image-rendering:pixelated}
+.lk img{width:64px;height:64px;image-rendering:auto}
 .lk.on{background:#fbe39a;box-shadow:0 0 0 2.5px #e0a93a}
 .swatches{display:flex;flex-wrap:wrap;gap:10px}
 .sw{width:38px;height:38px;border-radius:50%;background:var(--sw);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15),0 2px 0 var(--line);border:3px solid var(--paper)}
 .sw.on{box-shadow:0 0 0 3px #e0a93a}
 .lookrow{width:100%;margin-bottom:12px}
-.lookrow img{image-rendering:pixelated}
+.lookrow img{image-rendering:auto}
 
 /* ---------- Context buttons ---------- */
-.ctx{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 156px);
+.ctx{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 86px);
   display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;width:max-content;max-width:calc(100vw - 32px);pointer-events:none}
 .ctx > *{pointer-events:auto}
 .ctx .msg{background:var(--paper);border-radius:999px;padding:8px 14px;font-size:13.5px;font-weight:600;color:var(--ink2);box-shadow:var(--shadow)}
@@ -106,7 +114,7 @@ img.px{image-rendering:crisp-edges;image-rendering:pixelated}
 @keyframes rise{to{transform:translate(-50%,-200%);opacity:0}}
 
 /* ---------- Dialog (speech bubble) ---------- */
-.actionbar{position:fixed;z-index:7;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 156px);width:min(440px,calc(100vw - 28px));box-sizing:border-box;
+.actionbar{position:fixed;z-index:7;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 86px);width:min(440px,calc(100vw - 28px));box-sizing:border-box;
   background:var(--paper);border-radius:34px;box-shadow:var(--shadow);padding:20px 20px 14px;display:flex;flex-direction:column;gap:12px;animation:pop .3s cubic-bezier(.3,1.5,.5,1) both}
 @keyframes pop{from{transform:translateX(-50%) scale(.92);opacity:0}to{transform:translateX(-50%);opacity:1}}
 .actionbar .tag{position:absolute;top:-14px;left:24px;background:var(--yellow);color:var(--ink);font-weight:700;font-size:14px;padding:4px 14px;border-radius:999px;transform:rotate(-4deg);box-shadow:0 3px 0 var(--yellow-d)}
@@ -163,20 +171,20 @@ button.card:active{transform:scale(.98)}
 .invtop{display:flex;align-items:center;gap:10px;margin-bottom:12px}.invtop .tot{flex:1;font-size:14px;color:var(--ink2)}.invtop .tot b{color:var(--ink);font-size:17px}
 .inv{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:8px}
 .cell{position:relative;aspect-ratio:1;background:var(--paper);border-radius:18px;box-shadow:0 2px 0 var(--line),0 5px 12px rgba(107,79,47,.06);display:flex;align-items:center;justify-content:center;padding:0}
-.cell img{width:66%;height:66%;image-rendering:pixelated}
+.cell img{width:66%;height:66%;image-rendering:auto}
 .cell .n{position:absolute;right:5px;bottom:4px;min-width:18px;font-weight:700;font-size:12.5px;background:var(--cream);color:var(--ink);border-radius:99px;padding:1px 6px;box-shadow:0 1px 0 var(--line)}
 .cell .dot{position:absolute;left:7px;top:7px;width:9px;height:9px;border-radius:50%}
 .cell.sel{box-shadow:0 0 0 3px var(--teal),0 5px 12px rgba(107,79,47,.1);background:#fffdf6}
 .cell.empty{background:var(--wash);box-shadow:none;opacity:.55}
 .detail{display:flex;gap:14px;align-items:center;background:var(--wash);border-radius:22px;padding:12px 14px;margin-bottom:12px}
-.detail img{width:64px;height:64px;background:var(--paper);border-radius:18px;padding:6px;image-rendering:pixelated;flex:none}
+.detail img{width:64px;height:64px;background:var(--paper);border-radius:18px;padding:6px;image-rendering:auto;flex:none}
 .detail .nm{font-weight:700;font-size:17px}.detail .sub{font-size:13.5px;color:var(--ink2);line-height:1.35;margin-top:2px}
 .detail .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.detail .acts .pbtn{padding:7px 13px;font-size:14px}
 .recipe{display:flex;gap:12px;align-items:center;background:var(--paper);border-radius:20px;padding:10px 12px;box-shadow:0 2px 0 var(--line),0 6px 14px rgba(107,79,47,.06)}
-.recipe>img{width:50px;height:50px;background:var(--cream);border-radius:14px;padding:3px;flex:none;image-rendering:pixelated}
+.recipe>img{width:50px;height:50px;background:var(--cream);border-radius:14px;padding:3px;flex:none;image-rendering:auto}
 .recipe .nm{font-weight:700;font-size:15.5px}.recipe .ing{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .chip{display:inline-flex;align-items:center;gap:3px;font-size:12.5px;font-weight:600;background:var(--cream);border-radius:99px;padding:2px 8px 2px 3px}
-.chip img{width:18px;height:18px;image-rendering:pixelated}.chip.miss{background:#fbe1dc;color:#b0473a}
+.chip img{width:18px;height:18px;image-rendering:auto}.chip.miss{background:#fbe1dc;color:#b0473a}
 .recipe.lock{opacity:.5}.recipe .grow{flex:1;min-width:0}.recipe .pbtn{padding:8px 14px;font-size:14px}
 .sellall .pbtn{flex:1}
 .alm{display:flex;flex-direction:column;gap:6px}
@@ -233,10 +241,12 @@ input[type=range]{width:100%;accent-color:var(--teal);height:28px}
 <div id="ctx" class="ctx"></div>
 <div id="actionBar" class="actionbar" hidden><div class="tag" id="abTag"></div><div class="msg" id="abMsg"></div><div class="row" id="abRow"></div></div>
 
-<nav class="tools" id="tools" aria-label="Tools"></nav>
-
-<nav class="dock" aria-label="Apps">
-  <button class="btn" id="bSeed" style="--c:#fbe39a" aria-label="Choose seed"><span class="ico"><img class="px" id="seedImg" alt=""></span><span class="lb" id="seedTxt">Seeds</span></button>
+<!-- one bottom bar: your tools, plus a menu button that pops up the apps -->
+<nav class="bar" id="bar" aria-label="Tools">
+  <div class="tools" id="tools"></div>
+  <button class="menubtn" id="bMenu" aria-label="Menu" aria-expanded="false"><img class="px" id="icoMenu" alt=""></button>
+</nav>
+<nav class="dock apps" id="apps" aria-label="Menu" hidden>
   <button class="btn" id="bBag" style="--c:#f3d3a8"><span class="ico"><img class="px" id="icoBag" alt=""></span><span class="lb">Bag</span></button>
   <button class="btn" id="bShop" style="--c:#a6e3d8"><span class="ico"><img class="px" id="icoShop" alt=""></span><span class="lb">Shop</span></button>
   <button class="btn" id="bTask" style="--c:#ffc9a3"><span class="ico"><img class="px" id="icoTask" alt=""></span><span class="lb">Orders</span></button>
@@ -541,14 +551,27 @@ function isNight(h=S.hour){return h>=19.5||h<5.5;}
 const PAL={k:'#2b1e2e',g:'#5f9e3a',G:'#3d6e2c',l:'#9fd060',r:'#dc4034',R:'#962a2e',p:'#f39ab0',o:'#f08a2a',O:'#b85a1e',
   y:'#f6d04a',Y:'#c8952a',w:'#f7f2e6',W:'#c9c4d8',b:'#8a5a3a',B:'#5a3a2a',n:'#cfa46e',u:'#5a8ae0',U:'#3a5ab0',
   c:'#a8e6f4',v:'#9a6ad0',V:'#6a3a9a',m:'#d4b2f2',e:'#a4a4b4',E:'#5c5c6c',s:'#e8d4a8'};
+/* Sprites are authored as small character grids, then upgraded when drawn, to match cute 16-bit item icons:
+   Scale2x smooths the stair-steps, each shape gets a light rim along its top-left and a shaded bottom-right,
+   and the outline takes a dark tint of the colour it wraps instead of flat black. The result is painted
+   at 3× so the browser can scale it down smoothly (icons read as fine pixel art, not chunky blocks). */
+const rgbOf=h=>{const n=parseInt(h.slice(1),16);return[n>>16&255,n>>8&255,n&255];};
+function scale2x(g,w,h){const at=(x,y)=>x<0||y<0||x>=w||y>=h?null:g[y][x],o=[];
+  for(let y=0;y<h;y++){const r1=[],r2=[];for(let x=0;x<w;x++){const P=g[y][x],A=at(x,y-1),B=at(x+1,y),C=at(x-1,y),D=at(x,y+1);let e1=P,e2=P,e3=P,e4=P;
+    if(C===A&&C!==D&&A!==B)e1=A;if(A===B&&A!==C&&B!==D)e2=B;if(D===C&&D!==B&&C!==A)e3=C;if(B===D&&B!==A&&D!==C)e4=D;r1.push(e1,e2);r2.push(e3,e4);}o.push(r1,r2);}
+  return o;}
+const SPRITE_PX=3;
 function sprite(rows,pal={}){
-  const h=rows.length,w=Math.max(...rows.map(r=>r.length));
-  const cv=document.createElement('canvas');cv.width=w+2;cv.height=h+2;const cx=cv.getContext('2d');
-  const on=(x,y)=>{const r=rows[y-1];if(!r)return false;const ch=r[x-1];return ch&&ch!=='.';};
-  for(let y=0;y<h+2;y++)for(let x=0;x<w+2;x++){
-    if(on(x,y)){const ch=rows[y-1][x-1];cx.fillStyle=pal[ch]||PAL[ch]||'#f0f';cx.fillRect(x,y,1,1);}
-    else if(on(x+1,y)||on(x-1,y)||on(x,y+1)||on(x,y-1)){cx.fillStyle=PAL.k;cx.fillRect(x,y,1,1);}
-  }
+  const h0=rows.length,w0=Math.max(...rows.map(r=>r.length));
+  const g0=rows.map(r=>[...Array(w0)].map((_,x)=>{const ch=r[x];return ch&&ch!=='.'?(pal[ch]||PAL[ch]||'#f0f'):null;}));
+  const g=scale2x(g0,w0,h0),W=w0*2,H=h0*2,at=(x,y)=>x<0||y<0||x>=W||y>=H?null:g[y][x];
+  const cv=document.createElement('canvas');cv.width=(W+2)*SPRITE_PX;cv.height=(H+2)*SPRITE_PX;const cx=cv.getContext('2d');
+  const put=(x,y,[r,gg,b])=>{cx.fillStyle=`rgb(${r|0},${gg|0},${b|0})`;cx.fillRect((x+1)*SPRITE_PX,(y+1)*SPRITE_PX,SPRITE_PX,SPRITE_PX);};
+  for(let y=-1;y<=H;y++)for(let x=-1;x<=W;x++){const c=at(x,y);
+    if(c){let rgb=rgbOf(c);const lum=rgb[0]*0.3+rgb[1]*0.59+rgb[2]*0.11,tl=!at(x,y-1)||!at(x-1,y),br=!at(x,y+1)||!at(x+1,y);
+      if(lum>70){if(tl&&!br)rgb=rgb.map(v=>v+(255-v)*0.28);else if(br&&!tl)rgb=rgb.map(v=>v*0.84);}
+      put(x,y,rgb);}
+    else{const n=at(x,y-1)||at(x-1,y)||at(x+1,y)||at(x,y+1);if(n){const rgb=rgbOf(n);put(x,y,rgb.map((v,i)=>v*0.3+[43,30,46][i]*0.55));}}}
   return cv.toDataURL();
 }
 const SPR={
@@ -589,9 +612,10 @@ star:['.....y.....','.....y.....','....yyy....','yyyyyyyyyyy','.yyyyyyyyy.','..y
 boat:['.....w......','.....ww.....','.....wwr....','.....wwww...','.....b......','bbbbbbbbbbbb','.bnnnnnnnnb.','..bbbbbbbb..'],
 task:['.nnnnnnnn.','nbwwwwwwbn','.nwEEEEwn.','.nwwwwwwn.','.nwEEEwwn.','.nwwwwwwn.','.nwEEEEwn.','nbwwwwwwbn','.nnnnnnnn.'],
 rod:['..........E','.........E.','........b..','.......b..u','......b...u','.....b....u','....b.....r','...B.......','..B........'],
-hand:['.pp......pp.','pppp....pppp','pppp.pp.pppp','.pp.pppp.pp.','.....pp.....','...pppppp...','..pppppppp..','.pppppppppp.','.pppppppppp.','..pppppppp..','...pp..pp...'],
+menu:['.rrr...uuu.','rrrrr.uuuuu','rrrrr.uuuuu','rrrrr.uuuuu','.rrr...uuu.','...........','.ggg...yyy.','ggggg.yyyyy','ggggg.yyyyy','ggggg.yyyyy','.ggg...yyy.'],
+hand:['.pp...pp...pp.','pppp.pppp.pppp','pppp.pppp.pppp','.pp...pp...pp.','..............','....pppppp....','...pppppppp...','..pppppppppp..','..pppppppppp..','..ppppp.pppp..','...ppp...ppp..'],
 shovel:['....bbbb....','....b..b....','.....bb.....','.....bb.....','.....bb.....','.....bb.....','.....Bb.....','...eeeeee...','...eeeeee...','...eeeeeE...','....eeeE....','.....eE.....'],
-axe:['....EEEb....','...EeeEbb...','..EeeeEbb...','..EeeeEbb...','...EeeEbb...','....EE.bb...','.......bb...','.......bb...','.......bb...','.......bb...','.......BB...'],
+axe:['.......eee..','......eeeee.','.....bbeeeeE','....bb.eeeE.','...bb...eE..','..bb........','.bb.........','bb..........','B...........'],
 net:['...wwwww....','..wWwWwWw...','.wWwWwWwWw..','.wwWwWwWww..','.wWwWwWwWw..','..wWwWwWw...','...wwwww....','.....bb.....','.....bb.....','.....bb.....','.....bb.....','.....BB.....'],
 can:['....EEE.....','...E...E....','.OOOOOOOOE..','OOOOOOOOOOE.','.OoooooOO..O','.OOOOOOOOOOO','.OOOOOOOO...','..OOOOOO....'],
 };
@@ -1964,7 +1988,7 @@ function applyLook(){const L=S.look,b=playerBody(L);villager.remove(villager.chi
   playerLimbs=L.sp==='bunny'?null:limbsOf(b);}
 // preview thumbnails for the look picker, cached per species + colours
 const lookThumbs={};
-function lookThumb(sp,fur,shirt){const k=sp+'|'+fur+'|'+shirt;return lookThumbs[k]||(lookThumbs[k]=snapThumb(playerBody({sp,fur,shirt}),72));}
+function lookThumb(sp,fur,shirt){const k=sp+'|'+fur+'|'+shirt;return lookThumbs[k]||(lookThumbs[k]=snapThumb(playerBody({sp,fur,shirt}),128));}
 function setLook(ch){Object.assign(S.look,ch);if(ch.sp&&!ch.fur)S.look.fur=LOOKS[ch.sp].fur[0];applyLook();hearts(vil.x,1.1,vil.z);SFX.pop();save();}
 /* =========================================================
    Time of day
@@ -2094,8 +2118,7 @@ function updateHUD(){
   const lv=level();$('lvlTxt').textContent='Lv '+lv;
   const a=LV[lv-1]||0,b=LV[lv];$('xpFill').style.width=(b?clamp((S.xp-a)/(b-a),0,1)*100:100)+'%';
   {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${S.rain?' · rain':''}`;$('locTxt').textContent=locName();
-  const sd=S.seed==='mystery'?MYSTERY:CROPS[S.seed];$('seedImg').src=seedIcon(S.seed);$('seedTxt').textContent=S.free[S.seed]?'Free ×'+S.free[S.seed]:sd.name.split(' ')[0];
-  $('bTask').classList.toggle('ready',ordersReady());
+  $('bTask').classList.toggle('ready',ordersReady());$('bMenu').classList.toggle('ready',ordersReady());
   const [g,t]=dexCount();$('dexTxt').textContent=`Dex ${Math.floor(g/t*100)}%`;$('locTxt').hidden=!$('locTxt').textContent;
   updateCtx();
 }
@@ -2917,7 +2940,7 @@ function snapThumb(g,size=48){
   renderer.readRenderTargetPixels(trt,0,0,size,size,buf);renderer.setRenderTarget(null);renderer.setClearColor(0x000000,1);glowMat.emissiveIntensity=old;ts.remove(g);
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){const si=((size-1-y)*size+x)*4,di=(y*size+x)*4;img.data[di]=buf[si];img.data[di+1]=buf[si+1];img.data[di+2]=buf[si+2];img.data[di+3]=buf[si+3];}
   cx.putImageData(img,0,0);return cv.toDataURL();}
-function makeThumbs(){const snap=g=>snapThumb(g,48);
+function makeThumbs(){const snap=g=>snapThumb(g,96);
   for(const k in BUILD)THUMB[k]=snap(objGroup(k,3,0));
   for(let i=0;i<4;i++)THUMB['house'+i]=snap(houseGroup(i));
   const isl=new T.Group();for(let x=-3;x<=3;x++)for(let z=-3;z<=3;z++){const d=Math.hypot(x*0.9,z);if(d<3.4){const m=new T.Mesh(BOX,toon({color:d<2.2?0x6aa843:0xe9d3a4}));m.scale.set(1,d<2.2?1:0.8,1);m.position.set(x,0,z);isl.add(m);}}
@@ -2928,7 +2951,7 @@ function makeThumbs(){const snap=g=>snapThumb(g,48);
    Sheets
    ========================================================= */
 let sheet=null;
-function openSheet(kind,tab){if(caught){scene.remove(caught.g);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab};renderSheet();$('sheet').hidden=false;updateCtx();}
+function openSheet(kind,tab){showApps(false);if(caught){scene.remove(caught.g);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab};renderSheet();$('sheet').hidden=false;updateCtx();}
 function closeSheet(){$('sheet').hidden=true;sheet=null;updateCtx();}
 function tabs(list){$('sheetTabs').innerHTML=list.map(([id,l])=>`<button class="tab ${sheet.tab===id?'on':''}" data-tab="${id}">${l}</button>`).join('');}
 const sh=n=>`<span class="shl">${shellHTML}${fmt(n)}</span>`;
@@ -3091,7 +3114,10 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.really){resetting=true;try{localStorage.removeItem(SAVE_KEY);}catch(e){}location.reload();return;}
 });
 $('sheetX').onclick=()=>{SFX.ui();closeSheet();};
-$('bSeed').onclick=()=>openSheet('seeds');
+// the menu button pops the apps up above the bar; any app, sheet or tap on the world closes it
+function showApps(on){$('apps').hidden=!on;$('bMenu').classList.toggle('on',on);$('bMenu').setAttribute('aria-expanded',on);}
+$('bMenu').onclick=()=>{SFX.ui();showApps($('apps').hidden);};
+$('apps').addEventListener('click',()=>showApps(false));
 $('bBag').onclick=()=>openSheet('bag');
 $('bShop').onclick=()=>openSheet('shop',sheet&&sheet.kind==='shop'?sheet.tab:'decor');
 $('bTask').onclick=()=>openSheet('orders');
@@ -3167,7 +3193,7 @@ function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!
   if(did){paint.n++;cursorAt(x,z);walkTo(x,z);swingTool();if(paint.soil){rebuildSoil();paint.soil=false;}}}
 function endPaint(){if(!paint)return;const n=paint.n,m=paint.mode;paint=null;clearAction();updateHUD();if(n>1)floatText(vil.x,1.3,vil.z,PAINT_LBL[m]+' ×'+n);}
 function pinchDist(){const [a,b]=[...ptrs.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1;}
-canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+canvas.addEventListener('pointerdown',e=>{if(!$('apps').hidden)showApps(false);canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===1){drag={sx:e.clientX,sy:e.clientY,lx:e.clientX,ly:e.clientY,moved:false};clearTimeout(holdT);
     if(!inside&&!S.sea&&!placing&&!fishing&&!caught&&S.mode!=='edit'){const x0=e.clientX,y0=e.clientY;
       holdT=setTimeout(()=>{if(!drag||drag.moved||ptrs.size!==1)return;const hit=pick(x0,y0);if(!hit)return;const mode=paintMode(hit.x,hit.z);if(!mode)return;
@@ -3186,7 +3212,7 @@ function endPtr(e){if(!ptrs.has(e.pointerId))return;const wasOne=ptrs.size===1;p
 canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('wheel',e=>{e.preventDefault();cam.dist=clamp(cam.dist*(1+e.deltaY*0.001),8,60);},{passive:false});
-window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(placing)endPlace();else if(sheet)closeSheet();else clearAction();}});
+window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('apps').hidden)showApps(false);else if(placing)endPlace();else if(sheet)closeSheet();else clearAction();}});
 
 /* =========================================================
    New game setup
@@ -3393,7 +3419,7 @@ function frame(now){
 /* =========================================================
    Boot
    ========================================================= */
-$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
+$('icoMenu').src=ICON.menu;$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
 genIslands();for(const isl of islands)buildIsland(isl);rebuildSeaGrid();
 if(S.wv!==3){if(!isNew){S.sea=false;S.boat=null;S.picked={};vil.x=vil.tx=0.3;vil.z=vil.tz=2.1;}S.wv=3;}
 ensureBoat(true);if(S.sea&&isLand(Math.round(S.boat.x),Math.round(S.boat.z))){S.sea=false;S.boat=null;ensureBoat(false);}

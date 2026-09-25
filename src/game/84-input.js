@@ -66,7 +66,7 @@ function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!
   if(did){paint.n++;cursorAt(x,z);walkTo(x,z);swingTool();if(paint.soil){rebuildSoil();paint.soil=false;}}}
 function endPaint(){if(!paint)return;const n=paint.n,m=paint.mode;paint=null;clearAction();updateHUD();if(n>1)floatText(vil.x,1.3,vil.z,PAINT_LBL[m]+' ×'+n);}
 function pinchDist(){const [a,b]=[...ptrs.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1;}
-canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+canvas.addEventListener('pointerdown',e=>{if(!$('apps').hidden)showApps(false);canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===1){drag={sx:e.clientX,sy:e.clientY,lx:e.clientX,ly:e.clientY,moved:false};clearTimeout(holdT);
     if(!inside&&!S.sea&&!placing&&!fishing&&!caught&&S.mode!=='edit'){const x0=e.clientX,y0=e.clientY;
       holdT=setTimeout(()=>{if(!drag||drag.moved||ptrs.size!==1)return;const hit=pick(x0,y0);if(!hit)return;const mode=paintMode(hit.x,hit.z);if(!mode)return;
@@ -85,5 +85,5 @@ function endPtr(e){if(!ptrs.has(e.pointerId))return;const wasOne=ptrs.size===1;p
 canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('wheel',e=>{e.preventDefault();cam.dist=clamp(cam.dist*(1+e.deltaY*0.001),8,60);},{passive:false});
-window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(placing)endPlace();else if(sheet)closeSheet();else clearAction();}});
+window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('apps').hidden)showApps(false);else if(placing)endPlace();else if(sheet)closeSheet();else clearAction();}});
 

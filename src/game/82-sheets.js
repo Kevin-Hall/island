@@ -15,7 +15,7 @@ function snapThumb(g,size=48){
   renderer.readRenderTargetPixels(trt,0,0,size,size,buf);renderer.setRenderTarget(null);renderer.setClearColor(0x000000,1);glowMat.emissiveIntensity=old;ts.remove(g);
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){const si=((size-1-y)*size+x)*4,di=(y*size+x)*4;img.data[di]=buf[si];img.data[di+1]=buf[si+1];img.data[di+2]=buf[si+2];img.data[di+3]=buf[si+3];}
   cx.putImageData(img,0,0);return cv.toDataURL();}
-function makeThumbs(){const snap=g=>snapThumb(g,48);
+function makeThumbs(){const snap=g=>snapThumb(g,96);
   for(const k in BUILD)THUMB[k]=snap(objGroup(k,3,0));
   for(let i=0;i<4;i++)THUMB['house'+i]=snap(houseGroup(i));
   const isl=new T.Group();for(let x=-3;x<=3;x++)for(let z=-3;z<=3;z++){const d=Math.hypot(x*0.9,z);if(d<3.4){const m=new T.Mesh(BOX,toon({color:d<2.2?0x6aa843:0xe9d3a4}));m.scale.set(1,d<2.2?1:0.8,1);m.position.set(x,0,z);isl.add(m);}}
@@ -26,7 +26,7 @@ function makeThumbs(){const snap=g=>snapThumb(g,48);
    Sheets
    ========================================================= */
 let sheet=null;
-function openSheet(kind,tab){if(caught){scene.remove(caught.g);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab};renderSheet();$('sheet').hidden=false;updateCtx();}
+function openSheet(kind,tab){showApps(false);if(caught){scene.remove(caught.g);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab};renderSheet();$('sheet').hidden=false;updateCtx();}
 function closeSheet(){$('sheet').hidden=true;sheet=null;updateCtx();}
 function tabs(list){$('sheetTabs').innerHTML=list.map(([id,l])=>`<button class="tab ${sheet.tab===id?'on':''}" data-tab="${id}">${l}</button>`).join('');}
 const sh=n=>`<span class="shl">${shellHTML}${fmt(n)}</span>`;
@@ -189,7 +189,10 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.really){resetting=true;try{localStorage.removeItem(SAVE_KEY);}catch(e){}location.reload();return;}
 });
 $('sheetX').onclick=()=>{SFX.ui();closeSheet();};
-$('bSeed').onclick=()=>openSheet('seeds');
+// the menu button pops the apps up above the bar; any app, sheet or tap on the world closes it
+function showApps(on){$('apps').hidden=!on;$('bMenu').classList.toggle('on',on);$('bMenu').setAttribute('aria-expanded',on);}
+$('bMenu').onclick=()=>{SFX.ui();showApps($('apps').hidden);};
+$('apps').addEventListener('click',()=>showApps(false));
 $('bBag').onclick=()=>openSheet('bag');
 $('bShop').onclick=()=>openSheet('shop',sheet&&sheet.kind==='shop'?sheet.tab:'decor');
 $('bTask').onclick=()=>openSheet('orders');
