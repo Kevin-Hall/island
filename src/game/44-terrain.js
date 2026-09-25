@@ -35,19 +35,23 @@ function buildIsland(isl){
     if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>hclass(x+dx,z+dz)===-9))c.lerp(_a.set(0xb89868),0.28);return c.getHex();};
   for(const [x,z] of isl.grass){const L=hclass(x,z);let mask=0;
     CORNERS.forEach(([dx,dz],b)=>{const n=[hclass(x+dx,z),hclass(x,z+dz),hclass(x+dx,z+dz)];if(n.some(v=>v>=L||v===-5))return;mask|=1<<b;
-      const hm=Math.max(...n);if(hm>=0)under.push([x+dx*0.25,z+dz*0.25,TOP.grass+hm*LVH,groundCol(B.grass,x+dx,z+dz,isl.seed)]);
-      else if(hm===-1)under.push([x+dx*0.25,z+dz*0.25,TOP.sand,sandCol(x+dx,z+dz)]);});
+      const hm=Math.max(...n);if(hm>=0)under.push([x+dx*0.25,z+dz*0.25,TOP.grass+hm*LVH,groundCol(B.grass,x+dx,z+dz,isl.seed),grassTopMat]);
+      else if(hm===-1)under.push([x+dx*0.25,z+dz*0.25,TOP.sand,sandCol(x+dx,z+dz),sandMat]);});
     CMASK.set(K(x,z),mask);put(mask,{kind:'g',x,z});}
   for(const [x,z] of isl.sand){let mask=0;CORNERS.forEach(([dx,dz],b)=>{if([hclass(x+dx,z),hclass(x,z+dz),hclass(x+dx,z+dz)].every(v=>v===-9))mask|=1<<b;});put(mask,{kind:'s',x,z});}
   for(const [mask,{g:gl,s:sl}] of byMask){const geo=rtileGeo(mask);
-    if(gl.length){const body=new T.InstancedMesh(geo,vcMatFlat,gl.length),top=new T.InstancedMesh(geo,vcMatFlat,gl.length);
-      gl.forEach(({x,z},i)=>{const ty=topY(x,z),h=ty-0.14+0.6;_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,h,1));body.setMatrixAt(i,_m);body.setColorAt(i,_c.set(B.cliff).multiplyScalar(0.92+hash(z,x)*0.12));
-        _m.compose(_v.set(x,ty-0.14,z),_q.identity(),_s.set(1,0.14,1));top.setMatrixAt(i,_m);const pk=isl.home&&TOWN.path.get(K(x,z));
-        top.setColorAt(i,pk?_c.set(pk===2?0xcfae78:0xc49c62).multiplyScalar(0.94+hash(x*3,z)*0.1):_c.setHex(groundCol(B.grass,x,z,isl.seed)));});
-      for(const m of [body,top]){m.receiveShadow=true;m.castShadow=true;m.frustumCulled=false;g.add(m);}}
-    if(sl.length){const im=new T.InstancedMesh(geo,vcMatFlat,sl.length);sl.forEach(({x,z},i)=>{_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,TOP.sand+0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(sandCol(x,z)));});
+    if(gl.length){const body=new T.InstancedMesh(geo,cliffMat,gl.length);
+      gl.forEach(({x,z},i)=>{const ty=topY(x,z),h=ty-0.14+0.6;_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,h,1));body.setMatrixAt(i,_m);body.setColorAt(i,_c.set(B.cliff).multiplyScalar(0.92+hash(z,x)*0.12));});
+      body.receiveShadow=true;body.castShadow=true;body.frustumCulled=false;g.add(body);
+      // grass tops and dirt-path tops share the rounded geometry but use different ground textures
+      const pathOf=({x,z})=>isl.home&&TOWN.path.get(K(x,z));
+      for(const [list,mat] of [[gl.filter(e=>!pathOf(e)),grassTopMat],[gl.filter(pathOf),pathMat]]){if(!list.length)continue;const top=new T.InstancedMesh(geo,mat,list.length);
+        list.forEach(({x,z},i)=>{const ty=topY(x,z);_m.compose(_v.set(x,ty-0.14,z),_q.identity(),_s.set(1,0.14,1));top.setMatrixAt(i,_m);const pk=pathOf({x,z});
+          top.setColorAt(i,pk?_c.set(pk===2?0xd8b680:0xcca46a).multiplyScalar(0.96+hash(x*3,z)*0.06):_c.setHex(groundCol(B.grass,x,z,isl.seed)));});
+        top.receiveShadow=true;top.castShadow=true;top.frustumCulled=false;g.add(top);}}
+    if(sl.length){const im=new T.InstancedMesh(geo,sandMat,sl.length);sl.forEach(({x,z},i)=>{_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,TOP.sand+0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(sandCol(x,z)));});
       im.receiveShadow=true;im.castShadow=true;im.frustumCulled=false;g.add(im);}}
-  if(under.length){const im=new T.InstancedMesh(BOX,vcMatFlat,under.length);under.forEach(([x,z,ty,col],i)=>{_m.compose(_v.set(x,(ty-0.6)/2,z),_q.identity(),_s.set(0.5,ty+0.6,0.5));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(col));});
+  for(const mat of [grassTopMat,sandMat]){const list=under.filter(u=>u[4]===mat);if(!list.length)continue;const im=new T.InstancedMesh(BOX,mat,list.length);list.forEach(([x,z,ty,col],i)=>{_m.compose(_v.set(x,(ty-0.6)/2,z),_q.identity(),_s.set(0.5,ty+0.6,0.5));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(col));});
     im.receiveShadow=true;im.frustumCulled=false;g.add(im);}
   if(isl.grass.length)buildGrass(isl,g);
   // shallow-water bands, with rounded outer corners so the coast doesn't step in squares

@@ -90,19 +90,23 @@ const BOX=new T.BoxGeometry(1,1,1),ICO=new T.IcosahedronGeometry(0.5,1),CONE6=ne
   PRISM=new T.CylinderGeometry(1,1,1,3).rotateX(-Math.PI/2),ICO2=new T.IcosahedronGeometry(0.5,2),CONE12=new T.ConeGeometry(0.5,1,14),CYL12=new T.CylinderGeometry(0.5,0.5,1,14);
 const _m=new T.Matrix4(),_q=new T.Quaternion(),_e=new T.Euler(),_v=new T.Vector3(),_s=new T.Vector3(),_c=new T.Color();
 function P(geo,color,x=0,y=0,z=0,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1){return{geo,color,x,y,z,rx,ry,rz,sx,sy,sz};}
+// like P, but shaded from cBot (local bottom) to cTop (local top) — used for leaf cards
+function PG(geo,cTop,cBot,...rest){return Object.assign(P(geo,cTop,...rest),{c2:cBot});}
 function shift(parts,x,y,z,ry=0){const c=Math.cos(ry),s=Math.sin(ry);return parts.map(p=>Object.assign({},p,{x:x+p.x*c+p.z*s,y:y+p.y,z:z-p.x*s+p.z*c,ry:p.ry+ry}));}
 function merge(parts){
   const gs=[];let total=0;
   for(const p of parts){
     const g=p.geo.index?p.geo.toNonIndexed():p.geo.clone();
     g.computeVertexNormals();
+    let ys=null;if(p.c2!==undefined){const a=g.attributes.position.array;ys=new Float32Array(a.length/3);let y0=1e9,y1=-1e9;for(let i=0;i<ys.length;i++){ys[i]=a[i*3+1];y0=Math.min(y0,ys[i]);y1=Math.max(y1,ys[i]);}for(let i=0;i<ys.length;i++)ys[i]=(ys[i]-y0)/((y1-y0)||1);}
     _e.set(p.rx,p.ry,p.rz,'YXZ');_q.setFromEuler(_e);_v.set(p.x,p.y,p.z);_s.set(p.sx,p.sy,p.sz);_m.compose(_v,_q,_s);
-    g.applyMatrix4(_m);gs.push([g,p.color]);total+=g.attributes.position.count;
+    g.applyMatrix4(_m);gs.push([g,p.color,ys,p.c2]);total+=g.attributes.position.count;
   }
   const pos=new Float32Array(total*3),nor=new Float32Array(total*3),col=new Float32Array(total*3);let o=0;
-  for(const [g,color] of gs){
-    pos.set(g.attributes.position.array,o*3);nor.set(g.attributes.normal.array,o*3);_c.set(color);
-    const n=g.attributes.position.count;for(let i=0;i<n;i++){col[(o+i)*3]=_c.r;col[(o+i)*3+1]=_c.g;col[(o+i)*3+2]=_c.b;}
+  const cB=new T.Color();
+  for(const [g,color,ys,c2] of gs){
+    pos.set(g.attributes.position.array,o*3);nor.set(g.attributes.normal.array,o*3);_c.set(color);if(ys)cB.set(c2);
+    const n=g.attributes.position.count;for(let i=0;i<n;i++){if(ys){const t=ys[i];col[(o+i)*3]=cB.r+(_c.r-cB.r)*t;col[(o+i)*3+1]=cB.g+(_c.g-cB.g)*t;col[(o+i)*3+2]=cB.b+(_c.b-cB.b)*t;}else{col[(o+i)*3]=_c.r;col[(o+i)*3+1]=_c.g;col[(o+i)*3+2]=_c.b;}}
     o+=n;g.dispose();
   }
   const out=new T.BufferGeometry();

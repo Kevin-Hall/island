@@ -710,19 +710,23 @@ const BOX=new T.BoxGeometry(1,1,1),ICO=new T.IcosahedronGeometry(0.5,1),CONE6=ne
   PRISM=new T.CylinderGeometry(1,1,1,3).rotateX(-Math.PI/2),ICO2=new T.IcosahedronGeometry(0.5,2),CONE12=new T.ConeGeometry(0.5,1,14),CYL12=new T.CylinderGeometry(0.5,0.5,1,14);
 const _m=new T.Matrix4(),_q=new T.Quaternion(),_e=new T.Euler(),_v=new T.Vector3(),_s=new T.Vector3(),_c=new T.Color();
 function P(geo,color,x=0,y=0,z=0,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1){return{geo,color,x,y,z,rx,ry,rz,sx,sy,sz};}
+// like P, but shaded from cBot (local bottom) to cTop (local top) — used for leaf cards
+function PG(geo,cTop,cBot,...rest){return Object.assign(P(geo,cTop,...rest),{c2:cBot});}
 function shift(parts,x,y,z,ry=0){const c=Math.cos(ry),s=Math.sin(ry);return parts.map(p=>Object.assign({},p,{x:x+p.x*c+p.z*s,y:y+p.y,z:z-p.x*s+p.z*c,ry:p.ry+ry}));}
 function merge(parts){
   const gs=[];let total=0;
   for(const p of parts){
     const g=p.geo.index?p.geo.toNonIndexed():p.geo.clone();
     g.computeVertexNormals();
+    let ys=null;if(p.c2!==undefined){const a=g.attributes.position.array;ys=new Float32Array(a.length/3);let y0=1e9,y1=-1e9;for(let i=0;i<ys.length;i++){ys[i]=a[i*3+1];y0=Math.min(y0,ys[i]);y1=Math.max(y1,ys[i]);}for(let i=0;i<ys.length;i++)ys[i]=(ys[i]-y0)/((y1-y0)||1);}
     _e.set(p.rx,p.ry,p.rz,'YXZ');_q.setFromEuler(_e);_v.set(p.x,p.y,p.z);_s.set(p.sx,p.sy,p.sz);_m.compose(_v,_q,_s);
-    g.applyMatrix4(_m);gs.push([g,p.color]);total+=g.attributes.position.count;
+    g.applyMatrix4(_m);gs.push([g,p.color,ys,p.c2]);total+=g.attributes.position.count;
   }
   const pos=new Float32Array(total*3),nor=new Float32Array(total*3),col=new Float32Array(total*3);let o=0;
-  for(const [g,color] of gs){
-    pos.set(g.attributes.position.array,o*3);nor.set(g.attributes.normal.array,o*3);_c.set(color);
-    const n=g.attributes.position.count;for(let i=0;i<n;i++){col[(o+i)*3]=_c.r;col[(o+i)*3+1]=_c.g;col[(o+i)*3+2]=_c.b;}
+  const cB=new T.Color();
+  for(const [g,color,ys,c2] of gs){
+    pos.set(g.attributes.position.array,o*3);nor.set(g.attributes.normal.array,o*3);_c.set(color);if(ys)cB.set(c2);
+    const n=g.attributes.position.count;for(let i=0;i<n;i++){if(ys){const t=ys[i];col[(o+i)*3]=cB.r+(_c.r-cB.r)*t;col[(o+i)*3+1]=cB.g+(_c.g-cB.g)*t;col[(o+i)*3+2]=cB.b+(_c.b-cB.b)*t;}else{col[(o+i)*3]=_c.r;col[(o+i)*3+1]=_c.g;col[(o+i)*3+2]=_c.b;}}
     o+=n;g.dispose();
   }
   const out=new T.BufferGeometry();
@@ -771,6 +775,37 @@ const starMat=new T.ShaderMaterial({uniforms:{op:{value:0}},transparent:true,dep
   fragmentShader:'uniform float op;void main(){gl_FragColor=vec4(1.,.98,.9,op);}'});
 const stars=new T.Points(starGeo,starMat);stars.frustumCulled=false;scene.add(stars);
 
+/* =========================================================
+   Ground textures — Animal Crossing-style patterns instead of geometry:
+   triangle-flecked grass, pebbly dirt paths, speckled sand and layered cliff rock.
+   Textures are near-white patterns that multiply each tile's colour, and they are sampled
+   in world space (top-down on flat faces, side-on on cliffs) so they flow across tiles seamlessly.
+   ========================================================= */
+function patternTex(size,draw){const cv=document.createElement('canvas');cv.width=cv.height=size;const g=cv.getContext('2d');draw(g,size,mulberry(size*7+draw.length));
+  const t=new T.CanvasTexture(cv);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=T.NearestFilter;t.minFilter=T.LinearMipmapLinearFilter;return t;}
+const shade=v=>`rgb(${v},${v},${v})`;
+const GRASS_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(236);g.fillRect(0,0,n,n);
+  for(let cy=0;cy<8;cy++)for(let cx=0;cx<8;cx++){if(R()<0.18)continue;const x=cx*8+2+R()*4,y=cy*8+2+R()*4,s=2.2+R()*1.6,up=R()<0.5?1:-1;
+    g.fillStyle=R()<0.78?shade(196):shade(255);g.beginPath();g.moveTo(x,y-s*up);g.lineTo(x-s,y+s*0.8*up);g.lineTo(x+s,y+s*0.8*up);g.closePath();g.fill();}});
+const PATH_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(238);g.fillRect(0,0,n,n);
+  for(let i=0;i<70;i++){const x=R()*n,y=R()*n,r=1+R()*3.2;g.fillStyle=R()<0.55?shade(214):shade(250);g.beginPath();g.arc(x,y,r,0,6.283);g.fill();if(x<r*2||y<r*2){g.beginPath();g.arc(x+n,y+n,r,0,6.283);g.fill();}}});
+const SAND_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(244);g.fillRect(0,0,n,n);for(let i=0;i<140;i++){g.fillStyle=R()<0.7?shade(222):shade(255);g.fillRect(Math.floor(R()*n),Math.floor(R()*n),1+(R()<0.2),1);}});
+const CLIFF_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(238);g.fillRect(0,0,n,n);
+  for(let y=0;y<n;y+=8){g.fillStyle=shade(206);g.fillRect(0,y,n,1);let x=R()*10;while(x<n){g.fillRect(Math.floor(x),y,1,8);x+=10+R()*14;}}
+  for(let i=0;i<40;i++){g.fillStyle=shade(222);g.fillRect(Math.floor(R()*n),Math.floor(R()*n),2,1);}});
+// a toon material whose map is sampled by world position (triplanar-lite: top-down or side-on by face normal)
+function worldMat(tex,scale){const m=toon({color:0xffffff,map:tex});
+  m.onBeforeCompile=sh=>{sh.uniforms.uWS={value:scale};
+    sh.vertexShader='varying vec3 vWP;varying vec3 vWN;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+    vec4 wp_=vec4(transformed,1.);vec3 wn_=objectNormal;
+    #ifdef USE_INSTANCING
+    wp_=instanceMatrix*wp_;wn_=mat3(instanceMatrix)*wn_;
+    #endif
+    vWP=(modelMatrix*wp_).xyz;vWN=normalize(mat3(modelMatrix)*wn_);`);
+    sh.fragmentShader='uniform float uWS;varying vec3 vWP;varying vec3 vWN;\n'+sh.fragmentShader.replace('#include <map_fragment>',
+      'vec3 an_=abs(vWN);vec2 wuv_=an_.y>0.6?vWP.xz:(an_.x>an_.z?vec2(vWP.z,vWP.y):vWP.xy);vec4 texelColor=texture2D(map,wuv_*uWS);diffuseColor*=texelColor;');};
+  return m;}
+const grassTopMat=worldMat(GRASS_TEX,0.36),pathMat=worldMat(PATH_TEX,0.42),sandMat=worldMat(SAND_TEX,0.5),cliffMat=worldMat(CLIFF_TEX,0.55);
 /* =========================================================
    World: home island + generated islands
    ========================================================= */
@@ -826,12 +861,18 @@ function genIslands(){
 }
 function rebuildLandList(){landList=[];riverList=[];for(const [k,t] of landMap){if(t==='river'){const [x,z]=k.split(',').map(Number);riverList.push([x,z,riverSurf.get(k)]);continue;}if(!isLandT(t))continue;const [x,z]=k.split(',').map(Number);landList.push([x,z,t,islMap.get(k),topY(x,z)]);}}
 
-// canopy of many leafy puffs (lighter on top) with little leaves poking out for a fuzzy silhouette
-function canopy(p,R,cols,cx,cy,cz,rad,n,puff){
-  for(let i=0;i<n;i++){const a=i/n*6.283+R()*0.6,e=(R()-0.35)*1.3,r=rad*(0.55+R()*0.35);const x=cx+Math.cos(a)*Math.cos(e)*r,y=cy+Math.sin(e)*r*0.8,z=cz+Math.sin(a)*Math.cos(e)*r;
-    const c=cols[y>cy+rad*0.25?0:y<cy-rad*0.15?2:1],sz=puff*(0.75+R()*0.5);p.push(P(ICO2,c,x,y,z,R(),R()*3,R(),sz,sz*0.85,sz));}
-  p.push(P(ICO2,cols[1],cx,cy,cz,0,R()*3,0,rad*1.5,rad*1.25,rad*1.5));
-  for(let i=0;i<n*3;i++){const a=R()*6.283,e=(R()-0.3)*1.2,r=rad*1.02;lf(p,cols[i%3],cx+Math.cos(a)*Math.cos(e)*r,cy+Math.sin(e)*r*0.85,cz+Math.sin(a)*Math.cos(e)*r,a+1.57,0.3+e*0.6,0.2,0.12,0.03);}}
+// a leaf card: a flattened four-sided blade from (x,y,z) along direction d, dark at its base and light at its tip
+const lerpHex=(a,b,t)=>_a.set(a).lerp(_b.set(b),t).getHex();
+const LEAF_CARD=new T.SphereGeometry(0.5,6,3); // a rounded, low-poly leaf blade (36 triangles)
+function card(p,x,y,z,d,len,wid,cTip,cBase){const tilt=Math.acos(clamp(d[1],-1,1)),ry=Math.atan2(d[0],d[2]);
+  p.push(PG(LEAF_CARD,cTip,cBase,x+d[0]*len/2,y+d[1]*len/2,z+d[2]*len/2,tilt,ry,0,wid,len,wid*0.3));}
+// a round canopy shingled with leaf cards that droop outward; tips lighten toward the top, like Animal Crossing's trees
+function canopy(p,R,cols,cx,cy,cz,rad){const Rr=rad*1.55;p.push(P(ICO2,cols[2],cx,cy,cz,0,R()*3,0,Rr*1.3,Rr*1.1,Rr*1.3));
+  const N=Math.round(30+Rr*26),ga=Math.PI*(3-Math.sqrt(5));
+  for(let i=0;i<N;i++){const yy=1-(i+0.5)/N*1.8;if(yy<-0.7)continue;const r=Math.sqrt(Math.max(0,1-yy*yy)),a=i*ga+R()*0.2,dx=Math.cos(a)*r,dz=Math.sin(a)*r;
+    // each leaf hangs outward-and-down from a point on the canopy's surface
+    const hx=dx*0.6,hy=-1+yy*0.25,hz=dz*0.6,hl=Math.hypot(hx,hy,hz),d=[-hx/hl,-hy/hl,-hz/hl],h=(yy+1)/2;
+    const len=Rr*(0.52+R()*0.1),sx=cx+dx*Rr*0.78,sy=cy+yy*Rr*0.66+0.1*Rr,sz=cz+dz*Rr*0.78;card(p,sx+d[0]*len*0.25,sy+d[1]*len*0.25,sz+d[2]*len*0.25,[hx/hl,hy/hl,hz/hl],len,Rr*0.5,lerpHex(cols[1],cols[0],0.35+h*0.65),lerpHex(cols[2],cols[1],h*0.5));}}
 function trunkP(p,R,col,h,w=0.13,dk){p.push(P(TRUNK,col,0,(h+0.45)/2,0,0,R()*3,0,w*2,h+0.45,w*2),P(CYL8,col,0,h+0.3,0,0,0,0,w*1.5,0.3,w*1.5));
   for(let i=0;i<4;i++){const a=i/4*6.283+R();p.push(P(CYL6,dk||col,Math.cos(a)*w*1.1,0.05,Math.sin(a)*w*1.1,Math.sin(a)*0.9,0,-Math.cos(a)*0.9,0.07,0.24,0.07));}
   for(let i=0;i<3;i++){const a=i/3*6.283+R(),y=h*(0.62+R()*0.25);p.push(P(CYL6,col,Math.cos(a)*0.16,y+0.1,Math.sin(a)*0.16,Math.sin(a)*0.8,0,-Math.cos(a)*0.8,0.06,0.42,0.06));}
@@ -844,13 +885,13 @@ function treeParts(kind,R,colRock){
     case'maple':case'mapleR':{const c=kind==='maple'?[0xf4a444,0xe8803a,0xc85e24]:[0xec6a4a,0xc8402a,0x982a22];
       trunkP(p,R,0x6a4428,0.9,0.12,0x4e3020);canopy(p,R,c,0,1.3,0,0.55,11,0.6);
       for(let i=0;i<5;i++)lf(p,c[i%3],(R()-0.5)*1.4,0.02,(R()-0.5)*1.4,R()*6.28,0,0.13,0.1,0.02);break;}
-    case'pine':case'snowpine':{p.push(P(TRUNK,0x6b4526,0,0.45,0,0,0,0,0.26,0.9,0.26));
-      const sn=kind==='snowpine';
-      for(let i=0;i<7;i++){const s=1.4-i*0.18,y=0.7+i*0.3,col=sn?(i%2?0x3a6a5a:0x2f5a4c):(i%2?0x2e5c2c:0x3a7034);
-        p.push(P(CONE12,col,0,y,0,0,i*0.5+R()*0.3,0,s,0.62,s));
-        for(let k=0;k<9;k++){const a=k/9*6.283+i*0.4+R()*0.3;p.push(P(CONE4,k%2?col:(sn?0x467a68:0x44803c),Math.cos(a)*s*0.45,y-0.24,Math.sin(a)*s*0.45,Math.sin(a)*1.15,0,-Math.cos(a)*1.15,0.14,0.3,0.1));}
-        if(sn)p.push(P(CONE12,0xf4f8ff,0,y+0.1,0,0,i,0,s*0.75,0.38,s*0.75));}
-      p.push(P(CONE12,sn?0xf4f8ff:0x44803c,0,2.85,0,0,0,0,0.3,0.4,0.3));break;}
+    case'pine':case'snowpine':{const sn=kind==='snowpine',tip=sn?0xeef6fb:0x86cc6c,mid=sn?0x7aa898:0x4a9448,base=sn?0x2f5a4c:0x1f5230;
+      p.push(P(TRUNK,0x8a5a36,0,0.55,0,0,0,0,0.3,1.1,0.3));for(let i=0;i<4;i++){const a=i*1.7+R();p.push(P(ICO2,0xc8905a,Math.cos(a)*0.12,0.3+i*0.14,Math.sin(a)*0.12,0,a,0,0.06,0.08,0.04));}
+      // tiers of drooping leaf cards around a dark core, tips lightest — like the pines in Pocket Camp / New Leaf
+      for(let i=0;i<6;i++){const t=i/5,y=0.8+i*0.36,rad=1.1-t*0.74;p.push(P(CONE12,base,0,y+0.14,0,0,R(),0,rad*1.45,0.62,rad*1.45));
+        const n=Math.round(15-t*8);for(let k=0;k<n;k++){const a=k/n*6.283+i*0.41+R()*0.12,tl=2.0+R()*0.18,d=[Math.sin(a)*Math.sin(tl),Math.cos(tl),Math.cos(a)*Math.sin(tl)];
+          card(p,Math.sin(a)*rad*0.2,y+0.42,Math.cos(a)*rad*0.2,d,rad*0.95+0.18,0.34-t*0.1,k%2?tip:lerpHex(tip,mid,0.35),base);}}
+      for(let k=0;k<5;k++){const a=k/5*6.283,d=[Math.sin(a)*0.5,0.86,Math.cos(a)*0.5];card(p,0,2.72,0,d,0.34,0.14,tip,mid);}break;}
     case'palm':{const lean=(R()-0.5)*0.6,N=9;let tx=0,ty=0;
       for(let i=0;i<N;i++){const u=i/N;tx=lean*u*u*1.3;ty=0.1+i*0.22;p.push(P(CYL12,i%2?0xa8844a:0x94703e,tx,ty,0,0,i*0.4,-lean*0.5*u,0.2-u*0.05,0.24,0.2-u*0.05),P(CYL12,0x7a5a34,tx,ty+0.11,0,0,0,-lean*0.5*u,0.22-u*0.05,0.03,0.22-u*0.05));}
       ty+=0.14;
@@ -860,8 +901,7 @@ function treeParts(kind,R,colRock){
           const w=0.3*(1-k/8);for(const sd of [-1,1])lf(p,c,mx+Math.cos(a)*sd*0.02,my-0.01,mz-Math.sin(a)*sd*0.02,a+sd*1.05,-0.3,w,0.11,0.03);
           fx=nx;fy=ny;fz=nz;pitch-=0.24;}}
       for(let i=0;i<3;i++){const a=i*2.1;p.push(P(ICO2,0x6a4428,tx+Math.cos(a)*0.12,ty-0.14,Math.sin(a)*0.12,0,0,0,0.18,0.2,0.18));}break;}
-    case'bush':p.push(P(ICO2,0x4a8a34,0,0.25,0,0,R()*3,0,0.66,0.46,0.66));for(let i=0;i<30;i++){const a=R()*6.283,e=R()*1.1;lf(p,GREENS[i%4],Math.sin(a)*0.32*Math.cos(e),0.22+Math.sin(e)*0.22,Math.cos(a)*0.32*Math.cos(e),a,0.2+e*0.5,0.22,0.14);}
-      if(R()<0.5)for(let i=0;i<5;i++){const a=R()*6.28;bloom(p,0xffffff,0xf6d04a,Math.sin(a)*0.3,0.32+R()*0.12,Math.cos(a)*0.3,0.07);}break;
+    case'bush':canopy(p,R,[0x8ad060,0x5aa040,0x2e6a2a],0,0.3,0,0.2);if(R()<0.5)for(let i=0;i<5;i++){const a=R()*6.28;bloom(p,0xffffff,0xf6d04a,Math.sin(a)*0.3,0.42+R()*0.12,Math.cos(a)*0.3,0.07);}break;
     case'flowerbed':wildflowers(p,R,[0xf7f2e8,0xf2a6c8,0xf6d04a,0xb8a8f2],9,0.36);for(let i=0;i<10;i++)lf(p,GREENS[i%4],(R()-0.5)*0.6,0.02,(R()-0.5)*0.6,R()*6.28,0.35,0.16,0.07);break;
     case'rockM':rockP(p,R,colRock,0.85);p.push(P(ICO2,0x5a8a44,0,0.36,0,0,R()*3,0,0.52,0.12,0.44),P(ICO2,0x6a9a4a,0.1,0.38,0.08,0,0,0,0.3,0.1,0.26));for(let i=0;i<6;i++)lf(p,GREENS[i%4],(R()-0.5)*0.4,0.38,(R()-0.5)*0.3,R()*6.28,0.4,0.12,0.06);break;
     case'rock':rockP(p,R,colRock,0.75);break;
@@ -912,21 +952,21 @@ const BLADES=(()=>{const R=mulberry(77),pos=[],col=[],nor=[];
     // both windings, all normals up, so every blade is lit like the lawn from either side
     pos.push(x-cx,0,z-cz,x+cx,0,z+cz,tx,h,tz, x+cx,0,z+cz,x-cx,0,z-cz,tx,h,tz);for(let k=0;k<2;k++){col.push(b,b,b,b,b,b,t,t,t*0.97);nor.push(0,1,0,0,1,0,0,1,0);}}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('normal',new T.Float32BufferAttribute(nor,3));g.setAttribute('color',new T.Float32BufferAttribute(col,3));return g;})();
-const GRASS_DENS={snow:0,volcano:1};
+const GRASS_DENS={}; // blades per tile by biome; 0 by default now that grass is a ground texture (set e.g. meadow:4 to bring blades back)
 function clumpMat(x,z,j){const y=topY(x,z),h1=hash(x*7.1+j*3.3,z*2.9-j),h2=hash(z*5.3-j*1.7,x*3.7+j*2.1),h3=hash(x+j*9.1,z-j*4.3);
   const gx=(j%3-1)*0.3+(h1-0.5)*0.26,gz=(Math.floor(j/3)-0.5)*0.46+(h2-0.5)*0.3;
   const cm=CMASK.get(K(x,z));if(cm&&inNotch(cm,gx*1.15,gz*1.15))return _m.makeScale(0,0,0);
   _q.identity();return _m.compose(_v.set(x+gx,y,z+gz),_q,_s.set(0.85+h3*0.4,0.7+h1*0.7,0.85+h2*0.4));}
-function buildGrass(isl,g){const B=BIOMES[isl.biome],per=GRASS_DENS[isl.biome]===undefined?6:GRASS_DENS[isl.biome];isl.gIM=null;if(!per||!isl.grass.length)return;
+function buildGrass(isl,g){const B=BIOMES[isl.biome],per=GRASS_DENS[isl.biome]||0;isl.gIM=null;if(!per||!isl.grass.length)return;
   const im=new T.InstancedMesh(BLADES,grassMat,isl.grass.length*per);isl.gIdx=new Map();let i=0;
   for(const [x,z] of isl.grass){isl.gIdx.set(K(x,z),i);const base=_c.setHex(groundCol(B.grass,x,z,isl.seed));const bc=base.clone();
     for(let j=0;j<per;j++,i++){im.setMatrixAt(i,clumpMat(x,z,j));im.setColorAt(i,_c.copy(bc).offsetHSL(0,0,(hash(x*3+j,z*5-j)-0.5)*0.05));}}
   isl.gHid=null;im.userData.per=per;im.renderOrder=3;im.receiveShadow=true;im.castShadow=false;im.frustumCulled=false;g.add(im);isl.gIM=im;}
 // hide the blades where something sits on the home island (tilled soil, the house, furniture)
-function refreshHomeGrass(){const isl=islands&&islands[0];if(!isl||!isl.gIM)return;const im=isl.gIM,per=im.userData.per;if(!isl.gHid)isl.gHid=new Map();let ch=false;
+function refreshHomeGrass(){const isl=islands&&islands[0];if(!isl)return;if(isl.gIM){const im=isl.gIM,per=im.userData.per;if(!isl.gHid)isl.gHid=new Map();let ch=false;
   for(const [k,i0] of isl.gIdx){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||objAt(x,z)||fixedAt(x,z)||TOWN.path.has(k));if(isl.gHid.get(k)===hide)continue;isl.gHid.set(k,hide);ch=true;
     for(let j=0;j<per;j++){if(hide)im.setMatrixAt(i0+j,_m.makeScale(0,0,0));else im.setMatrixAt(i0+j,clumpMat(x,z,j));}}
-  if(ch)im.instanceMatrix.needsUpdate=true;
+  if(ch)im.instanceMatrix.needsUpdate=true;}
   const dirty=new Set();if(!TOWN.fHid)TOWN.fHid=new Map();for(const [k,arr] of TOWN.flora){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||objAt(x,z)||fixedAt(x,z));if(TOWN.fHid.get(k)===hide)continue;TOWN.fHid.set(k,hide);
     for(const [fm,i,mat] of arr){fm.setMatrixAt(i,hide?_m.makeScale(0,0,0):_m.fromArray(mat));dirty.add(fm);}}for(const fm of dirty)fm.instanceMatrix.needsUpdate=true;}
 const TUFT_GEO=merge([P(BOX,0xffffff,0,0.07,0,0.25,0,0.2,0.035,0.16,0.05),P(BOX,0xdddddd,0.06,0.06,0.03,-0.2,0.6,-0.3,0.035,0.13,0.05),P(BOX,0xeeeeee,-0.05,0.05,-0.03,0.3,1.2,0.4,0.035,0.11,0.05),P(BOX,0xd4d4d4,0.02,0.05,-0.06,-0.35,2,0.1,0.035,0.1,0.05)]);
@@ -1029,19 +1069,23 @@ function buildIsland(isl){
     if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>hclass(x+dx,z+dz)===-9))c.lerp(_a.set(0xb89868),0.28);return c.getHex();};
   for(const [x,z] of isl.grass){const L=hclass(x,z);let mask=0;
     CORNERS.forEach(([dx,dz],b)=>{const n=[hclass(x+dx,z),hclass(x,z+dz),hclass(x+dx,z+dz)];if(n.some(v=>v>=L||v===-5))return;mask|=1<<b;
-      const hm=Math.max(...n);if(hm>=0)under.push([x+dx*0.25,z+dz*0.25,TOP.grass+hm*LVH,groundCol(B.grass,x+dx,z+dz,isl.seed)]);
-      else if(hm===-1)under.push([x+dx*0.25,z+dz*0.25,TOP.sand,sandCol(x+dx,z+dz)]);});
+      const hm=Math.max(...n);if(hm>=0)under.push([x+dx*0.25,z+dz*0.25,TOP.grass+hm*LVH,groundCol(B.grass,x+dx,z+dz,isl.seed),grassTopMat]);
+      else if(hm===-1)under.push([x+dx*0.25,z+dz*0.25,TOP.sand,sandCol(x+dx,z+dz),sandMat]);});
     CMASK.set(K(x,z),mask);put(mask,{kind:'g',x,z});}
   for(const [x,z] of isl.sand){let mask=0;CORNERS.forEach(([dx,dz],b)=>{if([hclass(x+dx,z),hclass(x,z+dz),hclass(x+dx,z+dz)].every(v=>v===-9))mask|=1<<b;});put(mask,{kind:'s',x,z});}
   for(const [mask,{g:gl,s:sl}] of byMask){const geo=rtileGeo(mask);
-    if(gl.length){const body=new T.InstancedMesh(geo,vcMatFlat,gl.length),top=new T.InstancedMesh(geo,vcMatFlat,gl.length);
-      gl.forEach(({x,z},i)=>{const ty=topY(x,z),h=ty-0.14+0.6;_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,h,1));body.setMatrixAt(i,_m);body.setColorAt(i,_c.set(B.cliff).multiplyScalar(0.92+hash(z,x)*0.12));
-        _m.compose(_v.set(x,ty-0.14,z),_q.identity(),_s.set(1,0.14,1));top.setMatrixAt(i,_m);const pk=isl.home&&TOWN.path.get(K(x,z));
-        top.setColorAt(i,pk?_c.set(pk===2?0xcfae78:0xc49c62).multiplyScalar(0.94+hash(x*3,z)*0.1):_c.setHex(groundCol(B.grass,x,z,isl.seed)));});
-      for(const m of [body,top]){m.receiveShadow=true;m.castShadow=true;m.frustumCulled=false;g.add(m);}}
-    if(sl.length){const im=new T.InstancedMesh(geo,vcMatFlat,sl.length);sl.forEach(({x,z},i)=>{_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,TOP.sand+0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(sandCol(x,z)));});
+    if(gl.length){const body=new T.InstancedMesh(geo,cliffMat,gl.length);
+      gl.forEach(({x,z},i)=>{const ty=topY(x,z),h=ty-0.14+0.6;_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,h,1));body.setMatrixAt(i,_m);body.setColorAt(i,_c.set(B.cliff).multiplyScalar(0.92+hash(z,x)*0.12));});
+      body.receiveShadow=true;body.castShadow=true;body.frustumCulled=false;g.add(body);
+      // grass tops and dirt-path tops share the rounded geometry but use different ground textures
+      const pathOf=({x,z})=>isl.home&&TOWN.path.get(K(x,z));
+      for(const [list,mat] of [[gl.filter(e=>!pathOf(e)),grassTopMat],[gl.filter(pathOf),pathMat]]){if(!list.length)continue;const top=new T.InstancedMesh(geo,mat,list.length);
+        list.forEach(({x,z},i)=>{const ty=topY(x,z);_m.compose(_v.set(x,ty-0.14,z),_q.identity(),_s.set(1,0.14,1));top.setMatrixAt(i,_m);const pk=pathOf({x,z});
+          top.setColorAt(i,pk?_c.set(pk===2?0xd8b680:0xcca46a).multiplyScalar(0.96+hash(x*3,z)*0.06):_c.setHex(groundCol(B.grass,x,z,isl.seed)));});
+        top.receiveShadow=true;top.castShadow=true;top.frustumCulled=false;g.add(top);}}
+    if(sl.length){const im=new T.InstancedMesh(geo,sandMat,sl.length);sl.forEach(({x,z},i)=>{_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,TOP.sand+0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(sandCol(x,z)));});
       im.receiveShadow=true;im.castShadow=true;im.frustumCulled=false;g.add(im);}}
-  if(under.length){const im=new T.InstancedMesh(BOX,vcMatFlat,under.length);under.forEach(([x,z,ty,col],i)=>{_m.compose(_v.set(x,(ty-0.6)/2,z),_q.identity(),_s.set(0.5,ty+0.6,0.5));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(col));});
+  for(const mat of [grassTopMat,sandMat]){const list=under.filter(u=>u[4]===mat);if(!list.length)continue;const im=new T.InstancedMesh(BOX,mat,list.length);list.forEach(([x,z,ty,col],i)=>{_m.compose(_v.set(x,(ty-0.6)/2,z),_q.identity(),_s.set(0.5,ty+0.6,0.5));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(col));});
     im.receiveShadow=true;im.frustumCulled=false;g.add(im);}
   if(isl.grass.length)buildGrass(isl,g);
   // shallow-water bands, with rounded outer corners so the coast doesn't step in squares
@@ -2597,9 +2641,11 @@ function checkDiscovery(){const x=vil.x,z=vil.z;for(const isl of islands){if(S.d
 
 // ---- the villager sailboat: loops a sea route planned around the home island and farm field (never through land) ----
 const npcRoute={pts:null,len:[],total:0,d:0};
-function buildNpcRoute(){const b=islands[0].bc||{x:0,z:0,r:30},R=b.r+6;const out=[];
-  const corners=[[1,-1],[1,1],[-1,1],[-1,-1]].map(([sx,sz])=>{let x=Math.round(b.x+sx*R),z=Math.round(b.z+sz*R*0.8);for(let i=0;i<20&&seaMargin.has(K(x,z));i++){x+=sx;z+=sz;}return[x,z];});
-  for(let i=0;i<4;i++){const a=corners[i],c=corners[(i+1)%4],p=planPath(a[0],a[1],c[0],c[1]);if(p)out.push(...(out.length?p.slice(1):p));}
+function seaNear(x,z){if(!seaBlocked(x,z)&&!seaMargin.has(K(x,z)))return[x,z];for(let r=1;r<12;r++)for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;if(!seaBlocked(x+dx,z+dz)&&!seaMargin.has(K(x+dx,z+dz)))return[x+dx,z+dz];}return null;}
+function buildNpcRoute(){const b=islands[0].bc||{x:0,z:0,r:30},R=b.r+6;
+  let corners=[[1,-1],[1,1],[-1,1],[-1,-1]].map(([sx,sz])=>seaNear(Math.round(b.x+sx*R),Math.round(b.z+sz*R*0.8))).filter(Boolean);
+  let legs=null;for(let tries=0;tries<3&&corners.length>=2&&!legs;tries++){legs=[];for(let i=0;i<corners.length;i++){const a=corners[i],c=corners[(i+1)%corners.length],p=planPath(a[0],a[1],c[0],c[1]);if(!p){corners.splice((i+1)%corners.length,1);legs=null;break;}legs.push(p);}}
+  if(!legs)return;const out=[corners[0]];for(const p of legs)out.push(...p);out.pop();/* planPath omits its start, so seed with corner 0; the last leg ends back there, so the loop closes along a planned leg */
   if(out.length<4)return;npcRoute.pts=out;npcRoute.len=[0];for(let i=1;i<out.length;i++)npcRoute.len.push(npcRoute.len[i-1]+Math.hypot(out[i][0]-out[i-1][0],out[i][1]-out[i-1][1]));
   npcRoute.total=npcRoute.len[npcRoute.len.length-1]+Math.hypot(out[0][0]-out[out.length-1][0],out[0][1]-out[out.length-1][1]);}
 function updateNpcBoat(dt,tt){if(!npcRoute.pts){buildNpcRoute();if(!npcRoute.pts){npcBoat.visible=false;return;}}

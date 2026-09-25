@@ -26,8 +26,9 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 00-core | three.js check, curved-world vertex shader, tiny utilities (`clamp`, `hash`, `mulberry`, `K`) |
 | 10-data | **Data registries:** `CROPS`, `VARIANTS`, `BUILD`, `BIOMES`, `FISH`, `BUGS`, `PLANTS`, `FINDS`, `MATS`/`CONSUM`, rods, cans, house tiers, level curve |
 | 20-state, 21-sprites | Save state (`S`, `freshState`, `load`, `save`); pixel-art UI icons (`SPR`, `ICON`) |
-| 30-render | Renderer, pixel post-pass, geometry helpers (`P`, `merge`, `M`), shared materials, lights, sea, sky |
-| 40–44 world | Island generation (`genIslands`); trees (`treeParts`, `canopy`); swaying grass; rivers and waterfalls (`carveRivers`); terrain meshes with rounded corners (`buildIsland`, `rtileGeo`); island culling |
+| 30-render | Renderer, pixel post-pass, geometry helpers (`P`, `PG` gradient parts, `merge`, `M`), shared materials, lights, sea, sky |
+| 31-ground | Painted ground textures (grass, path, sand, cliff) and `worldMat`, which maps them in world space so tiles join up without seams |
+| 40–44 world | Island generation (`genIslands`); trees (`treeParts`, `canopy`, gradient leaf `card`s); grass tufts (off by default, see `GRASS_DENS`); rivers and waterfalls (`carveRivers`); terrain meshes with rounded corners (`buildIsland`, `rtileGeo`); island culling |
 | 45-crops | Soil and crop models (`cropParts`) |
 | 50-objects | Decor, house and bin models (`objGroup`, `houseGroup`, `roof`) |
 | 55-town | Town layout (`layoutTown`): plaza, paths, buildings, lamps, trees, flower species, gathering |
@@ -64,6 +65,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | A villager species or personality | `SPECIES` / `PERS` + a `case` in `npcModel` (57-villagers) |
 | Furniture | A `case` in `furn` + a `put()` in `buildRoom` (56-interiors) |
 | A flower species | `FLOWER_SP` + `FLOWER_H` + a `case` in `flowerHead` (55-town) |
+| Ground detail | Draw it in a `patternTex` in 31-ground. Don't add geometry. |
 | A biome | `BIOMES` entry (colours, trees, names) + any new tree kinds in `treeParts` |
 | A sheet tab | A branch in `renderSheet` + data-attribute handlers in the `#sheetBody` click listener (82-sheets) |
 
@@ -71,6 +73,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 
 - **Merge static things:** build models from parts with `P()` and merge them into one mesh with `M()`.
 - **Instance repeated things:** grass, flowers, tiles and terrain use `InstancedMesh`. Never create one mesh per tile.
+- **Texture, don't model:** ground detail (grass pattern, path pebbles, sand speckle, cliff strata) comes from the `31-ground` textures, not geometry. Trees are a core blob plus a few gradient leaf cards (`PG`), not many separate puffs.
 - **Share geometry and materials:** use `BOX`, `ICO2`, `vcMat`, `rtileGeo(mask)` and the other shared ones. Don't create materials per object.
 - **Culling:** every island's meshes live in `isl.group`. `cullIslands()` hides groups that are out of view, which removes their draw calls and shadow casting. Put new per-island meshes in that group.
 - **No allocation in `frame()`:** reuse the scratch objects (`_m`, `_v`, `_q`, `_c`, `_pv`). Throttle anything that doesn't need to run every frame, like the HUD, which updates every 0.5 s.
@@ -83,4 +86,5 @@ index.html            GENERATED. It's committed so the game stays a single file 
 
 - **One-line functions and comments:** a lot of code is packed onto single lines, so use `/* … */` for inline comments there. A `//` comments out the rest of the line.
 - **World curve:** the curved-world shader bends everything by distance from the camera. That includes thumbnail and room cameras, so keep special cameras close to their subject. For picking and screen positions, use `toScreen`, `waterPoint` and `roomPoint`, which account for the curve.
-- **Transparency:** grass blades don't write depth, so the outline pass doesn't ink every blade. Flowers do, because they must hide what's behind them.
+- **World-space textures:** `worldMat` samples by world position, so instanced tiles share one continuous pattern. Its colour is multiplied by the instance colour, so keep tile colours fairly light.
+- **Transparency:** grass blades (when enabled) don't write depth, so the outline pass doesn't ink every blade. Flowers do, because they must hide what's behind them.

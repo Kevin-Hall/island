@@ -126,9 +126,11 @@ function checkDiscovery(){const x=vil.x,z=vil.z;for(const isl of islands){if(S.d
 
 // ---- the villager sailboat: loops a sea route planned around the home island and farm field (never through land) ----
 const npcRoute={pts:null,len:[],total:0,d:0};
-function buildNpcRoute(){const b=islands[0].bc||{x:0,z:0,r:30},R=b.r+6;const out=[];
-  const corners=[[1,-1],[1,1],[-1,1],[-1,-1]].map(([sx,sz])=>{let x=Math.round(b.x+sx*R),z=Math.round(b.z+sz*R*0.8);for(let i=0;i<20&&seaMargin.has(K(x,z));i++){x+=sx;z+=sz;}return[x,z];});
-  for(let i=0;i<4;i++){const a=corners[i],c=corners[(i+1)%4],p=planPath(a[0],a[1],c[0],c[1]);if(p)out.push(...(out.length?p.slice(1):p));}
+function seaNear(x,z){if(!seaBlocked(x,z)&&!seaMargin.has(K(x,z)))return[x,z];for(let r=1;r<12;r++)for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;if(!seaBlocked(x+dx,z+dz)&&!seaMargin.has(K(x+dx,z+dz)))return[x+dx,z+dz];}return null;}
+function buildNpcRoute(){const b=islands[0].bc||{x:0,z:0,r:30},R=b.r+6;
+  let corners=[[1,-1],[1,1],[-1,1],[-1,-1]].map(([sx,sz])=>seaNear(Math.round(b.x+sx*R),Math.round(b.z+sz*R*0.8))).filter(Boolean);
+  let legs=null;for(let tries=0;tries<3&&corners.length>=2&&!legs;tries++){legs=[];for(let i=0;i<corners.length;i++){const a=corners[i],c=corners[(i+1)%corners.length],p=planPath(a[0],a[1],c[0],c[1]);if(!p){corners.splice((i+1)%corners.length,1);legs=null;break;}legs.push(p);}}
+  if(!legs)return;const out=[corners[0]];for(const p of legs)out.push(...p);out.pop();/* planPath omits its start, so seed with corner 0; the last leg ends back there, so the loop closes along a planned leg */
   if(out.length<4)return;npcRoute.pts=out;npcRoute.len=[0];for(let i=1;i<out.length;i++)npcRoute.len.push(npcRoute.len[i-1]+Math.hypot(out[i][0]-out[i-1][0],out[i][1]-out[i-1][1]));
   npcRoute.total=npcRoute.len[npcRoute.len.length-1]+Math.hypot(out[0][0]-out[out.length-1][0],out[0][1]-out[out.length-1][1]);}
 function updateNpcBoat(dt,tt){if(!npcRoute.pts){buildNpcRoute();if(!npcRoute.pts){npcBoat.visible=false;return;}}
