@@ -95,6 +95,9 @@ function layoutTown(isl){
     TOWN.fixed.set(k,'decor');TOWN.res.set(k,'rock');n++;}}
   {const [px,pz]=[pc[0]-2,pc[1]-2];const q=[P(BOX,0xb0a898,0,0.15,0,0,0,0,0.8,0.3,0.8),P(BOX,0x5a3a2a,0,0.31,0,0,0,0,0.7,0.02,0.7)];wildflowers(q,mulberry(3),[0xf2a6c8,0xf6d04a,0xffffff,0xe86a5a],8,0.3);
     p.push(...shift(q.slice(0,2),px,y0(px,pz),pz,0),...shift(q.slice(2),px,y0(px,pz)+0.31,pz,0));TOWN.fixed.set(K(px,pz),'decor');}
+  // palms along the town beach (shake or chop them like the other trees), clear of the dock and your boat
+  for(const [x,z] of palmSpots(isl,R,8,(x,z)=>!taken(K(x,z))&&Math.hypot(x-DOCK.x,z-DOCK.z)>3.5&&!(S.boat&&Math.hypot(x-S.boat.x,z-S.boat.z)<2.5))){const k=K(x,z);
+    p.push(...shift(treeParts(PALMS[Math.floor(hash(x,z)*PALMS.length)],mulberry(hi(x,z,13)),0x9a9ea8),x,y0(x,z),z,hash(z,x)*6.28));TOWN.fixed.set(k,'decor');TOWN.res.set(k,'tree');}
   isl.group.add(M(p));if(gl.length){const m=M(gl,glowMat);m.castShadow=false;isl.group.add(m);}
   // flowers, clover and pebbles: instanced over the open grass (hidden again wherever you till or build)
   {const lists=FLORA_GEOS.map(()=>[]),clov=[],peb=[];

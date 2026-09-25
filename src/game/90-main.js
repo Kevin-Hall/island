@@ -17,7 +17,7 @@ function frame(now){
     else{if(vil.cb){const cb=vil.cb;vil.cb=null;cb();}
       else if(!fishing){vil.idle+=dt;if(vil.idle>7+Math.random()*4){vil.idle=0;const isl=curIsl();if(isl){const tx=Math.round(vil.x+(Math.random()-0.5)*5),tz=Math.round(vil.z+(Math.random()-0.5)*5);
         if(islMap.get(K(tx,tz))===isl.id&&isLand(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)&&lineClear(vil.x,vil.z,tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}}}
-    if(!S.sea){const ty=topY(Math.round(vil.x),Math.round(vil.z))||0.15;if(ty-vil.y>0.3&&vil.hop<=0)vil.hop=0.4;vil.y=lerp(vil.y,ty,Math.min(1,dt*10));vil.hop=Math.max(0,vil.hop-dt);
+    if(!S.sea){const ty=surfY(vil.x,vil.z)||0.15;if(ty-vil.y>0.3&&vil.hop<=0)vil.hop=0.4;vil.y=lerp(vil.y,ty,Math.min(1,dt*10));vil.hop=Math.max(0,vil.hop-dt);
       villager.position.set(vil.x,vil.y+(d>0.04?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.4*Math.PI)*0.3*(vil.hop>0),vil.z);}
   }
   updateBoat(dt,tt);

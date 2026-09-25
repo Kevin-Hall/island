@@ -149,6 +149,8 @@ function pickPlant(pl){const isl=islands[pl.isl],[x,z]=isl.spots[pl.i],Pd=PLANTS
    Bugs (not saved)
    ========================================================= */
 const bugs=[];
+// bugs in the world are drawn at real-ish size next to the villager; the models themselves stay chunky for the catch close-up
+const BUG_SCALE=0.55;
 function bugGroup(B){const g=new T.Group(),kind=B.kind||'fly',wm=B.glow?lumMat:vcMat;
   if(kind==='crawl'){const s=0.9,p=[P(ICO,B.col,0,0.07*s,0,0,0,0,0.2*s,0.12*s,0.26*s),P(BOX,B.dk,0,0.125*s,0,0,0,0,0.012,0.012,0.24*s),P(ICO,B.dk,0,0.06*s,0.15*s,0,0,0,0.11*s,0.08*s,0.09*s),
       P(LEAF0,0xffffff,0.05*s,0.12*s,0.04*s,0,0,0,0.05*s,0.02,0.07*s)];
@@ -173,15 +175,15 @@ function spawnBug(){const isl=curIsl();if(!isl||!isl.grass.length)return;const n
   const flowers=isl.home?S.objs.filter(o=>o.k==='flowers'):[];
   const id=pickW(BUGS,k=>(BUGS[k].time==='night')===night&&BUGS[k].bio.includes(isl.biome),(k,v)=>v.w*(v.w<5?0.45:1)*(v.w<10?1+flowers.length*0.2:1));if(!id)return;
   let hx,hz;if(flowers.length&&Math.random()<0.6){const f=pickR(flowers);hx=f.x;hz=f.z;}else[hx,hz]=pickR(isl.grass);
-  const g=bugGroup(BUGS[id]);scene.add(g);g.position.set(hx,topY(hx,hz),hz);
+  const g=bugGroup(BUGS[id]);g.scale.setScalar(BUG_SCALE);scene.add(g);g.position.set(hx,topY(hx,hz),hz);
   bugs.push({id,g,hx,hz,t:0,life:32+Math.random()*24,ph:Math.random()*6.28,out:0,isl:isl.id,crawl:BUGS[id].kind==='crawl'});}
 function updateBugs(dt,tt){for(let i=bugs.length-1;i>=0;i--){const b=bugs[i];b.t+=dt;
     if(b.t>b.life||(isNight()!==(BUGS[b.id].time==='night')&&!b.out)||Math.hypot(b.hx-vil.x,b.hz-vil.z)>40)b.out=b.out||0.001;
     if(b.crawl){const x=b.hx+Math.sin(b.t*0.25+b.ph)*0.7,z=b.hz+Math.cos(b.t*0.2+b.ph*2)*0.7;const px=b.g.position.x,pz=b.g.position.z;
       b.g.position.set(x,(topY(Math.round(x),Math.round(z))||TOP.grass)+0.02,z);if(Math.hypot(x-px,z-pz)>1e-4)b.g.rotation.y=Math.atan2(x-px,z-pz);
-      if(b.out){b.g.scale.setScalar(Math.max(0.01,1-b.out));b.out+=dt;if(b.out>1){scene.remove(b.g);bugs.splice(i,1);}}continue;}
+      if(b.out){b.g.scale.setScalar(BUG_SCALE*Math.max(0.01,1-b.out));b.out+=dt;if(b.out>1){scene.remove(b.g);bugs.splice(i,1);}}continue;}
     const x=b.hx+Math.sin(b.t*0.7+b.ph)*1.2+Math.sin(b.t*1.9)*0.3,z=b.hz+Math.cos(b.t*0.55+b.ph)*1.2;
-    let y=(topY(Math.round(b.hx),Math.round(b.hz))||0.5)+0.55+Math.sin(b.t*2.3)*0.22;
+    let y=(topY(Math.round(b.hx),Math.round(b.hz))||0.5)+0.4+Math.sin(b.t*2.3)*0.16;
     if(b.out){b.out+=dt;y+=b.out*b.out*2;if(b.out>3){scene.remove(b.g);bugs.splice(i,1);continue;}}
     const px=b.g.position.x,pz=b.g.position.z;b.g.position.set(x,y,z);if(Math.hypot(x-px,z-pz)>1e-4)b.g.rotation.y=Math.atan2(x-px,z-pz);
     const f=Math.sin(tt*(b.g.userData.drag?30:16)+b.ph)*(b.g.userData.drag?0.4:0.9);b.g.userData.wl.rotation.z=f;b.g.userData.wr.rotation.z=-f;}}

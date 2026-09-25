@@ -24,7 +24,7 @@ function footstep(){const x=vil.x,z=vil.z,k=K(Math.round(x),Math.round(z)),t=lan
   else if(Math.random()<0.3)emit(x,topY(Math.round(x),Math.round(z))+0.05,z,{vx:(Math.random()-0.5)*0.5,vy:0.6,vz:(Math.random()-0.5)*0.5,life:0.45,max:0.45,size:0.04,color:0x6aa843,g:3});
   if(S.sound&&AC)noise(0.05,t==='sand'?0.025:0.018,t==='sand'?1600:800,1.2);}
 function updatePrints(dt){let n=0;for(const p of prints){p.age+=dt;const s=p.age<6?1:Math.max(0,1-(p.age-6)/3);if(s<=0)continue;
-  _e.set(0,p.r,0);_q.setFromEuler(_e);_m.compose(_v.set(p.x,TOP.sand+0.012,p.z),_q,_s.set(s,1,s));fpIM.setMatrixAt(n++,_m);}
+  _e.set(0,p.r,0);_q.setFromEuler(_e);_m.compose(_v.set(p.x,surfY(p.x,p.z)+0.012,p.z),_q,_s.set(s,1,s));fpIM.setMatrixAt(n++,_m);}
   fpIM.count=n;fpIM.instanceMatrix.needsUpdate=true;}
 
 // --- sky: drifting clouds, the moon, shooting stars, rainbows ---

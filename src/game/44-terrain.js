@@ -15,6 +15,13 @@ function islandBounds(isl){let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const k of isl.
   isl.bc={x:(x0+x1)/2,z:(z0+z1)/2,r:Math.hypot(x1-x0,z1-z0)/2+2};}
 function cullIslands(){const view=cam.dist+70;for(const isl of islands){const b=isl.bc;if(!b)continue;const vis=Math.hypot(b.x-cam.tx,b.z-cam.tz)-b.r<view;
     if(isl.group)isl.group.visible=vis;if(isl.pgroup)isl.pgroup.visible=vis;}}
+// sand corner heights from distance to open water: the waterline, halfway, then the full beach height
+const isSeaT=t=>!isLandT(t)&&t!=='river';
+function shapeBeach(isl){const d=new Map(),H=[0.03,0.17,TOP.sand,TOP.sand];let q=[];
+  for(const [x,z] of isl.sand){SAND_CH.delete(K(x,z));if(CORNERS.some(([dx,dz])=>isSeaT(landMap.get(K(x+dx,z+dz)))||isSeaT(landMap.get(K(x+dx,z)))||isSeaT(landMap.get(K(x,z+dz))))){d.set(K(x,z),1);q.push([x,z]);}}
+  for(const [x,z] of q)for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const k=K(x+dx,z+dz);if(landMap.get(k)==='sand'&&!d.has(k))d.set(k,2);}
+  const dOf=(x,z)=>{const k=K(x,z),t=landMap.get(k);return isSeaT(t)?0:t==='sand'?d.get(k)||3:3;};
+  for(const [x,z] of isl.sand)SAND_CH.set(K(x,z),CORNERS.map(([sx,sz])=>H[Math.min(dOf(x,z),dOf(x+sx,z),dOf(x,z+sz),dOf(x+sx,z+sz))]));}
 function buildIsland(isl){
   if(isl.group){scene.remove(isl.group);isl.group.traverse(o=>{if(o.isInstancedMesh)o.dispose();else if(o.geometry&&!Object.values(RTILE).includes(o.geometry)&&o.geometry!==TILE_PLANE&&o.geometry!==BOX&&o.geometry!==POOL_GEO&&o.geometry!==BLADES)o.geometry.dispose();});}
   if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);riverSurf.delete(k);bridgeY.delete(k);}
@@ -27,6 +34,7 @@ function buildIsland(isl){
     if(t==='grass'){const l=levelOf(isl,x,z);if(l)lvlMap.set(k,l);}
     (t==='grass'?isl.grass:t==='sand'?isl.sand:t==='s1'?a1:a2).push([x,z]);}
   if(isl.riverN)carveRivers(isl,g);
+  shapeBeach(isl);
   if(isl.home){layoutTown(isl);setPathMask(TOWN.path);}
   // grass tiles: a grassy slab on top of a dirt or rock cliff, like the tiers of Wild World
   // grass and sand tiles, drawn with rounded outer corners; the notch shows whatever lies just below (sand, lower grass, or the sea)
@@ -36,7 +44,7 @@ function buildIsland(isl){
   for(const [x,z] of isl.grass){const L=hclass(x,z);let mask=0;
     CORNERS.forEach(([dx,dz],b)=>{const n=[hclass(x+dx,z),hclass(x,z+dz),hclass(x+dx,z+dz)];if(n.some(v=>v>=L||v===-5))return;mask|=1<<b;
       const hm=Math.max(...n);if(hm>=0)under.push([x+dx*0.25,z+dz*0.25,TOP.grass+hm*LVH,groundCol(B.grass,x+dx,z+dz,isl.seed),grassTopMat]);
-      else if(hm===-1)under.push([x+dx*0.25,z+dz*0.25,TOP.sand,sandCol(x+dx,z+dz),sandMat]);});
+      else if(hm===-1)under.push([x+dx*0.25,z+dz*0.25,topY(x+dx,z+dz),sandCol(x+dx,z+dz),sandMat]);});
     CMASK.set(K(x,z),mask);put(mask,{kind:'g',x,z});}
   for(const [x,z] of isl.sand){let mask=0;CORNERS.forEach(([dx,dz],b)=>{if([hclass(x+dx,z),hclass(x,z+dz),hclass(x+dx,z+dz)].every(v=>v===-9))mask|=1<<b;});put(mask,{kind:'s',x,z});}
   for(const [mask,{g:gl,s:sl}] of byMask){const geo=rtileGeo(mask);
@@ -47,8 +55,10 @@ function buildIsland(isl){
       {const top=new T.InstancedMesh(geo,grassTopMat,gl.length);
         gl.forEach(({x,z},i)=>{const ty=topY(x,z);_m.compose(_v.set(x,ty-0.14,z),_q.identity(),_s.set(1,0.14,1));top.setMatrixAt(i,_m);top.setColorAt(i,_c.setHex(groundCol(B.grass,x,z,isl.seed)));});
         top.receiveShadow=true;top.castShadow=true;top.frustumCulled=false;g.add(top);}}
-    if(sl.length){const im=new T.InstancedMesh(geo,sandMat,sl.length);sl.forEach(({x,z},i)=>{_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,TOP.sand+0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(sandCol(x,z)));});
-      im.receiveShadow=true;im.castShadow=true;im.frustumCulled=false;g.add(im);}}
+    // sand: the shader slopes each tile's top between its corner heights (aCH), so beaches run down into the water
+    if(sl.length){const sg=geo.clone(),ch=new Float32Array(sl.length*4);sl.forEach(({x,z},i)=>ch.set(SAND_CH.get(K(x,z))||[TOP.sand,TOP.sand,TOP.sand,TOP.sand],i*4));sg.setAttribute('aCH',new T.InstancedBufferAttribute(ch,4));
+      const im=new T.InstancedMesh(sg,sandMat,sl.length);sl.forEach(({x,z},i)=>{_m.compose(_v.set(x,-0.6,z),_q.identity(),_s.set(1,TOP.sand+0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(sandCol(x,z)));});
+      im.receiveShadow=true;im.castShadow=false;im.frustumCulled=false;g.add(im);}}
   for(const mat of [grassTopMat,sandMat]){const list=under.filter(u=>u[4]===mat);if(!list.length)continue;const im=new T.InstancedMesh(BOX,mat,list.length);list.forEach(([x,z,ty,col],i)=>{_m.compose(_v.set(x,(ty-0.6)/2,z),_q.identity(),_s.set(0.5,ty+0.6,0.5));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(col));});
     im.receiveShadow=true;im.frustumCulled=false;g.add(im);}
   if(isl.grass.length)buildGrass(isl,g);
@@ -83,7 +93,10 @@ function buildIsland(isl){
     const gr=shuffle(isl.grass.slice(),R),n=Math.round(gr.length*(isl.grand?0.08:0.15));
     let placed=0;for(const [x,z] of gr){if(placed>=n)break;if(blocked.has(K(x,z)))continue;
       parts.push(...shift(treeParts(B.trees[Math.floor(R()*B.trees.length)],R,B.rock),x+(R()-0.5)*0.3,topY(x,z),z+(R()-0.5)*0.3,R()*6.28));blocked.add(K(x,z));placed++;}
-    const sa=shuffle(isl.sand.slice(),R);for(let i=0;i<Math.min(4,sa.length);i++){const [x,z]=sa[i];parts.push(...shift(treeParts(isl.biome==='swamp'?'reeds':'rock',R,B.rock),x,TOP.sand,z,R()*6));blocked.add(K(x,z));}
+    const sa=shuffle(isl.sand.slice(),R);for(let i=0;i<Math.min(4,sa.length);i++){const [x,z]=sa[i];parts.push(...shift(treeParts(isl.biome==='swamp'?'reeds':'rock',R,B.rock),x,topY(x,z),z,R()*6));blocked.add(K(x,z));}
+    {const pn=({tropic:0.12,meadow:0.04,autumn:0.03,volcano:0.04})[isl.biome]||0;
+      if(pn)for(const [x,z] of palmSpots(isl,R,Math.min(isl.grand?10:6,Math.ceil(isl.sand.length*pn)),(x,z)=>!blocked.has(K(x,z)))){
+        parts.push(...shift(treeParts(PALMS[Math.floor(R()*PALMS.length)],R,B.rock),x+(R()-0.5)*0.2,topY(x,z),z+(R()-0.5)*0.2,R()*6.28));blocked.add(K(x,z));}}
     if(parts.length)g.add(M(parts));
     if(glowParts.length){const m=M(glowParts,lumMat);m.castShadow=false;g.add(m);}
     isl.spots=gr.filter(([x,z])=>!blocked.has(K(x,z))).slice(0,Math.max(5,Math.min(isl.grand?30:18,Math.round(gr.length*0.18))));

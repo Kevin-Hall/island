@@ -12,7 +12,11 @@ let islands=[];
 const isLandT=t=>t==='grass'||t==='sand'||t==='bridge';
 function isLand(x,z){return isLandT(landMap.get(K(x,z)));}
 const lvlMap=new Map(),LVH=0.62;
-function topY(x,z){const k=K(x,z),t=landMap.get(k);return t==='grass'?TOP.grass+(lvlMap.get(k)||0)*LVH:t==='bridge'&&bridgeY.has(k)?bridgeY.get(k):t==='river'?riverSurf.get(k):TOP[t]||0;}
+// beaches slope into the sea: each sand tile stores its four corner heights ([-x-z, +x-z, +x+z, -x+z]), set in buildIsland
+const SAND_CH=new Map();
+function topY(x,z){const k=K(x,z),t=landMap.get(k);if(t==='sand'){const c=SAND_CH.get(k);if(c)return(c[0]+c[1]+c[2]+c[3])/4;}return t==='grass'?TOP.grass+(lvlMap.get(k)||0)*LVH:t==='bridge'&&bridgeY.has(k)?bridgeY.get(k):t==='river'?riverSurf.get(k):TOP[t]||0;}
+// ground height at any point (not just tile centres): follows the beach slope
+function surfY(x,z){const tx=Math.round(x),tz=Math.round(z),c=landMap.get(K(tx,tz))==='sand'&&SAND_CH.get(K(tx,tz));if(!c)return topY(tx,tz);const u=clamp(x-tx+0.5,0,1),v=clamp(z-tz+0.5,0,1);return lerp(lerp(c[0],c[1],u),lerp(c[3],c[2],u),v);}
 // rivers: water surface height per tile (bridges over a river keep theirs), and bridge deck heights
 const riverSurf=new Map(),bridgeY=new Map();let riverList=[];
 const waterY=(x,z)=>riverSurf.get(K(Math.round(x),Math.round(z)))||0;

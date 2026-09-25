@@ -49,7 +49,8 @@ index.html            GENERATED. It's committed so the game stays a single file 
 - **Tiles:** the world is a tile grid keyed by `K(x,z)`.
   - `landMap` holds each tile's type (grass, sand, s1/s2 shallows, river, bridge).
   - `lvlMap` holds cliff tiers, and `islMap` holds which island a tile belongs to.
-  - `topY(x,z)` gives a tile's surface height.
+  - `topY(x,z)` gives a tile's surface height (a sand tile's centre height). `surfY(x,z)` gives the height at any point, following the beach slope. Use it for things that move across sand.
+  - Beaches slope into the sea: `shapeBeach` gives each sand tile four corner heights (`SAND_CH`) from distance to open water, and the sand shader bends the tile top to match.
   - Rendering hides the grid with rounded corners and smooth colour noise, but the logic stays tile-based.
 - **State:** everything saved lives in `S`. Add a new field to `freshState()`, and `load()` backfills it for old saves. Things that can be regenerated from the world seed, like terrain, the town and villagers, are rebuilt on load, not saved.
 - **Registries first:** most content is a data entry plus, at most, one model function. Prefer adding data over adding special cases.
@@ -67,6 +68,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | Furniture | A `case` in `furn` + a `put()` in `buildRoom` (56-interiors) |
 | A flower species | `FLOWER_SP` + `FLOWER_H` + a `case` in `flowerHead` (55-town) |
 | Ground detail | Draw it in a `patternTex` in 31-ground. Don't add geometry. |
+| A palm type | A `case` in `treeParts` calling `palmParts` with options, and add it to `PALMS` (41-trees). Beaches get palms from `palmSpots`. |
 | A biome | `BIOMES` entry (colours, trees, names) + any new tree kinds in `treeParts` |
 | A tool | Entry in `TOOLS` + icon in `SPR` + held model in `HELD_PARTS` + a case in `toolTap` (and in `paintMode` for drag) (71-tools) |
 | A sheet tab | A branch in `renderSheet` + data-attribute handlers in the `#sheetBody` click listener (82-sheets) |
