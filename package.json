@@ -1,0 +1,11 @@
+{
+  "name": "driftseed-isle",
+  "private": true,
+  "type": "module",
+  "description": "A cozy 3D pixel-art island and town game (three.js). Edit src/, then build index.html.",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "check": "node tools/build.mjs --check",
+    "test": "node tools/build.mjs && node tools/smoke.mjs"
+  }
+}

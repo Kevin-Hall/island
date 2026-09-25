@@ -1,0 +1,84 @@
+# Driftseed architecture
+
+This guide covers how the game is organised, how to change it, and the rules that keep it fast.
+
+## Layout and build
+
+```
+src/index.html        page template (HUD, dock, sheets); /*@styles*/ and /*@game*/ get filled in
+src/styles.css        all CSS
+src/game/NN-name.js   game modules, concatenated in filename order into one IIFE
+tools/build.mjs       builds index.html; parses the bundle so a syntax error fails the build
+tools/smoke.mjs       headless play-through test (uses window.DS from 95-debug.js)
+index.html            GENERATED. It's committed so the game stays a single file you can open or host anywhere
+```
+
+- **Work loop:** edit `src/…`, run `npm run build`, then `npm test`. CI runs `npm run check`, which fails if `index.html` is stale or the code doesn't parse.
+- **Shared scope:** every module shares one function scope, as if it were one big file.
+  - A module can call any function from another module. Function declarations are hoisted.
+  - Top-level `const` and `let` values must be defined in an earlier-numbered module before any code that runs at load time uses them. The number prefix sets load order, so keep it meaningful.
+- **Debug API:** add `?debug` to the URL to get `window.DS`. It provides state snapshots, teleporting, setting the hour, giving items, entering houses and more.
+
+## Module map
+
+| Module | What lives there |
+|---|---|
+| 00-core | three.js check, curved-world vertex shader, tiny utilities (`clamp`, `hash`, `mulberry`, `K`) |
+| 10-data | **Data registries:** `CROPS`, `VARIANTS`, `BUILD`, `BIOMES`, `FISH`, `BUGS`, `PLANTS`, `FINDS`, `MATS`/`CONSUM`, rods, cans, house tiers, level curve |
+| 20-state, 21-sprites | Save state (`S`, `freshState`, `load`, `save`); pixel-art UI icons (`SPR`, `ICON`) |
+| 30-render | Renderer, pixel post-pass, adaptive resolution (`PERF`), geometry helpers (`P`, `merge`, `M`), shared materials, lights, sea, sky |
+| 40–44 world | Island generation (`genIslands`); trees (`treeParts`, `canopy`); swaying grass; rivers and waterfalls (`carveRivers`); terrain meshes with rounded corners (`buildIsland`, `rtileGeo`); island culling |
+| 45-crops | Soil and crop models (`cropParts`) |
+| 50-objects | Decor, house and bin models (`objGroup`, `houseGroup`, `roof`) |
+| 55-town | Town layout (`layoutTown`): plaza, paths, buildings, lamps, trees, flower species, gathering |
+| 56-interiors | Enterable rooms: separate `roomScene`, furniture (`furn`), room tapping |
+| 57-villagers | Species, personalities, models (`npcModel`), routines, chat, wishes, friendship |
+| 58-crafting | `RECIPES`, crafting, consumables |
+| 60–64 | Ambient life (villager, boat, gulls, particles); time of day and offline simulation; synth audio |
+| 70–80 | UI helpers and items; farming and drag-farming; finds, weeds, wild plants, bugs and crows; fishing; sailing and fast travel; orders |
+| 82-sheets | Bottom sheets: Pockets (inventory and crafting), shop, seeds, orders, Islandex, chart, settings |
+| 84-input | Tap, drag, pinch and picking (`pick`, `onTap`) |
+| 86–87 | New-game setup; atmosphere (foam, footprints, sky events, motes, music) |
+| 90-main | Main loop (`frame`) and boot |
+| 95-debug | `window.DS` (only with `?debug`) |
+
+## Core concepts
+
+- **Tiles:** the world is a tile grid keyed by `K(x,z)`.
+  - `landMap` holds each tile's type (grass, sand, s1/s2 shallows, river, bridge).
+  - `lvlMap` holds cliff tiers, and `islMap` holds which island a tile belongs to.
+  - `topY(x,z)` gives a tile's surface height.
+  - Rendering hides the grid with rounded corners and smooth colour noise, but the logic stays tile-based.
+- **State:** everything saved lives in `S`. Add a new field to `freshState()`, and `load()` backfills it for old saves. Things that can be regenerated from the world seed, like terrain, the town and villagers, are rebuilt on load, not saved.
+- **Registries first:** most content is a data entry plus, at most, one model function. Prefer adding data over adding special cases.
+
+## Adding things
+
+| To add | Do this |
+|---|---|
+| A crop | Entry in `CROPS` (10-data) → icon in `SPR` (21-sprites) → a `case` in `cropParts` (45-crops) |
+| A fish | Entry in `FISH`. Icons and Islandex are automatic. Use `hab:'river'` for river fish. Keys must be unique across the table. |
+| A bug or wild plant | Entry in `BUGS`/`PLANTS` (a model `kind` is already handled in `bugGroup`/`plantGroup`, 74-life) |
+| Decor | Entry in `BUILD` (add `craft:true` for craft-only) → `case` in `objGroup` + tap height in `OBJ_H` (50-objects). The thumbnail is generated automatically. |
+| A recipe | Push onto `RECIPES` (58-crafting). Inputs are item keys: `m:` material, `c:` crop (any variant), `f:`/`b:`/`p:`/`g:` catch and finds. |
+| A villager species or personality | `SPECIES` / `PERS` + a `case` in `npcModel` (57-villagers) |
+| Furniture | A `case` in `furn` + a `put()` in `buildRoom` (56-interiors) |
+| A flower species | `FLOWER_SP` + `FLOWER_H` + a `case` in `flowerHead` (55-town) |
+| A biome | `BIOMES` entry (colours, trees, names) + any new tree kinds in `treeParts` |
+| A sheet tab | A branch in `renderSheet` + data-attribute handlers in the `#sheetBody` click listener (82-sheets) |
+
+## Performance rules
+
+- **Merge static things:** build models from parts with `P()` and merge them into one mesh with `M()`.
+- **Instance repeated things:** grass, flowers, tiles and terrain use `InstancedMesh`. Never create one mesh per tile.
+- **Share geometry and materials:** use `BOX`, `ICO2`, `vcMat`, `rtileGeo(mask)` and the other shared ones. Don't create materials per object.
+- **Culling:** every island's meshes live in `isl.group`. `cullIslands()` hides groups that are out of view, which removes their draw calls and shadow casting. Put new per-island meshes in that group.
+- **No allocation in `frame()`:** reuse the scratch objects (`_m`, `_v`, `_q`, `_c`, `_pv`). Throttle anything that doesn't need to run every frame, like the HUD, which updates every 0.5 s.
+- **Incremental updates:** `refreshHomeGrass` only rewrites tiles whose hidden state changed, and `objAt` uses an index. Follow the same pattern for new per-tile systems.
+- **Adaptive resolution:** `PERF` raises the pixel size by up to 2 steps when frames run slower than about 28 fps, and lowers it again when there's headroom.
+
+## Gotchas
+
+- **One-line functions and comments:** a lot of code is packed onto single lines, so use `/* … */` for inline comments there. A `//` comments out the rest of the line.
+- **World curve:** the curved-world shader bends everything by distance from the camera. That includes thumbnail and room cameras, so keep special cameras close to their subject. For picking and screen positions, use `toScreen`, `waterPoint` and `roomPoint`, which account for the curve.
+- **Transparency:** grass blades don't write depth, so the outline pass doesn't ink every blade. Flowers do, because they must hide what's behind them.

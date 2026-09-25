@@ -675,10 +675,15 @@ function updateSkyDome(){const u=skyMat.uniforms;u.zen.value.copy(skyZen);u.hz.v
   u.sunP.value.set((_sp.x+1)/2,(_sp.y+1)/2);if(!ok)u.ga.value*=0.25;
   u.disc.value=nightF>0.5?0:(ok?clamp((skyGA-0.5)*2.5,0,1)*(1-rainMix):0);}
 
+const PERF={px:0,acc:0,n:0,slow:0,fast:0,t0:0,js:0};
+function perfTick(dt){PERF.acc+=dt;PERF.n++;if(PERF.acc<1)return;const avg=PERF.acc/PERF.n;PERF.acc=PERF.n=0;
+  if(tt<6)return; // ignore loading hitches
+  if(avg>1/28){PERF.fast=0;if(++PERF.slow>=3&&PERF.px<2){PERF.px++;PERF.slow=0;resize();}}
+  else if(avg<1/55){PERF.slow=0;if(++PERF.fast>=6&&PERF.px>0){PERF.px--;PERF.fast=0;resize();}}else PERF.slow=PERF.fast=0;}
 function resize(){
   const cw=window.innerWidth,ch=window.innerHeight;
   const base=clamp(Math.round(Math.min(cw,ch)/190),2,6);
-  PX=clamp(base+S.pxAdj,1,8);
+  PX=clamp(base+S.pxAdj+PERF.px,1,9);
   W=Math.max(1,Math.ceil(cw/PX));H=Math.max(1,Math.ceil(ch/PX));
   renderer.setSize(W,H,false);
   if(rt){rt.depthTexture.dispose();rt.dispose();}
@@ -920,13 +925,13 @@ function buildGrass(isl,g){const B=BIOMES[isl.biome],per=GRASS_DENS[isl.biome]==
   const im=new T.InstancedMesh(BLADES,grassMat,isl.grass.length*per);isl.gIdx=new Map();let i=0;
   for(const [x,z] of isl.grass){isl.gIdx.set(K(x,z),i);const base=_c.setHex(groundCol(B.grass,x,z,isl.seed));const bc=base.clone();
     for(let j=0;j<per;j++,i++){im.setMatrixAt(i,clumpMat(x,z,j));im.setColorAt(i,_c.copy(bc).offsetHSL(0,0,(hash(x*3+j,z*5-j)-0.5)*0.05));}}
-  im.userData.per=per;im.renderOrder=3;im.receiveShadow=true;im.castShadow=false;im.frustumCulled=false;g.add(im);isl.gIM=im;}
+  isl.gHid=null;im.userData.per=per;im.renderOrder=3;im.receiveShadow=true;im.castShadow=false;im.frustumCulled=false;g.add(im);isl.gIM=im;}
 // hide the blades where something sits on the home island (tilled soil, the house, furniture)
-function refreshHomeGrass(){const isl=islands&&islands[0];if(!isl||!isl.gIM)return;const im=isl.gIM,per=im.userData.per;
-  for(const [k,i0] of isl.gIdx){const [x,z]=k.split(',').map(Number);const hide=S.tiles[k]||objAt(x,z)||fixedAt(x,z)||TOWN.path.has(k);
+function refreshHomeGrass(){const isl=islands&&islands[0];if(!isl||!isl.gIM)return;const im=isl.gIM,per=im.userData.per;if(!isl.gHid)isl.gHid=new Map();let ch=false;
+  for(const [k,i0] of isl.gIdx){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||objAt(x,z)||fixedAt(x,z)||TOWN.path.has(k));if(isl.gHid.get(k)===hide)continue;isl.gHid.set(k,hide);ch=true;
     for(let j=0;j<per;j++){if(hide)im.setMatrixAt(i0+j,_m.makeScale(0,0,0));else im.setMatrixAt(i0+j,clumpMat(x,z,j));}}
-  im.instanceMatrix.needsUpdate=true;
-  const dirty=new Set();for(const [k,arr] of TOWN.flora){const [x,z]=k.split(',').map(Number);const hide=S.tiles[k]||objAt(x,z)||fixedAt(x,z);
+  if(ch)im.instanceMatrix.needsUpdate=true;
+  const dirty=new Set();if(!TOWN.fHid)TOWN.fHid=new Map();for(const [k,arr] of TOWN.flora){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||objAt(x,z)||fixedAt(x,z));if(TOWN.fHid.get(k)===hide)continue;TOWN.fHid.set(k,hide);
     for(const [fm,i,mat] of arr){fm.setMatrixAt(i,hide?_m.makeScale(0,0,0):_m.fromArray(mat));dirty.add(fm);}}for(const fm of dirty)fm.instanceMatrix.needsUpdate=true;}
 const TUFT_GEO=merge([P(BOX,0xffffff,0,0.07,0,0.25,0,0.2,0.035,0.16,0.05),P(BOX,0xdddddd,0.06,0.06,0.03,-0.2,0.6,-0.3,0.035,0.13,0.05),P(BOX,0xeeeeee,-0.05,0.05,-0.03,0.3,1.2,0.4,0.035,0.11,0.05),P(BOX,0xd4d4d4,0.02,0.05,-0.06,-0.35,2,0.1,0.035,0.1,0.05)]);
 const riverU={uTime:{value:0}};
@@ -1004,6 +1009,10 @@ function inNotch(mask,lx,lz){for(let b=0;b<4;b++)if(mask>>b&1){const [sx,sz]=COR
 const CMASK=new Map();
 const _gc1=new T.Color(),_gc2=new T.Color();
 function groundCol(list,x,z,seed){const n=vnoise(x*0.7+11,z*0.7-5,seed|0),m=vnoise(x*2.1-3,z*2.1+8,(seed|0)+7);_gc1.set(list[0]).lerp(_gc2.set(list[1%list.length]),n);if(list[2])_gc1.lerp(_gc2.set(list[2]),Math.max(0,m-0.55));return _gc1.getHex();}
+function islandBounds(isl){let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const k of isl.keys){const [x,z]=k.split(',').map(Number);if(x<x0)x0=x;if(x>x1)x1=x;if(z<z0)z0=z;if(z>z1)z1=z;}
+  isl.bc={x:(x0+x1)/2,z:(z0+z1)/2,r:Math.hypot(x1-x0,z1-z0)/2+2};}
+function cullIslands(){const view=cam.dist+70;for(const isl of islands){const b=isl.bc;if(!b)continue;const vis=Math.hypot(b.x-cam.tx,b.z-cam.tz)-b.r<view;
+    if(isl.group)isl.group.visible=vis;if(isl.pgroup)isl.pgroup.visible=vis;}}
 function buildIsland(isl){
   if(isl.group){scene.remove(isl.group);isl.group.traverse(o=>{if(o.isInstancedMesh)o.dispose();else if(o.geometry&&!Object.values(RTILE).includes(o.geometry)&&o.geometry!==TILE_PLANE&&o.geometry!==BOX&&o.geometry!==POOL_GEO&&o.geometry!==BLADES)o.geometry.dispose();});}
   if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);riverSurf.delete(k);bridgeY.delete(k);}
@@ -1081,7 +1090,7 @@ function buildIsland(isl){
   if(!isl.home&&B.tuft){const pts=[];for(const [x,z] of isl.grass){if(blocked.has(K(x,z)))continue;const h=hash(x*3.1,z*1.7);if(h<0.45){pts.push([x+(hash(z,x*2)-0.5)*0.7,topY(x,z),z+(hash(x+5,z)-0.5)*0.7]);if(h<0.15)pts.push([x+(hash(z*3,x)-0.5)*0.7,topY(x,z),z+(hash(x,z*7)-0.5)*0.7]);}}
     if(pts.length){const im=new T.InstancedMesh(TUFT_GEO,grassMat,pts.length);pts.forEach(([x,y,z],i)=>{_e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x,y,z),_q,_s.set(1,0.8+hash(z,x)*0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.set(B.tuft));});
       im.frustumCulled=false;im.receiveShadow=true;im.renderOrder=3;g.add(im);}}
-  scene.add(g);rebuildLandList();
+  scene.add(g);islandBounds(isl);rebuildLandList();
 }
 function islandAt(x,z){const id=islMap.get(K(Math.round(x),Math.round(z)));return id===undefined?null:islands[id];}
 function curIsl(){if(S.sea)return null;return islandAt(vil.x,vil.z);}
@@ -1330,7 +1339,7 @@ function binGroup(){const g=new T.Group();g.add(M([P(BOX,0x8a5a36,0,0.22,0,0,0,0
    The town: a Wild World-style village generated from the world seed —
    plaza with a town tree, shops, a museum, a town hall, villager homes, dirt paths, lamps and trees
    ========================================================= */
-const TOWN={name:'',plaza:[0,0],bld:[],path:new Map(),fixed:new Map(),plot:[],board:null,lamps:[],flora:new Map(),res:new Map()};
+const TOWN={fHid:null,name:'',plaza:[0,0],bld:[],path:new Map(),fixed:new Map(),plot:[],board:null,lamps:[],flora:new Map(),res:new Map()};
 // wild flower clumps (one geometry per colour), clover and pebbles for the town's grass
 const FLOWER_SP={tulip:[0xe8453a,0xf6d04a,0xf2a6c8,0xffffff,0x9a6ad0],rose:[0xd8303a,0xf8f4ee,0xf6d04a,0xf2a6c8],cosmos:[0xf2a6c8,0xf8f4ee,0xe86a8a,0xf6a830],
   pansy:[0x7a5ad0,0xf6d04a,0xe8453a,0x8ac8f0],lily:[0xf8f4ee,0xf08a2a,0xf2a6c8],hyacinth:[0x6a7ae0,0xf2a6c8,0xf8f4ee],daisy:[0xffffff,0xf6e6f0]};
@@ -1361,7 +1370,7 @@ const DOCK={x:1,z:12};
 function scaleParts(ps,s){return ps.map(p=>Object.assign({},p,{x:p.x*s,y:p.y*s,z:p.z*s,sx:p.sx*s,sy:p.sy*s,sz:p.sz*s}));}
 const TOWN_NAMES=[['Maple','Willow','Clover','Honey','Pebble','Juniper','Bramble','Acorn','Sunny','Misty','Hazel','Plum','Fern','Button'],['wick','brook','ton','dale','haven','ford','vale','bury','field','hollow']];
 function layoutTown(isl){
-  const R=mulberry((S.worldSeed|0)^0x70a1);TOWN.bld=[];TOWN.path.clear();TOWN.fixed.clear();TOWN.plot=[];TOWN.lamps=[];
+  const R=mulberry((S.worldSeed|0)^0x70a1);TOWN.fHid=null;TOWN.flora.clear();TOWN.res.clear();TOWN.bld=[];TOWN.path.clear();TOWN.fixed.clear();TOWN.plot=[];TOWN.lamps=[];
   TOWN.name=TOWN_NAMES[0][Math.floor(R()*TOWN_NAMES[0].length)]+TOWN_NAMES[1][Math.floor(R()*TOWN_NAMES[1].length)];
   const G=(x,z)=>landMap.get(K(x,z))==='grass'&&islMap.get(K(x,z))===0&&farmQ(x,z)>1.15;
   const L=(x,z)=>lvlMap.get(K(x,z))||0,taken=k=>TOWN.fixed.has(k)||TOWN.path.has(k);
@@ -1702,7 +1711,7 @@ function useItem(k){if(k==='x:fert'){const ks=Object.keys(S.tiles).filter(q=>S.t
 const objRoot=new T.Group();scene.add(objRoot);
 const anims=[];let houseMesh=null,binMesh=null;
 function syncObjs(){
-  setTimeout(refreshHomeGrass,0);
+  OBJ_IDX.len=-1;setTimeout(refreshHomeGrass,0);
   while(objRoot.children.length){const c=objRoot.children[0];objRoot.remove(c);c.traverse(o=>{if(o.geometry&&o.geometry!==POOL_GEO)o.geometry.dispose();});}
   anims.length=0;
   for(const o of S.objs){const g=objGroup(o.k,o.id,o.r||0);g.position.set(o.x,topY(o.x,o.z),o.z);g.userData.tile={x:o.x,z:o.z};g.userData.obj=o;objRoot.add(g);
@@ -1717,7 +1726,8 @@ function recomputeBonuses(){bonus=new Map();hasWindmill=S.objs.some(o=>o.k==='wi
   for(const o of S.objs){if(o.k!=='beehive'&&o.k!=='clover')continue;
     for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++){const k=K(o.x+dx,o.z+dz);const b=bonus.get(k)||{bee:0,clover:0};if(o.k==='beehive')b.bee=1;else b.clover++;bonus.set(k,b);}}}
 function fixedAt(x,z){if(x>=HOUSE_AT.x&&x<=HOUSE_AT.x+1&&z>=HOUSE_AT.z&&z<=HOUSE_AT.z+1)return'house';if(x===BIN_AT.x&&z===BIN_AT.z)return'bin';return TOWN.fixed.get(K(x,z))||null;}
-function objAt(x,z){return S.objs.find(o=>o.x===x&&o.z===z)||null;}
+const OBJ_IDX={src:null,len:-1,map:new Map()};
+function objAt(x,z){if(OBJ_IDX.src!==S.objs||OBJ_IDX.len!==S.objs.length){OBJ_IDX.map.clear();for(const o of S.objs)OBJ_IDX.map.set(K(o.x,o.z),o);OBJ_IDX.src=S.objs;OBJ_IDX.len=S.objs.length;}return OBJ_IDX.map.get(K(x,z))||null;}
 const onHome=(x,z)=>islMap.get(K(x,z))===0;
 
 /* =========================================================
@@ -1979,11 +1989,14 @@ function goTo(x,z,cb){routeVil(x,z);vil.idle=0;vil.cb=cb||null;}
 // only rivers block walking (the villager hops up cliffs); detour over a bridge with a small A* when needed
 const walkable=(x,z)=>{const t=landMap.get(K(x,z));return t==='grass'||t==='sand'||t==='bridge';};
 function lineClear(x0,z0,x1,z1){const n=Math.ceil(Math.hypot(x1-x0,z1-z0)/0.2);for(let i=1;i<=n;i++){if(landMap.get(K(Math.round(x0+(x1-x0)*i/n),Math.round(z0+(z1-z0)*i/n)))==='river')return false;}return true;}
+// a tiny binary min-heap keyed on element[3]
+function heapPush(h,n){h.push(n);let i=h.length-1;while(i>0){const p=(i-1)>>1;if(h[p][3]<=h[i][3])break;[h[p],h[i]]=[h[i],h[p]];i=p;}}
+function heapPop(h){const top=h[0],last=h.pop();if(h.length){h[0]=last;let i=0;for(;;){const l=i*2+1,r=l+1;let m=i;if(l<h.length&&h[l][3]<h[m][3])m=l;if(r<h.length&&h[r][3]<h[m][3])m=r;if(m===i)break;[h[m],h[i]]=[h[i],h[m]];i=m;}}return top;}
 function landPath(sx,sz,tx,tz,opt={}){const W=(x,z)=>walkable(x,z)&&!(opt.block&&opt.block(x,z)&&!(x===tx&&z===tz));if(!W(tx,tz))return null;const open=[[sx,sz,0,0]],g=new Map([[K(sx,sz),0]]),from=new Map();let it=0;
-  while(open.length&&it++<(opt.max||5000)){let bi=0;for(let i=1;i<open.length;i++)if(open[i][3]<open[bi][3])bi=i;const [x,z,gc]=open.splice(bi,1)[0];
+  while(open.length&&it++<(opt.max||5000)){const [x,z,gc]=heapPop(open);if(gc>g.get(K(x,z)))continue;
     if(x===tx&&z===tz){const p=[[x,z]];let k=K(x,z);while(from.has(k)){const q=from.get(k);p.unshift(q);k=K(q[0],q[1]);}return p;}
     for(const [dx,dz] of opt.four?[[1,0],[-1,0],[0,1],[0,-1]]:[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){const nx=x+dx,nz=z+dz;if(!W(nx,nz))continue;if(dx&&dz&&(!W(x+dx,z)||!W(x,z+dz)))continue;
-      const ng=gc+(dx&&dz?1.414:1)*(opt.cost?opt.cost(nx,nz,x,z):1),k=K(nx,nz);if(g.has(k)&&g.get(k)<=ng)continue;g.set(k,ng);from.set(k,[x,z]);open.push([nx,nz,ng,ng+Math.hypot(tx-nx,tz-nz)]);}}
+      const ng=gc+(dx&&dz?1.414:1)*(opt.cost?opt.cost(nx,nz,x,z):1),k=K(nx,nz);if(g.has(k)&&g.get(k)<=ng)continue;g.set(k,ng);from.set(k,[x,z]);heapPush(open,[nx,nz,ng,ng+Math.hypot(tx-nx,tz-nz)]);}}
   return null;}
 function routeVil(tx,tz){vil.path=null;const sx=Math.round(vil.x),sz=Math.round(vil.z);
   if(!S.sea&&walkable(sx,sz)&&riverList.length&&!lineClear(vil.x,vil.z,tx,tz)){const p=landPath(sx,sz,Math.round(tx),Math.round(tz));
@@ -3047,7 +3060,7 @@ let fogBoost=0;
    ========================================================= */
 let last=performance.now(),tt=0,saveT=0,hudT=0;
 function frame(now){
-  const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;
+  const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;perfTick(dt);
   advance(dt*devSpeed);
   rainMix=clamp(rainMix+(S.rain?dt:-dt)*0.5,0,1);
   grassU.uTime.value=tt;riverU.uTime.value=tt;
@@ -3066,7 +3079,7 @@ function frame(now){
   }
   updateBoat(dt,tt);
   if(S.sea){vil.hop=Math.max(0,vil.hop-dt);villager.position.set(vil.x,0.14+Math.sin(tt*1.5)*0.04+Math.sin(vil.hop/0.35*Math.PI)*0.3*(vil.hop>0),vil.z);if(!fishing)villager.rotation.y=S.boat.r;}
-  const k=paint?0:Math.min(1,dt*3);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam(); // hold the view still while drag-farming so tiles stay under the finger
+  const k=paint?0:Math.min(1,dt*3);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();cullIslands(); // hold the view still while drag-farming so tiles stay under the finger
   applyTime();
   water.position.set(Math.round(cam.tx/10)*10,0,Math.round(cam.tz/10)*10);
   scene.fog.near=cam.dist+18-fogBoost*14;scene.fog.far=cam.dist+95-fogBoost*45;
@@ -3126,6 +3139,31 @@ if(isNew){setTimeout(()=>toast('Welcome to Driftseed Isle! Tap soil to plant, an
 else if(!S.boatTip)setTimeout(()=>toast('New: your boat waits at the dock! Sail to new islands and fill your Islandex.','',ICON.boat),800);
 if(away.length)afterSim(away,'While you were away');
 requestAnimationFrame(t=>{last=t;frame(t);});
+/* =========================================================
+   Debug / test API — only when the page is opened with ?debug
+   Used by tools/smoke.mjs; handy from the browser console too (window.DS).
+   ========================================================= */
+if(/[?&]debug\b/.test(location.search)){
+  const tileKeys=()=>islands[0].grass.map(([x,z])=>[x,z]);
+  window.DS={
+    state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
+      islands:islands.length,town:TOWN.name,buildings:TOWN.bld.map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
+    hour:h=>{S.hour=h;applyTime();},
+    tp:(x,z)=>{S.sea=false;vil.x=vil.tx=x;vil.z=vil.tz=z;vil.path=null;cam.tx=x;cam.tz=z;},
+    visit:id=>{const i=islands[id];S.disc[id]=1;const sp=(i.spots&&i.spots[1])||i.grass[0];DS.tp(sp[0]+0.6,sp[1]+0.6);},
+    islands:()=>islands.map(i=>({id:i.id,biome:i.biome,name:i.name,x:i.cx,z:i.cz,r:Math.round(islR(i)),grand:!!i.grand,river:(i.rtiles||[]).length})),
+    screen:(x,z)=>toScreen(x,topY(x,z),z),
+    npcScreen:i=>{const n=npcs[i];return toScreen(n.x,n.y+0.5,n.z);},
+    freeRow:(len=5)=>{for(const [x,z] of tileKeys()){let ok=true;for(let i=0;i<len&&ok;i++){const k=K(x+i,z);ok=landMap.get(k)==='grass'&&freeTile(x+i,z)&&!fixedAt(x+i,z)&&farmQ(x+i,z)>1.3&&(lvlMap.get(k)||0)===(lvlMap.get(K(x,z))||0);}if(ok)return[x,z];}return null;},
+    give:(items)=>{Object.assign(S.inv,items||{'m:wood':14,'m:stone':11,'m:fiber':9,'g:shell':4,'f:sardine':2,'tomato|normal':3,'tomato|golden':1});updateHUD();},
+    craft:i=>craft(i),sheet:(k,tab)=>openSheet(k,tab),closeSheet:()=>closeSheet(),
+    enterHome:()=>enterHouse('home'),enterNpc:i=>{const n=npcs[i];enterHouse('vh',n.b,n);},leave:()=>leaveHouse(),
+    ripen:()=>{for(const k in S.tiles){const t=S.tiles[k];if(t.crop)t.crop.p=1;}syncAllCrops();},
+    fish:()=>{const isl=curIsl();if(!isl)return false;const [x,z]=isl.sand[0];DS.tp(x,z);startFishing(x+3,z+3);return !!fishing;},
+    fastTravel:id=>fastTravel(islands[id]),
+  };
+  console.info('Driftseed debug API ready: window.DS');
+}
 })();
 </script>
 </body>

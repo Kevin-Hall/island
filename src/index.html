@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#78b4ee">
+<title>Driftseed Isle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap">
+<style>
+/*@styles*/
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="floats"></div>
+
+<div class="hud">
+  <div><div class="clockb"><div class="t" id="timeTxt">7:00</div><div class="d" id="dayTxt">Day 1 · morning</div></div><div class="loc" id="locTxt">Home</div></div>
+  <div class="hud-r"><div class="chip"><img class="px" id="icoShell" alt="shells"><span id="shellTxt">0</span></div>
+    <button class="chip lvl" id="lvlChip" aria-label="Island and settings"><img class="px" id="icoStar" alt=""><span class="lv"><span id="lvlTxt">Lv 1</span><i class="xpbar"><b id="xpFill"></b></i></span></button></div>
+</div>
+<div id="toasts"></div>
+<div id="ctx" class="ctx"></div>
+<div id="actionBar" class="actionbar" hidden><div class="tag" id="abTag"></div><div class="msg" id="abMsg"></div><div class="row" id="abRow"></div></div>
+
+<nav class="dock" aria-label="Apps">
+  <button class="btn" id="bSeed" style="--c:#fbe39a" aria-label="Choose seed"><span class="ico"><img class="px" id="seedImg" alt=""></span><span class="lb" id="seedTxt">Seeds</span></button>
+  <button class="btn" id="bBag" style="--c:#f3d3a8"><span class="ico"><img class="px" id="icoBag" alt=""></span><span class="lb">Bag</span></button>
+  <button class="btn" id="bShop" style="--c:#a6e3d8"><span class="ico"><img class="px" id="icoShop" alt=""></span><span class="lb">Shop</span></button>
+  <button class="btn" id="bTask" style="--c:#ffc9a3"><span class="ico"><img class="px" id="icoTask" alt=""></span><span class="lb">Orders</span></button>
+  <button class="btn" id="bChart" style="--c:#b7d7f7"><span class="ico"><img class="px" id="icoChart" alt=""></span><span class="lb">Chart</span></button>
+  <button class="btn" id="bDex" style="--c:#fac3cf"><span class="ico"><img class="px" id="icoDex" alt=""></span><span class="lb" id="dexTxt">Dex</span></button>
+</nav>
+
+<section class="sheet" id="sheet" hidden>
+  <header><h2 id="sheetTitle"></h2><button class="x" id="sheetX" aria-label="Close">×</button></header>
+  <div class="tabs" id="sheetTabs"></div>
+  <div class="sbody" id="sheetBody"></div>
+</section>
+<div id="fade"></div>
+<div id="boot"><h1>Driftseed Isle</h1><p id="bootMsg">washing ashore…</p></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+/*@game*/
+</body>
+</html>

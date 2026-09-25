@@ -24,3 +24,15 @@ A tiny 3D pixel-art island farming game. Open `index.html` in any modern browser
 - **Controls:** drag to spin, pinch to zoom, two fingers to pan. Progress saves on your device.
 
 Built with three.js (r128). Everything is rendered at low resolution, then passed through an outline and dither shader for the pixel look.
+
+## Development
+
+The game is built from `src/` into the single file `index.html`. See [ARCHITECTURE.md](ARCHITECTURE.md) for the module map, conventions and how to add content.
+
+```
+npm run build   # src/ → index.html (also fails on syntax errors)
+npm test        # build, then a headless play-through (needs Playwright)
+npm run check   # CI: is index.html up to date?
+```
+
+Open `index.html?debug` to get `window.DS`, a small console API for testing.
