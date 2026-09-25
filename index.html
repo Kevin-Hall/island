@@ -670,6 +670,67 @@ const seedIcon=id=>id==='mystery'?ICON.mystery:ICON[id];
 const shellHTML=`<img class="px" src="${ICON.shell}" alt="">`;
 
 /* =========================================================
+   Tool icons, painted as small shaded illustrations (gradients, a highlight, a dark tinted outline)
+   rather than pixel grids, so tools read as real objects. Each tool is drawn upright around (0,0),
+   then tilted 45° like an item icon. Overrides the sprite versions in ICON.
+   ========================================================= */
+function paintIcon(fn){const N=96,cv=document.createElement('canvas');cv.width=cv.height=N;const g=cv.getContext('2d');g.lineJoin='round';g.lineCap='round';fn(g,N);return cv.toDataURL();}
+const lgrad=(g,x0,y0,x1,y1,stops)=>{const gr=g.createLinearGradient(x0,y0,x1,y1);stops.forEach(([o,c])=>gr.addColorStop(o,c));return gr;};
+// outline first (a fat stroke), then the fill on top, so each part gets a clean tinted edge
+function part(g,path,fill,edge,w=6){g.lineWidth=w;g.strokeStyle=edge;g.stroke(path);g.fillStyle=fill;g.fill(path);}
+const rrect=(x,y,w,h,r)=>{const p=new Path2D();p.roundRect?p.roundRect(x,y,w,h,r):p.rect(x,y,w,h);return p;};
+const WOOD=g=>lgrad(g,-5,0,5,0,[[0,'#e2a86a'],[0.45,'#c07c44'],[1,'#8a5230']]),WOOD_E='#4a2a18';
+const STEEL=(g,x0,x1)=>lgrad(g,x0,0,x1,0,[[0,'#f4f8fc'],[0.35,'#c4ccd8'],[1,'#7a8494']]),STEEL_E='#2c3240';
+function tilted(fn){return paintIcon((g,N)=>{g.translate(N/2,N/2);g.rotate(Math.PI/4);fn(g);});}
+function shine(g,x0,y0,x1,y1,w=3){g.strokeStyle='rgba(255,255,255,.75)';g.lineWidth=w;g.beginPath();g.moveTo(x0,y0);g.lineTo(x1,y1);g.stroke();}
+
+const TOOL_ICONS={
+  shovel:tilted(g=>{
+    part(g,rrect(-13,-45,26,9,4),WOOD(g),WOOD_E);part(g,rrect(-4.5,-40,9,56,3),WOOD(g),WOOD_E);
+    part(g,rrect(-7,10,14,10,2),lgrad(g,-7,0,7,0,[[0,'#8a94a4'],[1,'#4a5262']]),STEEL_E);
+    const b=new Path2D();b.moveTo(-15,17);b.lineTo(15,17);b.lineTo(15,31);b.quadraticCurveTo(15,43,0,48);b.quadraticCurveTo(-15,43,-15,31);b.closePath();part(g,b,STEEL(g,-15,15),STEEL_E);
+    shine(g,-8,23,-8,37);shine(g,-2,-34,-2,6,2);}),
+  axe:tilted(g=>{
+    part(g,rrect(-4.5,-38,9,84,4),WOOD(g),WOOD_E);
+    part(g,rrect(1,-40,11,15,3),lgrad(g,0,0,12,0,[[0,'#9aa2b0'],[1,'#5a6272']]),STEEL_E);
+    const h=new Path2D();h.moveTo(-2,-40);h.lineTo(-17,-45);h.quadraticCurveTo(-33,-31,-18,-13);h.lineTo(-2,-21);h.closePath();part(g,h,STEEL(g,-30,-2),STEEL_E);
+    g.strokeStyle='#ffffff';g.lineWidth=3.5;g.beginPath();g.moveTo(-18,-41);g.quadraticCurveTo(-29,-31,-19,-17);g.stroke();
+    shine(g,-2,-12,-2,36,2);}),
+  net:tilted(g=>{
+    part(g,rrect(-3.5,-8,7,54,3),WOOD(g),WOOD_E);
+    const hoop=new Path2D();hoop.ellipse(0,-27,19,20,0,0,Math.PI*2);g.lineWidth=11;g.strokeStyle=STEEL_E;g.stroke(hoop);
+    g.save();g.clip(hoop);g.fillStyle='rgba(236,244,248,.55)';g.fill(hoop);g.strokeStyle='rgba(120,140,160,.8)';g.lineWidth=1.5;
+    for(let i=-24;i<=24;i+=6){g.beginPath();g.moveTo(i-20,-47);g.lineTo(i+20,-7);g.stroke();g.beginPath();g.moveTo(i+20,-47);g.lineTo(i-20,-7);g.stroke();}g.restore();
+    g.lineWidth=5;g.strokeStyle=lgrad(g,-19,0,19,0,[[0,'#f0f4f8'],[1,'#8a94a4']]);g.stroke(hoop);
+    part(g,rrect(-5,-9,10,8,2),lgrad(g,-5,0,5,0,[[0,'#8a94a4'],[1,'#4a5262']]),STEEL_E,4);}),
+  rod:paintIcon((g,N)=>{
+    g.save();g.translate(N/2,N/2);g.rotate(Math.PI/4);
+    const r=new Path2D();r.moveTo(-1.5,-46);r.lineTo(1.5,-46);r.lineTo(4,24);r.lineTo(-4,24);r.closePath();part(g,r,lgrad(g,-4,0,4,0,[[0,'#8ab4e8'],[1,'#3a5aa0']]),'#1e2a48',5);
+    part(g,rrect(-5.5,20,11,24,4),lgrad(g,-5,0,5,0,[[0,'#f0d0a0'],[1,'#b88a58']]),WOOD_E,5);for(const y of [26,32,38]){g.strokeStyle='#8a5a34';g.lineWidth=1.5;g.beginPath();g.moveTo(-5,y);g.lineTo(5,y);g.stroke();}
+    const reel=new Path2D();reel.arc(10,14,7,0,Math.PI*2);part(g,reel,lgrad(g,4,8,16,20,[[0,'#f4f8fc'],[1,'#7a8494']]),STEEL_E,4);
+    for(const y of [-30,-12,6]){const e=new Path2D();e.arc(3,y,2.5,0,Math.PI*2);g.lineWidth=2;g.strokeStyle='#2c3240';g.stroke(e);}
+    g.restore();
+    g.strokeStyle='rgba(255,255,255,.95)';g.lineWidth=1.6;g.beginPath();g.moveTo(80,16);g.quadraticCurveTo(90,40,82,64);g.stroke();
+    const top=new Path2D();top.arc(82,70,7,Math.PI,0);top.closePath();const bot=new Path2D();bot.arc(82,70,7,0,Math.PI);bot.closePath();
+    g.lineWidth=4;g.strokeStyle='#4a1a1a';g.beginPath();g.arc(82,70,7,0,Math.PI*2);g.stroke();g.fillStyle='#e8453a';g.fill(top);g.fillStyle='#fbf8f0';g.fill(bot);}),
+  can:paintIcon((g,N)=>{
+    const E='#1e3a3a';
+    const sp=new Path2D();sp.moveTo(58,58);sp.lineTo(80,28);sp.lineTo(86,32);sp.lineTo(66,64);sp.closePath();part(g,sp,lgrad(g,60,0,86,0,[[0,'#6ad0b8'],[1,'#2e8a78']]),E,5);
+    const rose=new Path2D();rose.ellipse(84,27,8,6,-0.9,0,Math.PI*2);part(g,rose,lgrad(g,76,20,92,34,[[0,'#8ae0c8'],[1,'#3a9a84']]),E,4);
+    const hd=new Path2D();hd.moveTo(22,40);hd.bezierCurveTo(20,14,58,12,58,38);g.lineWidth=12;g.strokeStyle=E;g.stroke(hd);g.lineWidth=6;g.strokeStyle='#4ab8a0';g.stroke(hd);
+    const body=new Path2D();body.moveTo(14,40);body.lineTo(62,40);body.lineTo(66,78);body.quadraticCurveTo(40,86,10,78);body.closePath();part(g,body,lgrad(g,12,0,66,0,[[0,'#8ae8cc'],[0.4,'#4ab8a0'],[1,'#257a6a']]),E);
+    const rim=new Path2D();rim.ellipse(38,40,25,6,0,0,Math.PI*2);part(g,rim,'#2e8a78',E,4);
+    shine(g,22,48,20,72,4);g.fillStyle='rgba(255,255,255,.35)';g.fillRect(28,54,24,4);}),
+  hand:paintIcon((g,N)=>{
+    const E='#6a3a3a',fur=lgrad(g,20,20,76,80,[[0,'#fffaf2'],[1,'#e8d8c8']]),bean=lgrad(g,0,20,0,80,[[0,'#ffb8c8'],[1,'#e8788e']]);
+    const pad=new Path2D();pad.moveTo(48,44);pad.bezierCurveTo(72,44,80,70,66,80);pad.bezierCurveTo(56,86,40,86,30,80);pad.bezierCurveTo(16,70,24,44,48,44);part(g,pad,fur,E);
+    const toes=[[22,38,9,11,-0.4],[38,24,9,12,-0.15],[58,24,9,12,0.15],[74,38,9,11,0.4]];
+    for(const [x,y,rx,ry,a] of toes){const t=new Path2D();t.ellipse(x,y,rx,ry,a,0,Math.PI*2);part(g,t,fur,E);}
+    g.fillStyle=bean;const pb=new Path2D();pb.moveTo(48,52);pb.bezierCurveTo(64,52,68,70,60,74);pb.bezierCurveTo(54,78,42,78,36,74);pb.bezierCurveTo(28,70,32,52,48,52);g.fill(pb);
+    for(const [x,y,rx,ry,a] of toes){const t=new Path2D();t.ellipse(x,y+2,rx*0.55,ry*0.55,a,0,Math.PI*2);g.fill(t);}
+    g.fillStyle='rgba(255,255,255,.7)';for(const [x,y] of [[43,58],[35,33],[55,21]]){g.beginPath();g.arc(x,y,2.4,0,Math.PI*2);g.fill();}})};
+Object.assign(ICON,TOOL_ICONS);
+/* =========================================================
    Renderer, camera, post-process (pixelate + outline + dither)
    ========================================================= */
 const canvas=$('c');
@@ -1171,7 +1232,7 @@ function buildIsland(isl){
     (t==='grass'?isl.grass:t==='sand'?isl.sand:t==='s1'?a1:a2).push([x,z]);}
   if(isl.riverN)carveRivers(isl,g);
   shapeBeach(isl);
-  if(isl.home){layoutTown(isl);setPathMask(TOWN.path);}
+  if(isl.home){layoutTown(isl);setPathMask(TOWN.path);musShow.g=null;musShow.sig='';refreshMuseumShow();}
   // grass tiles: a grassy slab on top of a dirt or rock cliff, like the tiers of Wild World
   // grass and sand tiles, drawn with rounded outer corners; the notch shows whatever lies just below (sand, lower grass, or the sea)
   const byMask=new Map(),under=[];const put=(mask,e)=>{if(!byMask.has(mask))byMask.set(mask,{g:[],s:[]});byMask.get(mask)[e.kind].push(e);};
@@ -1607,10 +1668,27 @@ function townBuilding(b,R){const p=[],gl=[];let lit=true;
     p.push(P(BOX,0x6a4a30,0,0.38,0.76,0,0,0,0.42,0.72,0.04),P(BOX,0xf6ecd0,0,1.36,0.78,0,0,0,0.9,0.26,0.04),P(ICO2,0x5fae44,-0.28,1.36,0.8,0,0,0,0.12,0.14,0.04));
     gl.push(P(BOX,0x404a60,-0.6,0.55,0.76,0,0,0,0.34,0.3,0.03),P(BOX,0x404a60,0.6,0.55,0.76,0,0,0,0.34,0.3,0.03));
     for(const [x,c] of [[-0.95,0xa87444],[0.98,0x9a6a3a]])p.push(P(BOX,c,x,0.16,1.05,0,0.3,0,0.3,0.3,0.3),P(ICO2,x<0?0xf08a2a:0xe0303a,x,0.36,1.05,0,0,0,0.14,0.12,0.14));}
-  else if(b.t==='museum'){p.push(P(BOX,0xe8e0d0,0,0.6,-0.1,0,0,0,1.9,1.2,1.4),P(BOX,0xc8c0b0,0,0.05,0.1,0,0,0,2.1,0.1,1.9),P(BOX,0xd8d0c0,0,0.14,0.75,0,0,0,1.8,0.08,0.3));
-    for(let i=0;i<4;i++)p.push(P(CYL12,0xf4f0e6,-0.72+i*0.48,0.7,0.62,0,0,0,0.16,1.1,0.16));
-    p.push(P(BOX,0xd8d0c0,0,1.28,0.2,0,0,0,2.0,0.12,1.2),P(PRISM,0xc8c0b0,0,1.5,0.2,0,0,0,1.12,0.34,1.2),P(PRISM,0x9aa8c8,0,1.49,0.2,0,0,0,0.9,0.28,1.22),P(BOX,0x6a5a4a,0,0.42,0.52,0,0,0,0.42,0.72,0.04));
-    p.push(P(ICO2,0xf6d04a,0,1.52,0.82,0,0,0,0.14,0.14,0.03));gl.push(P(BOX,0x404a60,-0.62,0.8,0.52,0,0,0,0.2,0.34,0.03),P(BOX,0x404a60,0.62,0.8,0.52,0,0,0,0.2,0.34,0.03));}
+  else if(b.t==='museum'){// a grand little museum: stone steps, columns, a glass dome with a gold fish weathervane, aquarium windows and banners
+    const ST=0xeee6d4,ST2=0xd8d0c0,GOLD=0xd8b050;
+    p.push(P(BOX,0xc8c0b0,0,0.06,0,0,0,0,2.2,0.12,2.0),P(BOX,ST,0,0.8,-0.25,0,0,0,2.0,1.36,1.3),P(BOX,ST2,0,0.2,-0.25,0,0,0,2.04,0.16,1.34),P(BOX,GOLD,0,1.44,-0.25,0,0,0,2.06,0.06,1.36));
+    for(let i=0;i<3;i++)p.push(P(BOX,i%2?ST2:0xe0d8c8,0,0.05+i*0.05,0.95-i*0.12,0,0,0,1.3-i*0.12,0.1+i*0.1,0.14));
+    for(const x of [-0.78,-0.26,0.26,0.78])p.push(P(CYL12,0xf8f4ea,x,0.8,0.72,0,0,0,0.15,1.2,0.15),P(BOX,ST2,x,0.23,0.72,0,0,0,0.22,0.06,0.22),P(BOX,ST2,x,1.4,0.72,0,0,0,0.22,0.06,0.22));
+    p.push(P(BOX,ST,0,1.5,0.62,0,0,0,2.1,0.12,0.5),P(PRISM,ST2,0,1.74,0.62,0,0,0,2.1,0.36,0.5),P(CYL12,GOLD,0,1.68,0.88,1.57,0,0,0.3,0.03,0.3),P(CYL12,0x8a6040,0,1.68,0.9,1.57,0,0,0.22,0.02,0.22));
+    for(const sd of [-1,1])p.push(P(CYL12,0xfbf8f0,sd*0.045,1.7,0.91,1.57,0,0,0.07,0.01,0.07));
+    // door and the two aquarium windows (your fish swim in front of the blue glass, see refreshMuseumShow)
+    p.push(P(BOX,GOLD,0,0.56,0.41,0,0,0,0.5,0.8,0.02),P(BOX,0x5a3a2a,0,0.54,0.42,0,0,0,0.42,0.72,0.02),P(ICO2,GOLD,0.12,0.54,0.44,0,0,0,0.04,0.04,0.03));
+    for(const x of [-0.62,0.62])p.push(P(BOX,GOLD,x,0.8,0.405,0,0,0,0.46,0.5,0.02),P(BOX,0x4aa0d0,x,0.8,0.41,0,0,0,0.4,0.44,0.02),P(BOX,0xe8d6a8,x,0.61,0.43,0,0,0,0.4,0.05,0.05));
+    // dome with a gold finial and a fish weathervane
+    p.push(P(CYL12,ST2,0,1.6,-0.3,0,0,0,1.0,0.24,1.0),P(ICO2,0x7ac8c0,0,1.72,-0.3,0,0,0,0.96,0.78,0.96),P(CYL12,GOLD,0,1.72,-0.3,0,0,0,1.0,0.04,1.0),P(CYL8,GOLD,0,2.2,-0.3,0,0,0,0.03,0.3,0.03),
+      P(ICO2,GOLD,0,2.36,-0.3,0,0,0,0.05,0.1,0.22),P(CONE4,GOLD,0,2.36,-0.44,1.57,0.785,0,0.1,0.1,0.02));
+    for(let i=0;i<6;i++){const a=i/6*Math.PI*2;p.push(P(BOX,0xfbf8f0,Math.sin(a)*0.46,1.9,-0.3+Math.cos(a)*0.46,0,a,0,0.02,0.3,0.1));}
+    // banners: fish in blue, butterfly in green
+    for(const [x,c,e] of [[-0.98,0x3a6ab0,'fish'],[0.98,0x4a8a4a,'bug']]){p.push(P(BOX,GOLD,x,1.38,0.82,0,0,0,0.3,0.03,0.03),P(BOX,c,x,1.12,0.82,0,0,0,0.26,0.5,0.02),P(PRISM,c,x,0.82,0.82,Math.PI,0,0,0.26,0.1,0.02));
+      if(e==='fish')p.push(P(ICO2,0xf6d04a,x,1.14,0.835,0,0,0,0.12,0.08,0.02),P(CONE4,0xf6d04a,x+0.08,1.14,0.835,0,0,1.57,0.06,0.06,0.01));
+      else p.push(P(ICO2,0xf6d04a,x-0.05,1.16,0.835,0,0,0.5,0.08,0.1,0.02),P(ICO2,0xf6d04a,x+0.05,1.16,0.835,0,0,-0.5,0.08,0.1,0.02),P(ICO2,0xf39ab0,x-0.04,1.07,0.835,0,0,0.3,0.06,0.07,0.02),P(ICO2,0xf39ab0,x+0.04,1.07,0.835,0,0,-0.3,0.06,0.07,0.02));}
+    // flower planters at the front corners (your butterflies visit them)
+    for(const x of [-0.95,0.95]){p.push(P(BOX,ST2,x,0.2,1.0,0,0,0,0.42,0.28,0.36),P(BOX,0x5a3a2a,x,0.35,1.0,0,0,0,0.36,0.02,0.3));const q=[];wildflowers(q,mulberry(x>0?5:6),[0xf2a6c8,0xf6d04a,0xffffff,0xb8a8f2],7,0.15);p.push(...shift(q,x,0.36,1.0,0));}
+    gl.push(P(BOX,0xfff0b8,-0.26,1.2,0.86,0,0,0,0.1,0.14,0.1),P(BOX,0xfff0b8,0.26,1.2,0.86,0,0,0,0.1,0.14,0.1));}
   else if(b.t==='hall'){p.push(P(BOX,0xf1e3c6,0,0.62,0,0,0,0,2.0,1.24,1.5),P(BOX,0xb8ae9a,0,0.06,0,0,0,0,2.06,0.12,1.56));roof(p,0x5a6ab0,0xf1e3c6,2.1,0.8,1.5,1.24);
     p.push(P(BOX,0xf1e3c6,0,1.95,0.1,0,0,0,0.6,0.7,0.6),P(CONE4,0x5a6ab0,0,2.5,0.1,0,0.785,0,0.9,0.44,0.9),P(CYL12,0xf6f0e0,0,2.0,0.41,1.57,0,0,0.36,0.03,0.36),P(BOX,0x3a2a2a,0.04,2.03,0.43,0,0,0.6,0.02,0.16,0.01),P(BOX,0x3a2a2a,0,2.0,0.43,0,0,0,0.12,0.02,0.01));
     p.push(P(BOX,0x6a4a3a,0,0.42,0.76,0,0,0,0.5,0.8,0.04),P(CYL8,0x8a8e98,0.95,0.9,0.95,0,0,0,0.04,1.8,0.04),P(BOX,0x5fae44,1.08,1.66,0.95,0,0,0,0.26,0.18,0.02),P(ICO2,0xf6d04a,1.08,1.66,0.965,0,0,0,0.08,0.08,0.01));
@@ -1670,7 +1748,7 @@ function furn(k,c){const p=[],gl=[];
       p.push(P(BOX,0x8a8e98,-0.3,0.58,0.05,0,0.4,0,0.3,0.05,0.08),P(BOX,0x7a5230,-0.3,0.58,0.15,0,0.4,0,0.06,0.04,0.22),P(BOX,0xc8905a,0.25,0.58,0,0,0,0,0.3,0.06,0.2),P(CYL8,0x6a4428,0.3,0.12,0,0,0,0,0.04,0.2,0.04),P(BOX,0x7a5230,0,0.18,0,0,0,0,1.0,0.04,0.4));break;
     case'dresser':p.push(P(BOX,0xa8744a,0,0.45,0,0,0,0,0.9,0.9,0.45));for(let i=0;i<3;i++)p.push(P(BOX,0xc8905a,0,0.2+i*0.27,0.23,0,0,0,0.8,0.2,0.01),P(ICO2,0xf6d04a,0,0.2+i*0.27,0.24,0,0,0,0.04,0.04,0.03));p.push(P(CYL12,0xf2a6c8,0.25,0.98,0,0,0,0,0.12,0.14,0.12));break;}
   return{p,gl};}
-function buildRoom(kind,n){const st=ROOM_STYLE[kind==='home'?'home':n.pers],RW=kind==='home'?4.6+S.house*0.6:5.2,RD=4.4,p=[],gl=[];
+function buildRoom(kind,n){if(kind==='museum')return buildMuseum();const st=ROOM_STYLE[kind==='home'?'home':n.pers],RW=kind==='home'?4.6+S.house*0.6:5.2,RD=4.4,p=[],gl=[];
   for(let i=0;i<Math.round(RW/0.5);i++)p.push(P(BOX,st.floor[i%2],-RW/2+0.25+i*0.5,-0.05,0,0,0,0,0.5,0.1,RD));
   p.push(P(BOX,st.wall,0,1.3,-RD/2-0.05,0,0,0,RW+0.2,2.6,0.1),P(BOX,st.wall,-RW/2-0.05,1.3,0,0,0,0,0.1,2.6,RD+0.1),P(BOX,st.wall,RW/2+0.05,1.3,0,0,0,0,0.1,2.6,RD+0.1));
   for(let i=0;i<Math.round(RW/0.4);i++)p.push(P(BOX,new T.Color(st.wall).lerp(new T.Color(0xffffff),0.25).getHex(),-RW/2+0.2+i*0.4,1.3,-RD/2+0.005,0,0,0,0.12,2.5,0.01));
@@ -1692,9 +1770,10 @@ function buildRoom(kind,n){const st=ROOM_STYLE[kind==='home'?'home':n.pers],RW=k
 function enterHouse(kind,b,n){if(inside)return;$('fade').classList.add('on');SFX.ui();
   setTimeout(()=>{const r=buildRoom(kind,n);roomScene.add(r.g);const pm=villager.children[0].clone();const me=new T.Group();me.add(pm);r.g.add(me);
     let who=null;if(n&&(n.state==='home'||S.hour>=21||S.hour<6.5)){who=n.g.clone(true);who.visible=true;who.position.set(0.9,0,-0.2);who.rotation.y=0.4;r.g.add(who);}
-    inside={kind,b,n,room:r,me,who,wl:who?limbsOf(who):null,ml:null,x:0,z:r.RD/2-0.8,tx:0,tz:r.RD/2-0.8,face:Math.PI,title:kind==='home'?'Your '+HOUSES[S.house].toLowerCase():n.name+'’s house'};
+    inside={kind,b,n,room:r,me,who,wl:who?limbsOf(who):null,ml:null,x:0,z:r.RD/2-0.8,tx:0,tz:r.RD/2-0.8,face:Math.PI,title:r.title||(kind==='home'?'Your '+HOUSES[S.house].toLowerCase():n.name+'’s house')};
     ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');
-    if(kind==='vh'&&!who)toast(`${n.name} is out. You peek around the cosy ${n.pers==='snooty'?'parlour':'room'}.`);
+    if(kind==='museum')setTimeout(()=>toast(`Hoo! Welcome to the ${TOWN.name} Museum. Tap an exhibit to learn about it, or tap me for a chat.`,'',ICON.dex),350);
+    else if(kind==='vh'&&!who)toast(`${n.name} is out. You peek around the cosy ${n.pers==='snooty'?'parlour':'room'}.`);
     else if(who)setTimeout(()=>showTalk(n,`Oh! Welcome to my home! ${n.cp[0].toUpperCase()+n.cp.slice(1)}!`),350);},450);}
 function leaveHouse(){if(!inside)return;$('fade').classList.add('on');SFX.ui();clearAction();
   setTimeout(()=>{roomScene.remove(inside.room.g);for(const c of inside.room.g.children)if(c.isMesh)c.geometry.dispose();inside=null;ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');},420);}
@@ -1705,6 +1784,7 @@ function roomTap(cx,cy){const I=inside;if(I.who&&I.n){_pv.set(I.who.position.x,0
   const pt=roomPoint(cx,cy);if(!pt)return;const R=I.room;
   const pr=R.props.find(q=>Math.abs(pt.x-q.x)<q.w/2+0.1&&Math.abs(pt.z-q.z)<q.d/2+0.1);
   if(pr&&pr.label==='exit'){leaveHouse();return;}
+  if(pr&&pr.info){I.tx=clamp(pr.x+(pr.x<-1?1:pr.x>1?-1:0)*(pr.w/2+0.35),-R.RW/2+0.35,R.RW/2-0.35);I.tz=clamp(pr.z+(Math.abs(pr.x)>1?0:pr.d/2+0.4),-R.RD/2+0.4,R.RD/2-0.3);setTimeout(pr.info,0);return;}
   I.tx=clamp(pt.x,-R.RW/2+0.35,R.RW/2-0.35);I.tz=clamp(pt.z,-R.RD/2+0.4,R.RD/2-0.3);
   if(pr){I.tx=clamp(pr.x+(pr.x<0?0.8:-0.8)*(Math.abs(pr.x)>1?1:0),-R.RW/2+0.35,R.RW/2-0.35);I.tz=clamp(pr.z+(Math.abs(pr.x)>1?0:0.8),-R.RD/2+0.4,R.RD/2-0.3);
     if(pr.k==='workbench'){setTimeout(()=>openSheet('bag','craft'),250);}
@@ -1717,11 +1797,12 @@ function updateRoom(dt,tt){const I=inside;if(!I)return;const dx=I.tx-I.x,dz=I.tz
   if(walking){const sp=Math.min(d,dt*2.6);I.x+=dx/d*sp;I.z+=dz/d*sp;I.face=Math.atan2(dx,dz);}
   I.me.position.set(I.x,walking?Math.abs(Math.sin(tt*14))*0.06:0,I.z);I.me.rotation.y+=angDiff(I.me.rotation.y,I.face)*Math.min(1,dt*8);
   if(I.who){I.who.rotation.y+=angDiff(I.who.rotation.y,Math.atan2(I.x-I.who.position.x,I.z-I.who.position.z))*Math.min(1,dt*3);I.who.position.y=Math.sin(tt*2)*0.01;}
-  roomCam.aspect=camera.aspect;roomCam.position.set(0,6.2,I.room.RD/2+4.6);roomCam.lookAt(0,0.4,-0.2);roomCam.updateProjectionMatrix();
+  roomCam.aspect=camera.aspect;if(I.room.follow){/* big rooms: the camera follows you, staying close so the world curve stays gentle */const cx=clamp(I.x,-I.room.RW/2+3,I.room.RW/2-3),cz=clamp(I.z,-I.room.RD/2+2.2,I.room.RD/2-2.2);I.cx=I.cx===undefined?cx:lerp(I.cx,cx,Math.min(1,dt*3));I.cz=I.cz===undefined?cz:lerp(I.cz,cz,Math.min(1,dt*3));roomCam.position.set(I.cx,7.2,I.cz+6.8);roomCam.lookAt(I.cx,0.4,I.cz-0.9);}
+  else{roomCam.position.set(0,6.2,I.room.RD/2+4.6);roomCam.lookAt(0,0.4,-0.2);}roomCam.updateProjectionMatrix();if(I.room.tick)I.room.tick(dt,tt);
   roomWinMat.color.setHex(nightF>0.5?0x2a3a6a:S.rain?0x9aa8b8:S.hour<7||S.hour>18?0xf4b890:0x9fd4ff);roomLamp.intensity=0.25+nightF*0.5;}
 function townTap(f,x,z){const b=TOWN.bld.find(q=>x>=q.x&&x<=q.x+1&&z>=q.z&&z<=q.z+1);
   if(f==='shop'){walkTo(b.door[0]+0.5,b.door[1]);openSheet('shop','decor');return true;}
-  if(f==='museum'){walkTo(b.door[0]+0.5,b.door[1]);const [g,t]=dexCount();toast(`The ${TOWN.name} Museum — ${g} of ${t} exhibits so far. Every new catch goes on display in the Islandex.`,'',ICON.dex);openSheet('dex','fish');return true;}
+  if(f==='museum'){goTo(b.door[0]+0.5,b.door[1]+0.2,()=>enterHouse('museum',b,null));return true;}
   if(f==='hall'){walkTo(b.door[0]+0.5,b.door[1]);openSheet('orders');return true;}
   if(f==='vh'){const n=npcs.find(q=>q.b===b);if(!n)return true;goTo(b.door[0]+0.5,b.door[1]+0.2,()=>enterHouse('vh',b,n));return true;}
   if(f==='board'){walkTo(x,z+1);boardNews();return true;}
@@ -1891,6 +1972,116 @@ const OBJ_IDX={src:null,len:-1,map:new Map()};
 function objAt(x,z){if(OBJ_IDX.src!==S.objs||OBJ_IDX.len!==S.objs.length){OBJ_IDX.map.clear();for(const o of S.objs)OBJ_IDX.map.set(K(o.x,o.z),o);OBJ_IDX.src=S.objs;OBJ_IDX.len=S.objs.length;}return OBJ_IDX.map.get(K(x,z))||null;}
 const onHome=(x,z)=>islMap.get(K(x,z))===0;
 
+/* =========================================================
+   The museum: a hall you can walk around in, filled with what you've caught.
+   Left wing: aquarium tanks where your fish swim (river, shore & open sea, deep sea).
+   Right wing: a glass butterfly garden for flying bugs and terrariums for crawlers.
+   Centre: your biggest catch on a spotlit plinth, and Professor Hoot the owl curator by the door.
+   Outside (musShow): aquarium windows with a few of your fish, and your butterflies around the planters.
+   ========================================================= */
+const musGlass=new T.MeshLambertMaterial({color:0xd8f4ff,transparent:true,opacity:0.16,depthWrite:false});
+const musWater=new T.MeshBasicMaterial({color:0x3a9ad8,transparent:true,opacity:0.2,depthWrite:false});
+const musLit=new T.MeshBasicMaterial({vertexColors:true});
+const caughtFish=()=>Object.keys(FISH).filter(k=>S.alm['f:'+k]&&!FISH[k].junk);
+const caughtBugs=()=>Object.keys(BUGS).filter(k=>S.alm['b:'+k]);
+const TANKS=[{name:'River & Pond',hab:['river'],x:-4.95,z:-1.9,w:1.1,d:2.6},{name:'Shore & Open Sea',hab:['shore','any'],x:-4.95,z:1.3,w:1.1,d:2.6},{name:'Deep Sea',hab:['deep'],x:-2.9,z:-3.85,w:3.0,d:1.1}];
+const TANK_H=1.35,TANK_Y=0.5;
+function owlModel(){const p=[],br=0x8a6040,lt=0xd8b888;
+  p.push(P(ICO2,br,0,0.42,0,0,0,0,0.56,0.62,0.5),P(ICO2,lt,0,0.36,0.16,0,0,0,0.36,0.42,0.24),P(ICO2,br,0,0.86,0,0,0,0,0.52,0.44,0.46));
+  for(const sd of [-1,1])p.push(P(ICO2,0xfbf8f0,sd*0.11,0.88,0.19,0,0,0,0.18,0.18,0.06),P(ICO2,0x2b1e2e,sd*0.11,0.88,0.225,0,0,0,0.08,0.09,0.03),P(ICO2,0xffffff,sd*0.09,0.905,0.24,0,0,0,0.03,0.03,0.01),
+    P(CONE4,br,sd*0.17,1.1,0,0,0.785,sd*-0.35,0.08,0.16,0.06),P(ICO2,br,sd*0.27,0.46,0,0,0,sd*0.4,0.12,0.36,0.24),P(ICO2,0xe0a040,sd*0.08,0.12,0.12,0,0,0,0.1,0.05,0.12),
+    P(CYL12,0xc8a060,sd*0.11,0.88,0.225,1.57,0,0,0.2,0.01,0.2));
+  p.push(P(CONE4,0xe0a040,0,0.8,0.23,1.9,0.785,0,0.06,0.1,0.06),P(BOX,0x4a8a4a,0,0.66,0.2,0,0,0,0.2,0.07,0.04),P(ICO2,0x3a7a3a,0,0.66,0.22,0,0,0,0.06,0.06,0.04));
+  const g=new T.Group();g.add(M(p));return g;}
+const HOOT_LINES=['Hoo! Welcome, welcome! Every creature you donate finds a home here.','Did you know some fish only bite in the rain? Fascinating… hoo!',
+  'The butterflies are my favourite. Please don’t tell the fish.','I must confess: I’m not fond of bugs. But I adore how happy they make our visitors!','Keep exploring! The far islands hide the rarest specimens.'];
+function hootTalk(){const [g,t]=dexCount();setAction(`<b>Professor Hoot</b><br>${pickR(HOOT_LINES)}<br><span class="sub">Collection: ${g} of ${t} discovered.</span>`,
+  [{label:'Islandex',cls:'go',fn:()=>{clearAction();openSheet('dex','fish');}},{label:'Bye!',fn:clearAction}],'Curator');tone(660,0.1,'triangle',0.04);setTimeout(()=>tone(520,0.14,'triangle',0.04),110);}
+function buildMuseum(){const RW=11,RD=9,WH=3.2,p=[],gl=[],lit=[],glass=[],water=[],anim=[],props=[{x:0,z:RD/2-0.35,w:1.2,d:0.6,label:'exit'}];
+  const g=new T.Group(),BLUE=0x355f8a,GREEN=0x4a7a4a,CREAM=0xf2e6cc,GOLD=0xd8b050,WOODD=0x6a4428;
+  // floor: marble checks with a red carpet running up to the centrepiece
+  for(let x=0;x<RW;x++)for(let z=0;z<RD;z++)p.push(P(BOX,(x+z)%2?0xcfc3ae:0xb3a690,-RW/2+0.5+x,-0.05,-RD/2+0.5+z,0,0,0,1,0.1,1));
+  p.push(P(BOX,0xb83a3a,0,0.005,1.2,0,0,0,1.4,0.02,6.6),P(BOX,GOLD,-0.72,0.01,1.2,0,0,0,0.06,0.02,6.6),P(BOX,GOLD,0.72,0.01,1.2,0,0,0,0.06,0.02,6.6));
+  // walls: blue for the fish wing, green for the bugs, cream in the middle, gold trim
+  const wall=(x,z,w,d,c)=>p.push(P(BOX,c,x,WH/2,z,0,0,0,w,WH,d));
+  wall(-3.35,-RD/2-0.05,4.3,0.1,BLUE);wall(3.35,-RD/2-0.05,4.3,0.1,GREEN);wall(0,-RD/2-0.05,2.4,0.1,CREAM);wall(-RW/2-0.05,0,0.1,RD,BLUE);wall(RW/2+0.05,0,0.1,RD,GREEN);
+  for(const [x,z,w,d] of [[0,-RD/2+0.01,RW,0.04],[-RW/2+0.01,0,0.04,RD],[RW/2-0.01,0,0.04,RD]])p.push(P(BOX,GOLD,x,0.1,z,0,0,0,w,0.2,d),P(BOX,GOLD,x,WH-0.08,z,0,0,0,w,0.12,d));
+  for(let i=0;i<9;i++)p.push(P(ICO2,0x5a8ac0,-5.3+i*0.5,2.5,-RD/2+0.02,0,0,0,0.3,0.14,0.02),P(ICO2,0x6aa06a,1.3+i*0.5,2.5,-RD/2+0.02,0,0,0,0.26,0.16,0.02));
+  // back arch with the museum crest: an owl in a gold roundel
+  p.push(P(BOX,0xe8d8b8,-1.1,1.4,-RD/2+0.08,0,0,0,0.2,2.8,0.12),P(BOX,0xe8d8b8,1.1,1.4,-RD/2+0.08,0,0,0,0.2,2.8,0.12),P(CYL12,GOLD,0,2.55,-RD/2+0.06,1.57,0,0,0.9,0.04,0.9),P(CYL12,0x8a6040,0,2.55,-RD/2+0.09,1.57,0,0,0.7,0.04,0.7));
+  for(const sd of [-1,1])p.push(P(CYL12,0xfbf8f0,sd*0.13,2.6,-RD/2+0.12,1.57,0,0,0.2,0.02,0.2),P(CYL12,0x2b1e2e,sd*0.13,2.6,-RD/2+0.13,1.57,0,0,0.09,0.02,0.09));
+  // columns along the carpet
+  for(const x of [-1.5,1.5])for(const z of [-1.2,1.6]){p.push(P(CYL12,0xf4efe4,x,WH/2,z,0,0,0,0.34,WH,0.34),P(BOX,0xe0d8c8,x,0.08,z,0,0,0,0.46,0.16,0.46),P(BOX,0xe0d8c8,x,WH-0.1,z,0,0,0,0.46,0.16,0.46));}
+  // ---- fish wing: tanks with sand, weed and rocks; your fish swim inside ----
+  const fish=caughtFish();
+  for(const T0 of TANKS){const {x,z,w,d}=T0,list=fish.filter(k=>T0.hab.includes(FISH[k].hab||'any'));
+    p.push(P(BOX,0x5a4a3a,x,TANK_Y/2,z,0,0,0,w+0.14,TANK_Y,d+0.14),P(BOX,GOLD,x,TANK_Y,z,0,0,0,w+0.16,0.04,d+0.16),P(BOX,0x3a3440,x,TANK_Y+TANK_H+0.04,z,0,0,0,w+0.12,0.08,d+0.12),P(BOX,0xc8b488,x,TANK_Y+0.05,z,0,0,0,w,0.1,d));
+    lit.push(P(BOX,0x4aa0d0,x-(w<d?w/2-0.02:0),TANK_Y+TANK_H/2,z-(w<d?0:d/2-0.02),0,0,0,w<d?0.02:w,TANK_H,w<d?d:0.02));
+    const R=mulberry(hi(Math.round(x*10),Math.round(z*10),3));
+    for(let i=0;i<6;i++){const sx=x+(R()-0.5)*(w-0.2),sz=z+(R()-0.5)*(d-0.2);for(let k=0;k<4;k++)lf(p,[0x3a8a4a,0x4aa05a,0x2e7a3e][k%3],sx,TANK_Y+0.1,sz,R()*6.28,1.3,0.3+R()*0.35,0.06,0.02);}
+    for(let i=0;i<3;i++)p.push(P(ICO2,[0x9a9ea8,0xb8b0a0,0x8a8e98][i],x+(R()-0.5)*(w-0.3),TANK_Y+0.12,z+(R()-0.5)*(d-0.3),0,R()*3,0,0.18+R()*0.12,0.12,0.16));
+    glass.push(P(BOX,0xffffff,x,TANK_Y+TANK_H/2,z,0,0,0,w,TANK_H,d));water.push(P(BOX,0xffffff,x,TANK_Y+TANK_H/2-0.03,z,0,0,0,w-0.04,TANK_H-0.1,d-0.04));
+    // a little plaque on the tank's front edge
+    p.push(P(BOX,GOLD,w<d?x+w/2+0.08:x,TANK_Y*0.6,w<d?z:z+d/2+0.08,0,0,0,w<d?0.02:0.5,0.14,w<d?0.5:0.02));
+    list.forEach((k,i)=>{const F=FISH[k],m=fishModel(F),s=0.32+F.size*0.1,sc=Math.min(0.7,0.42/(s*1.4));m.scale.setScalar(sc);g.add(m);
+      anim.push({m,kind:'fish',x,z,a:(w/2-0.22)*(0.45+((i*0.37)%0.55)),b:(d/2-0.2)*(0.45+((i*0.53)%0.55)),y:TANK_Y+0.3+((i*0.29)%1)*(TANK_H-0.55),sp:(0.35+((i*0.17)%0.4))*(i%2?1:-1),ph:i*1.7});});
+    props.push({x,z,w:w+0.3,d:d+0.3,label:'tank',info:()=>toast(list.length?`<b>${T0.name}</b> · ${list.map(k=>FISH[k].name).join(', ')}`:`<b>${T0.name}</b> tank · still empty. Catch some fish and they’ll swim here!`,'',ICON.fish)});}
+  // ---- bug wing: a glass butterfly garden, and terrariums for the crawlers ----
+  const bugs=caughtBugs(),fly=bugs.filter(k=>(BUGS[k].kind||'fly')!=='crawl'),crawl=bugs.filter(k=>BUGS[k].kind==='crawl');
+  {const x=3.3,z=-3.05,w=3.6,d=2.3,h=2.2,R=mulberry(77);
+    p.push(P(BOX,0x6a5a4a,x,0.06,z,0,0,0,w+0.1,0.12,d+0.1),P(BOX,0x6aa84a,x,0.13,z,0,0,0,w,0.04,d),P(BOX,0x3a3440,x,h+0.04,z,0,0,0,w+0.08,0.08,d+0.08));
+    for(const [cx,cz] of [[-1,-1],[1,-1],[-1,1],[1,1]])p.push(P(BOX,0x3a3440,x+cx*w/2,h/2,z+cz*d/2,0,0,0,0.06,h,0.06));
+    p.push(...shift(scaleParts(treeParts('oak',mulberry(9),0x9a9ea8),0.55),x+1.1,0.15,z-0.4,0));
+    for(let i=0;i<14;i++){const fx=x+(R()-0.5)*(w-0.4),fz=z+(R()-0.5)*(d-0.4);stemP(p,0x4f8a34,fx,fz,0.18,0.15);bloom(p,[0xf2a6c8,0xf6d04a,0xffffff,0xe86a5a,0xb8a8f2][i%5],0xf6d04a,fx,0.33+0.15,fz,0.07,6,0.9);}
+    glass.push(P(BOX,0xffffff,x,h/2+0.1,z,0,0,0,w,h,d));
+    fly.forEach((k,i)=>{const m=bugGroup(BUGS[k]);m.scale.setScalar(0.8);g.add(m);anim.push({m,kind:'fly',x,z,rx:w/2-0.35,rz:d/2-0.3,y:0.7+((i*0.23)%1)*1.0,ph:i*2.1,sp:0.5+((i*0.13)%0.5)});});
+    props.push({x,z,w:w+0.3,d:d+0.3,label:'garden',info:()=>toast(fly.length?`<b>Butterfly Garden</b> · ${fly.map(k=>BUGS[k].name).join(', ')}`:'<b>Butterfly Garden</b> · no residents yet. Catch flying bugs with your net!','',ICON.fly)});}
+  for(let i=0;i<4;i++){const x=4.75,z=-0.6+i*1.25,here=crawl.slice(i*2,i*2+2);
+    p.push(P(BOX,0xe0d8c8,x,0.35,z,0,0,0,0.7,0.7,0.8),P(BOX,GOLD,x,0.71,z,0,0,0,0.74,0.04,0.84),P(BOX,0x8a6a44,x,0.76,z,0,0,0,0.64,0.06,0.74),P(CYL8,0x7a5230,x,0.83,z,1.57,0.3,0,0.08,0.5,0.08),P(BOX,GOLD,x-0.36,0.45,z,0,0,0,0.02,0.12,0.36));
+    lf(p,0x4aa05a,x-0.15,0.8,z+0.2,1,0.6,0.2,0.1);lf(p,0x3a8a4a,x+0.18,0.8,z-0.22,4,0.6,0.22,0.1);
+    glass.push(P(BOX,0xffffff,x,1.05,z,0,0,0,0.64,0.6,0.74));
+    here.forEach((k,j)=>{const m=bugGroup(BUGS[k]);m.scale.setScalar(1.1);m.position.set(x+(j?0.12:-0.12),0.86,z+(j?-0.15:0.15));m.rotation.y=j?2:-1;g.add(m);anim.push({m,kind:'crawl',ph:i+j});});
+    props.push({x,z,w:0.9,d:1.0,label:'case',info:()=>toast(here.length?here.map(k=>`<b>${BUGS[k].name}</b>`).join(' & '):'An empty terrarium, waiting for a beetle or two.','',ICON.crawl)});}
+  // ---- centrepiece: your biggest catch, turning slowly on a spotlit plinth ----
+  {const best=fish.slice().sort((a,b)=>FISH[b].size-FISH[a].size||FISH[b].price-FISH[a].price)[0],z=-2.3;
+    p.push(P(CYL12,0xe8e0d0,0,0.3,z,0,0,0,1.0,0.6,1.0),P(CYL12,GOLD,0,0.62,z,0,0,0,1.04,0.05,1.04),P(CYL12,0x3a3440,0,0.66,z,0,0,0,0.86,0.04,0.86));
+    glass.push(P(ICO2,0xffffff,0,1.15,z,0,0,0,0.95,1.0,0.95));lit.push(P(CONE12,0xfff4c8,0,2.9,z,0,0,0,0.3,0.2,0.3));
+    if(best){const m=fishModel(FISH[best]);m.scale.setScalar(Math.min(1.1,0.75/((0.32+FISH[best].size*0.1)*1.2)));m.position.set(0,1.12,z);g.add(m);anim.push({m,kind:'spin'});}
+    props.push({x:0,z,w:1.2,d:1.2,label:'centre',info:()=>toast(best?`<b>Star exhibit:</b> your ${FISH[best].name}, the biggest catch in the collection!`:'The star exhibit plinth is waiting for your first catch.','rare',ICON.star)});}
+  // ---- the curator's desk by the door ----
+  {const x=-2.7,z=2.9;p.push(P(BOX,0x8a5a3a,x,0.45,z,0,0,0,1.4,0.9,0.6),P(BOX,0xa8744a,x,0.92,z,0,0,0,1.5,0.06,0.7),P(BOX,0xd8453a,x+0.4,0.98,z,0,0.3,0,0.36,0.06,0.26),P(BOX,0xf4f0ea,x+0.4,1.02,z,0,0.3,0,0.3,0.02,0.22));
+    lit.push(P(ICO2,0xfff0c0,x-0.5,1.2,z,0,0,0,0.16,0.14,0.16));p.push(P(CYL8,GOLD,x-0.5,1.02,z,0,0,0,0.04,0.2,0.04));
+    const owl=owlModel();owl.position.set(x,0.45,z-0.55);owl.rotation.y=0.5;g.add(owl);anim.push({m:owl,kind:'owl'});
+    props.push({x,z:z-0.3,w:1.6,d:1.2,label:'owl',info:hootTalk});}
+  // entrance mat and potted palms
+  p.push(P(BOX,0x3a6a8a,0,0.01,RD/2-0.35,0,0,0,1.2,0.02,0.5));for(const x of [-1.2,1.2]){const f=furn('plant');p.push(...shift(f.p,x,0,RD/2-0.5,0));}
+  g.add(M(p));if(gl.length)g.add(M(gl,glowMat));g.add(new T.Mesh(merge(lit),musLit));
+  const wm=new T.Mesh(merge(water),musWater);wm.renderOrder=1;g.add(wm);const gm=new T.Mesh(merge(glass),musGlass);gm.renderOrder=2;g.add(gm);
+  const l1=new T.PointLight(0x9ad0ff,0.35,6);l1.position.set(-3.8,2.4,-0.5);g.add(l1);
+  const tick=(dt,tt)=>{for(const a of anim){const m=a.m;
+    if(a.kind==='fish'){const t=tt*a.sp+a.ph,px=a.x+Math.cos(t)*a.a,pz=a.z+Math.sin(t)*a.b;m.position.set(px,a.y+Math.sin(tt*1.3+a.ph)*0.05,pz);m.rotation.y=Math.atan2(-Math.sin(t)*a.a*a.sp,Math.cos(t)*a.b*a.sp);m.rotation.z=Math.sin(tt*6+a.ph)*0.08;}
+    else if(a.kind==='fly'){const t=tt*a.sp+a.ph,px=a.x+Math.sin(t)*a.rx,pz=a.z+Math.sin(t*1.7+1)*a.rz;const ox=m.position.x,oz=m.position.z;m.position.set(px,a.y+Math.sin(t*2.3)*0.25,pz);
+      if(Math.hypot(px-ox,pz-oz)>1e-4)m.rotation.y=Math.atan2(px-ox,pz-oz);const u=m.userData;if(u.wl){const f=Math.sin(tt*(u.drag?30:16)+a.ph)*(u.drag?0.4:0.9);u.wl.rotation.z=f;u.wr.rotation.z=-f;}}
+    else if(a.kind==='crawl')m.rotation.y+=Math.sin(tt*0.8+a.ph)*0.004;
+    else if(a.kind==='spin')m.rotation.y+=dt*0.5;
+    else if(a.kind==='owl')m.position.y=0.45+Math.abs(Math.sin(tt*1.5))*0.02;}};
+  return{g,props,RW,RD,follow:true,tick,title:`The ${TOWN.name} Museum`};}
+
+/* ---- outside: aquarium windows and butterflies around the planters, refreshed when the collection grows ---- */
+const musShow={g:null,anim:[],sig:''};
+function museumSpot(){const b=TOWN.bld.find(q=>q.t==='museum');return b?{b,x:b.x+0.5,z:b.z+0.5,y:Math.min(topY(b.x,b.z),topY(b.x+1,b.z+1))}:null;}
+function refreshMuseumShow(){const at=museumSpot(),isl=islands[0];if(!at||!isl||!isl.group)return;const fish=caughtFish(),fly=caughtBugs().filter(k=>(BUGS[k].kind||'fly')!=='crawl');
+  const sig=fish.length+'|'+fly.length;if(sig===musShow.sig&&musShow.g)return;musShow.sig=sig;
+  if(musShow.g){isl.group.remove(musShow.g);musShow.g.traverse(o=>{if(o.geometry&&o.geometry!==BOX)o.geometry.dispose();});}
+  const g=new T.Group();g.position.set(at.x,at.y,at.z);musShow.g=g;musShow.anim=[];isl.group.add(g);
+  // the two aquarium windows sit at x=±0.62 on the facade (z≈0.53); a few of your fish swim behind the glass
+  const show=fish.slice(-6);show.forEach((k,i)=>{const F=FISH[k],m=fishModel(F),s=0.32+F.size*0.1;m.scale.setScalar(Math.min(0.32,0.2/(s*1.4)));g.add(m);
+    musShow.anim.push({m,kind:'fish',x:i%2?0.62:-0.62,y:0.72+((i>>1)%3)*0.09,sp:0.6+(i%3)*0.25,ph:i*1.9});});
+  fly.slice(-5).forEach((k,i)=>{const m=bugGroup(BUGS[k]);m.scale.setScalar(BUG_SCALE);g.add(m);musShow.anim.push({m,kind:'fly',x:i%2?0.95:-0.95,ph:i*2.3,sp:0.7+(i%3)*0.2});});}
+function updateMuseumShow(dt,tt){if(!musShow.g)return;for(const a of musShow.anim){const m=a.m;
+  if(a.kind==='fish'){const t=tt*a.sp+a.ph,px=a.x+Math.sin(t)*0.16;m.position.set(px,a.y+Math.sin(tt*1.7+a.ph)*0.03,0.5);m.rotation.y=Math.cos(t)>0?Math.PI/2:-Math.PI/2;}
+  else{const t=tt*a.sp+a.ph,ox=m.position.x,oz=m.position.z,px=a.x+Math.sin(t)*0.3,pz=1.05+Math.sin(t*1.6)*0.25;m.position.set(px,0.45+Math.sin(t*2.2)*0.15,pz);if(Math.hypot(px-ox,pz-oz)>1e-4)m.rotation.y=Math.atan2(px-ox,pz-oz);
+    const u=m.userData;if(u.wl){const f=Math.sin(tt*16+a.ph)*0.9;u.wl.rotation.z=f;u.wr.rotation.z=-f;}}}}
 /* =========================================================
    Ambient life: villager, boat, clouds, gulls, glints, fireflies, rain, particles
    ========================================================= */
@@ -2118,7 +2309,7 @@ function updateHUD(){
   const lv=level();$('lvlTxt').textContent='Lv '+lv;
   const a=LV[lv-1]||0,b=LV[lv];$('xpFill').style.width=(b?clamp((S.xp-a)/(b-a),0,1)*100:100)+'%';
   {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${S.rain?' · rain':''}`;$('locTxt').textContent=locName();
-  $('bTask').classList.toggle('ready',ordersReady());$('bMenu').classList.toggle('ready',ordersReady());
+  refreshMuseumShow();$('bTask').classList.toggle('ready',ordersReady());$('bMenu').classList.toggle('ready',ordersReady());
   const [g,t]=dexCount();$('dexTxt').textContent=`Dex ${Math.floor(g/t*100)}%`;$('locTxt').hidden=!$('locTxt').textContent;
   updateCtx();
 }
@@ -3391,7 +3582,7 @@ function frame(now){
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);
   for(const a of anims)a(tt,dt);
-  updateLife(dt,tt);updateAtmos(dt,tt);updateNPCs(dt,tt);updateSeaLife(dt,tt);updateDebris(dt,tt);updateTool(dt);
+  updateLife(dt,tt);updateAtmos(dt,tt);updateNPCs(dt,tt);updateSeaLife(dt,tt);updateDebris(dt,tt);updateTool(dt);updateMuseumShow(dt,tt);
   if(sprayT>0){sprayT-=dt;for(const o of S.objs)if(o.k==='sprinkler'&&Math.random()<0.8){const a=Math.random()*6.28;emit(o.x,topY(o.x,o.z)+0.4,o.z,{vx:Math.cos(a)*1.6,vy:1.6,vz:Math.sin(a)*1.6,life:0.6,max:0.6,size:0.05,color:0x9ad0ff,g:6});}}
   for(const c of clouds){const u=c.userData;u.ox+=dt*u.sp;const rx=((u.ox-cam.tx)%80+120)%80-40,rz=((u.oz-cam.tz)%80+120)%80-40;c.position.set(cam.tx+rx,11,cam.tz+rz);}
   const day=1-nightF;
@@ -3466,7 +3657,7 @@ if(/[?&]debug\b/.test(location.search)){
     fastTravel:id=>fastTravel(islands[id]),
     npcRouteOnLand:()=>{updateNpcBoat(0,0);const R=npcRoute;if(!R.pts)return -1;let n=0;for(let d=0;d<R.total;d+=0.25){R.d=d;updateNpcBoat(0,0);if(seaBlocked(Math.round(npcBoat.position.x),Math.round(npcBoat.position.z)))n++;}return n;},
     sailTo:id=>{const isl=islands[id];if(!S.sea){S.sea=true;const b=S.boat;vil.x=b.x;vil.z=b.z;}sailToIsland(isl);return !!sail;},
-    pick:(cx,cy)=>pick(cx,cy),look:(sp,fur,shirt)=>{setLook(Object.assign({sp},fur?{fur}:{},shirt?{shirt}:{}));return S.look;},beach:id=>{const i=islands[id],s=i.sand.filter(([x,z])=>{const c=SAND_CH.get(K(x,z));return c&&Math.min(...c)<0.1;});return s[Math.floor(s.length/3)]||i.sand[0];},tool:k=>{equip(k);return S.tool;},tile:(x,z)=>S.tiles[K(x,z)]||null,vil:()=>({x:vil.x,z:vil.z}),
+    pick:(cx,cy)=>pick(cx,cy),collectAll:()=>{for(const k in FISH)S.alm['f:'+k]=1;for(const k in BUGS)S.alm['b:'+k]=1;refreshMuseumShow();},enterMuseum:()=>enterHouse('museum',TOWN.bld.find(b=>b.t==='museum'),null),museumDoor:()=>{const b=TOWN.bld.find(q=>q.t==='museum');return b.door;},roomGo:(x,z)=>{inside.tx=x;inside.tz=z;},look:(sp,fur,shirt)=>{setLook(Object.assign({sp},fur?{fur}:{},shirt?{shirt}:{}));return S.look;},beach:id=>{const i=islands[id],s=i.sand.filter(([x,z])=>{const c=SAND_CH.get(K(x,z));return c&&Math.min(...c)<0.1;});return s[Math.floor(s.length/3)]||i.sand[0];},tool:k=>{equip(k);return S.tool;},tile:(x,z)=>S.tiles[K(x,z)]||null,vil:()=>({x:vil.x,z:vil.z}),
     boat:()=>({x:S.boat.x,z:S.boat.z,onLand:seaBlocked(Math.round(S.boat.x),Math.round(S.boat.z)),sailing:!!sail}),
   };
   console.info('Driftseed debug API ready: window.DS');

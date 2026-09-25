@@ -35,7 +35,7 @@ function buildIsland(isl){
     (t==='grass'?isl.grass:t==='sand'?isl.sand:t==='s1'?a1:a2).push([x,z]);}
   if(isl.riverN)carveRivers(isl,g);
   shapeBeach(isl);
-  if(isl.home){layoutTown(isl);setPathMask(TOWN.path);}
+  if(isl.home){layoutTown(isl);setPathMask(TOWN.path);musShow.g=null;musShow.sig='';refreshMuseumShow();}
   // grass tiles: a grassy slab on top of a dirt or rock cliff, like the tiers of Wild World
   // grass and sand tiles, drawn with rounded outer corners; the notch shows whatever lies just below (sand, lower grass, or the sea)
   const byMask=new Map(),under=[];const put=(mask,e)=>{if(!byMask.has(mask))byMask.set(mask,{g:[],s:[]});byMask.get(mask)[e.kind].push(e);};

@@ -12,6 +12,9 @@ const errors=[];pg.on('pageerror',e=>errors.push(e.message));
 if(process.env.THREE_JS)await pg.route('**/three.min.js',r=>r.fulfill({path:process.env.THREE_JS,contentType:'application/javascript'}));
 let fails=0;const check=(ok,msg)=>{console.log((ok?'  ok   ':'  FAIL ')+msg);if(!ok)fails++;};
 const ev=(f,a)=>pg.evaluate(f,a),wait=ms=>pg.waitForTimeout(ms);
+// poll instead of fixed waits: headless software rendering can drop to ~1 fps, which delays the game's own timers
+const waitFor=async(f,ms=12000)=>{const t=Date.now();while(Date.now()-t<ms){const v=await ev(f);if(v)return v;await wait(300);}return null;};
+const enter=async f=>{await ev(f);await waitFor(()=>DS.state().inside);return ev(()=>DS.state());},leave=async()=>{await ev(()=>DS.leave());await waitFor(()=>!DS.state().inside);};
 await pg.goto(pathToFileURL(join(root,'index.html')).href+'?debug');await wait(3500);
 check(await ev(()=>!!window.DS),'boots and exposes the debug API');
 let st=await ev(()=>DS.state());check(st.buildings.length>=8,`town "${st.town}" has ${st.buildings.length} buildings`);check(st.npcs.length>=5,`${st.npcs.length} villagers`);
@@ -39,8 +42,10 @@ await ev(()=>{DS.give();DS.sheet('bag');});await wait(500);check(await pg.locato
 await ev(()=>DS.craft(0));st=await ev(()=>DS.state());check((st.store.fence||0)>=4,'crafted fences into storage');
 await ev(()=>DS.sheet('bag','craft'));await wait(400);await pg.screenshot({path:join(shots,'2-craft.png')});await ev(()=>DS.closeSheet());
 // houses
-await ev(()=>DS.enterHome());await wait(1500);st=await ev(()=>DS.state());check(!!st.inside,`entered ${st.inside}`);await pg.screenshot({path:join(shots,'3-home.png')});
-await ev(()=>DS.leave());await wait(900);await ev(()=>DS.enterNpc(0));await wait(1500);st=await ev(()=>DS.state());check(!!st.inside,`entered ${st.inside}`);await ev(()=>DS.leave());await wait(900);
+st=await enter(()=>DS.enterHome());check(!!st.inside,`entered ${st.inside}`);await pg.screenshot({path:join(shots,'3-home.png')});
+await leave();st=await enter(()=>DS.enterNpc(0));check(!!st.inside,`entered ${st.inside}`);await leave();
+// museum: walk-in hall with your catches on display
+await ev(()=>DS.collectAll());st=await enter(()=>DS.enterMuseum());check(/Museum/.test(st.inside||''),`entered ${st.inside}`);await pg.screenshot({path:join(shots,'3b-museum.png')});await leave();
 // explore: visit an island, fish there, travel home
 const isl=await ev(()=>DS.islands().find(i=>!i.grand&&i.id>0));await ev(id=>DS.visit(id),isl.id);await wait(1500);
 st=await ev(()=>DS.state());check(st.loc===isl.name,`visited ${isl.name}`);check(await ev(()=>DS.fish()),'started fishing');await wait(1500);

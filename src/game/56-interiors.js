@@ -31,7 +31,7 @@ function furn(k,c){const p=[],gl=[];
       p.push(P(BOX,0x8a8e98,-0.3,0.58,0.05,0,0.4,0,0.3,0.05,0.08),P(BOX,0x7a5230,-0.3,0.58,0.15,0,0.4,0,0.06,0.04,0.22),P(BOX,0xc8905a,0.25,0.58,0,0,0,0,0.3,0.06,0.2),P(CYL8,0x6a4428,0.3,0.12,0,0,0,0,0.04,0.2,0.04),P(BOX,0x7a5230,0,0.18,0,0,0,0,1.0,0.04,0.4));break;
     case'dresser':p.push(P(BOX,0xa8744a,0,0.45,0,0,0,0,0.9,0.9,0.45));for(let i=0;i<3;i++)p.push(P(BOX,0xc8905a,0,0.2+i*0.27,0.23,0,0,0,0.8,0.2,0.01),P(ICO2,0xf6d04a,0,0.2+i*0.27,0.24,0,0,0,0.04,0.04,0.03));p.push(P(CYL12,0xf2a6c8,0.25,0.98,0,0,0,0,0.12,0.14,0.12));break;}
   return{p,gl};}
-function buildRoom(kind,n){const st=ROOM_STYLE[kind==='home'?'home':n.pers],RW=kind==='home'?4.6+S.house*0.6:5.2,RD=4.4,p=[],gl=[];
+function buildRoom(kind,n){if(kind==='museum')return buildMuseum();const st=ROOM_STYLE[kind==='home'?'home':n.pers],RW=kind==='home'?4.6+S.house*0.6:5.2,RD=4.4,p=[],gl=[];
   for(let i=0;i<Math.round(RW/0.5);i++)p.push(P(BOX,st.floor[i%2],-RW/2+0.25+i*0.5,-0.05,0,0,0,0,0.5,0.1,RD));
   p.push(P(BOX,st.wall,0,1.3,-RD/2-0.05,0,0,0,RW+0.2,2.6,0.1),P(BOX,st.wall,-RW/2-0.05,1.3,0,0,0,0,0.1,2.6,RD+0.1),P(BOX,st.wall,RW/2+0.05,1.3,0,0,0,0,0.1,2.6,RD+0.1));
   for(let i=0;i<Math.round(RW/0.4);i++)p.push(P(BOX,new T.Color(st.wall).lerp(new T.Color(0xffffff),0.25).getHex(),-RW/2+0.2+i*0.4,1.3,-RD/2+0.005,0,0,0,0.12,2.5,0.01));
@@ -53,9 +53,10 @@ function buildRoom(kind,n){const st=ROOM_STYLE[kind==='home'?'home':n.pers],RW=k
 function enterHouse(kind,b,n){if(inside)return;$('fade').classList.add('on');SFX.ui();
   setTimeout(()=>{const r=buildRoom(kind,n);roomScene.add(r.g);const pm=villager.children[0].clone();const me=new T.Group();me.add(pm);r.g.add(me);
     let who=null;if(n&&(n.state==='home'||S.hour>=21||S.hour<6.5)){who=n.g.clone(true);who.visible=true;who.position.set(0.9,0,-0.2);who.rotation.y=0.4;r.g.add(who);}
-    inside={kind,b,n,room:r,me,who,wl:who?limbsOf(who):null,ml:null,x:0,z:r.RD/2-0.8,tx:0,tz:r.RD/2-0.8,face:Math.PI,title:kind==='home'?'Your '+HOUSES[S.house].toLowerCase():n.name+'’s house'};
+    inside={kind,b,n,room:r,me,who,wl:who?limbsOf(who):null,ml:null,x:0,z:r.RD/2-0.8,tx:0,tz:r.RD/2-0.8,face:Math.PI,title:r.title||(kind==='home'?'Your '+HOUSES[S.house].toLowerCase():n.name+'’s house')};
     ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');
-    if(kind==='vh'&&!who)toast(`${n.name} is out. You peek around the cosy ${n.pers==='snooty'?'parlour':'room'}.`);
+    if(kind==='museum')setTimeout(()=>toast(`Hoo! Welcome to the ${TOWN.name} Museum. Tap an exhibit to learn about it, or tap me for a chat.`,'',ICON.dex),350);
+    else if(kind==='vh'&&!who)toast(`${n.name} is out. You peek around the cosy ${n.pers==='snooty'?'parlour':'room'}.`);
     else if(who)setTimeout(()=>showTalk(n,`Oh! Welcome to my home! ${n.cp[0].toUpperCase()+n.cp.slice(1)}!`),350);},450);}
 function leaveHouse(){if(!inside)return;$('fade').classList.add('on');SFX.ui();clearAction();
   setTimeout(()=>{roomScene.remove(inside.room.g);for(const c of inside.room.g.children)if(c.isMesh)c.geometry.dispose();inside=null;ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');},420);}
@@ -66,6 +67,7 @@ function roomTap(cx,cy){const I=inside;if(I.who&&I.n){_pv.set(I.who.position.x,0
   const pt=roomPoint(cx,cy);if(!pt)return;const R=I.room;
   const pr=R.props.find(q=>Math.abs(pt.x-q.x)<q.w/2+0.1&&Math.abs(pt.z-q.z)<q.d/2+0.1);
   if(pr&&pr.label==='exit'){leaveHouse();return;}
+  if(pr&&pr.info){I.tx=clamp(pr.x+(pr.x<-1?1:pr.x>1?-1:0)*(pr.w/2+0.35),-R.RW/2+0.35,R.RW/2-0.35);I.tz=clamp(pr.z+(Math.abs(pr.x)>1?0:pr.d/2+0.4),-R.RD/2+0.4,R.RD/2-0.3);setTimeout(pr.info,0);return;}
   I.tx=clamp(pt.x,-R.RW/2+0.35,R.RW/2-0.35);I.tz=clamp(pt.z,-R.RD/2+0.4,R.RD/2-0.3);
   if(pr){I.tx=clamp(pr.x+(pr.x<0?0.8:-0.8)*(Math.abs(pr.x)>1?1:0),-R.RW/2+0.35,R.RW/2-0.35);I.tz=clamp(pr.z+(Math.abs(pr.x)>1?0:0.8),-R.RD/2+0.4,R.RD/2-0.3);
     if(pr.k==='workbench'){setTimeout(()=>openSheet('bag','craft'),250);}
@@ -78,11 +80,12 @@ function updateRoom(dt,tt){const I=inside;if(!I)return;const dx=I.tx-I.x,dz=I.tz
   if(walking){const sp=Math.min(d,dt*2.6);I.x+=dx/d*sp;I.z+=dz/d*sp;I.face=Math.atan2(dx,dz);}
   I.me.position.set(I.x,walking?Math.abs(Math.sin(tt*14))*0.06:0,I.z);I.me.rotation.y+=angDiff(I.me.rotation.y,I.face)*Math.min(1,dt*8);
   if(I.who){I.who.rotation.y+=angDiff(I.who.rotation.y,Math.atan2(I.x-I.who.position.x,I.z-I.who.position.z))*Math.min(1,dt*3);I.who.position.y=Math.sin(tt*2)*0.01;}
-  roomCam.aspect=camera.aspect;roomCam.position.set(0,6.2,I.room.RD/2+4.6);roomCam.lookAt(0,0.4,-0.2);roomCam.updateProjectionMatrix();
+  roomCam.aspect=camera.aspect;if(I.room.follow){/* big rooms: the camera follows you, staying close so the world curve stays gentle */const cx=clamp(I.x,-I.room.RW/2+3,I.room.RW/2-3),cz=clamp(I.z,-I.room.RD/2+2.2,I.room.RD/2-2.2);I.cx=I.cx===undefined?cx:lerp(I.cx,cx,Math.min(1,dt*3));I.cz=I.cz===undefined?cz:lerp(I.cz,cz,Math.min(1,dt*3));roomCam.position.set(I.cx,7.2,I.cz+6.8);roomCam.lookAt(I.cx,0.4,I.cz-0.9);}
+  else{roomCam.position.set(0,6.2,I.room.RD/2+4.6);roomCam.lookAt(0,0.4,-0.2);}roomCam.updateProjectionMatrix();if(I.room.tick)I.room.tick(dt,tt);
   roomWinMat.color.setHex(nightF>0.5?0x2a3a6a:S.rain?0x9aa8b8:S.hour<7||S.hour>18?0xf4b890:0x9fd4ff);roomLamp.intensity=0.25+nightF*0.5;}
 function townTap(f,x,z){const b=TOWN.bld.find(q=>x>=q.x&&x<=q.x+1&&z>=q.z&&z<=q.z+1);
   if(f==='shop'){walkTo(b.door[0]+0.5,b.door[1]);openSheet('shop','decor');return true;}
-  if(f==='museum'){walkTo(b.door[0]+0.5,b.door[1]);const [g,t]=dexCount();toast(`The ${TOWN.name} Museum — ${g} of ${t} exhibits so far. Every new catch goes on display in the Islandex.`,'',ICON.dex);openSheet('dex','fish');return true;}
+  if(f==='museum'){goTo(b.door[0]+0.5,b.door[1]+0.2,()=>enterHouse('museum',b,null));return true;}
   if(f==='hall'){walkTo(b.door[0]+0.5,b.door[1]);openSheet('orders');return true;}
   if(f==='vh'){const n=npcs.find(q=>q.b===b);if(!n)return true;goTo(b.door[0]+0.5,b.door[1]+0.2,()=>enterHouse('vh',b,n));return true;}
   if(f==='board'){walkTo(x,z+1);boardNews();return true;}

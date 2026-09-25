@@ -25,6 +25,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 |---|---|
 | 00-core | three.js check, curved-world vertex shader, tiny utilities (`clamp`, `hash`, `mulberry`, `K`) |
 | 10-data | **Data registries:** `CROPS`, `VARIANTS`, `BUILD`, `BIOMES`, `FISH`, `BUGS`, `PLANTS`, `FINDS`, `MATS`/`CONSUM`, rods, cans, house tiers, level curve |
+| 22-toolicons | Tool icons painted as shaded vector illustrations (`paintIcon`); they override the sprite versions in `ICON` |
 | 20-state, 21-sprites | Save state (`S`, `freshState`, `load`, `save`); UI icons (`SPR`, `ICON`). Sprites are small character grids that `sprite()` upgrades when drawn: Scale2x smoothing, rim light and shade, a tinted outline, painted at 3× |
 | 30-render | Renderer, pixel post-pass, geometry helpers (`P`, `PG` gradient parts, `merge`, `M`), shared materials, lights, sea, sky |
 | 31-ground | Painted ground textures (grass, path, sand, cliff) and `worldMat`, which maps them in world space so tiles join up without seams. Dirt paths are painted into the grass from a blurred mask (`setPathMask`), so their edges curve instead of following tiles |
@@ -33,6 +34,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 50-objects | Decor, house and bin models (`objGroup`, `houseGroup`, `roof`) |
 | 55-town | Town layout (`layoutTown`): plaza, paths, buildings, lamps, trees, flower species, gathering |
 | 56-interiors | Enterable rooms: separate `roomScene`, furniture (`furn`), room tapping |
+| 59-museum | The walk-in museum (`buildMuseum`): fish tanks, butterfly garden, bug terrariums and a centrepiece, all filled from `S.alm`; Professor Hoot the curator; the outdoor showcase (`refreshMuseumShow`) |
 | 57-villagers | Species, personalities, models (`npcModel`), routines, chat, wishes, friendship |
 | 58-crafting | `RECIPES`, crafting, consumables |
 | 61-player | Player looks (`LOOKS`, `applyLook`, `setLook`): the bunny or any `npcModel` species, in fur and outfit colours saved as `S.look`. The body is always `villager.children[0]`. |
@@ -66,6 +68,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | Decor | Entry in `BUILD` (add `craft:true` for craft-only) → `case` in `objGroup` + tap height in `OBJ_H` (50-objects). The thumbnail is generated automatically. |
 | A recipe | Push onto `RECIPES` (58-crafting). Inputs are item keys: `m:` material, `c:` crop (any variant), `f:`/`b:`/`p:`/`g:` catch and finds. |
 | A villager species or personality | `SPECIES` / `PERS` + a `case` in `npcModel` (57-villagers) |
+| A room with its own camera | Return `follow:true` (and optionally `tick`, `title`) from the room builder; `updateRoom` follows the player and runs `tick` each frame. Props with `info` run it when tapped. |
 | Furniture | A `case` in `furn` + a `put()` in `buildRoom` (56-interiors) |
 | A flower species | `FLOWER_SP` + `FLOWER_H` + a `case` in `flowerHead` (55-town) |
 | Ground detail | Draw it in a `patternTex` in 31-ground. Don't add geometry. |
