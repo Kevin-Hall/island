@@ -35,6 +35,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 56-interiors | Enterable rooms: separate `roomScene`, furniture (`furn`), room tapping |
 | 57-villagers | Species, personalities, models (`npcModel`), routines, chat, wishes, friendship |
 | 58-crafting | `RECIPES`, crafting, consumables |
+| 61-player | Player looks (`LOOKS`, `applyLook`, `setLook`): the bunny or any `npcModel` species, in fur and outfit colours saved as `S.look`. The body is always `villager.children[0]`. |
 | 60–64 | Ambient life (villager, boat, gulls, particles); time of day and offline simulation; synth audio |
 | 71-tools | Tool bar and held tools (`TOOLS`, `equip`); `toolTap` decides what a tap does with the equipped tool; `actAt` walks up, faces the tile and swings |
 | 70–80 | UI helpers and items; farming actions (`tillAt`, `waterAt`, `tendAt`, `useFixed`) and drag-farming; finds, weeds, wild plants, bugs and crows; fishing; sailing and fast travel; orders |
@@ -71,6 +72,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | A palm type | A `case` in `treeParts` calling `palmParts` with options, and add it to `PALMS` (41-trees). Beaches get palms from `palmSpots`. |
 | A biome | `BIOMES` entry (colours, trees, names) + any new tree kinds in `treeParts` |
 | A tool | Entry in `TOOLS` + icon in `SPR` + held model in `HELD_PARTS` + a case in `toolTap` (and in `paintMode` for drag) (71-tools) |
+| A player look | Entry in `LOOKS` (61-player), plus a `case` in `npcModel` if it's a new species |
 | A sheet tab | A branch in `renderSheet` + data-attribute handlers in the `#sheetBody` click listener (82-sheets) |
 
 ## Performance rules

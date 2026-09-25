@@ -18,6 +18,7 @@ function frame(now){
       else if(!fishing){vil.idle+=dt;if(vil.idle>7+Math.random()*4){vil.idle=0;const isl=curIsl();if(isl){const tx=Math.round(vil.x+(Math.random()-0.5)*5),tz=Math.round(vil.z+(Math.random()-0.5)*5);
         if(islMap.get(K(tx,tz))===isl.id&&isLand(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)&&lineClear(vil.x,vil.z,tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}}}
     if(!S.sea){const ty=surfY(vil.x,vil.z)||0.15;if(ty-vil.y>0.3&&vil.hop<=0)vil.hop=0.4;vil.y=lerp(vil.y,ty,Math.min(1,dt*10));vil.hop=Math.max(0,vil.hop-dt);
+      if(playerLimbs)swingLimbs(playerLimbs,tt*11,d>0.04?0.7:0);
       villager.position.set(vil.x,vil.y+(d>0.04?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.4*Math.PI)*0.3*(vil.hop>0),vil.z);}
   }
   updateBoat(dt,tt);
@@ -70,7 +71,7 @@ syncObjs();rebuildSoil();if(!S.orders.length)makeOrders();syncLife();setRod();in
 let away=[];if(!isNew){const el=clamp((Date.now()-S.t)/1000,0,3*3600);if(el>5)away=simulate(el);}
 syncAllCrops();fitZoom();cam.tx=vil.x;cam.tz=vil.z;resize();
 try{makeThumbs();}catch(e){console.warn(e);}
-renderTools();showHeld();if(!S.tipTools){S.tipTools=1;setTimeout(()=>toast('Tap anywhere to walk. Pick a <b>tool</b> from the bar above the dock, then tap to dig, water, plant, chop, catch bugs or fish.','',ICON.shovel),5000);}shownShells=S.shells;$('shellTxt').textContent=fmt(S.shells);applyTime();updateHUD();
+applyLook();renderTools();showHeld();if(!S.tipTools){S.tipTools=1;setTimeout(()=>toast('Tap anywhere to walk. Pick a <b>tool</b> from the bar above the dock, then tap to dig, water, plant, chop, catch bugs or fish.','',ICON.shovel),5000);}shownShells=S.shells;$('shellTxt').textContent=fmt(S.shells);applyTime();updateHUD();
 window.addEventListener('resize',()=>{resize();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{const el=clamp((Date.now()-S.t)/1000,0,3*3600);if(el>5){const out=simulate(el);afterSim(out,'While you were away');}last=performance.now();}});
 window.addEventListener('pagehide',save);

@@ -22,7 +22,7 @@ if(/[?&]debug\b/.test(location.search)){
     fastTravel:id=>fastTravel(islands[id]),
     npcRouteOnLand:()=>{updateNpcBoat(0,0);const R=npcRoute;if(!R.pts)return -1;let n=0;for(let d=0;d<R.total;d+=0.25){R.d=d;updateNpcBoat(0,0);if(seaBlocked(Math.round(npcBoat.position.x),Math.round(npcBoat.position.z)))n++;}return n;},
     sailTo:id=>{const isl=islands[id];if(!S.sea){S.sea=true;const b=S.boat;vil.x=b.x;vil.z=b.z;}sailToIsland(isl);return !!sail;},
-    pick:(cx,cy)=>pick(cx,cy),beach:id=>{const i=islands[id],s=i.sand.filter(([x,z])=>{const c=SAND_CH.get(K(x,z));return c&&Math.min(...c)<0.1;});return s[Math.floor(s.length/3)]||i.sand[0];},tool:k=>{equip(k);return S.tool;},tile:(x,z)=>S.tiles[K(x,z)]||null,vil:()=>({x:vil.x,z:vil.z}),
+    pick:(cx,cy)=>pick(cx,cy),look:(sp,fur,shirt)=>{setLook(Object.assign({sp},fur?{fur}:{},shirt?{shirt}:{}));return S.look;},beach:id=>{const i=islands[id],s=i.sand.filter(([x,z])=>{const c=SAND_CH.get(K(x,z));return c&&Math.min(...c)<0.1;});return s[Math.floor(s.length/3)]||i.sand[0];},tool:k=>{equip(k);return S.tool;},tile:(x,z)=>S.tiles[K(x,z)]||null,vil:()=>({x:vil.x,z:vil.z}),
     boat:()=>({x:S.boat.x,z:S.boat.z,onLand:seaBlocked(Math.round(S.boat.x),Math.round(S.boat.z)),sailing:!!sail}),
   };
   console.info('Driftseed debug API ready: window.DS');

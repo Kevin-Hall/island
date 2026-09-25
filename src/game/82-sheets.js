@@ -2,21 +2,24 @@
    Thumbnails of 3D models for the shop
    ========================================================= */
 const THUMB={};
-function makeThumbs(){
-  const ts=new T.Scene();ts.add(new T.HemisphereLight(0xfff4e0,0x6a6a8a,0.8));const dl=new T.DirectionalLight(0xffffff,0.8);dl.position.set(3,6,5);ts.add(dl);
-  const tc=new T.OrthographicCamera(-1,1,1,-1,0.1,60);const size=48;const trt=new T.WebGLRenderTarget(size,size,{minFilter:T.NearestFilter,magFilter:T.NearestFilter});
-  const buf=new Uint8Array(size*size*4);const cv=document.createElement('canvas');cv.width=cv.height=size;const cx=cv.getContext('2d');const img=cx.createImageData(size,size);
-  const snap=(g)=>{g.traverse(o=>{if(o.userData.noThumb)o.visible=false;});ts.add(g);const box=new T.Box3().setFromObject(g);const c=box.getCenter(new T.Vector3());const s=box.getSize(new T.Vector3());
-    const r=Math.max(s.x,s.y,s.z)*0.62;tc.left=-r;tc.right=r;tc.top=r;tc.bottom=-r;tc.position.set(c.x+2.2,c.y+1.55,c.z+2.2);/* close in, so the world-curve shader doesn't bend small items out of frame */tc.lookAt(c);tc.updateProjectionMatrix();tc.updateMatrixWorld();
-    const old=glowMat.emissiveIntensity;glowMat.emissiveIntensity=0.4;renderer.setRenderTarget(trt);renderer.setClearColor(0x000000,0);renderer.clear();renderer.render(ts,tc);
-    renderer.readRenderTargetPixels(trt,0,0,size,size,buf);renderer.setRenderTarget(null);glowMat.emissiveIntensity=old;ts.remove(g);
-    for(let y=0;y<size;y++)for(let x=0;x<size;x++){const si=((size-1-y)*size+x)*4,di=(y*size+x)*4;img.data[di]=buf[si];img.data[di+1]=buf[si+1];img.data[di+2]=buf[si+2];img.data[di+3]=buf[si+3];}
-    cx.putImageData(img,0,0);return cv.toDataURL();};
+// renders a model to a small transparent PNG (data URL), from a close 3/4 view so the world-curve shader doesn't bend it
+let thumbRig=null;
+function snapThumb(g,size=48){
+  if(!thumbRig||thumbRig.size!==size){if(thumbRig)thumbRig.trt.dispose();const ts=new T.Scene();ts.add(new T.HemisphereLight(0xfff4e0,0x6a6a8a,0.8));const dl=new T.DirectionalLight(0xffffff,0.8);dl.position.set(3,6,5);ts.add(dl);
+    const cv=document.createElement('canvas');cv.width=cv.height=size;const cx=cv.getContext('2d');
+    thumbRig={size,ts,tc:new T.OrthographicCamera(-1,1,1,-1,0.1,60),trt:new T.WebGLRenderTarget(size,size,{minFilter:T.NearestFilter,magFilter:T.NearestFilter}),buf:new Uint8Array(size*size*4),cv,cx,img:cx.createImageData(size,size)};}
+  const {ts,tc,trt,buf,cv,cx,img}=thumbRig;
+  g.traverse(o=>{if(o.userData.noThumb)o.visible=false;});ts.add(g);const box=new T.Box3().setFromObject(g);const c=box.getCenter(new T.Vector3());const s=box.getSize(new T.Vector3());
+  const r=Math.max(s.x,s.y,s.z)*0.62;tc.left=-r;tc.right=r;tc.top=r;tc.bottom=-r;tc.position.set(c.x+2.2,c.y+1.55,c.z+2.2);tc.lookAt(c);tc.updateProjectionMatrix();tc.updateMatrixWorld();
+  const old=glowMat.emissiveIntensity;glowMat.emissiveIntensity=0.4;renderer.setRenderTarget(trt);renderer.setClearColor(0x000000,0);renderer.clear();renderer.render(ts,tc);
+  renderer.readRenderTargetPixels(trt,0,0,size,size,buf);renderer.setRenderTarget(null);renderer.setClearColor(0x000000,1);glowMat.emissiveIntensity=old;ts.remove(g);
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){const si=((size-1-y)*size+x)*4,di=(y*size+x)*4;img.data[di]=buf[si];img.data[di+1]=buf[si+1];img.data[di+2]=buf[si+2];img.data[di+3]=buf[si+3];}
+  cx.putImageData(img,0,0);return cv.toDataURL();}
+function makeThumbs(){const snap=g=>snapThumb(g,48);
   for(const k in BUILD)THUMB[k]=snap(objGroup(k,3,0));
   for(let i=0;i<4;i++)THUMB['house'+i]=snap(houseGroup(i));
   const isl=new T.Group();for(let x=-3;x<=3;x++)for(let z=-3;z<=3;z++){const d=Math.hypot(x*0.9,z);if(d<3.4){const m=new T.Mesh(BOX,toon({color:d<2.2?0x6aa843:0xe9d3a4}));m.scale.set(1,d<2.2?1:0.8,1);m.position.set(x,0,z);isl.add(m);}}
   isl.add(objGroup('pine',2).translateX(-0.5).translateY(0.5));THUMB.land=snap(isl);
-  trt.dispose();renderer.setClearColor(0x000000,1);
 }
 
 /* =========================================================
@@ -107,7 +110,13 @@ function renderSheet(){
       let got=0,tot=0;if(!isl.home){for(const k in PLANTS)if(PLANTS[k].bio.includes(bio)){tot++;if(S.alm['p:'+k])got++;}for(const k in BUGS)if(BUGS[k].bio.includes(bio)){tot++;if(S.alm['b:'+k])got++;}}
       h+=`<button class="card" data-isle="${isl.id}"><img class="px" src="${isl.home?ICON.sprout:ICON.chart}" alt=""><span class="grow"><span class="nm">${isl.name}</span><br><span class="sub">${isl.home?'Your island':BIOMES[bio].name+' island'} · ${d<4?'you are here':d+' leagues away'}${tot?` · ${got}/${tot} local plants & bugs`:''}</span></span></button>`;}
     h+='</div>';}
+  else if(sheet.kind==='look'){$('sheetTitle').textContent='Your look';tabs([]);const L=S.look;
+    h+=`<div class="looks">${Object.keys(LOOKS).map(sp=>`<button class="lk ${L.sp===sp?'on':''}" data-look="${sp}"><img src="${lookThumb(sp,sp===L.sp?L.fur:LOOKS[sp].fur[0],L.shirt)}" alt=""><span>${LOOKS[sp].name}</span></button>`).join('')}</div>`;
+    h+=`<h3 class="sech">${L.sp==='duck'||L.sp==='penguin'?'Feathers':L.sp==='frog'?'Skin':'Fur'}</h3><div class="swatches">${LOOKS[L.sp].fur.map(c=>`<button class="sw ${L.fur===c?'on':''}" data-fur="${c}" style="--sw:${hexCss(c)}" aria-label="Colour"></button>`).join('')}</div>`;
+    h+=`<h3 class="sech">Outfit</h3><div class="swatches">${OUTFITS.map(c=>`<button class="sw ${L.shirt===c?'on':''}" data-shirt="${c}" style="--sw:${hexCss(c)}" aria-label="Outfit colour"></button>`).join('')}</div>`;
+    h+=`<p class="note">Changes show on your villager right away, and you can switch any time from the Island menu.</p>`;}
   else if(sheet.kind==='settings'){$('sheetTitle').textContent='Island';tabs([]);const b=LV[lv];
+    h+=`<button class="card lookrow" data-openlook="1"><img src="${lookThumb(S.look.sp,S.look.fur,S.look.shirt)}" alt=""><span class="grow"><span class="nm">Your look</span><br><span class="sub">${LOOKS[S.look.sp]?.name||'Bunny'} · tap to change animal and colours</span></span></button>`;
     h+=`<div class="stat"><span>Level <b>${lv}</b></span><span>${b?`<b>${fmt(b-S.xp)}</b> XP to next`:'max level'}</span><span>Day <b>${S.day}</b></span><span><b>${fmt(S.earned)}</b> shells earned</span></div>`;
     h+=`<div class="setrow"><span>Sound</span><span class="seg"><button data-snd="1" class="${S.sound?'on':''}">On</button><button data-snd="0" class="${S.sound?'':'on'}">Off</button></span></div>`;
     h+=`<div class="setrow"><span>Music</span><span class="seg"><button data-mus="1" class="${S.music!==false?'on':''}">On</button><button data-mus="0" class="${S.music===false?'on':''}">Off</button></span></div>`;
@@ -147,6 +156,8 @@ $('sheetBody').addEventListener('input',e=>{if(e.target.id==='devHour'){const pr
 $('sheetTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;sheet.tab=b.dataset.tab;SFX.ui();renderSheet();});
 $('sheetBody').addEventListener('click',e=>{
   const el=e.target.closest('button');if(!el||el.disabled)return;const d=el.dataset;
+  if(d.openlook){openSheet('look');return;}
+  if(d.look){setLook({sp:d.look});renderSheet();return;}if(d.fur){setLook({fur:+d.fur});renderSheet();return;}if(d.shirt){setLook({shirt:+d.shirt});renderSheet();return;}
   if(d.seed){S.seed=d.seed;S.tool='seeds';SFX.ui();updateHUD();renderTools();showHeld();closeSheet();return;}
   if(d.pick){sheet.sel=d.pick;SFX.ui();renderSheet();return;}
   if(d.craft!==undefined){craft(Number(d.craft));renderSheet();return;}

@@ -60,6 +60,17 @@ img.px{image-rendering:crisp-edges;image-rendering:pixelated}
 .tool:active{transform:scale(.9)}
 @media (max-width:370px){.tools{gap:3px}.tool{width:37px;height:37px}}
 
+/* ---------- Look picker ---------- */
+.looks{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.lk{display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--paper);border-radius:18px;padding:6px 2px 7px;box-shadow:0 2px 0 var(--line);font-size:13px;font-weight:600;color:var(--ink2)}
+.lk img{width:64px;height:64px;image-rendering:pixelated}
+.lk.on{background:#fbe39a;box-shadow:0 0 0 2.5px #e0a93a}
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.sw{width:38px;height:38px;border-radius:50%;background:var(--sw);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15),0 2px 0 var(--line);border:3px solid var(--paper)}
+.sw.on{box-shadow:0 0 0 3px #e0a93a}
+.lookrow{width:100%;margin-bottom:12px}
+.lookrow img{image-rendering:pixelated}
+
 /* ---------- Context buttons ---------- */
 .ctx{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 156px);
   display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;width:max-content;max-width:calc(100vw - 32px);pointer-events:none}

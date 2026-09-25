@@ -3,6 +3,7 @@
 A tiny 3D pixel-art island farming game. Open `index.html` in any modern browser (works great on iPhone).
 
 - **Tap to walk, tools to act:** tap anywhere to walk there. Pick a tool from the tool bar (hands, shovel, watering can, seeds, axe, net, fishing rod), and a tap walks you over and uses it. The shovel digs soil and breaks rocks, the axe chops trees and stumps for wood, the net catches bugs and the rod fishes. Long-press and drag repeats the tool across tiles. Keys 1–7 switch tools on desktop.
+- **Your look:** play as a bunny, cat, fox, dog, bear, frog, duck or penguin, in your choice of fur and outfit colour. Tap the level chip, then **Your look**.
 - **Farm:** dig with the shovel, plant with seeds, water with the can, and harvest ripe crops with any tool.
 - **25 crops:** turnip, radish, carrot, lettuce, red onion, potato, cabbage, strawberry, wheat, sweet peas, bell pepper, tomato, tulip, sunflower, corn, eggplant, blueberry, pumpkin, lavender, watermelon, moonflower, grapes, peach, starfruit and night-blooming dragon fruit. They unlock as you level up.
 - **Farm field:** across a wooden bridge west of home lies a big flat field, overgrown with weeds, twigs, bushes, rocks, stumps and boulders. Tap them to clear the land (stumps and boulders take several hits). Clearing gives wood, stone and fiber, plus the odd old coin or seed packet. A few weeds and twigs creep back each morning.

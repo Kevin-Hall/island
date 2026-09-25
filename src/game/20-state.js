@@ -4,7 +4,7 @@
 const SAVE_KEY='driftseed-town-v1'; // the town branch keeps its own save so it never touches the main game's
 function freshState(){
   return {v:1,shells:150,xp:0,day:1,hour:7.2,land:0,house:0,tiles:{},objs:[],store:{},inv:{},alm:{},almR:{},
-    seed:'turnip',rain:false,demand:'carrot',sound:true,pxAdj:0,nextId:1,t:Date.now(),mode:'farm',tool:'hand',tipTools:0,tipSeed:0,tut:0,harvested:0,earned:0,
+    seed:'turnip',rain:false,demand:'carrot',sound:true,pxAdj:0,nextId:1,t:Date.now(),mode:'farm',look:{sp:'bunny',fur:0xf6f3ee,shirt:0xd8453a},tool:'hand',tipTools:0,tipSeed:0,tut:0,harvested:0,earned:0,
     finds:[],weeds:[],free:{},orders:[],ordBonus:0,rod:0,can:0,rec:{},npc:{},shook:{},wv:0,farmInit:0,debris:[],farmClear:0,tipPaint:0,
     worldSeed:Math.floor(Math.random()*1e9),sea:false,px:0.3,pz:2.1,boat:null,disc:{0:1},picked:{},dexR:{},boatTip:0};
 }
