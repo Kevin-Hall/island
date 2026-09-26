@@ -4,9 +4,9 @@ roomScene.add(new T.HemisphereLight(0xfff4e0,0x6a5a7a,0.55));{const d=new T.Dire
 const roomLamp=new T.PointLight(0xffd8a0,0.5,14);roomLamp.position.set(0,2.3,0.4);roomScene.add(roomLamp);
 const roomCam=new T.PerspectiveCamera(40,1,NEAR,FAR);const roomWinMat=new T.MeshBasicMaterial({color:0x9fd4ff});
 let inside=null;
-const ROOM_STYLE={peppy:{wall:0xf6d0e0,trim:0xf2a6c8,floor:[0xf4e4c8,0xe8d4b4],rug:0xf39ab0},lazy:{wall:0xd8e8c8,trim:0x9ac080,floor:[0xc89a6a,0xb88a5a],rug:0xf6d04a},
-  cranky:{wall:0xd8c8b0,trim:0x7a5a3a,floor:[0x8a6040,0x7a5236],rug:0x8a3a3a},jock:{wall:0xc8d8f0,trim:0x5a8ae0,floor:[0xc8a878,0xb89868],rug:0xd8453a},
-  normal:{wall:0xf6ecd8,trim:0xd8b088,floor:[0xd8b088,0xc8a078],rug:0x9ad0a0},snooty:{wall:0xe8dcf4,trim:0x9a6ad0,floor:[0xf4f0ea,0x3a3440],rug:0x6a3a9a},
+const ROOM_STYLE={sailor:{wall:0xdce8f2,trim:0x2f4f7a,floor:[0xb8905e,0xa8804e],rug:0x2f4f7a},dreamer:{wall:0xe4dcf4,trim:0x8a7ac8,floor:[0xe8dcc8,0xdccfb8],rug:0x9a8ad8},
+  tinkerer:{wall:0xe8dcc4,trim:0x8a5a2a,floor:[0x8a6040,0x7a5236],rug:0xd8903a},homebody:{wall:0xf6ecd8,trim:0xd8b088,floor:[0xd8b088,0xc8a078],rug:0x9ad0a0},
+  explorer:{wall:0xdcecd8,trim:0x5a8a5a,floor:[0xc8a878,0xb89868],rug:0xd86a3a},scholar:{wall:0xe8d8c8,trim:0x6a3a3a,floor:[0x7a5236,0x6a4428],rug:0x8a3a4a},
   home:{wall:0xf6ead0,trim:0xc8905a,floor:[0xc8905a,0xb8804a],rug:0x5fae44}};
 function furn(k,c){const p=[],gl=[];
   switch(k){
@@ -47,7 +47,7 @@ function buildRoom(kind,n){if(kind==='museum')return buildMuseum();const st=ROOM
   if(kind==='home'){put('bed',-L,B+0.4,0,'bed',0x5a8ae0);put('workbench',L,B,0,'workbench');put('table',0.3,0.3,0,'table');put('chair',-0.4,0.3,1.57,'chair',0xc8905a);put('lamp',-L,1.2,0,'lamp');put('plant',L,1.3,0,'plant');
     if(S.house>=2)put('fireplace',0,B-0.1,0,'fireplace');if(S.house>=1)put('fishtank',L,0.2,-1.57,'fish tank');}
   else{const P0=n.pers;put('bed',-L,B+0.4,0,'bed',st.rug);put('lamp',L,B,0,'lamp');put('table',0.4,0.4,0,'table');put('chair',-0.35,0.4,1.57,'chair',st.trim);put('plant',-L,1.4,0,'plant');
-    const extra={peppy:['stereo','vanity'],lazy:['tv','beanbag'],cranky:['armchair','shelf'],jock:['weights','bag'],normal:['counter','shelf'],snooty:['piano','vanity']}[P0];
+    const extra={sailor:['fishtank','armchair'],dreamer:['stereo','beanbag'],tinkerer:['workbench','shelf'],homebody:['counter','fireplace'],explorer:['bag','tv'],scholar:['shelf','piano']}[P0];
     put(extra[0],L-0.2,0.9,-1.57,extra[0],st.rug);put(extra[1],0.2,B,0,extra[1],st.rug);}
   const g=new T.Group();g.add(M(p));if(gl.length){const m=M(gl,glowMat);m.castShadow=false;g.add(m);}g.add(win);return{g,props,RW,RD};}
 function enterHouse(kind,b,n){if(inside)return;$('fade').classList.add('on');SFX.ui();
@@ -55,9 +55,9 @@ function enterHouse(kind,b,n){if(inside)return;$('fade').classList.add('on');SFX
     let who=null;if(n&&(n.state==='home'||S.hour>=21||S.hour<6.5)){who=n.g.clone(true);who.visible=true;who.position.set(0.9,0,-0.2);who.rotation.y=0.4;r.g.add(who);}
     inside={kind,b,n,room:r,me,who,wl:who?limbsOf(who):null,ml:null,x:0,z:r.RD/2-0.8,tx:0,tz:r.RD/2-0.8,face:Math.PI,title:r.title||(kind==='home'?'Your '+HOUSES[S.house].toLowerCase():n.name+'’s house')};
     ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');
-    if(kind==='museum')setTimeout(()=>toast(`Hoo! Welcome to the ${TOWN.name} Museum. Tap an exhibit to learn about it, or tap me for a chat.`,'',ICON.dex),350);
-    else if(kind==='vh'&&!who)toast(`${n.name} is out. You peek around the cosy ${n.pers==='snooty'?'parlour':'room'}.`);
-    else if(who)setTimeout(()=>showTalk(n,`Oh! Welcome to my home! ${n.cp[0].toUpperCase()+n.cp.slice(1)}!`),350);},450);}
+    if(kind==='museum')setTimeout(()=>toast(`Grandpa Tully: “Welcome to the ${TOWN.name} Museum! Tap an exhibit to learn about it, or come chat with an old turtle.”`,'',ICON.dex),350);
+    else if(kind==='vh'&&!who)toast(`${n.name} is out. You peek around the cosy ${n.pers==='scholar'?'study':n.pers==='tinkerer'?'workshop':'room'}.`);
+    else if(who)setTimeout(()=>showTalk(n,`Oh! Welcome to my home! Make yourself comfortable.`),350);},450);}
 function leaveHouse(){if(!inside)return;$('fade').classList.add('on');SFX.ui();clearAction();
   setTimeout(()=>{roomScene.remove(inside.room.g);for(const c of inside.room.g.children)if(c.isMesh)c.geometry.dispose();inside=null;ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');},420);}
 function roomPoint(cx,cy){ndc.set(cx/window.innerWidth*2-1,-(cy/window.innerHeight)*2+1);ray.setFromCamera(ndc,roomCam);let y=0,pt=null;
@@ -72,8 +72,8 @@ function roomTap(cx,cy){const I=inside;if(I.who&&I.n){_pv.set(I.who.position.x,0
   if(pr){I.tx=clamp(pr.x+(pr.x<0?0.8:-0.8)*(Math.abs(pr.x)>1?1:0),-R.RW/2+0.35,R.RW/2-0.35);I.tz=clamp(pr.z+(Math.abs(pr.x)>1?0:0.8),-R.RD/2+0.4,R.RD/2-0.3);
     if(pr.k==='workbench'){setTimeout(()=>openSheet('bag','craft'),250);}
     else if(pr.k==='bed'&&I.kind==='home'){if(S.hour>=19||S.hour<5)setTimeout(()=>setAction('Snuggle in and sleep until morning?',[{label:'Sleep',cls:'go',fn:sleep},{label:'Not yet',fn:clearAction}],'Bed'),0);else toast('Not sleepy yet. Come back after 7 pm.');}
-    else{const T0={bed:'A cosy bed with a patchwork quilt.',table:'Tea for two, and a shiny red apple.',lamp:'It glows warmly.',plant:'Lovingly watered.',tv:'It’s showing a nature documentary about sea bass.',beanbag:'Squishy. Dangerously comfy.',
-      armchair:'A well-worn favourite.',shelf:'Books, books and more books.',weights:'Heavy! Very heavy.',bag:'Thwump!',counter:'Something smells delicious.',piano:'You play a little tune. ♪',stereo:'K.K.-style tunes are playing softly.',
+    else{const T0={bed:'A cosy bed with a patchwork quilt.',table:'Tea for two, and a shiny red apple.',lamp:'It glows warmly.',plant:'Lovingly watered.',tv:'It’s showing a documentary about deep-sea lanternfish.',beanbag:'Squishy. Dangerously comfy.',
+      armchair:'A well-worn favourite.',shelf:'Books, books and more books.',weights:'Heavy! Very heavy.',bag:'Thwump!',counter:'Something smells delicious.',piano:'You play a little tune. ♪',stereo:'An old sea shanty crackles from the speakers.',
       vanity:'You look fabulous.',fireplace:'Crackle, crackle.',fishtank:'Two little fish wave hello.',dresser:'Full of neatly folded clothes.',chair:'A sturdy chair.'};
       toast(T0[pr.k]||'Nice!');if(pr.k==='piano'){tone(523,0.2,'triangle',0.05);setTimeout(()=>tone(659,0.2,'triangle',0.05),180);setTimeout(()=>tone(784,0.3,'triangle',0.05),360);}}}}
 function updateRoom(dt,tt){const I=inside;if(!I)return;const dx=I.tx-I.x,dz=I.tz-I.z,d=Math.hypot(dx,dz);const walking=d>0.04;

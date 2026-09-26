@@ -34,8 +34,8 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 50-objects | Decor, house and bin models (`objGroup`, `houseGroup`, `roof`) |
 | 55-town | Town layout (`layoutTown`): plaza, paths, buildings, lamps, trees, flower species, gathering |
 | 56-interiors | Enterable rooms: separate `roomScene`, furniture (`furn`), room tapping |
-| 59-museum | The walk-in museum (`buildMuseum`): fish tanks, butterfly garden, bug terrariums and a centrepiece, all filled from `S.alm`; Professor Hoot the curator; the outdoor showcase (`refreshMuseumShow`) |
-| 57-villagers | Species, personalities, models (`npcModel`), routines, chat, wishes, friendship |
+| 59-museum | The walk-in museum (`buildMuseum`): fish tanks, butterfly garden, bug terrariums and a centrepiece, all filled from `S.alm`; Grandpa Tully the sea-turtle curator; the outdoor showcase (`refreshMuseumShow`) |
+| 57-villagers | Species (`SPECIES` names and colours, `BODY` build, snout, ears and tail), personalities (`PERS`: sailor, dreamer, tinkerer, homebody, explorer, scholar) and what they wear (`STYLE`), models (`npcModel` with outfits and headwear), faces (`setFace`: blink, happy, talk), routines, chat, wishes, friendship |
 | 58-crafting | `RECIPES`, crafting, consumables |
 | 61-player | Player looks (`LOOKS`, `applyLook`, `setLook`): the bunny or any `npcModel` species, in fur and outfit colours saved as `S.look`. The body is always `villager.children[0]`. |
 | 60–64 | Ambient life (villager, boat, gulls, particles); time of day and offline simulation; synth audio |
@@ -67,7 +67,8 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | A bug or wild plant | Entry in `BUGS`/`PLANTS` (a model `kind` is already handled in `bugGroup`/`plantGroup`, 74-life) |
 | Decor | Entry in `BUILD` (add `craft:true` for craft-only) → `case` in `objGroup` + tap height in `OBJ_H` (50-objects). The thumbnail is generated automatically. |
 | A recipe | Push onto `RECIPES` (58-crafting). Inputs are item keys: `m:` material, `c:` crop (any variant), `f:`/`b:`/`p:`/`g:` catch and finds. |
-| A villager species or personality | `SPECIES` / `PERS` + a `case` in `npcModel` (57-villagers) |
+| A villager species | `SPECIES` (names, colours) + `BODY` (build, head, ears, snout, tail): the model is assembled from those (57-villagers) |
+| A personality | `PERS` (label, sign-offs, lines, hobby) + `STYLE` (outfits, accessories) + `ROOM_STYLE` and furniture in `buildRoom` (56-interiors) |
 | A room with its own camera | Return `follow:true` (and optionally `tick`, `title`) from the room builder; `updateRoom` follows the player and runs `tick` each frame. Props with `info` run it when tapped. |
 | Furniture | A `case` in `furn` + a `put()` in `buildRoom` (56-interiors) |
 | A flower species | `FLOWER_SP` + `FLOWER_H` + a `case` in `flowerHead` (55-town) |

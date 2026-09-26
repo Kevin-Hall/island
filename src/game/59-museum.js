@@ -2,7 +2,7 @@
    The museum: a hall you can walk around in, filled with what you've caught.
    Left wing: aquarium tanks where your fish swim (river, shore & open sea, deep sea).
    Right wing: a glass butterfly garden for flying bugs and terrariums for crawlers.
-   Centre: your biggest catch on a spotlit plinth, and Professor Hoot the owl curator by the door.
+   Centre: your biggest catch on a spotlit plinth, and Grandpa Tully, the old sea-turtle curator, by the door.
    Outside (musShow): aquarium windows with a few of your fish, and your butterflies around the planters.
    ========================================================= */
 const musGlass=new T.MeshLambertMaterial({color:0xd8f4ff,transparent:true,opacity:0.16,depthWrite:false});
@@ -12,17 +12,22 @@ const caughtFish=()=>Object.keys(FISH).filter(k=>S.alm['f:'+k]&&!FISH[k].junk);
 const caughtBugs=()=>Object.keys(BUGS).filter(k=>S.alm['b:'+k]);
 const TANKS=[{name:'River & Pond',hab:['river'],x:-4.95,z:-1.9,w:1.1,d:2.6},{name:'Shore & Open Sea',hab:['shore','any'],x:-4.95,z:1.3,w:1.1,d:2.6},{name:'Deep Sea',hab:['deep'],x:-2.9,z:-3.85,w:3.0,d:1.1}];
 const TANK_H=1.35,TANK_Y=0.5;
-function owlModel(){const p=[],br=0x8a6040,lt=0xd8b888;
-  p.push(P(ICO2,br,0,0.42,0,0,0,0,0.56,0.62,0.5),P(ICO2,lt,0,0.36,0.16,0,0,0,0.36,0.42,0.24),P(ICO2,br,0,0.86,0,0,0,0,0.52,0.44,0.46));
-  for(const sd of [-1,1])p.push(P(ICO2,0xfbf8f0,sd*0.11,0.88,0.19,0,0,0,0.18,0.18,0.06),P(ICO2,0x2b1e2e,sd*0.11,0.88,0.225,0,0,0,0.08,0.09,0.03),P(ICO2,0xffffff,sd*0.09,0.905,0.24,0,0,0,0.03,0.03,0.01),
-    P(CONE4,br,sd*0.17,1.1,0,0,0.785,sd*-0.35,0.08,0.16,0.06),P(ICO2,br,sd*0.27,0.46,0,0,0,sd*0.4,0.12,0.36,0.24),P(ICO2,0xe0a040,sd*0.08,0.12,0.12,0,0,0,0.1,0.05,0.12),
-    P(CYL12,0xc8a060,sd*0.11,0.88,0.225,1.57,0,0,0.2,0.01,0.2));
-  p.push(P(CONE4,0xe0a040,0,0.8,0.23,1.9,0.785,0,0.06,0.1,0.06),P(BOX,0x4a8a4a,0,0.66,0.2,0,0,0,0.2,0.07,0.04),P(ICO2,0x3a7a3a,0,0.66,0.22,0,0,0,0.06,0.06,0.04));
+// Grandpa Tully, the museum's curator: a very old sea turtle in spectacles and a knitted scarf
+function turtleModel(){const p=[],sk=0x7ab87a,skd=0x5a9a5e,sh=0x3f7a4e,shl=0x6aa86a;
+  p.push(P(ICO2,sh,0,0.56,-0.1,0,0,0,0.62,0.7,0.42),P(ICO2,0x2f5e3c,0,0.5,-0.12,0,0,0,0.66,0.52,0.4),P(ICO2,0xe8d8a0,0,0.52,0.08,0,0,0,0.44,0.58,0.26));
+  for(const [x,y] of [[0,0.66],[-0.16,0.5],[0.16,0.5],[-0.1,0.8],[0.1,0.8],[0,0.4]])p.push(P(ICO2,shl,x,y,-0.3,0,0,0,0.16,0.14,0.06));
+  for(let i=0;i<3;i++)p.push(P(BOX,0xd0c088,0,0.36+i*0.14,0.2,0,0,0,0.3-i*0.03,0.012,0.02));
+  p.push(P(CYL8,sk,0,0.9,0.02,0,0,0,0.16,0.14,0.16),P(ICO2,sk,0,1.04,0.06,0,0,0,0.38,0.32,0.36),P(ICO2,skd,0,0.97,0.2,0,0,0,0.2,0.1,0.1));
+  for(const sd of [-1,1])p.push(P(ICO2,0xfbf8f0,sd*0.1,1.08,0.21,0,0,0,0.1,0.1,0.05),P(ICO2,0x2b1e2e,sd*0.1,1.08,0.235,0,0,0,0.05,0.06,0.02),
+    P(CYL12,0xc8a060,sd*0.1,1.08,0.24,1.57,0,0,0.15,0.01,0.15),P(ICO2,sk,sd*0.3,0.62,0.02,0,0,sd*0.7,0.12,0.34,0.1),P(ICO2,skd,sd*0.13,0.14,0.04,0,0,0,0.16,0.1,0.2));
+  p.push(P(BOX,0xc8a060,0,1.09,0.245,0,0,0,0.06,0.01,0.01),P(BOX,0x3a2a2a,0,0.97,0.25,0,0,0,0.1,0.015,0.01),P(ICO2,0xf39ab0,-0.14,1.0,0.21,0,0,0,0.05,0.03,0.02),P(ICO2,0xf39ab0,0.14,1.0,0.21,0,0,0,0.05,0.03,0.02));
+  p.push(P(CYL12,0xd8604a,0,0.86,0.02,0,0,0,0.3,0.08,0.28),P(BOX,0xd8604a,0.1,0.72,0.16,0.2,0,0.2,0.08,0.22,0.03),P(BOX,0xf4f0ea,0.1,0.64,0.175,0.2,0,0.2,0.08,0.03,0.03));
   const g=new T.Group();g.add(M(p));return g;}
-const HOOT_LINES=['Hoo! Welcome, welcome! Every creature you donate finds a home here.','Did you know some fish only bite in the rain? Fascinating… hoo!',
-  'The butterflies are my favourite. Please don’t tell the fish.','I must confess: I’m not fond of bugs. But I adore how happy they make our visitors!','Keep exploring! The far islands hide the rarest specimens.'];
-function hootTalk(){const [g,t]=dexCount();setAction(`<b>Professor Hoot</b><br>${pickR(HOOT_LINES)}<br><span class="sub">Collection: ${g} of ${t} discovered.</span>`,
-  [{label:'Islandex',cls:'go',fn:()=>{clearAction();openSheet('dex','fish');}},{label:'Bye!',fn:clearAction}],'Curator');tone(660,0.1,'triangle',0.04);setTimeout(()=>tone(520,0.14,'triangle',0.04),110);}
+const TULLY_LINES=['Welcome, welcome! Take your time. I’ve had two hundred years; you can have an afternoon.','When I was a hatchling these islands had no names. Now look at them.',
+  'Every fish you bring swims a little happier here. I like to think so, anyway.','The butterflies keep me young. Well. Younger.','I’ve collected shells since before your grandparents’ grandparents. Never found a matching pair.',
+  'The sea brings everything home in the end. Driftwood, bottles, curious visitors…','Slow and steady fills a museum, my friend.'];
+function tullyTalk(){const [g,t]=dexCount();setAction(`<b>Grandpa Tully</b><br>${pickR(TULLY_LINES)}<br><span class="sub">Collection: ${g} of ${t} discovered.</span>`,
+  [{label:'Islandex',cls:'go',fn:()=>{clearAction();openSheet('dex','fish');}},{label:'Bye!',fn:clearAction}],'Curator');tone(330,0.18,'triangle',0.04);setTimeout(()=>tone(262,0.22,'triangle',0.04),160);}
 function buildMuseum(){const RW=11,RD=9,WH=3.2,p=[],gl=[],lit=[],glass=[],water=[],anim=[],props=[{x:0,z:RD/2-0.35,w:1.2,d:0.6,label:'exit'}];
   const g=new T.Group(),BLUE=0x355f8a,GREEN=0x4a7a4a,CREAM=0xf2e6cc,GOLD=0xd8b050,WOODD=0x6a4428;
   // floor: marble checks with a red carpet running up to the centrepiece
@@ -33,9 +38,9 @@ function buildMuseum(){const RW=11,RD=9,WH=3.2,p=[],gl=[],lit=[],glass=[],water=
   wall(-3.35,-RD/2-0.05,4.3,0.1,BLUE);wall(3.35,-RD/2-0.05,4.3,0.1,GREEN);wall(0,-RD/2-0.05,2.4,0.1,CREAM);wall(-RW/2-0.05,0,0.1,RD,BLUE);wall(RW/2+0.05,0,0.1,RD,GREEN);
   for(const [x,z,w,d] of [[0,-RD/2+0.01,RW,0.04],[-RW/2+0.01,0,0.04,RD],[RW/2-0.01,0,0.04,RD]])p.push(P(BOX,GOLD,x,0.1,z,0,0,0,w,0.2,d),P(BOX,GOLD,x,WH-0.08,z,0,0,0,w,0.12,d));
   for(let i=0;i<9;i++)p.push(P(ICO2,0x5a8ac0,-5.3+i*0.5,2.5,-RD/2+0.02,0,0,0,0.3,0.14,0.02),P(ICO2,0x6aa06a,1.3+i*0.5,2.5,-RD/2+0.02,0,0,0,0.26,0.16,0.02));
-  // back arch with the museum crest: an owl in a gold roundel
+  // back arch with the museum crest: a turtle shell in a gold roundel
   p.push(P(BOX,0xe8d8b8,-1.1,1.4,-RD/2+0.08,0,0,0,0.2,2.8,0.12),P(BOX,0xe8d8b8,1.1,1.4,-RD/2+0.08,0,0,0,0.2,2.8,0.12),P(CYL12,GOLD,0,2.55,-RD/2+0.06,1.57,0,0,0.9,0.04,0.9),P(CYL12,0x8a6040,0,2.55,-RD/2+0.09,1.57,0,0,0.7,0.04,0.7));
-  for(const sd of [-1,1])p.push(P(CYL12,0xfbf8f0,sd*0.13,2.6,-RD/2+0.12,1.57,0,0,0.2,0.02,0.2),P(CYL12,0x2b1e2e,sd*0.13,2.6,-RD/2+0.13,1.57,0,0,0.09,0.02,0.09));
+  for(const [x,y] of [[0,2.55],[-0.18,2.64],[0.18,2.64],[-0.18,2.46],[0.18,2.46],[0,2.74],[0,2.36]])p.push(P(CYL6,0x6aa86a,x,y,-RD/2+0.11,1.57,0,0,0.16,0.02,0.16));
   // columns along the carpet
   for(const x of [-1.5,1.5])for(const z of [-1.2,1.6]){p.push(P(CYL12,0xf4efe4,x,WH/2,z,0,0,0,0.34,WH,0.34),P(BOX,0xe0d8c8,x,0.08,z,0,0,0,0.46,0.16,0.46),P(BOX,0xe0d8c8,x,WH-0.1,z,0,0,0,0.46,0.16,0.46));}
   // ---- fish wing: tanks with sand, weed and rocks; your fish swim inside ----
@@ -77,8 +82,8 @@ function buildMuseum(){const RW=11,RD=9,WH=3.2,p=[],gl=[],lit=[],glass=[],water=
   // ---- the curator's desk by the door ----
   {const x=-2.7,z=2.9;p.push(P(BOX,0x8a5a3a,x,0.45,z,0,0,0,1.4,0.9,0.6),P(BOX,0xa8744a,x,0.92,z,0,0,0,1.5,0.06,0.7),P(BOX,0xd8453a,x+0.4,0.98,z,0,0.3,0,0.36,0.06,0.26),P(BOX,0xf4f0ea,x+0.4,1.02,z,0,0.3,0,0.3,0.02,0.22));
     lit.push(P(ICO2,0xfff0c0,x-0.5,1.2,z,0,0,0,0.16,0.14,0.16));p.push(P(CYL8,GOLD,x-0.5,1.02,z,0,0,0,0.04,0.2,0.04));
-    const owl=owlModel();owl.position.set(x,0.45,z-0.55);owl.rotation.y=0.5;g.add(owl);anim.push({m:owl,kind:'owl'});
-    props.push({x,z:z-0.3,w:1.6,d:1.2,label:'owl',info:hootTalk});}
+    const tully=turtleModel();tully.position.set(x,0.45,z-0.55);tully.rotation.y=0.5;g.add(tully);anim.push({m:tully,kind:'curator'});
+    props.push({x,z:z-0.3,w:1.6,d:1.2,label:'curator',info:tullyTalk});}
   // entrance mat and potted palms
   p.push(P(BOX,0x3a6a8a,0,0.01,RD/2-0.35,0,0,0,1.2,0.02,0.5));for(const x of [-1.2,1.2]){const f=furn('plant');p.push(...shift(f.p,x,0,RD/2-0.5,0));}
   g.add(M(p));if(gl.length)g.add(M(gl,glowMat));g.add(new T.Mesh(merge(lit),musLit));
@@ -90,7 +95,7 @@ function buildMuseum(){const RW=11,RD=9,WH=3.2,p=[],gl=[],lit=[],glass=[],water=
       if(Math.hypot(px-ox,pz-oz)>1e-4)m.rotation.y=Math.atan2(px-ox,pz-oz);const u=m.userData;if(u.wl){const f=Math.sin(tt*(u.drag?30:16)+a.ph)*(u.drag?0.4:0.9);u.wl.rotation.z=f;u.wr.rotation.z=-f;}}
     else if(a.kind==='crawl')m.rotation.y+=Math.sin(tt*0.8+a.ph)*0.004;
     else if(a.kind==='spin')m.rotation.y+=dt*0.5;
-    else if(a.kind==='owl')m.position.y=0.45+Math.abs(Math.sin(tt*1.5))*0.02;}};
+    else if(a.kind==='curator'){m.position.y=0.45+Math.abs(Math.sin(tt*1.2))*0.015;m.rotation.z=Math.sin(tt*0.8)*0.03;}}};
   return{g,props,RW,RD,follow:true,tick,title:`The ${TOWN.name} Museum`};}
 
 /* ---- outside: aquarium windows and butterflies around the planters, refreshed when the collection grows ---- */

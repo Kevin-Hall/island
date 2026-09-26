@@ -125,7 +125,7 @@ function townBuilding(b,R){const p=[],gl=[];let lit=true;
     for(let i=0;i<3;i++)p.push(P(BOX,i%2?ST2:0xe0d8c8,0,0.05+i*0.05,0.95-i*0.12,0,0,0,1.3-i*0.12,0.1+i*0.1,0.14));
     for(const x of [-0.78,-0.26,0.26,0.78])p.push(P(CYL12,0xf8f4ea,x,0.8,0.72,0,0,0,0.15,1.2,0.15),P(BOX,ST2,x,0.23,0.72,0,0,0,0.22,0.06,0.22),P(BOX,ST2,x,1.4,0.72,0,0,0,0.22,0.06,0.22));
     p.push(P(BOX,ST,0,1.5,0.62,0,0,0,2.1,0.12,0.5),P(PRISM,ST2,0,1.74,0.62,0,0,0,2.1,0.36,0.5),P(CYL12,GOLD,0,1.68,0.88,1.57,0,0,0.3,0.03,0.3),P(CYL12,0x8a6040,0,1.68,0.9,1.57,0,0,0.22,0.02,0.22));
-    for(const sd of [-1,1])p.push(P(CYL12,0xfbf8f0,sd*0.045,1.7,0.91,1.57,0,0,0.07,0.01,0.07));
+    for(const [x,y] of [[0,1.68],[-0.07,1.72],[0.07,1.72],[-0.07,1.64],[0.07,1.64]])p.push(P(CYL6,0x6aa86a,x,y,0.91,1.57,0,0,0.06,0.01,0.06));/* turtle-shell crest */
     // door and the two aquarium windows (your fish swim in front of the blue glass, see refreshMuseumShow)
     p.push(P(BOX,GOLD,0,0.56,0.41,0,0,0,0.5,0.8,0.02),P(BOX,0x5a3a2a,0,0.54,0.42,0,0,0,0.42,0.72,0.02),P(ICO2,GOLD,0.12,0.54,0.44,0,0,0,0.04,0.04,0.03));
     for(const x of [-0.62,0.62])p.push(P(BOX,GOLD,x,0.8,0.405,0,0,0,0.46,0.5,0.02),P(BOX,0x4aa0d0,x,0.8,0.41,0,0,0,0.4,0.44,0.02),P(BOX,0xe8d6a8,x,0.61,0.43,0,0,0,0.4,0.05,0.05));
