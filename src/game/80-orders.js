@@ -26,7 +26,7 @@ function ordersReady(){return S.orders.some(o=>!o.done&&orderHave(o)>=o.n);}
 let lifeT=4,bugT=2,crowT=40,slowT=0,shT=1;
 function updateLife(dt,tt){
   const isl=curIsl();
-  lifeT-=dt;if(lifeT<=0){lifeT=6;if(isl&&Math.random()<0.28)spawnFind(false,isl);if(Math.random()<0.2)spawnWeed();}
+  lifeT-=dt;if(lifeT<=0){lifeT=6;if(isl&&Math.random()<0.28)spawnFind(false,isl);if(isl&&!isl.home&&!restored(isl)&&Math.random()<0.05)spawnDriftseed(isl,false);if(Math.random()<0.2)spawnWeed();}
   bugT-=dt;if(bugT<=0){bugT=3+Math.random()*4;spawnBug();}
   shT-=dt;if(shT<=0){shT=2+Math.random()*3;spawnShadow();}
   crowT-=dt;if(crowT<=0){crowT=55+Math.random()*50;spawnCrow();}

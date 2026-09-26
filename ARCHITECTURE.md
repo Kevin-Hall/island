@@ -42,6 +42,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 60–64 | Ambient life (villager, boat, gulls, particles); time of day and offline simulation; synth audio |
 | 71-tools | Tool bar and held tools (`TOOLS`, `equip`); `toolTap` decides what a tap does with the equipped tool; `actAt` walks up, faces the tile and swings |
 | 70–80 | UI helpers and items; farming actions (`tillAt`, `waterAt`, `tendAt`, `useFixed`) and drag-farming; finds, weeds, wild plants, bugs and crows; fishing; sailing and fast travel; orders |
+| 79-voyage | The long-term loop: driftseeds wash ashore (`spawnDriftseed`); each wild island has a withered heart tree (`pickHeart`, `buildHeart`); planting 3 driftseeds restores the island (`S.restore`, `islandBiome` fades the grass until then), and a resident moves in with a daily trade (`residentTalk`, `tradeOf`). Tides (`updateTides`, `tideY`, `lowTide`) move the sea and uncover tide-pool finds |
 | 82-sheets | The bottom bar's menu (`showApps`) and bottom sheets: Pockets (inventory and crafting), shop, seeds, orders, Islandex, chart, settings |
 | 84-input | Tap, drag, pinch and picking (`pick`, `onTap`) |
 | 86–87 | New-game setup; atmosphere (foam, footprints, sky events, motes, music) |

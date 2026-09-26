@@ -51,8 +51,8 @@ function shapeBeach(isl){const d=new Map(),H=[0.03,0.17,TOP.sand,TOP.sand];let q
 function buildIsland(isl){
   if(isl.group){scene.remove(isl.group);isl.group.traverse(o=>{if(o.isInstancedMesh)o.dispose();else if(o.geometry&&!Object.values(RTILE).includes(o.geometry)&&o.geometry!==TILE_PLANE&&o.geometry!==BOX&&o.geometry!==POOL_GEO&&o.geometry!==BLADES)o.geometry.dispose();});}
   if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);riverSurf.delete(k);bridgeY.delete(k);}
-  const g=new T.Group();isl.group=g;isl.veg=[];isl.lowOn=false;isl.casters=null;isl.shadowOn=undefined;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
-  const span=Math.ceil(islR(isl)/0.62+3),B=BIOMES[isl.biome];
+  const g=new T.Group();isl.group=g;isl.heartG=null;isl.residentG=null;isl.flats=[];isl.veg=[];isl.lowOn=false;isl.casters=null;isl.shadowOn=undefined;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
+  const span=Math.ceil(islR(isl)/0.62+3),B=islandBiome(isl);
   for(let x=isl.home?Math.min(isl.cx-span,FARM.x-11):isl.cx-span;x<=isl.cx+span;x++)for(let z=isl.cz-span;z<=isl.cz+span;z++){
     const t=tileTypeI(isl,x,z);if(!t)continue;const k=K(x,z);
     if(landMap.has(k)&&islMap.get(k)!==isl.id)continue;
@@ -88,7 +88,7 @@ function buildIsland(isl){
   const shc=(x,z)=>{const t=landMap.get(K(x,z));return t==='s1'?1:t==='s2'?2:t?0:3;};
   const flat=(list,mat,y,lvl)=>{const groups=new Map();for(const [x,z] of list){let mask=0;CORNERS.forEach(([dx,dz],b)=>{if([shc(x+dx,z),shc(x,z+dz),shc(x+dx,z+dz)].every(v=>v>lvl))mask|=1<<b;});
       if(!groups.has(mask))groups.set(mask,[]);groups.get(mask).push([x,z]);}
-    const bk=makeBake();for(const [mask,l] of groups)for(const [x,z] of l)bk.add(rtileGeo(mask),x,y,z,1,0.002,1,0xffffff,null,()=>true);const m=bk.mesh(mat,false);if(m){m.receiveShadow=false;g.add(m);}};
+    const bk=makeBake();for(const [mask,l] of groups)for(const [x,z] of l)bk.add(rtileGeo(mask),x,y,z,1,0.002,1,0xffffff,null,()=>true);const m=bk.mesh(mat,false);if(m){m.receiveShadow=false;g.add(m);isl.flats.push(m);}};
   flat(a1,s1Mat,0.012,1);flat(a2,s2Mat,0.006,2);
   const blocked=new Set();
   if(isl.home){
@@ -112,6 +112,7 @@ function buildIsland(isl){
       for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++)if(dx*dx+dz*dz<=5)blocked.add(K(isl.cx+dx,isl.cz+dz));
       isl.vent=[isl.cx,3,isl.cz];
     }
+    pickHeart(isl,blocked);/* the withered heart tree (79-voyage) */
     const gr=shuffle(isl.grass.slice(),R),n=Math.round(gr.length*(isl.grand?0.08:0.15));
     let placed=0;for(const [x,z] of gr){if(placed>=n)break;if(blocked.has(K(x,z)))continue;
       tp.push(...shift(treeParts(B.trees[Math.floor(R()*B.trees.length)],R,B.rock),x+(R()-0.5)*0.3,topY(x,z),z+(R()-0.5)*0.3,R()*6.28));blocked.add(K(x,z));placed++;}
@@ -121,6 +122,7 @@ function buildIsland(isl){
         tp.push(...shift(treeParts(PALMS[Math.floor(R()*PALMS.length)],R,B.rock),x+(R()-0.5)*0.2,topY(x,z),z+(R()-0.5)*0.2,R()*6.28));blocked.add(K(x,z));}}
     if(parts.length)g.add(M(parts));addVeg(isl,g,tp);
     if(glowParts.length){const m=M(glowParts,lumMat);m.castShadow=false;g.add(m);}
+    buildHeart(isl);
     isl.spots=gr.filter(([x,z])=>!blocked.has(K(x,z))).slice(0,Math.max(5,Math.min(isl.grand?30:18,Math.round(gr.length*0.18))));
   }
   isl.blocked=blocked;

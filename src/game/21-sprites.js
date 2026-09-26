@@ -115,6 +115,9 @@ const FIND_SPR={
 'g:obsidianshard':['....V.....','...VkV....','..VkkVV...','.VkkVkkV..','.VkVkkkV..','..VkkkV...','...VVV....'],
 'g:amber':['...OO....','..OyyO...','.OyyyyO..','.OyBByO..','.OyyyyO..','..OyyO...','...OO....'],
 'g:frostshell':['.....ww.....','...wcwwcw...','..wcwcwcwc..','.wcwcwcwcww.','.wcwcwcwcwc.','..wcwcwcwc..','...wwwwww...'],
+'g:driftseed':['....cc....','...cwwc...','..cwccwc..','.cwcggcwc.','.ccgllgcc.','.cgllllgc.','..cgllgc..','...cggc...','....cc....'],
+'g:hermit':['...nnnn...','..nwwnnn..','.nwnnwnnn.','.nnwnnwnn.','..nnnnnn..','.oo.oo.oo.','o.oo..oo.o','.r.r..r.r.'],
+'g:anemone':['.p.p.p.p.','.p.p.p.p..','..ppppp...','.ppwppwp..','.ppppppp..','..mmmmm...','.mmmmmmm..'],
 'g:starfrag':['....y....','...ywy...','yyyywyyyy','.yywwwyy.','..yywyy..','.yy...yy.','y.......y'],
 'g:fossil':['...eeee...','..eWWWWe..','.eWeeeeWe.','.eWeWWeWe.','.eWeWeeWe.','.eWeeWWe..','..eWWe....','...ee.....']};
 for(const k in FIND_SPR)ICON[k]=sprite(FIND_SPR[k]);

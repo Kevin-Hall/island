@@ -51,6 +51,7 @@ function actAt(x,z,fn){const run=()=>{villager.rotation.y=Math.atan2(x-vil.x,z-v
   walkTo(x,z);vil.cb=run;}
 function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
   {const fd=findAt(x,z);if(fd){actAt(x,z,()=>collectFind(fd));return;}const pl=plantAt(x,z);if(pl){actAt(x,z,()=>pickPlant(pl));return;}}
+  if(isl&&!isl.home&&nearHeart(isl,x,z)){actAt(x,z,()=>heartTap(isl));return;}
   if(!isl||!isl.home){goTo(x,z);return;}
   // town trees and rocks: shake or chop a tree, break a rock with the shovel
   const res=fixedAt(x,z)==='decor'&&TOWN.res.get(k);

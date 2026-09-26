@@ -12,7 +12,7 @@ function updateFoam(tt){let n=0;_s.set(1,1,1);
   for(const isl of islands){if(!isl.edges)continue;const R=islR(isl)/0.62+30;if(Math.hypot(isl.cx-cam.tx,isl.cz-cam.tz)>R)continue;
     for(const e of isl.edges){if(n>=FOAMN)break;const dx=e[0]-cam.tx,dz=e[1]-cam.tz;if(dx*dx+dz*dz>1000)continue;
       const w=0.5+0.5*Math.sin(tt*1.3+e[4]),off=0.08+w*0.24;_e.set(0,Math.atan2(e[2],e[3]),0);_q.setFromEuler(_e);
-      _m.compose(_v.set(e[0]+e[2]*off,0.028,e[1]+e[3]*off),_q,_s.set(1,1,0.35+(1-w)*0.9));foamIM.setMatrixAt(n++,_m);}}
+      _m.compose(_v.set(e[0]+e[2]*off,0.028+tideY,e[1]+e[3]*off),_q,_s.set(1,1,0.35+(1-w)*0.9));foamIM.setMatrixAt(n++,_m);}}
   foamIM.count=n;foamIM.instanceMatrix.needsUpdate=true;foamMat.opacity=0.55+0.2*(1-nightF);}
 
 // --- footprints in the sand, dust and footsteps ---

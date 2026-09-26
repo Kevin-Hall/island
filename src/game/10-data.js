@@ -201,7 +201,7 @@ const FINDS={
   bottle:{name:'Message in a Bottle',price:0,w:3,bio:['any']},pearl:{name:'Pearl',price:450,w:1.5,bio:['any']},
   coral:{name:'Coral',price:120,w:10,bio:['tropic']},obsidianshard:{name:'Obsidian',price:160,w:10,bio:['volcano']},
   amber:{name:'Amber',price:700,w:2.5,bio:['pine','autumn']},frostshell:{name:'Frost Shell',price:140,w:10,bio:['snow']},
-  fossil:{name:'Fossil',price:1500,w:0.8,bio:['any']},starfrag:{name:'Star Fragment',price:1000,w:0,bio:['home']},feather:{name:'Crow Feather',price:25,w:0,bio:['home']},
+  fossil:{name:'Fossil',price:1500,w:0.8,bio:['any']},driftseed:{name:'Driftseed',price:0,w:0,bio:['any']},hermit:{name:'Hermit Crab',price:90,w:0,bio:['any']},anemone:{name:'Sea Anemone',price:120,w:0,bio:['any']},starfrag:{name:'Star Fragment',price:1000,w:0,bio:['home']},feather:{name:'Crow Feather',price:25,w:0,bio:['home']},
 };
 const RODS=[{name:'Bamboo Rod'},{name:'Sturdy Rod',cost:900,lvl:3},{name:'Golden Rod',cost:6000,lvl:7}];
 const CANS=[{name:'Tin Can'},{name:'Copper Can',cost:700,lvl:2}];

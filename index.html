@@ -513,7 +513,7 @@ const FINDS={
   bottle:{name:'Message in a Bottle',price:0,w:3,bio:['any']},pearl:{name:'Pearl',price:450,w:1.5,bio:['any']},
   coral:{name:'Coral',price:120,w:10,bio:['tropic']},obsidianshard:{name:'Obsidian',price:160,w:10,bio:['volcano']},
   amber:{name:'Amber',price:700,w:2.5,bio:['pine','autumn']},frostshell:{name:'Frost Shell',price:140,w:10,bio:['snow']},
-  fossil:{name:'Fossil',price:1500,w:0.8,bio:['any']},starfrag:{name:'Star Fragment',price:1000,w:0,bio:['home']},feather:{name:'Crow Feather',price:25,w:0,bio:['home']},
+  fossil:{name:'Fossil',price:1500,w:0.8,bio:['any']},driftseed:{name:'Driftseed',price:0,w:0,bio:['any']},hermit:{name:'Hermit Crab',price:90,w:0,bio:['any']},anemone:{name:'Sea Anemone',price:120,w:0,bio:['any']},starfrag:{name:'Star Fragment',price:1000,w:0,bio:['home']},feather:{name:'Crow Feather',price:25,w:0,bio:['home']},
 };
 const RODS=[{name:'Bamboo Rod'},{name:'Sturdy Rod',cost:900,lvl:3},{name:'Golden Rod',cost:6000,lvl:7}];
 const CANS=[{name:'Tin Can'},{name:'Copper Can',cost:700,lvl:2}];
@@ -532,7 +532,7 @@ const DEX_CATS=[['fish','Fish','f:',FISH],['bugs','Bugs','b:',BUGS],['plants','P
 const SAVE_KEY='driftseed-town-v1'; // the town branch keeps its own save so it never touches the main game's
 function freshState(){
   return {v:1,shells:150,xp:0,day:1,hour:7.2,land:0,house:0,tiles:{},objs:[],store:{},inv:{},alm:{},almR:{},
-    seed:'turnip',rain:false,demand:'carrot',sound:true,pxAdj:0,nextId:1,t:Date.now(),mode:'farm',log:[],buff:{},look:{sp:'bunny',fur:0xf6f3ee,shirt:0xd8453a},tool:'hand',tipTools:0,tipSeed:0,tut:0,harvested:0,earned:0,
+    seed:'turnip',rain:false,demand:'carrot',sound:true,pxAdj:0,nextId:1,t:Date.now(),mode:'farm',log:[],buff:{},restore:{},traded:{},look:{sp:'bunny',fur:0xf6f3ee,shirt:0xd8453a},tool:'hand',tipTools:0,tipSeed:0,tut:0,harvested:0,earned:0,
     finds:[],weeds:[],free:{},orders:[],ordBonus:0,rod:0,can:0,rec:{},npc:{},shook:{},wv:0,farmInit:0,debris:[],farmClear:0,tipPaint:0,
     worldSeed:Math.floor(Math.random()*1e9),sea:false,px:0.3,pz:2.1,boat:null,disc:{0:1},picked:{},dexR:{},boatTip:0};
 }
@@ -662,6 +662,9 @@ const FIND_SPR={
 'g:obsidianshard':['....V.....','...VkV....','..VkkVV...','.VkkVkkV..','.VkVkkkV..','..VkkkV...','...VVV....'],
 'g:amber':['...OO....','..OyyO...','.OyyyyO..','.OyBByO..','.OyyyyO..','..OyyO...','...OO....'],
 'g:frostshell':['.....ww.....','...wcwwcw...','..wcwcwcwc..','.wcwcwcwcww.','.wcwcwcwcwc.','..wcwcwcwc..','...wwwwww...'],
+'g:driftseed':['....cc....','...cwwc...','..cwccwc..','.cwcggcwc.','.ccgllgcc.','.cgllllgc.','..cgllgc..','...cggc...','....cc....'],
+'g:hermit':['...nnnn...','..nwwnnn..','.nwnnwnnn.','.nnwnnwnn.','..nnnnnn..','.oo.oo.oo.','o.oo..oo.o','.r.r..r.r.'],
+'g:anemone':['.p.p.p.p.','.p.p.p.p..','..ppppp...','.ppwppwp..','.ppppppp..','..mmmmm...','.mmmmmmm..'],
 'g:starfrag':['....y....','...ywy...','yyyywyyyy','.yywwwyy.','..yywyy..','.yy...yy.','y.......y'],
 'g:fossil':['...eeee...','..eWWWWe..','.eWeeeeWe.','.eWeWWeWe.','.eWeWeeWe.','.eWeeWWe..','..eWWe....','...ee.....']};
 for(const k in FIND_SPR)ICON[k]=sprite(FIND_SPR[k]);
@@ -1266,8 +1269,8 @@ function shapeBeach(isl){const d=new Map(),H=[0.03,0.17,TOP.sand,TOP.sand];let q
 function buildIsland(isl){
   if(isl.group){scene.remove(isl.group);isl.group.traverse(o=>{if(o.isInstancedMesh)o.dispose();else if(o.geometry&&!Object.values(RTILE).includes(o.geometry)&&o.geometry!==TILE_PLANE&&o.geometry!==BOX&&o.geometry!==POOL_GEO&&o.geometry!==BLADES)o.geometry.dispose();});}
   if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);riverSurf.delete(k);bridgeY.delete(k);}
-  const g=new T.Group();isl.group=g;isl.veg=[];isl.lowOn=false;isl.casters=null;isl.shadowOn=undefined;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
-  const span=Math.ceil(islR(isl)/0.62+3),B=BIOMES[isl.biome];
+  const g=new T.Group();isl.group=g;isl.heartG=null;isl.residentG=null;isl.flats=[];isl.veg=[];isl.lowOn=false;isl.casters=null;isl.shadowOn=undefined;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
+  const span=Math.ceil(islR(isl)/0.62+3),B=islandBiome(isl);
   for(let x=isl.home?Math.min(isl.cx-span,FARM.x-11):isl.cx-span;x<=isl.cx+span;x++)for(let z=isl.cz-span;z<=isl.cz+span;z++){
     const t=tileTypeI(isl,x,z);if(!t)continue;const k=K(x,z);
     if(landMap.has(k)&&islMap.get(k)!==isl.id)continue;
@@ -1303,7 +1306,7 @@ function buildIsland(isl){
   const shc=(x,z)=>{const t=landMap.get(K(x,z));return t==='s1'?1:t==='s2'?2:t?0:3;};
   const flat=(list,mat,y,lvl)=>{const groups=new Map();for(const [x,z] of list){let mask=0;CORNERS.forEach(([dx,dz],b)=>{if([shc(x+dx,z),shc(x,z+dz),shc(x+dx,z+dz)].every(v=>v>lvl))mask|=1<<b;});
       if(!groups.has(mask))groups.set(mask,[]);groups.get(mask).push([x,z]);}
-    const bk=makeBake();for(const [mask,l] of groups)for(const [x,z] of l)bk.add(rtileGeo(mask),x,y,z,1,0.002,1,0xffffff,null,()=>true);const m=bk.mesh(mat,false);if(m){m.receiveShadow=false;g.add(m);}};
+    const bk=makeBake();for(const [mask,l] of groups)for(const [x,z] of l)bk.add(rtileGeo(mask),x,y,z,1,0.002,1,0xffffff,null,()=>true);const m=bk.mesh(mat,false);if(m){m.receiveShadow=false;g.add(m);isl.flats.push(m);}};
   flat(a1,s1Mat,0.012,1);flat(a2,s2Mat,0.006,2);
   const blocked=new Set();
   if(isl.home){
@@ -1327,6 +1330,7 @@ function buildIsland(isl){
       for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++)if(dx*dx+dz*dz<=5)blocked.add(K(isl.cx+dx,isl.cz+dz));
       isl.vent=[isl.cx,3,isl.cz];
     }
+    pickHeart(isl,blocked);/* the withered heart tree (79-voyage) */
     const gr=shuffle(isl.grass.slice(),R),n=Math.round(gr.length*(isl.grand?0.08:0.15));
     let placed=0;for(const [x,z] of gr){if(placed>=n)break;if(blocked.has(K(x,z)))continue;
       tp.push(...shift(treeParts(B.trees[Math.floor(R()*B.trees.length)],R,B.rock),x+(R()-0.5)*0.3,topY(x,z),z+(R()-0.5)*0.3,R()*6.28));blocked.add(K(x,z));placed++;}
@@ -1336,6 +1340,7 @@ function buildIsland(isl){
         tp.push(...shift(treeParts(PALMS[Math.floor(R()*PALMS.length)],R,B.rock),x+(R()-0.5)*0.2,topY(x,z),z+(R()-0.5)*0.2,R()*6.28));blocked.add(K(x,z));}}
     if(parts.length)g.add(M(parts));addVeg(isl,g,tp);
     if(glowParts.length){const m=M(glowParts,lumMat);m.castShadow=false;g.add(m);}
+    buildHeart(isl);
     isl.spots=gr.filter(([x,z])=>!blocked.has(K(x,z))).slice(0,Math.max(5,Math.min(isl.grand?30:18,Math.round(gr.length*0.18))));
   }
   isl.blocked=blocked;
@@ -1963,6 +1968,8 @@ const MEM_TPL={
   decor:{scholar:n=>`I noticed your new ${n}. An interesting choice.`,dreamer:n=>`Your ${n} makes the whole town feel dreamier.`,_:n=>`I love the ${n} you put up!`},
   island:{explorer:n=>`You made it to ${n}?! I’m so jealous. What was it like?`,sailor:n=>`${n}, eh? Tricky waters out that way. Well sailed.`,_:n=>`I heard you sailed to ${n}! Bring me back a story.`},
   rarecrop:{homebody:n=>`A ${n}! Your farm must be very happy.`,_:n=>`Everyone’s talking about your ${n}!`},
+  restore:{dreamer:n=>`I dreamed ${n} was singing last night. Was that you?`,explorer:n=>`You brought ${n} back to life?! I have to see it!`,_:n=>`Everyone’s talking about how you restored ${n}!`},
+  trade:{sailor:n=>`Running cargo to ${n} now, are we? Good trade winds to you.`,_:n=>`I heard you’ve been trading with ${n}. How exciting!`},
   museum:{scholar:()=>`I saw you at the museum. Grandpa Tully speaks very highly of you.`,_:()=>`Grandpa Tully says you’ve been a great help to the museum!`}};
 // what's worth remembering when you pick something up: new or valuable catches, and special crops
 function noteGain(key,first){if(key.startsWith('f:')||key.startsWith('b:')){const I=(key[0]==='f'?FISH:BUGS)[key.slice(2)];if(I&&!I.junk&&(first||I.price>=250))logEvent(key[0]==='f'?'catch':'bug',{name:I.name});}
@@ -2518,7 +2525,7 @@ function dawn(quiet){
   if(S.rain)for(const k in S.tiles)S.tiles[k].w=1;
   let spr=0;for(const o of S.objs)if(o.k==='sprinkler'){spr++;for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){const t=S.tiles[K(o.x+dx,o.z+dz)];if(t)t.w=1;}}
   const un=CROP_IDS.filter(id=>CROPS[id].lvl<=level());S.demand=pickR(un);
-  for(let i=0;i<2;i++)spawnFind(true,islands[0]);for(let i=0;i<2;i++)spawnWeed(true);makeOrders();
+  for(let i=0;i<2;i++)spawnFind(true,islands[0]);for(let i=0;i<2;i++)spawnWeed(true);makeOrders();spawnDriftseed(islands[0],true);
   if(!quiet){rebuildSoil();syncLife();if(spr&&!S.rain){sprayT=2.5;}
     toast(`Day ${S.day} — ${S.rain?'rain is watering everything':'crops are thirsty'}. New orders are in, and wild plants have regrown.`,'',ICON.sprout);}
 }
@@ -2596,7 +2603,7 @@ function locName(){if(inside)return inside.title;if(S.sea){const [isl,d]=nearest
 function updateHUD(){
   const lv=level();$('lvlTxt').textContent='Lv '+lv;
   const a=LV[lv-1]||0,b=LV[lv];$('xpFill').style.width=(b?clamp((S.xp-a)/(b-a),0,1)*100:100)+'%';
-  {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${S.rain?' · rain':''}`;$('locTxt').textContent=locName();
+  {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${S.rain?' · rain':''}${lowTide?' · low tide':''}`;$('locTxt').textContent=locName();
   refreshMuseumShow();$('bTask').classList.toggle('ready',ordersReady());$('bMenu').classList.toggle('ready',ordersReady());
   const [g,t]=dexCount();$('dexTxt').textContent=`Dex ${Math.floor(g/t*100)}%`;$('locTxt').hidden=!$('locTxt').textContent;
   updateCtx();
@@ -2699,6 +2706,7 @@ function actAt(x,z,fn){const run=()=>{villager.rotation.y=Math.atan2(x-vil.x,z-v
   walkTo(x,z);vil.cb=run;}
 function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
   {const fd=findAt(x,z);if(fd){actAt(x,z,()=>collectFind(fd));return;}const pl=plantAt(x,z);if(pl){actAt(x,z,()=>pickPlant(pl));return;}}
+  if(isl&&!isl.home&&nearHeart(isl,x,z)){actAt(x,z,()=>heartTap(isl));return;}
   if(!isl||!isl.home){goTo(x,z);return;}
   // town trees and rocks: shake or chop a tree, break a rock with the shovel
   const res=fixedAt(x,z)==='decor'&&TOWN.res.get(k);
@@ -2856,6 +2864,9 @@ function findGroup(k,seed){const p=[],g=new T.Group();
   switch(k){
     case'shell':p.push(P(ICO,0xf6d6d0,0,0.05,0,0,0,0,0.28,0.09,0.26),P(BOX,0xf0a0a8,0,0.09,0,0,0,0,0.04,0.03,0.24),P(BOX,0xf0a0a8,0.08,0.08,0,0,0.3,0,0.03,0.03,0.2),P(BOX,0xf0a0a8,-0.08,0.08,0,0,-0.3,0,0.03,0.03,0.2));break;
     case'frostshell':p.push(P(ICO,0xd8f0ff,0,0.05,0,0,0,0,0.28,0.09,0.26),P(BOX,0x8ac8f0,0,0.09,0,0,0,0,0.04,0.03,0.24),P(BOX,0x8ac8f0,0.08,0.08,0,0,0.3,0,0.03,0.03,0.2),P(BOX,0x8ac8f0,-0.08,0.08,0,0,-0.3,0,0.03,0.03,0.2));break;
+    case'driftseed':p.push(P(ICO2,0x6ad8b8,0,0.12,0,0.4,0,0.3,0.16,0.26,0.16),P(ICO2,0xc8fff0,0.02,0.18,0.03,0.4,0,0.3,0.07,0.1,0.07),P(CONE4,0x3a9a78,0,0.28,0,0,0.785,0.2,0.05,0.1,0.05));break;
+    case'hermit':p.push(P(CONE6,0xe8c8a0,0,0.1,-0.02,-0.4,0,0,0.18,0.24,0.18),P(ICO2,0xd86a4a,0,0.04,0.1,0,0,0,0.12,0.06,0.1),P(ICO2,0x2b1e2e,-0.03,0.08,0.15,0,0,0,0.02,0.03,0.02),P(ICO2,0x2b1e2e,0.03,0.08,0.15,0,0,0,0.02,0.03,0.02));for(const sd of [-1,1])p.push(P(BOX,0xd86a4a,sd*0.07,0.02,0.06,0,sd*0.5,0,0.08,0.02,0.02));break;
+    case'anemone':p.push(P(CYL8,0xd870a8,0,0.04,0,0,0,0,0.18,0.08,0.18));for(let i=0;i<9;i++){const a=i/9*6.283;p.push(P(CYL6,0xf2a6c8,Math.cos(a)*0.06,0.12,Math.sin(a)*0.06,Math.sin(a)*0.5,0,-Math.cos(a)*0.5,0.025,0.14,0.025));}break;
     case'conch':p.push(P(CONE6,0xf0d8c0,0,0.1,0,0,0,Math.PI/2,0.24,0.4,0.24),P(ICO,0xf39ab0,-0.1,0.09,0,0,0,0,0.16,0.12,0.16));break;
     case'dollar':p.push(P(CYL8,0xe8dcc0,0,0.02,0,0,0,0,0.32,0.03,0.32));for(let i=0;i<5;i++)p.push(P(BOX,0xc0ae88,Math.sin(i*1.256)*0.07,0.04,Math.cos(i*1.256)*0.07,0,i*1.256,0,0.03,0.01,0.08));break;
     case'star':for(let i=0;i<5;i++){const a=i/5*6.28;p.push(P(BOX,0xf08a4a,Math.sin(a)*0.11,0.03,Math.cos(a)*0.11,0,a,0,0.08,0.05,0.2));}p.push(P(BOX,0xe8703a,0,0.04,0,0,0,0,0.12,0.06,0.12));break;
@@ -2940,7 +2951,7 @@ function pullWeed(w){S.weeds=S.weeds.filter(q=>q!==w);syncLife();walkTo(w.x,w.z)
   else floatText(w.x,1,w.z,'pulled!');}
 function collectFind(f){S.finds=S.finds.filter(q=>q!==f);syncLife();walkTo(f.x,f.z);vil.hop=0.25;
   if(f.k==='bottle'){const first=!S.alm['g:bottle'];S.alm['g:bottle']=(S.alm['g:bottle']||0)+1;if(first)setTimeout(()=>checkDex('g:bottle'),600);openBottle();return;}
-  const I=FINDS[f.k],first=gain('g:'+f.k);burst(f.x,0.5,f.z,0xfff6e2,8,1,0.06);floatText(f.x,0.9,f.z,'+ '+I.name,I.w<5?'gold':'');
+  const I=FINDS[f.k],first=gain('g:'+f.k);if(f.k==='driftseed')driftseedFound(first);burst(f.x,0.5,f.z,0xfff6e2,8,1,0.06);floatText(f.x,0.9,f.z,'+ '+I.name,I.w<5?'gold':'');
   if(I.w<5){SFX.rare();toast(`You found a <b>${I.name}</b>!${first?' <b>New!</b>':''}`,'rare',ICON['g:'+f.k]);}else{SFX.harvest();if(first)toast(`New in your Islandex: <b>${I.name}</b>`,'',ICON['g:'+f.k]);}addXP(2);}
 function openBottle(){SFX.rare();const lv=level(),r=Math.random();let msg;
   const un=CROP_IDS.filter(i=>CROPS[i].lvl<=lv);
@@ -3365,6 +3376,78 @@ function updateNpcBoat(dt,tt){if(!npcRoute.pts){buildNpcRoute();if(!npcRoute.pts
   npcBoat.visible=true;npcBoat.position.set(x,Math.sin(tt*1.3)*0.03,z);npcBoat.rotation.y+=angDiff(npcBoat.rotation.y,h)*Math.min(1,dt*1.5);npcBoat.rotation.z=Math.sin(tt*0.9)*0.04;
   if(Math.random()<dt*9&&Math.hypot(x-cam.tx,z-cam.tz)<50)emit(x-Math.sin(npcBoat.rotation.y)*0.9+(Math.random()-0.5)*0.3,0.03,z-Math.cos(npcBoat.rotation.y)*0.9+(Math.random()-0.5)*0.3,{life:2.2,max:2.2,size:0.14,color:0xe8f0ff});}
 /* =========================================================
+   The long voyage: driftseeds, island restoration, residents and trade, and the tides.
+   - Driftseeds wash ashore at dawn (and now and then on wild shores).
+   - Every wild island has a withered heart tree. Plant three driftseeds in it and it grows back (sprout, sapling, heart
+     tree); the island's faded grass comes back to life and a new resident sails in to live there.
+   - Residents ask for a daily trade (a crop, at twice the market price): a reason to sail your harvest across the sea.
+   - The tide rises and falls twice a day; low tide uncovers tide-pool creatures on the beaches.
+   S.restore[islandId] = stage 0..3.
+   ========================================================= */
+const RESTORE_N=3;
+const stageOf2=isl=>(S.restore&&S.restore[isl.id])||0;
+const restored=isl=>isl.home||stageOf2(isl)>=RESTORE_N;
+// wild islands look washed-out until their heart tree is restored
+function islandBiome(isl){const B=BIOMES[isl.biome];if(restored(isl))return B;return Object.assign({},B,{grass:B.grass.map(c=>lerpHex(c,0xa0a08e,0.42))});}
+
+/* ---- heart trees ---- */
+function pickHeart(isl,blocked){let best=null,bd=1e9;for(const [x,z] of isl.grass){if(blocked.has(K(x,z)))continue;const d=Math.hypot(x-isl.cx,z-isl.cz);if(d<bd){bd=d;best=[x,z];}}
+  if(best){isl.heart=best;blocked.add(K(...best));}}
+function heartParts(stage,R){const p=[],gl=[];
+  if(stage===0){p.push(P(CYL8,0x8a7a6a,0,0.3,0,0,0,0,0.42,0.6,0.42),P(CYL8,0x7a6a5a,0,0.02,0,0,0,0,0.7,0.06,0.7));for(let i=0;i<4;i++){const a=i*1.6+0.3;p.push(P(CYL6,0x7a6a5a,Math.cos(a)*0.2,0.72,Math.sin(a)*0.2,Math.sin(a)*0.9,0,-Math.cos(a)*0.9,0.06,0.5,0.06));}
+    gl.push(P(ICO2,0x9ae8d0,0,0.64,0.2,0,0,0,0.08,0.08,0.05));}
+  else if(stage===1){p.push(P(CYL8,0x8a6a4a,0,0.02,0,0,0,0,0.7,0.06,0.7));for(let i=0;i<5;i++)lf(p,[0x7ad8a0,0x5ab888][i%2],0,0.05,0,i*1.25,1.1,0.26,0.1);gl.push(P(ICO2,0xb8f8e0,0,0.24,0,0,0,0,0.12,0.12,0.12));}
+  else if(stage===2){p.push(P(CYL8,0x8a6a4a,0,0.35,0,0,0,0,0.14,0.7,0.14));canopy(p,R,[0x9ae8b8,0x6ac898,0x3a8a6a],0,0.95,0,0.28);gl.push(P(ICO2,0xc8fff0,0.1,0.8,0.2,0,0,0,0.1,0.1,0.1));}
+  else{p.push(P(TRUNK,0x9a7858,0,0.7,0,0,0,0,0.5,1.4,0.5));for(let i=0;i<5;i++){const a=i*1.26;p.push(P(CYL6,0x8a6848,Math.cos(a)*0.28,0.08,Math.sin(a)*0.28,Math.sin(a)*1.2,0,-Math.cos(a)*1.2,0.1,0.4,0.1));}
+    canopy(p,R,[0xa8f0c8,0x7ad0a8,0x3a9a78],0,1.9,0,0.62);canopy(p,R,[0xf8c8e0,0xe8a0c8,0x9a6a9a],0.35,2.3,0.2,0.26);
+    for(let i=0;i<9;i++){const a=i*0.7,r=0.5+(i%3)*0.18;gl.push(P(ICO2,[0xc8fff0,0xfff0c0,0xffd0e8][i%3],Math.cos(a)*r,1.6+(i%4)*0.25,Math.sin(a)*r,0,0,0,0.1,0.1,0.1));}}
+  return{p,gl};}
+function buildHeart(isl){if(!isl.heart||!isl.group)return;if(isl.heartG){isl.group.remove(isl.heartG);isl.heartG.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
+  const [x,z]=isl.heart,g=new T.Group(),st=stageOf2(isl),{p,gl}=heartParts(st,mulberry(hi(isl.id,st,5)));g.add(M(p));if(gl.length){const m=M(gl,lumMat);m.castShadow=false;g.add(m);}
+  g.position.set(x,topY(x,z),z);isl.group.add(g);isl.heartG=g;
+  if(st>=RESTORE_N)buildResident(isl);}
+
+/* ---- the resident who moves in once an island is restored ---- */
+function residentPlan(isl){const R=mulberry(hi(isl.id,S.worldSeed|0,17)),spk=Object.keys(SPECIES),sp=spk[Math.floor(R()*spk.length)],S0=SPECIES[sp],pk=Object.keys(PERS),pers=pk[Math.floor(R()*pk.length)],st=STYLE[pers];
+  return{sp,pers,name:S0.names[Math.floor(R()*S0.names.length)]+(R()<0.5?'':' the '+PERS[pers].label),col:S0.col[Math.floor(R()*S0.col.length)],shirt:[0x6ab8a8,0xe8866a,0xd8b84a,0x9a8ad8][Math.floor(R()*4)],outfit:st.o[0],acc:st.a[0]};}
+function buildResident(isl){if(isl.residentG)return;const v=residentPlan(isl),g=npcModel(v.sp,v.col,v.shirt,v.acc,v.outfit);g.scale.setScalar(0.92);
+  const [hx,hz]=isl.heart,x=hx+1.1,z=hz+0.9;g.position.set(x,surfY(x,z),z);isl.group.add(g);isl.residentG=g;isl.residentPlan=v;}
+function tradeOf(isl){const R=mulberry(hi(isl.id,S.day,23)),un=CROP_IDS.filter(id=>CROPS[id].lvl<=level()),id=un[Math.floor(R()*un.length)],n=3+Math.floor(R()*4);return{id,n,pay:Math.round(CROPS[id].price*n*2)};}
+function cropCount(id){let n=0;for(const k in S.inv)if(k.split('|')[0]===id)n+=S.inv[k];return n;}
+function takeCrops(id,n){for(const v of ['normal',...VARIANTS.map(q=>q.id).filter(q=>q!=='normal')]){const k=id+'|'+v;while(n>0&&S.inv[k]>0){S.inv[k]--;n--;if(!S.inv[k])delete S.inv[k];}}}
+function residentTalk(isl){const v=isl.residentPlan,t=tradeOf(isl),have=cropCount(t.id),done=S.traded&&S.traded[isl.id]===S.day;
+  const hello={sailor:'The sea brought me here, and your heart tree kept me.',dreamer:'This island sings now. Can you hear it?',tinkerer:'Everything here works again. Even me!',homebody:'I’ve made this little island my home. Thank you, dear.',explorer:'Best island I’ve found yet. And I’ve found a lot.',scholar:'The heart tree is a remarkable specimen. I’m taking notes.'}[v.pers];
+  setAction(`<b>${v.name}:</b> ${hello}<br>${done?'Thanks for today’s trade! Come back tomorrow.':`Today I’m trading for <b>${t.n}× ${CROPS[t.id].name}</b>: <b>${fmt(t.pay)} shells</b>, twice the market price. You have ${have}.`}`,
+    [...(done?[]:[{label:'Trade',cls:'go',disabled:have<t.n,fn:()=>{takeCrops(t.id,t.n);S.shells+=t.pay;S.traded=S.traded||{};S.traded[isl.id]=S.day;addXP(6);SFX.coin();logEvent('trade',{name:isl.name});clearAction();toast(`Traded ${t.n}× ${CROPS[t.id].name} for <b>${fmt(t.pay)} shells</b>.`,'',seedIcon(t.id));updateHUD();}}]),{label:'Bye',fn:clearAction}],isl.name);}
+
+/* ---- tapping the heart tree ---- */
+function heartTap(isl){const st=stageOf2(isl),n=S.inv['g:driftseed']||0;
+  if(st>=RESTORE_N){if(isl.residentG)residentTalk(isl);else toast(`${isl.name}’s heart tree glows softly.`);return;}
+  if(!n){toast(st?`The heart tree is waking… ${RESTORE_N-st} more Driftseed${RESTORE_N-st>1?'s':''} will restore it. Look for them on the beach at dawn.`:'A withered old tree at the heart of the island. It seems to be waiting for something… (Driftseeds wash ashore at dawn.)','',ICON['g:driftseed']);return;}
+  setAction(`Plant a <b>Driftseed</b> at ${isl.name}’s heart tree? (${st}/${RESTORE_N} planted, you have ${n})`,[{label:'Plant',cls:'go',fn:()=>{clearAction();plantDriftseed(isl);}},{label:'Not yet',fn:clearAction}],'Heart Tree');}
+function plantDriftseed(isl){S.inv['g:driftseed']--;if(!S.inv['g:driftseed'])delete S.inv['g:driftseed'];S.restore=S.restore||{};S.restore[isl.id]=stageOf2(isl)+1;
+  const [x,z]=isl.heart,y=topY(x,z);for(let i=0;i<24;i++)sparkle(x+(Math.random()-0.5)*1.4,y+0.3+Math.random()*1.6,z+(Math.random()-0.5)*1.4,[0xc8fff0,0xfff0c0,0xffd0e8][i%3]);SFX.rare();addXP(10);
+  if(stageOf2(isl)>=RESTORE_N){buildIsland(isl);if(isl.pgroup&&typeof syncPlants==='function')syncPlants(isl);cullIslands();const pay=800+islands.filter(i=>!i.home&&restored(i)).length*200;S.shells+=pay;logEvent('restore',{name:isl.name});
+    setTimeout(()=>{SFX.discover();toast(`${isl.name} is restored! Colour floods back across the island, and a new resident, <b>${isl.residentPlan.name}</b>, has moved in. +${fmt(pay)} shells`,'rare',ICON.star);},500);}
+  else{buildHeart(isl);toast(stageOf2(isl)===1?'A tiny glowing sprout pushes up through the old stump!':'The heart tree grows into a sapling. One more Driftseed…','',ICON['g:driftseed']);}
+  updateHUD();}
+const nearHeart=(isl,x,z)=>isl&&isl.heart&&Math.abs(x-isl.heart[0])<=1&&Math.abs(z-isl.heart[1])<=1;
+
+/* ---- driftseeds washing ashore ---- */
+function spawnDriftseed(isl,quiet){if(!isl)return;if(S.finds.some(f=>f.k==='driftseed'&&islMap.get(K(f.x,f.z))===isl.id))return;
+  const c=isl.sand.filter(([x,z])=>freeTile(x,z)&&!(isl.blocked&&isl.blocked.has(K(x,z))));if(!c.length)return;const [x,z]=pickR(c);S.finds.push({k:'driftseed',x,z});if(!quiet){syncLife();for(let i=0;i<8;i++)sparkle(x,0.4,z,0xc8fff0);}}
+function driftseedFound(first){if(first)setTimeout(()=>setAction('A glowing <b>Driftseed</b>! Old sailors say they wake sleeping islands. Every wild island has a withered heart tree at its centre: plant three Driftseeds there to bring it back to life.',[{label:'Got it',cls:'go',fn:clearAction}],'Driftseed'),400);}
+
+/* ---- tides: two highs and two lows a day; low tide uncovers tide-pool creatures ---- */
+let tideY=0,lowTide=null;
+const tideAt=h=>0.045*Math.cos((h-3)/12.4*Math.PI*2)-0.03;
+function updateTides(){tideY=tideAt(S.hour);const low=tideY<-0.055;
+  water.position.y=tideY;for(const isl of islands)if(isl.flats&&isl.group&&isl.group.visible)for(const m of isl.flats)m.position.y=tideY;
+  if(low!==lowTide){lowTide=low;const isl=S.sea?null:curIsl();
+    if(low&&isl){const edge=isl.sand.filter(([x,z])=>{const c=SAND_CH.get(K(x,z));return c&&Math.min(...c)<0.1&&freeTile(x,z);});for(let i=0;i<3&&edge.length;i++){const [x,z]=edge.splice(Math.floor(Math.random()*edge.length),1)[0];S.finds.push({k:pickR(['hermit','anemone','star']),x,z,tide:1});}
+      syncLife();if(!S.tipTide){S.tipTide=1;toast('Low tide! Creatures are hiding in the tide pools along the beach.','',ICON['g:hermit']);}}
+    else if(!low&&S.finds.some(f=>f.tide)){S.finds=S.finds.filter(f=>!f.tide);syncLife();}}}
+/* =========================================================
    Daily orders
    ========================================================= */
 function cropOrder(id){const C=CROPS[id],n=C.price<60?4:C.price<200?3:2;return{k:'c:'+id,n,reward:Math.round(C.price*n*1.8),xp:Math.round(C.price*n/20)+3};}
@@ -3392,7 +3475,7 @@ function ordersReady(){return S.orders.some(o=>!o.done&&orderHave(o)>=o.n);}
 let lifeT=4,bugT=2,crowT=40,slowT=0,shT=1;
 function updateLife(dt,tt){
   const isl=curIsl();
-  lifeT-=dt;if(lifeT<=0){lifeT=6;if(isl&&Math.random()<0.28)spawnFind(false,isl);if(Math.random()<0.2)spawnWeed();}
+  lifeT-=dt;if(lifeT<=0){lifeT=6;if(isl&&Math.random()<0.28)spawnFind(false,isl);if(isl&&!isl.home&&!restored(isl)&&Math.random()<0.05)spawnDriftseed(isl,false);if(Math.random()<0.2)spawnWeed();}
   bugT-=dt;if(bugT<=0){bugT=3+Math.random()*4;spawnBug();}
   shT-=dt;if(shT<=0){shT=2+Math.random()*3;spawnShadow();}
   crowT-=dt;if(crowT<=0){crowT=55+Math.random()*50;spawnCrow();}
@@ -3726,7 +3809,7 @@ function updateFoam(tt){let n=0;_s.set(1,1,1);
   for(const isl of islands){if(!isl.edges)continue;const R=islR(isl)/0.62+30;if(Math.hypot(isl.cx-cam.tx,isl.cz-cam.tz)>R)continue;
     for(const e of isl.edges){if(n>=FOAMN)break;const dx=e[0]-cam.tx,dz=e[1]-cam.tz;if(dx*dx+dz*dz>1000)continue;
       const w=0.5+0.5*Math.sin(tt*1.3+e[4]),off=0.08+w*0.24;_e.set(0,Math.atan2(e[2],e[3]),0);_q.setFromEuler(_e);
-      _m.compose(_v.set(e[0]+e[2]*off,0.028,e[1]+e[3]*off),_q,_s.set(1,1,0.35+(1-w)*0.9));foamIM.setMatrixAt(n++,_m);}}
+      _m.compose(_v.set(e[0]+e[2]*off,0.028+tideY,e[1]+e[3]*off),_q,_s.set(1,1,0.35+(1-w)*0.9));foamIM.setMatrixAt(n++,_m);}}
   foamIM.count=n;foamIM.instanceMatrix.needsUpdate=true;foamMat.opacity=0.55+0.2*(1-nightF);}
 
 // --- footprints in the sand, dust and footsteps ---
@@ -3869,7 +3952,7 @@ function frame(now){
   if(S.sea){vil.hop=Math.max(0,vil.hop-dt);villager.position.set(vil.x,0.14+Math.sin(tt*1.5)*0.04+Math.sin(vil.hop/0.35*Math.PI)*0.3*(vil.hop>0),vil.z);if(!fishing)villager.rotation.y=S.boat.r;}
   const k=paint?0:Math.min(1,dt*3);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();cullIslands(); // hold the view still while drag-farming so tiles stay under the finger
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
-  water.position.set(Math.round(cam.tx/10)*10,0,Math.round(cam.tz/10)*10);
+  updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
   scene.fog.near=cam.dist+18-fogBoost*14;scene.fog.far=cam.dist+95-fogBoost*45;
   for(const {g} of cropMeshes.values())g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
@@ -3952,7 +4035,7 @@ if(/[?&]debug\b/.test(location.search)){
     fastTravel:id=>fastTravel(islands[id]),
     npcRouteOnLand:()=>{updateNpcBoat(0,0);const R=npcRoute;if(!R.pts)return -1;let n=0;for(let d=0;d<R.total;d+=0.25){R.d=d;updateNpcBoat(0,0);if(seaBlocked(Math.round(npcBoat.position.x),Math.round(npcBoat.position.z)))n++;}return n;},
     sailTo:id=>{const isl=islands[id];if(!S.sea){S.sea=true;const b=S.boat;vil.x=b.x;vil.z=b.z;}sailToIsland(isl);return !!sail;},
-    pick:(cx,cy)=>pick(cx,cy),beam:()=>({has:!!beam,vis:beam&&beam.visible,op:beamMat.opacity,nightF,parentOk:beam&&beam.parent===islands[0].group,pos:beam&&beam.position.toArray(),grpVis:islands[0].group.visible}),spots:()=>({cafe:(TOWN.bld.find(b=>b.t==='cafe')||{}).x!==undefined?[TOWN.bld.find(b=>b.t==='cafe').x,TOWN.bld.find(b=>b.t==='cafe').z]:null,light:TOWN.light&&[TOWN.light.x,TOWN.light.z],shop:(b=>b&&[b.x,b.z])(TOWN.bld.find(b=>b.t==='shop'))}),view:(x,z,yaw,dist,pitch)=>{S.sea=false;vil.x=vil.tx=x;vil.z=vil.tz=z;vil.path=null;cam.tx=x;cam.tz=z;cam.yaw=yaw;cam.dist=dist;if(pitch)cam.pitch=pitch;},homes:()=>TOWN.bld.filter(b=>b.t==='vh').map(b=>[b.x,b.z,planVillagers()[b.n%6].pers]),plaza:()=>TOWN.plaza.slice(),lineup:(list)=>{const g=new T.Group();g.name='lineup';(list||Object.keys(SPECIES)).forEach((sp,i)=>{const L=Object.keys(STYLE),pe=L[i%L.length],st=STYLE[pe];const m=npcModel(sp,SPECIES[sp].col[0],[0x6ab8a8,0x5a8ae0,0xe8866a,0xd8b84a,0xf39ab0,0x9a8ad8][i%6],st.a[i%st.a.length],st.o[i%st.o.length]);const x=vil.x-3+(i%7)*1.0,z=vil.z-1-Math.floor(i/7)*1.4;m.position.set(x,surfY(x,z),z);g.add(m);});scene.add(g);return (list||Object.keys(SPECIES)).length;},npcAt:i=>{const n=npcs[i];return[n.x,n.z];},bldAt:t=>{const b=TOWN.bld.find(q=>q.t===t);return b?[b.x,b.z]:null;},calls:()=>{const out={};const names=new Map([[debrisRoot,'debris'],[lifeRoot,'life']]);try{names.set(cropRoot,'crops');}catch(e){}try{names.set(objRoot,'objs');}catch(e){}
+    pick:(cx,cy)=>pick(cx,cy),heart:id=>islands[id].heart,giveSeeds:n=>{S.inv['g:driftseed']=(S.inv['g:driftseed']||0)+n;},plantHeart:id=>{plantDriftseed(islands[id]);return stageOf2(islands[id]);},tide:()=>({tideY,lowTide,finds:S.finds.filter(f=>f.tide).length}),beam:()=>({has:!!beam,vis:beam&&beam.visible,op:beamMat.opacity,nightF,parentOk:beam&&beam.parent===islands[0].group,pos:beam&&beam.position.toArray(),grpVis:islands[0].group.visible}),spots:()=>({cafe:(TOWN.bld.find(b=>b.t==='cafe')||{}).x!==undefined?[TOWN.bld.find(b=>b.t==='cafe').x,TOWN.bld.find(b=>b.t==='cafe').z]:null,light:TOWN.light&&[TOWN.light.x,TOWN.light.z],shop:(b=>b&&[b.x,b.z])(TOWN.bld.find(b=>b.t==='shop'))}),view:(x,z,yaw,dist,pitch)=>{S.sea=false;vil.x=vil.tx=x;vil.z=vil.tz=z;vil.path=null;cam.tx=x;cam.tz=z;cam.yaw=yaw;cam.dist=dist;if(pitch)cam.pitch=pitch;},homes:()=>TOWN.bld.filter(b=>b.t==='vh').map(b=>[b.x,b.z,planVillagers()[b.n%6].pers]),plaza:()=>TOWN.plaza.slice(),lineup:(list)=>{const g=new T.Group();g.name='lineup';(list||Object.keys(SPECIES)).forEach((sp,i)=>{const L=Object.keys(STYLE),pe=L[i%L.length],st=STYLE[pe];const m=npcModel(sp,SPECIES[sp].col[0],[0x6ab8a8,0x5a8ae0,0xe8866a,0xd8b84a,0xf39ab0,0x9a8ad8][i%6],st.a[i%st.a.length],st.o[i%st.o.length]);const x=vil.x-3+(i%7)*1.0,z=vil.z-1-Math.floor(i/7)*1.4;m.position.set(x,surfY(x,z),z);g.add(m);});scene.add(g);return (list||Object.keys(SPECIES)).length;},npcAt:i=>{const n=npcs[i];return[n.x,n.z];},bldAt:t=>{const b=TOWN.bld.find(q=>q.t===t);return b?[b.x,b.z]:null;},calls:()=>{const out={};const names=new Map([[debrisRoot,'debris'],[lifeRoot,'life']]);try{names.set(cropRoot,'crops');}catch(e){}try{names.set(objRoot,'objs');}catch(e){}
       scene.traverseVisible(o=>{if(!(o.isMesh||o.isPoints||o.isLine))return;let p=o,k=null;while(p&&p!==scene){if(names.has(p)){k=names.get(p);break;}const ii=islands.findIndex(i=>i.group===p||i.pgroup===p);if(ii>=0){k=ii===0?'home':'isl';break;}if(npcs.some(n=>n.g===p)){k='npc';break;}if(p===villager){k='player';break;}p=p.parent;}
         k=k||('scene:'+(o.name||o.type)+':'+(o.material&&o.material.type));out[k]=(out[k]||0)+1;});return Object.entries(out).sort((a,b)=>b[1]-a[1]).slice(0,20).map(x=>x.join(' '));},tris:()=>{const out={};const tag=o=>{let p=o;while(p){if(p.userData&&p.userData.tag)return p.userData.tag;if(islands.some(i=>i.group===p))return 'isl'+islands.findIndex(i=>i.group===p)+':'+(o.isInstancedMesh?'inst':'mesh');if(p===scene)break;p=p.parent;}return (o.isInstancedMesh?'inst:':'mesh:')+(o.material&&o.material.type)+(o.parent===scene?'@scene':'');};
       scene.traverseVisible(o=>{if(!(o.isMesh||o.isInstancedMesh||o.isPoints))return;const g=o.geometry;if(!g)return;const n=(g.index?g.index.count:g.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);const k=tag(o);out[k]=out[k]||{tris:0,n:0,shadow:0};out[k].tris+=n;out[k].n++;if(o.castShadow)out[k].shadow+=n;});

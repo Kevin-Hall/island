@@ -47,7 +47,7 @@ function dawn(quiet){
   if(S.rain)for(const k in S.tiles)S.tiles[k].w=1;
   let spr=0;for(const o of S.objs)if(o.k==='sprinkler'){spr++;for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){const t=S.tiles[K(o.x+dx,o.z+dz)];if(t)t.w=1;}}
   const un=CROP_IDS.filter(id=>CROPS[id].lvl<=level());S.demand=pickR(un);
-  for(let i=0;i<2;i++)spawnFind(true,islands[0]);for(let i=0;i<2;i++)spawnWeed(true);makeOrders();
+  for(let i=0;i<2;i++)spawnFind(true,islands[0]);for(let i=0;i<2;i++)spawnWeed(true);makeOrders();spawnDriftseed(islands[0],true);
   if(!quiet){rebuildSoil();syncLife();if(spr&&!S.rain){sprayT=2.5;}
     toast(`Day ${S.day} — ${S.rain?'rain is watering everything':'crops are thirsty'}. New orders are in, and wild plants have regrown.`,'',ICON.sprout);}
 }
