@@ -17,6 +17,7 @@ function trunkP(p,R,col,h,w=0.13,dk){p.push(P(TRUNK,col,0,(h+0.45)/2,0,0,R()*3,0
 const PALMS=['palm','palmtall','palmfan','palmtwin'];
 // the far-away version of a batch of tree parts: a third of the leaf cards and palm leaflets (a bit bigger, so the silhouette holds)
 function lowParts(parts){let n=0,m=0;const out=[];for(const p of parts){
+  if(p.lo==='drop')continue;if(p.lo==='wide'){out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.8}));continue;}/* palm fronds: keep every main blade, wider, drop the side blades */
   if(p.geo===LEAF_CARD){if(n++%3)continue;out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.4,sy:p.sy*1.15,sz:p.sz*1.4}));}
   else if(p.geo===LEAF0&&p.sx<0.16){if(m++%3)continue;out.push(Object.assign({},p,{sx:p.sx*1.7}));}
   else if(p.geo===BOX&&p.sx<0.06&&p.sz>0.1){if(m++%2)continue;out.push(Object.assign({},p,{sz:p.sz*2}));}/* palm frond stems: every other, doubled */
@@ -26,16 +27,20 @@ function addVeg(isl,g,parts){if(!parts.length)return;const hi=M(parts),lo=M(lowP
 // beach tiles a palm can stand on: flat sand (not the slope into the water), spread a few tiles apart
 function palmSpots(isl,R,n,ok){const out=[];for(const [x,z] of shuffle(isl.sand.slice(),R)){if(out.length>=n)break;const c=SAND_CH.get(K(x,z));if(!c||Math.min(...c)<0.17||!ok(x,z))continue;
   if(out.some(([a,b])=>Math.abs(a-x)+Math.abs(b-z)<3))continue;out.push([x,z]);}return out;}
-// a palm: a segmented trunk leaning along x, fronds of drooping leaflets shaded dark at the stem to light at the tip, optional coconuts
-function palmParts(p,R,{n,lean,fronds,flen,cols,nuts,pitch=0.45,ox=0,trunk=[0xa8844a,0x94703e]}){let tx=ox,ty=0;
-  for(let i=0;i<n;i++){const u=i/Math.max(1,n-1);tx=ox+lean*u*u*n*0.14;ty=0.1+i*0.22;p.push(P(CYL12,trunk[i%2],tx,ty,0,0,i*0.4,-lean*0.5*u,0.2-u*0.05,0.24,0.2-u*0.05),P(CYL12,0x7a5a34,tx,ty+0.11,0,0,0,-lean*0.5*u,0.22-u*0.05,0.03,0.22-u*0.05));}
-  ty+=0.14;
-  for(let i=0;i<fronds;i++){const a=i/fronds*6.283+R()*0.3;let fx=tx,fy=ty,fz=0,pt=pitch+R()*0.3;
-    for(let k=0;k<flen;k++){const L=0.19,c=lerpHex(cols[0],cols[1],k/(flen-1)),nx=fx+Math.sin(a)*Math.cos(pt)*L,ny=fy+Math.sin(pt)*L,nz=fz+Math.cos(a)*Math.cos(pt)*L;
-      const mx=(fx+nx)/2,my=(fy+ny)/2,mz=(fz+nz)/2;p.push(P(BOX,lerpHex(0x3a7a2e,cols[0],0.5),mx,my,mz,-pt,a,0,0.045,0.035,L+0.02));
-      const w=0.3*(1-k/(flen+2));for(const sd of [-1,1])lf(p,c,mx+Math.cos(a)*sd*0.02,my-0.01,mz-Math.sin(a)*sd*0.02,a+sd*1.05,-0.3,w,0.11,0.03);
-      fx=nx;fy=ny;fz=nz;pt-=0.24;}}
-  for(let i=0;i<nuts;i++){const a=i*2.1;p.push(P(ICO2,0x6a4428,tx+Math.cos(a)*0.12,ty-0.14,Math.sin(a)*0.12,0,0,0,0.18,0.2,0.18));}}
+// a palm, Animal Crossing style: a fat ringed trunk bending along a gentle curve, and broad drooping fronds built from
+// leaf cards (dark at the stem, light at the tip) with side blades that give the frond a serrated, feathery edge
+function palmParts(p,R,{n,lean,fronds,seg=4,flen=0.34,wid=0.34,cols,nuts,pitch=0.55,droop=0.3,spread=0.5,ox=0,trunk=[0xb08a52,0x967040]}){
+  const H=0.22;let tx=ox,ty=0;p.push(P(ICO2,lerpHex(trunk[1],0x5a3a22,0.25),ox,0.04,0,0,0,0,0.36,0.14,0.36));
+  for(let i=0;i<n;i++){const u=(i+0.5)/n,r=0.27-u*0.11,rz=-Math.atan(lean*1.27*u);tx=ox+lean*u*u*n*0.14;ty=0.1+i*H;
+    p.push(P(CYL12,trunk[i%2],tx,ty,0,0,i*0.7,rz,r,H*1.04,r),P(CYL12,lerpHex(trunk[1],0x5a3a22,0.4),tx,ty+H/2-0.015,0,0,0,rz,r*1.1,0.035,r*1.1));}
+  ty+=H/2;p.push(P(ICO2,cols[0],tx,ty+0.06,0,0,0,0,0.34,0.24,0.34));
+  for(let i=0;i<fronds;i++){const a=i/fronds*6.283+R()*0.25;let x=tx,y=ty+0.1,z=0,pt=pitch+R()*0.25;
+    for(let k=0;k<seg;k++){const d=[Math.sin(a)*Math.cos(pt),Math.sin(pt),Math.cos(a)*Math.cos(pt)],w=wid*(k===0?0.7:k===seg-1?0.62:1),
+        cb=lerpHex(cols[0],cols[1],k/seg),ct=lerpHex(cols[0],cols[1],(k+1)/seg);
+      card(p,x,y,z,d,flen,w,ct,cb);p[p.length-1].lo='wide';
+      if(k>0)for(const sd of [-1,1]){const b=a+sd*spread,q=pt-0.18,e=[Math.sin(b)*Math.cos(q),Math.sin(q),Math.cos(b)*Math.cos(q)];card(p,x,y,z,e,flen*0.8,w*0.55,lerpHex(ct,cols[0],0.15),cb);p[p.length-1].lo='drop';}
+      x+=d[0]*flen*0.9;y+=d[1]*flen*0.9;z+=d[2]*flen*0.9;pt-=droop;}}
+  for(let i=0;i<nuts;i++){const a=i*2.1+0.4,cx=tx+Math.cos(a)*0.13,cz=Math.sin(a)*0.13;p.push(P(ICO2,0x6a4428,cx,ty-0.02,cz,0,0,0,0.18,0.19,0.18),P(ICO,0x9a7448,cx-0.03,ty+0.02,cz+0.04,0,0,0,0.06,0.05,0.04));}}
 function treeParts(kind,R,colRock){
   const p=[];
   switch(kind){
@@ -51,10 +56,10 @@ function treeParts(kind,R,colRock){
         const n=Math.round(15-t*8);for(let k=0;k<n;k++){const a=k/n*6.283+i*0.41+R()*0.12,tl=2.0+R()*0.18,d=[Math.sin(a)*Math.sin(tl),Math.cos(tl),Math.cos(a)*Math.sin(tl)];
           card(p,Math.sin(a)*rad*0.2,y+0.42,Math.cos(a)*rad*0.2,d,rad*0.95+0.18,0.34-t*0.1,k%2?tip:lerpHex(tip,mid,0.35),base);}}
       for(let k=0;k<5;k++){const a=k/5*6.283,d=[Math.sin(a)*0.5,0.86,Math.cos(a)*0.5];card(p,0,2.72,0,d,0.34,0.14,tip,mid);}break;}
-    case'palm':palmParts(p,R,{n:9,lean:(R()-0.5)*0.6,fronds:8,flen:6,cols:[0x3f8a34,0x7cc453],nuts:3});break;
-    case'palmtall':palmParts(p,R,{n:13,lean:(R()<0.5?-1:1)*(0.55+R()*0.3),fronds:9,flen:7,cols:[0x4a9a3a,0x96d864],nuts:2});break;
-    case'palmfan':palmParts(p,R,{n:4,lean:0,fronds:12,flen:5,pitch:0.95,cols:[0x2f7a3a,0x6ab85a],nuts:0,trunk:[0x8a6a3e,0x7a5a34]});break;
-    case'palmtwin':palmParts(p,R,{n:8,lean:-0.5,fronds:7,flen:6,cols:[0x3f8a34,0x7cc453],nuts:2,ox:-0.12});palmParts(p,R,{n:11,lean:0.55,fronds:8,flen:6,cols:[0x4a9a3a,0x88cc5a],nuts:0,ox:0.12});break;
+    case'palm':palmParts(p,R,{n:9,lean:(R()-0.5)*0.6,fronds:8,cols:[0x2f7a34,0x8ad05a],nuts:3});break;
+    case'palmtall':palmParts(p,R,{n:13,lean:(R()<0.5?-1:1)*(0.55+R()*0.3),fronds:9,flen:0.37,cols:[0x3a8a3a,0x9ade6a],nuts:2});break;
+    case'palmfan':palmParts(p,R,{n:4,lean:0,fronds:11,seg:2,flen:0.44,wid:0.5,pitch:0.95,droop:0.35,spread:0.7,cols:[0x2a6e38,0x72c05a],nuts:0,trunk:[0x8a6a3e,0x7a5a34]});break;
+    case'palmtwin':palmParts(p,R,{n:8,lean:-0.5,fronds:7,cols:[0x2f7a34,0x8ad05a],nuts:2,ox:-0.14});palmParts(p,R,{n:11,lean:0.55,fronds:8,cols:[0x3a8a3a,0x94d862],nuts:0,ox:0.14});break;
     case'bush':canopy(p,R,[0x8ad060,0x5aa040,0x2e6a2a],0,0.3,0,0.2);if(R()<0.5)for(let i=0;i<5;i++){const a=R()*6.28;bloom(p,0xffffff,0xf6d04a,Math.sin(a)*0.3,0.42+R()*0.12,Math.cos(a)*0.3,0.07);}break;
     case'flowerbed':wildflowers(p,R,[0xf7f2e8,0xf2a6c8,0xf6d04a,0xb8a8f2],9,0.36);for(let i=0;i<10;i++)lf(p,GREENS[i%4],(R()-0.5)*0.6,0.02,(R()-0.5)*0.6,R()*6.28,0.35,0.16,0.07);break;
     case'rockM':rockP(p,R,colRock,0.85);p.push(P(ICO2,0x5a8a44,0,0.36,0,0,R()*3,0,0.52,0.12,0.44),P(ICO2,0x6a9a4a,0.1,0.38,0.08,0,0,0,0.3,0.1,0.26));for(let i=0;i<6;i++)lf(p,GREENS[i%4],(R()-0.5)*0.4,0.38,(R()-0.5)*0.3,R()*6.28,0.4,0.12,0.06);break;
