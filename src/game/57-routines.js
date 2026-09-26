@@ -14,6 +14,7 @@ const ACT_LINES={fish:['Shh… they’re biting.','Caught three this morning. Th
   wander:['What a view from up here!','I’m mapping every path on the island. Want a copy?','Found a shortcut! It took longer, but it was prettier.'],
   sing:['La la… oh! You heard that?','I’m working on a new song about the tides.','Hum along if you know it!'],
   chat:['We were just talking about you! All good things.','Oh, just catching up on town gossip.','You’re welcome to join us!'],
+  coffee:['Best cocoa on the island, this.','Morning! Grab a cup and sit a while.','I can’t start the day without the café.'],
   bench:['Nothing like a sit in the sun.','Lunch with a view. Can’t beat it.','My feet needed a rest.'],
   stargaze:['Look, the first star is out.','Every night the sky looks a little different.','I think that one’s winking at us.']};
 
@@ -32,7 +33,7 @@ function noteGain(key,first){if(key.startsWith('f:')||key.startsWith('b:')){cons
   else if(key.includes('|')&&!key.endsWith('|normal'))logEvent('rarecrop',{name:nameOf(key)});}
 function memoryLine(n){const recent=(S.log||[]).filter(e=>S.day-e.day<=2).slice(-8);if(!recent.length)return null;const e=recent[Math.floor(Math.random()*recent.length)],T0=MEM_TPL[e.t];if(!T0)return null;return(T0[n.pers]||T0._)(e.name||'');}
 function neighbourLine(n){const o=npcs.filter(q=>q!==n&&q.act);if(!o.length)return null;const q=o[Math.floor(Math.random()*o.length)];
-  const what={fish:'fishing down by the shore',water:'fussing over the flowers',read:'with their nose in a book',tinker:'tinkering again',wander:'off exploring',sing:'singing at the plaza',bench:'having lunch on a bench',chat:'chatting away',stargaze:'watching the sky'}[q.act.k];
+  const what={coffee:'at the café',fish:'fishing down by the shore',water:'fussing over the flowers',read:'with their nose in a book',tinker:'tinkering again',wander:'off exploring',sing:'singing at the plaza',bench:'having lunch on a bench',chat:'chatting away',stargaze:'watching the sky'}[q.act.k];
   return what?`Have you seen ${q.name}? ${what[0].toUpperCase()+what.slice(1)}, as usual.`:null;}
 
 /* ---- props held in the right hand ---- */
@@ -42,6 +43,7 @@ function npcProps(n){const arm=n.limbs[1];if(!arm)return;const g=new T.Group();g
   add('can',[P(CYL12,0xe0883a,0,0,0.08,0,0,0,0.14,0.12,0.12),P(CYL6,0xe0883a,0,0.04,0.18,1.0,0,0,0.025,0.14,0.025)],0.2);
   add('book',[P(BOX,0x8a3a4a,0,0,0.1,0,0,0,0.16,0.02,0.12),P(BOX,0xf8f4ea,0,0.012,0.1,0,0,0,0.14,0.012,0.1)],-0.3);
   add('hammer',[P(CYL6,0x9a6a3a,0,0.08,0,0,0,0,0.025,0.2,0.025),P(BOX,0x8a8e98,0,0.18,0,0,0,0,0.1,0.05,0.05)],0.6);
+  add('cup',[P(CYL12,0xfbf8f0,0,0,0.08,0,0,0,0.08,0.09,0.08),P(CYL12,0x7a4a2a,0,0.045,0.08,0,0,0,0.065,0.01,0.065)],-0.4);
   add('map',[P(BOX,0xf2e2b8,0,0,0.1,0,0,0,0.2,0.01,0.15),P(BOX,0xd8453a,0.03,0.008,0.12,0,0,0,0.02,0.01,0.02)],-0.4);}
 function showProp(n,k){if(!n.props)return;for(const q in n.props)n.props[q].visible=q===k;}
 
@@ -53,13 +55,13 @@ function homeShore(){if(shoreSpots)return shoreSpots;const pc=TOWN.plaza;shoreSp
   return shoreSpots;}
 const nearTile=(x,z,r=1)=>{for(let i=0;i<12;i++){const tx=x+Math.round((Math.random()-0.5)*2*r),tz=z+Math.round((Math.random()-0.5)*2*r);if(walkable(tx,tz)&&onHome(tx,tz)&&!npcBlock(tx,tz))return[tx,tz];}return null;};
 function chooseActivity(n){const h=S.hour,pc=TOWN.plaza,door=n.b.door,R=Math.random(),hob=HOBBY_ACT[PERS[n.pers].hobby]||'sing';
-  let k;if(h<8)k=R<0.6?'stroll':'water';else if(h<11)k=hob;else if(h<13)k=R<0.55?'bench':'chat';else if(h<17)k=R<0.65?hob:R<0.85?'chat':'wander';
+  let k;if(h<8.5)k=R<0.5&&TOWN.cafeSeats.length?'coffee':R<0.75?'stroll':'water';else if(h<11)k=hob;else if(h<13)k=R<0.55?'bench':'chat';else if(h<17)k=R<0.65?hob:R<0.85?'chat':'wander';
   else k=n.pers==='dreamer'&&h>=19?'stargaze':R<0.5?'sing':R<0.8?'chat':'bench';
   switch(k){
     case'fish':{const sh=homeShore();if(!sh.length)return chooseActivity2(n,'sing');const s=sh[(n.i*7+Math.floor(Math.random()*sh.length))%sh.length];return{k,to:[s[0],s[1]],face:s[2],dur:25+Math.random()*25,prop:'rod'};}
     case'water':{const t=nearTile(door[0],door[1]+1,2)||nearTile(pc[0],pc[1],3);return t&&{k,to:t,face:Math.random()*6.28,dur:12+Math.random()*10,prop:'can'};}
-    case'read':case'bench':{const free=TOWN.benches.filter(b=>!npcs.some(q=>q!==n&&q.act&&q.act.seat&&q.act.seat[0]===b[0]&&q.act.seat[1]===b[1]));if(!free.length)return chooseActivity2(n,'sing');
-      const b=free[Math.floor(Math.random()*free.length)];return{k,to:[b[0],b[1]+1],seat:b,face:0,dur:k==='read'?30+Math.random()*20:18+Math.random()*12,prop:k==='read'?'book':null};}
+    case'read':case'bench':case'coffee':{const seats=k==='coffee'?TOWN.cafeSeats:TOWN.benches,free=seats.filter(b=>!npcs.some(q=>q!==n&&q.act&&q.act.seat&&q.act.seat[0]===b[0]&&q.act.seat[1]===b[1]));if(!free.length)return chooseActivity2(n,'sing');
+      const b=free[Math.floor(Math.random()*free.length)];return{k,to:[b[0],b[1]+1],seat:b,face:0,dur:k==='read'?30+Math.random()*20:18+Math.random()*12,prop:k==='read'?'book':k==='coffee'?'cup':null};}
     case'tinker':{const t=[door[0],door[1]+1];return walkable(t[0],t[1])?{k,to:t,face:Math.PI,dur:20+Math.random()*15,prop:'hammer'}:chooseActivity2(n,'sing');}
     case'wander':{const gl=islands[0].grass;for(let i=0;i<10;i++){const [x,z]=gl[Math.floor(Math.random()*gl.length)];if(walkable(x,z)&&!npcBlock(x,z)&&Math.hypot(x-pc[0],z-pc[1])<30)return{k,to:[x,z],face:Math.random()*6.28,dur:6+Math.random()*6,prop:'map'};}return null;}
     case'chat':{const o=npcs.filter(q=>q!==n&&q.state!=='home'&&q.state!=='talk'&&!(q.act&&q.act.seat)&&(!q.act||q.act.k==='sing'||q.act.k==='chat'||q.state==='idle'));if(!o.length)return chooseActivity2(n,'sing');
@@ -79,6 +81,7 @@ function actTick(n,dt,tt){const a=n.act,L=n.limbs;n.actT-=dt;
     case'fish':if(L[1])L[1].rotation.x=-0.9+Math.sin(tt*1.2+n.i)*0.05;if(Math.random()<dt*0.05){floatText(n.x,n.y+1.2,n.z,Math.random()<0.5?'!':'Got one!');n.happyT=1.2;}break;
     case'water':if(L[1])L[1].rotation.x=-0.7;if(Math.random()<dt*8){const fx=n.x+Math.sin(n.face)*0.45,fz=n.z+Math.cos(n.face)*0.45;emit(fx,n.y+0.35,fz,{vy:-1,life:0.4,max:0.4,size:0.04,color:0x8ac4ff,g:6});}break;
     case'read':if(L[1])L[1].rotation.x=-1.0;if(L[0])L[0].rotation.x=-0.9;break;
+    case'coffee':if(L[1])L[1].rotation.x=-0.6-Math.max(0,Math.sin(tt*0.8+n.i))*0.6;break;
     case'tinker':if(L[1])L[1].rotation.x=-0.6-Math.abs(Math.sin(tt*6+n.i))*0.9;if(Math.random()<dt*2)sparkle(n.x+Math.sin(n.face)*0.4,n.y+0.2,n.z+Math.cos(n.face)*0.4,0xffe08a);break;
     case'wander':n.face+=Math.sin(tt*0.7+n.i)*dt*0.8;if(L[1])L[1].rotation.x=-0.8;break;
     case'sing':case'stargaze':n.g.rotation.z=Math.sin(tt*2+n.i)*0.08;if(Math.random()<dt*0.6)floatText(n.x,n.y+1.2,n.z,a.k==='sing'?'♪':'✦');break;

@@ -121,12 +121,18 @@ function npcModel(sp,col,shirt,acc,outfit='tee'){const B=BODY[sp]||BODY.cat,[tw,
 function setFace(g,eyes,mouth){const f=g.userData.face;if(!f)return;for(const k of ['open','blink','happy'])if(f[k])f[k].visible=k===eyes;for(const k of ['smile','talk'])if(f[k])f[k].visible=k===mouth;}
 function limbsOf(g){return['armL','armR','footL','footR'].map(n=>g.getObjectByName(n));}
 function swingLimbs(L,ph,amt){if(!L[0])return;const s=Math.sin(ph)*amt;L[0].rotation.x=s;L[1].rotation.x=-s;L[2].rotation.x=-s*0.8;L[3].rotation.x=s*0.8;}
-function initNPCs(){for(const n of npcs)scene.remove(n.g);npcs.length=0;const R=mulberry((S.worldSeed|0)^0x5eed);const used=new Set(),spk=Object.keys(SPECIES),pk=Object.keys(PERS);
-  for(const b of TOWN.bld.filter(b=>b.t==='vh')){let sp;do{sp=spk[Math.floor(R()*spk.length)];}while(used.has(sp)&&used.size<spk.length);used.add(sp);const S0=SPECIES[sp];
-    const name=S0.names[Math.floor(R()*S0.names.length)],pers=pk[Math.floor(R()*pk.length)],cp=PERS[pers].cp[Math.floor(R()*PERS[pers].cp.length)];
-    const col=S0.col[Math.floor(R()*S0.col.length)],shirt=[0x6ab8a8,0x5a8ae0,0xe8866a,0xd8b84a,0xf39ab0,0x9a8ad8,0x7aa86a,0xd8604a][Math.floor(R()*8)];
-    const st=STYLE[pers],outfit=st.o[Math.floor(R()*st.o.length)],acc=st.a[Math.floor(R()*st.a.length)];const g=npcModel(sp,col,shirt,acc,outfit);g.scale.setScalar(0.92);scene.add(g);const i=npcs.length;if(!S.npc[i])S.npc[i]={f:0,talk:0,wish:null,gift5:0,gift10:0};
-    const n={i,name,sp,pers,cp,b,g,limbs:limbsOf(g),x:b.door[0]+0.5,z:b.door[1]+0.3,y:topY(b.door[0],b.door[1]),path:null,state:'idle',wait:R()*4,t:0,face:0};g.position.set(n.x,n.y,n.z);npcs.push(n);npcProps(n);}shoreSpots=null;}
+// who lives in each villager home (by b.n): species, name, personality, colours and style, rolled from the world seed.
+// Every town gets one of each personality. layoutTown reads this too, so each home is built in its owner's style.
+let villagerPlan=null,villagerPlanSeed=null;
+function planVillagers(){if(villagerPlan&&villagerPlanSeed===S.worldSeed)return villagerPlan;const R=mulberry((S.worldSeed|0)^0x5eed),spk=Object.keys(SPECIES),used=new Set(),pk=shuffle(Object.keys(PERS),R);villagerPlan=[];
+  for(let i=0;i<6;i++){let sp;do{sp=spk[Math.floor(R()*spk.length)];}while(used.has(sp)&&used.size<spk.length);used.add(sp);const S0=SPECIES[sp],pers=pk[i%pk.length],st=STYLE[pers];
+    villagerPlan.push({sp,pers,name:S0.names[Math.floor(R()*S0.names.length)],cp:PERS[pers].cp[Math.floor(R()*PERS[pers].cp.length)],col:S0.col[Math.floor(R()*S0.col.length)],
+      shirt:[0x6ab8a8,0x5a8ae0,0xe8866a,0xd8b84a,0xf39ab0,0x9a8ad8,0x7aa86a,0xd8604a][Math.floor(R()*8)],outfit:st.o[Math.floor(R()*st.o.length)],acc:st.a[Math.floor(R()*st.a.length)],wait:R()*4});}
+  villagerPlanSeed=S.worldSeed;return villagerPlan;}
+function initNPCs(){for(const n of npcs)scene.remove(n.g);npcs.length=0;const plan=planVillagers();
+  for(const b of TOWN.bld.filter(b=>b.t==='vh')){const v=plan[b.n%plan.length],{sp,pers,name,cp}=v;
+    const g=npcModel(sp,v.col,v.shirt,v.acc,v.outfit);g.scale.setScalar(0.92);scene.add(g);const i=npcs.length;if(!S.npc[i])S.npc[i]={f:0,talk:0,wish:null,gift5:0,gift10:0};
+    const n={i,name,sp,pers,cp,b,g,limbs:limbsOf(g),x:b.door[0]+0.5,z:b.door[1]+0.3,y:topY(b.door[0],b.door[1]),path:null,state:'idle',wait:v.wait,t:0,face:0};g.position.set(n.x,n.y,n.z);npcs.push(n);npcProps(n);}shoreSpots=null;}
 const npcBlock=(x,z)=>!!S.tiles[K(x,z)]||(!!objAt(x,z)&&objAt(x,z).k!=='stonepath')||(x>=HOUSE_AT.x&&x<=HOUSE_AT.x+1&&z>=HOUSE_AT.z&&z<=HOUSE_AT.z+1)||(TOWN.fixed.has(K(x,z))&&TOWN.fixed.get(K(x,z))!=='board');
 function npcGo(n,tx,tz){const p=landPath(Math.round(n.x),Math.round(n.z),tx,tz,{block:npcBlock,cost:(x,z)=>TOWN.path.has(K(x,z))?0.45:1,max:3000});if(!p||p.length<2)return false;n.path=p.slice(1);n.state='walk';return true;}
 function updateNPCs(dt,tt){if(!npcs.length)return;const near=Math.hypot(cam.tx,cam.tz)<70;const night=S.hour>=21||S.hour<6.5;
@@ -162,7 +168,7 @@ function npcLine(n){const P0=PERS[n.pers],h=S.hour;const ctx=[];
   const r=Math.random(),special=r<0.35?activityLine(n):r<0.65?memoryLine(n):r<0.8?neighbourLine(n):null;if(special)return special;
   const all=[...P0.lines,...ctx];const line=all[Math.floor(Math.random()*all.length)];return Math.random()<0.35?`${line} ${n.cp[0].toUpperCase()+n.cp.slice(1)}!`:line;}
 function talkTo(n){if(n.state==='home')return;if(n.act&&n.act.k==='chat'){const q=n.act.with;if(q&&q.act&&q.act.with===n)endActivity(q);}n.state='talk';n.t=0;n.path=null;walkTo(n.x,n.z);SFX.ui();const d=S.npc[n.i];
-  if(d.talk!==S.day){d.talk=S.day;d.f=Math.min(10,d.f+1);hearts(n.x,n.y+1,n.z);}
+  if(d.talk!==S.day){d.talk=S.day;d.f=Math.min(10,d.f+(buffOn('friend')?2:1));hearts(n.x,n.y+1,n.z);}
   setTimeout(()=>showTalk(n,npcLine(n)),0);}
 function showTalk(n,line){n.talkT=Math.min(2.4,0.6+line.length*0.025);const d=S.npc[n.i],w=npcWish(n),btns=[];
   let msg=`<b>${n.name}:</b> ${line}`;

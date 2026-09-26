@@ -32,7 +32,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 40–44 world | Island generation (`genIslands`); trees (`treeParts`, `canopy`, gradient leaf `card`s); grass tufts (off by default, see `GRASS_DENS`); rivers and waterfalls (`carveRivers`); terrain meshes with rounded corners (`buildIsland`, `rtileGeo`); island culling |
 | 45-crops | Soil and crop models (`cropParts`) |
 | 50-objects | Decor, house and bin models (`objGroup`, `houseGroup`, `roof`) |
-| 55-town | Town layout (`layoutTown`): plaza, paths, buildings, lamps, trees, flower species, gathering |
+| 55-town | Town layout (`layoutTown`): plaza, paths, civic buildings (hall, shop with sign, museum, harbour café), villager homes in their owner's style (`homeStyle`: boathouse on stilts, thatched round cottage, brick workshop, hill burrow, lookout, keeper's cottage), the lighthouse and its night beam, lamps, trees, flowers, benches and café seats |
 | 56-interiors | Enterable rooms: separate `roomScene`, furniture (`furn`), room tapping |
 | 59-museum | The walk-in museum (`buildMuseum`): fish tanks, butterfly garden, bug terrariums and a centrepiece, all filled from `S.alm`; Grandpa Tully the sea-turtle curator; the outdoor showcase (`refreshMuseumShow`) |
 | 57-villagers | Species (`SPECIES` names and colours, `BODY` build, snout, ears and tail), personalities (`PERS`: sailor, dreamer, tinkerer, homebody, explorer, scholar) and what they wear (`STYLE`), models (`npcModel` with outfits and headwear), faces (`setFace`: blink, happy, talk), routines, chat, wishes, friendship |
@@ -80,6 +80,8 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | A biome | `BIOMES` entry (colours, trees, names) + any new tree kinds in `treeParts` |
 | A tool | Entry in `TOOLS` + icon in `SPR` + held model in `HELD_PARTS` + a case in `toolTap` (and in `paintMode` for drag) (71-tools) |
 | A player look | Entry in `LOOKS` (61-player), plus a `case` in `npcModel` if it's a new species |
+| A home style | A case in `homeStyle` keyed by personality (55-town); `planVillagers` (57-villagers) decides who lives where |
+| A café drink | An entry in `CAFE` (56-interiors) and a check with `buffOn(k)` where it applies |
 | A sheet tab | A branch in `renderSheet` + data-attribute handlers in the `#sheetBody` click listener (82-sheets) |
 
 ## Performance rules

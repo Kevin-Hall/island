@@ -87,6 +87,8 @@ function updateRoom(dt,tt){const I=inside;if(!I)return;const dx=I.tx-I.x,dz=I.tz
 function townTap(f,x,z){const b=TOWN.bld.find(q=>x>=q.x&&x<=q.x+1&&z>=q.z&&z<=q.z+1);
   if(f==='shop'){walkTo(b.door[0]+0.5,b.door[1]);openSheet('shop','decor');return true;}
   if(f==='museum'){goTo(b.door[0]+0.5,b.door[1]+0.2,()=>enterHouse('museum',b,null));return true;}
+  if(f==='cafe'){walkTo(b.door[0]+0.5,b.door[1]);cafeMenu();return true;}
+  if(f==='lighthouse'){walkTo(x,z+1);toast('The old lighthouse. At night its beam sweeps the sea, so you can always find your way home.','',ICON.boat);return true;}
   if(f==='hall'){walkTo(b.door[0]+0.5,b.door[1]);openSheet('orders');return true;}
   if(f==='vh'){const n=npcs.find(q=>q.b===b);if(!n)return true;goTo(b.door[0]+0.5,b.door[1]+0.2,()=>enterHouse('vh',b,n));return true;}
   if(f==='board'){walkTo(x,z+1);boardNews();return true;}
@@ -106,3 +108,9 @@ function gatherRes(x,z){const k=K(x,z),t=TOWN.res.get(k),sh=S.shook[k]||{d:0,n:0
 function boardNews(){const w=npcs.map(n=>{const d=S.npc[n.i]||{};return d.wish&&!d.wish.done&&d.wish.day===S.day?`${n.name} wants ${nameOf(d.wish.k)}`:null;}).filter(Boolean);
   setAction(`<b>${TOWN.name} Bulletin</b><br>Market: <b>${CROPS[S.demand].name}</b> sells for 1.5× today. ${S.rain?'Rain today — crops are watered.':'Sunny skies — water your crops!'}${w.length?'<br>'+w.join(' · '):''}`,[{label:'Close',fn:clearAction}],'Notice Board');}
 
+
+/* ---- the harbour café: a drink gives a small boost for the rest of the day ---- */
+const CAFE=[{k:'tail',name:'Tailwind cocoa',cost:60,desc:'walk and sail faster for the rest of the day'},{k:'friend',name:'Friendship blend',cost:40,desc:'villagers warm up to you twice as fast today'}];
+const buffOn=k=>S.buff&&S.buff[k]===S.day;
+function cafeMenu(){setAction(`<b>The Harbour Café</b><br>${CAFE.map(c=>`${c.name} · ${c.cost} shells — ${c.desc}${buffOn(c.k)?' <b>(enjoying it)</b>':''}`).join('<br>')}`,
+  [...CAFE.map(c=>({label:c.name.split(' ')[0],cls:'go',disabled:buffOn(c.k)||S.shells<c.cost,fn:()=>{S.shells-=c.cost;S.buff=S.buff||{};S.buff[c.k]=S.day;clearAction();SFX.coin();hearts(vil.x,1.1,vil.z);toast(`You sip your ${c.name.toLowerCase()}. Lovely!`,'',ICON.shop);updateHUD();}})),{label:'Bye',fn:clearAction}],'Café');}

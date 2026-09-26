@@ -11,7 +11,7 @@ function frame(now){
   {const ci=S.sea?null:curIsl();if(ci&&ci.falls)for(const [x,y,z] of ci.falls){if(Math.random()<dt*3&&Math.abs(x-cam.tx)<16&&Math.abs(z-cam.tz)<16)emit(x+(Math.random()-0.5)*0.8,y+0.05,z+(Math.random()-0.5)*0.3,{vy:0.5+Math.random()*0.5,life:0.6,max:0.6,size:0.07,color:ci.lava?0xffc070:0xf4fbff,g:2});}}grassU.uWind.value=1+rainMix*1.3;grassU.uPl.value.set(vil.x,S.sea?-99:vil.y,vil.z);
   if(!S.sea){
     const dx=vil.tx-vil.x,dz=vil.tz-vil.z,d=Math.hypot(dx,dz);
-    if(d>0.04){const sp=Math.min(d,dt*3),nx=vil.x+dx/d*sp,nz=vil.z+dz/d*sp;
+    if(d>0.04){const sp=Math.min(d,dt*3*(buffOn('tail')?1.35:1)),nx=vil.x+dx/d*sp,nz=vil.z+dz/d*sp;
       if(landMap.get(K(Math.round(nx),Math.round(nz)))==='river'&&landMap.get(K(Math.round(vil.x),Math.round(vil.z)))!=='river'){vil.tx=vil.x;vil.tz=vil.z;vil.path=null;}
       else{vil.x=nx;vil.z=nz;villager.rotation.y=Math.atan2(dx,dz);}}
     else if(vil.path&&vil.path.length){const p=vil.path.shift();vil.tx=p[0];vil.tz=p[1];}
@@ -33,7 +33,7 @@ function frame(now){
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);
   for(const a of anims)a(tt,dt);
   {let t0=performance.now();const lap=k=>{const t=performance.now();FRAME_STAT[k]=(FRAME_STAT[k]||0)*0.9+(t-t0)*0.1;t0=t;};/* smoothed per-system timings, read by DS.perf() */
-    updateLife(dt,tt);lap('life');updateAtmos(dt,tt);lap('atmos');updateNPCs(dt,tt);lap('npcs');updateSeaLife(dt,tt);lap('sea');updateDebris(dt,tt);updateTool(dt);updateMuseumShow(dt,tt);lap('misc');}
+    updateLife(dt,tt);lap('life');updateAtmos(dt,tt);lap('atmos');updateNPCs(dt,tt);lap('npcs');updateSeaLife(dt,tt);lap('sea');updateDebris(dt,tt);updateTool(dt);updateMuseumShow(dt,tt);updateLighthouse(dt,tt);lap('misc');}
   if(sprayT>0){sprayT-=dt;for(const o of S.objs)if(o.k==='sprinkler'&&Math.random()<0.8){const a=Math.random()*6.28;emit(o.x,topY(o.x,o.z)+0.4,o.z,{vx:Math.cos(a)*1.6,vy:1.6,vz:Math.sin(a)*1.6,life:0.6,max:0.6,size:0.05,color:0x9ad0ff,g:6});}}
   for(const c of clouds){const u=c.userData;u.ox+=dt*u.sp;const rx=((u.ox-cam.tx)%80+120)%80-40,rz=((u.oz-cam.tz)%80+120)%80-40;c.position.set(cam.tx+rx,11,cam.tz+rz);}
   const day=1-nightF;
