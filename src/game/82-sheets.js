@@ -174,7 +174,7 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.can){const R=CANS[S.can+1];if(!R||S.shells<R.cost)return;S.shells-=R.cost;S.can++;SFX.level();toast(`You got the ${R.name}! It waters a 3×3 patch.`,'rare',ICON.can);renderSheet();return;}
   if(d.land){const L=LAND_UP[S.land];if(!L||S.shells<L.cost)return;S.shells-=L.cost;S.land++;buildIsland(islands[0]);rebuildSeaGrid();syncObjs();rebuildSoil();syncAllCrops();syncLife();ensureBoat(true);SFX.level();
     toast('The tide pulls back — your island has grown!','rare',ICON.star);for(let i=0;i<30;i++)sparkle((Math.random()-0.5)*14,0.6,(Math.random()-0.5)*12,0xfff6e2);renderSheet();return;}
-  if(d.house){const HU=HOUSE_UP[S.house];if(!HU||S.shells<HU.cost)return;S.shells-=HU.cost;S.house++;syncObjs();SFX.level();burst(HOUSE_AT.x+0.5,1.5,HOUSE_AT.z+0.5,0xf6eedb,30,2.4,0.1);
+  if(d.house){const HU=HOUSE_UP[S.house];if(!HU||S.shells<HU.cost)return;S.shells-=HU.cost;S.house++;logEvent('house');syncObjs();SFX.level();burst(HOUSE_AT.x+0.5,1.5,HOUSE_AT.z+0.5,0xf6eedb,30,2.4,0.1);
     toast(S.house===3?'Your Villa is complete!':`Your new ${HOUSES[S.house]} is ready!`,'rare',THUMB['house'+S.house]);renderSheet();return;}
   if(d.mus!==undefined){S.music=d.mus==='1';renderSheet();return;}
   if(d.spd!==undefined){devSpeed=Number(d.spd);renderSheet();return;}

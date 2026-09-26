@@ -118,7 +118,7 @@ function placeBar(){const B=BUILD[placing.kind],n=S.store[placing.kind]||0,ok=ca
 function doPlace(){const B=BUILD[placing.kind];const {x,z}=placing;if(!canPlace(x,z))return;
   if(placing.fromStore){S.store[placing.kind]--;if(!S.store[placing.kind])delete S.store[placing.kind];}
   else{if(S.shells<B.cost){SFX.no();return;}S.shells-=B.cost;}
-  S.objs.push({id:S.nextId++,k:placing.kind,x,z,r:placing.rot});syncObjs();SFX.place();burst(x,topY(x,z)+0.2,z,0xf6eedb,12,1.4,0.08);walkTo(x,z);
+  S.objs.push({id:S.nextId++,k:placing.kind,x,z,r:placing.rot});logEvent('decor',{name:BUILD[placing.kind].name.toLowerCase()});syncObjs();SFX.place();burst(x,topY(x,z)+0.2,z,0xf6eedb,12,1.4,0.08);walkTo(x,z);
   if(placing.fromStore?!S.store[placing.kind]:!B.multi){endPlace();toast(`${B.name} placed.`);return;}
   const nxt=nearestValid(x,z);if(nxt)moveGhost(nxt[0],nxt[1]);else endPlace();}
 function endPlace(){if(ghost){scene.remove(ghost);ghost=null;}placing=null;cursor.visible=false;cursorT=0;clearAction();}

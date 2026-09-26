@@ -2,7 +2,7 @@
    The town: a Wild World-style village generated from the world seed —
    plaza with a town tree, shops, a museum, a town hall, villager homes, dirt paths, lamps and trees
    ========================================================= */
-const TOWN={fHid:null,name:'',plaza:[0,0],bld:[],path:new Map(),fixed:new Map(),plot:[],board:null,lamps:[],flora:new Map(),res:new Map()};
+const TOWN={fHid:null,name:'',plaza:[0,0],benches:[],bld:[],path:new Map(),fixed:new Map(),plot:[],board:null,lamps:[],flora:new Map(),res:new Map()};
 // wild flower clumps (one geometry per colour), clover and pebbles for the town's grass
 const FLOWER_SP={tulip:[0xe8453a,0xf6d04a,0xf2a6c8,0xffffff,0x9a6ad0],rose:[0xd8303a,0xf8f4ee,0xf6d04a,0xf2a6c8],cosmos:[0xf2a6c8,0xf8f4ee,0xe86a8a,0xf6a830],
   pansy:[0x7a5ad0,0xf6d04a,0xe8453a,0x8ac8f0],lily:[0xf8f4ee,0xf08a2a,0xf2a6c8],hyacinth:[0x6a7ae0,0xf2a6c8,0xf8f4ee],daisy:[0xffffff,0xf6e6f0]};
@@ -72,7 +72,7 @@ function layoutTown(isl){
   // town tree + benches + bulletin board
   tp.push(...shift(scaleParts(treeParts('oak',mulberry(7),0x9a9ea8),1.55),pc[0],y0(...pc),pc[1],0.4));
   for(let i=0;i<10;i++){const a=i/10*6.283;bloom(p,[0xf2a6c8,0xffffff,0xf6d04a][i%3],0xf6d04a,pc[0]+Math.cos(a)*0.85,y0(...pc)+0.05,pc[1]+Math.sin(a)*0.85,0.07);}
-  for(const [bx,bz,r] of [[pc[0]-2,pc[1]+2,0],[pc[0]+2,pc[1]+2,0]]){const q=[];for(const [x,z] of [[-0.38,-0.1],[0.38,-0.1],[-0.38,0.12],[0.38,0.12]])q.push(P(BOX,0x5a3a2a,x,0.12,z,0,0,0,0.06,0.24,0.06));
+  TOWN.benches=[];for(const [bx,bz,r] of [[pc[0]-2,pc[1]+2,0],[pc[0]+2,pc[1]+2,0]]){TOWN.benches.push([bx,bz]);const q=[];for(const [x,z] of [[-0.38,-0.1],[0.38,-0.1],[-0.38,0.12],[0.38,0.12]])q.push(P(BOX,0x5a3a2a,x,0.12,z,0,0,0,0.06,0.24,0.06));
     q.push(P(BOX,0xb07a44,0,0.26,0,0,0,0,0.9,0.06,0.34),P(BOX,0xb07a44,0,0.52,-0.16,0,0,0,0.9,0.18,0.05));p.push(...shift(q,bx,y0(bx,bz),bz,r));TOWN.fixed.set(K(bx,bz),'decor');}
   {const [bx,bz]=TOWN.board,q=[P(CYL8,0x6a4428,-0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(CYL8,0x6a4428,0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(BOX,0x9a6a3a,0,0.62,0,0,0,0,0.9,0.52,0.06),P(BOX,0x7a5230,0,0.92,0,0,0,0,1.0,0.07,0.12),
     P(BOX,0xf6ecd0,-0.2,0.66,0.035,0,0,0.08,0.22,0.26,0.01),P(BOX,0xf2c8d8,0.14,0.6,0.035,0,0,-0.1,0.2,0.2,0.01),P(BOX,0xd8ecf4,0.22,0.74,0.035,0,0,0.05,0.14,0.12,0.01)];p.push(...shift(q,bx,y0(bx,bz),bz,0));}

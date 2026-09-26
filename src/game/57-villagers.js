@@ -126,31 +126,28 @@ function initNPCs(){for(const n of npcs)scene.remove(n.g);npcs.length=0;const R=
     const name=S0.names[Math.floor(R()*S0.names.length)],pers=pk[Math.floor(R()*pk.length)],cp=PERS[pers].cp[Math.floor(R()*PERS[pers].cp.length)];
     const col=S0.col[Math.floor(R()*S0.col.length)],shirt=[0x6ab8a8,0x5a8ae0,0xe8866a,0xd8b84a,0xf39ab0,0x9a8ad8,0x7aa86a,0xd8604a][Math.floor(R()*8)];
     const st=STYLE[pers],outfit=st.o[Math.floor(R()*st.o.length)],acc=st.a[Math.floor(R()*st.a.length)];const g=npcModel(sp,col,shirt,acc,outfit);g.scale.setScalar(0.92);scene.add(g);const i=npcs.length;if(!S.npc[i])S.npc[i]={f:0,talk:0,wish:null,gift5:0,gift10:0};
-    const n={i,name,sp,pers,cp,b,g,limbs:limbsOf(g),x:b.door[0]+0.5,z:b.door[1]+0.3,y:topY(b.door[0],b.door[1]),path:null,state:'idle',wait:R()*4,t:0,face:0};g.position.set(n.x,n.y,n.z);npcs.push(n);}}
+    const n={i,name,sp,pers,cp,b,g,limbs:limbsOf(g),x:b.door[0]+0.5,z:b.door[1]+0.3,y:topY(b.door[0],b.door[1]),path:null,state:'idle',wait:R()*4,t:0,face:0};g.position.set(n.x,n.y,n.z);npcs.push(n);npcProps(n);}shoreSpots=null;}
 const npcBlock=(x,z)=>!!S.tiles[K(x,z)]||(!!objAt(x,z)&&objAt(x,z).k!=='stonepath')||(x>=HOUSE_AT.x&&x<=HOUSE_AT.x+1&&z>=HOUSE_AT.z&&z<=HOUSE_AT.z+1)||(TOWN.fixed.has(K(x,z))&&TOWN.fixed.get(K(x,z))!=='board');
 function npcGo(n,tx,tz){const p=landPath(Math.round(n.x),Math.round(n.z),tx,tz,{block:npcBlock,cost:(x,z)=>TOWN.path.has(K(x,z))?0.45:1,max:3000});if(!p||p.length<2)return false;n.path=p.slice(1);n.state='walk';return true;}
 function updateNPCs(dt,tt){if(!npcs.length)return;const near=Math.hypot(cam.tx,cam.tz)<70;const night=S.hour>=21||S.hour<6.5;
   for(const n of npcs){if(!near){n.g.visible=false;continue;}
     if(n.state==='home'){n.g.visible=false;if(!night){n.state='idle';n.wait=1+Math.random()*3;n.x=n.b.door[0]+0.5;n.z=n.b.door[1]+0.3;}continue;}
     n.g.visible=true;n.t+=dt;
-    if(n.state==='talk'){n.face=Math.atan2(vil.x-n.x,vil.z-n.z);if(n.t>12||Math.hypot(vil.x-n.x,vil.z-n.z)>4){n.state='idle';n.wait=2;}}
-    else if(n.state==='walk'){const w=n.path&&n.path[0];if(!w){n.state=night?'goinghome':'idle';n.wait=2+Math.random()*5;}
+    if(n.state==='talk'){if(!n.sit)n.face=Math.atan2(vil.x-n.x,vil.z-n.z);if(n.t>12||Math.hypot(vil.x-n.x,vil.z-n.z)>4){if(n.act)endActivity(n);n.state='idle';n.wait=2;}}
+    else if(n.state==='act'){if(night)endActivity(n);else actTick(n,dt,tt);}
+    else if(n.state==='walk'){const w=n.path&&n.path[0];if(!w){if(n.act&&!night)startActivity(n);else{n.state=night?'goinghome':'idle';n.wait=2+Math.random()*5;}}
       else{const tx=w[0]+(w===n.path[n.path.length-1]?0:0),dx=tx-n.x,dz=w[1]-n.z,d=Math.hypot(dx,dz);if(d<0.06)n.path.shift();else{const sp=Math.min(d,dt*1.25);n.x+=dx/d*sp;n.z+=dz/d*sp;n.face=Math.atan2(dx,dz);}}}
     else if(n.state==='goinghome'){if(Math.hypot(n.x-n.b.door[0]-0.5,n.z-n.b.door[1])<1.2){n.state='home';burst(n.x,n.y+0.4,n.z,0xfff6e2,5,0.6,0.05);}else if(!npcGo(n,n.b.door[0],n.b.door[1]))n.state='home';}
     else{n.wait-=dt;if(night){if(!npcGo(n,n.b.door[0],n.b.door[1]))n.state='home';else n.state='walk';}
-      else if(n.wait<=0){n.wait=3+Math.random()*6;const r=Math.random();let t=null;const pc=TOWN.plaza;
-        if(r<0.4)t=[pc[0]+Math.round((Math.random()-0.5)*4),pc[1]+Math.round((Math.random()-0.5)*4)];
-        else if(r<0.75){const ks=[...TOWN.path.keys()];const k=ks[Math.floor(Math.random()*ks.length)];t=k.split(',').map(Number);}
-        else if(r<0.88)t=n.b.door;else t=[Math.round(vil.x+(Math.random()-0.5)*3),Math.round(vil.z+(Math.random()-0.5)*3)];
-        if(t&&walkable(t[0],t[1])&&onHome(t[0],t[1]))npcGo(n,t[0],t[1]);
-        if(Math.random()<0.25)floatText(n.x,n.y+1.1,n.z,['♪','…','♥','!'][Math.floor(Math.random()*4)]);}}
-    const ty=topY(Math.round(n.x),Math.round(n.z))||0.3;n.y=lerp(n.y,ty,Math.min(1,dt*8));
+      else if(n.wait<=0){n.wait=2+Math.random()*4;/* follow the daily routine (57-routines) */
+        const a=chooseActivity(n);if(a&&npcGo(n,a.to[0],a.to[1]))n.act=a;else if(a&&Math.hypot(a.to[0]-n.x,a.to[1]-n.z)<0.8){n.act=a;startActivity(n);}}}
+    const ty=(topY(Math.round(n.x),Math.round(n.z))||0.3)+(n.sit?0.16:0);n.y=lerp(n.y,ty,Math.min(1,dt*8));
     // face: blink every few seconds, flap the mouth while talking, happy eyes after a gift
     {n.blinkT=(n.blinkT===undefined?2+Math.random()*3:n.blinkT)-dt;let eyes='open',mouth='smile';
       if(n.happyT>0){n.happyT-=dt;eyes='happy';}else if(n.blinkT<0){eyes='blink';if(n.blinkT<-0.13)n.blinkT=2.5+Math.random()*3.5;}
       if(n.talkT>0){n.talkT-=dt;mouth=Math.sin(tt*17+n.i)>0?'talk':'smile';}
       if(eyes!==n.fe||mouth!==n.fm){n.fe=eyes;n.fm=mouth;setFace(n.g,eyes,mouth);}}
-    const walking=n.state==='walk'||n.state==='goinghome';swingLimbs(n.limbs,tt*9+n.i,walking?0.7:0);n.g.position.set(n.x,n.y+(walking?Math.abs(Math.sin(tt*9+n.i))*0.05:Math.sin(tt*2+n.i)*0.01),n.z);
+    const walking=n.state==='walk'||n.state==='goinghome';if(n.state!=='act'&&!n.sit)swingLimbs(n.limbs,tt*9+n.i,walking?0.7:0);n.g.position.set(n.x,n.y+(walking?Math.abs(Math.sin(tt*9+n.i))*0.05:Math.sin(tt*2+n.i)*0.01),n.z);
     n.g.rotation.y+=angDiff(n.g.rotation.y,n.face)*Math.min(1,dt*6);}}
 function npcWish(n){const d=S.npc[n.i];if(d.wish&&d.wish.day===S.day)return d.wish;const R=mulberry(hi(S.worldSeed|0,S.day,n.i));const lv=level();let k;
   const r=R();if(r<0.5){const un=CROP_IDS.filter(id=>CROPS[id].lvl<=lv);k='c:'+un[Math.floor(R()*un.length)];}
@@ -161,9 +158,10 @@ function npcWish(n){const d=S.npc[n.i];if(d.wish&&d.wish.day===S.day)return d.wi
 function invFor(k){if(k.startsWith('c:')){const id=k.slice(2);return Object.keys(S.inv).find(q=>q.split('|')[0]===id&&S.inv[q]>0)||null;}return S.inv[k]>0?k:null;}
 function npcLine(n){const P0=PERS[n.pers],h=S.hour;const ctx=[];
   if(S.rain)ctx.push('This rain is perfect for the flowers. And for naps.');if(h<9)ctx.push('Good morning! The early bird catches the… well, bugs, I suppose.');if(h>=18)ctx.push('The lanterns look so pretty this time of evening.');
-  ctx.push(`I heard ${CROPS[S.demand].name.toLowerCase()} is selling for a fortune today!`);const d=S.npc[n.i];if(d.f>=5)ctx.push('I’m really glad you moved to '+TOWN.name+', you know?');
+  ctx.push(`I heard ${CROPS[S.demand].name.toLowerCase()} is selling for a fortune today!`);const d=S.npc[n.i];if(d.f>=5)ctx.push('I’m really glad you moved to '+TOWN.name+', you know?');if(d.lastGift&&S.day-d.lastGift.day<=3)ctx.push(`I’m still enjoying that ${nameOf(d.lastGift.key)} you gave me!`,`Thanks again for the ${nameOf(d.lastGift.key)}. You remembered!`);
+  const r=Math.random(),special=r<0.35?activityLine(n):r<0.65?memoryLine(n):r<0.8?neighbourLine(n):null;if(special)return special;
   const all=[...P0.lines,...ctx];const line=all[Math.floor(Math.random()*all.length)];return Math.random()<0.35?`${line} ${n.cp[0].toUpperCase()+n.cp.slice(1)}!`:line;}
-function talkTo(n){if(n.state==='home')return;n.state='talk';n.t=0;n.path=null;walkTo(n.x,n.z);SFX.ui();const d=S.npc[n.i];
+function talkTo(n){if(n.state==='home')return;if(n.act&&n.act.k==='chat'){const q=n.act.with;if(q&&q.act&&q.act.with===n)endActivity(q);}n.state='talk';n.t=0;n.path=null;walkTo(n.x,n.z);SFX.ui();const d=S.npc[n.i];
   if(d.talk!==S.day){d.talk=S.day;d.f=Math.min(10,d.f+1);hearts(n.x,n.y+1,n.z);}
   setTimeout(()=>showTalk(n,npcLine(n)),0);}
 function showTalk(n,line){n.talkT=Math.min(2.4,0.6+line.length*0.025);const d=S.npc[n.i],w=npcWish(n),btns=[];
@@ -172,7 +170,7 @@ function showTalk(n,line){n.talkT=Math.min(2.4,0.6+line.length*0.025);const d=S.
     btns.push({label:have?'Give '+nameOf(have):'Need one',cls:'go',disabled:!have,fn:()=>giveWish(n,have)});}
   btns.push({label:'Chat',fn:()=>{SFX.ui();showTalk(n,npcLine(n));}},{label:'Bye',fn:()=>{clearAction();n.state='idle';n.wait=1.5;}});
   setAction(msg,btns,`${n.name} · ${PERS[n.pers].label} ${n.sp} · ♥ ${d.f}/10`);}
-function giveWish(n,key){const d=S.npc[n.i];if(!key||!S.inv[key])return;n.happyT=2.5;n.talkT=1.6;S.inv[key]--;if(!S.inv[key])delete S.inv[key];d.wish.done=true;d.f=Math.min(10,d.f+3);
+function giveWish(n,key){const d=S.npc[n.i];if(!key||!S.inv[key])return;d.lastGift={key,day:S.day};n.happyT=2.5;n.talkT=1.6;S.inv[key]--;if(!S.inv[key])delete S.inv[key];d.wish.done=true;d.f=Math.min(10,d.f+3);
   const pay=Math.round(priceOf(key)*2+60);S.shells+=pay;SFX.rare();hearts(n.x,n.y+1,n.z);addXP(8);let extra='';
   if(Math.random()<0.4){const ks=Object.keys(BUILD).filter(k=>BUILD[k].lvl<=level());const k=pickR(ks);S.store[k]=(S.store[k]||0)+1;extra=` and a <b>${BUILD[k].name}</b> (in your storage)`;}
   else{const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+3;extra=` and <b>3 ${CROPS[id].name} seeds</b>`;}

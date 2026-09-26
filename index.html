@@ -532,7 +532,7 @@ const DEX_CATS=[['fish','Fish','f:',FISH],['bugs','Bugs','b:',BUGS],['plants','P
 const SAVE_KEY='driftseed-town-v1'; // the town branch keeps its own save so it never touches the main game's
 function freshState(){
   return {v:1,shells:150,xp:0,day:1,hour:7.2,land:0,house:0,tiles:{},objs:[],store:{},inv:{},alm:{},almR:{},
-    seed:'turnip',rain:false,demand:'carrot',sound:true,pxAdj:0,nextId:1,t:Date.now(),mode:'farm',look:{sp:'bunny',fur:0xf6f3ee,shirt:0xd8453a},tool:'hand',tipTools:0,tipSeed:0,tut:0,harvested:0,earned:0,
+    seed:'turnip',rain:false,demand:'carrot',sound:true,pxAdj:0,nextId:1,t:Date.now(),mode:'farm',log:[],look:{sp:'bunny',fur:0xf6f3ee,shirt:0xd8453a},tool:'hand',tipTools:0,tipSeed:0,tut:0,harvested:0,earned:0,
     finds:[],weeds:[],free:{},orders:[],ordBonus:0,rod:0,can:0,rec:{},npc:{},shook:{},wv:0,farmInit:0,debris:[],farmClear:0,tipPaint:0,
     worldSeed:Math.floor(Math.random()*1e9),sea:false,px:0.3,pz:2.1,boat:null,disc:{0:1},picked:{},dexR:{},boatTip:0};
 }
@@ -1593,7 +1593,7 @@ function binGroup(){const g=new T.Group();g.add(M([P(BOX,0x8a5a36,0,0.22,0,0,0,0
    The town: a Wild World-style village generated from the world seed —
    plaza with a town tree, shops, a museum, a town hall, villager homes, dirt paths, lamps and trees
    ========================================================= */
-const TOWN={fHid:null,name:'',plaza:[0,0],bld:[],path:new Map(),fixed:new Map(),plot:[],board:null,lamps:[],flora:new Map(),res:new Map()};
+const TOWN={fHid:null,name:'',plaza:[0,0],benches:[],bld:[],path:new Map(),fixed:new Map(),plot:[],board:null,lamps:[],flora:new Map(),res:new Map()};
 // wild flower clumps (one geometry per colour), clover and pebbles for the town's grass
 const FLOWER_SP={tulip:[0xe8453a,0xf6d04a,0xf2a6c8,0xffffff,0x9a6ad0],rose:[0xd8303a,0xf8f4ee,0xf6d04a,0xf2a6c8],cosmos:[0xf2a6c8,0xf8f4ee,0xe86a8a,0xf6a830],
   pansy:[0x7a5ad0,0xf6d04a,0xe8453a,0x8ac8f0],lily:[0xf8f4ee,0xf08a2a,0xf2a6c8],hyacinth:[0x6a7ae0,0xf2a6c8,0xf8f4ee],daisy:[0xffffff,0xf6e6f0]};
@@ -1663,7 +1663,7 @@ function layoutTown(isl){
   // town tree + benches + bulletin board
   tp.push(...shift(scaleParts(treeParts('oak',mulberry(7),0x9a9ea8),1.55),pc[0],y0(...pc),pc[1],0.4));
   for(let i=0;i<10;i++){const a=i/10*6.283;bloom(p,[0xf2a6c8,0xffffff,0xf6d04a][i%3],0xf6d04a,pc[0]+Math.cos(a)*0.85,y0(...pc)+0.05,pc[1]+Math.sin(a)*0.85,0.07);}
-  for(const [bx,bz,r] of [[pc[0]-2,pc[1]+2,0],[pc[0]+2,pc[1]+2,0]]){const q=[];for(const [x,z] of [[-0.38,-0.1],[0.38,-0.1],[-0.38,0.12],[0.38,0.12]])q.push(P(BOX,0x5a3a2a,x,0.12,z,0,0,0,0.06,0.24,0.06));
+  TOWN.benches=[];for(const [bx,bz,r] of [[pc[0]-2,pc[1]+2,0],[pc[0]+2,pc[1]+2,0]]){TOWN.benches.push([bx,bz]);const q=[];for(const [x,z] of [[-0.38,-0.1],[0.38,-0.1],[-0.38,0.12],[0.38,0.12]])q.push(P(BOX,0x5a3a2a,x,0.12,z,0,0,0,0.06,0.24,0.06));
     q.push(P(BOX,0xb07a44,0,0.26,0,0,0,0,0.9,0.06,0.34),P(BOX,0xb07a44,0,0.52,-0.16,0,0,0,0.9,0.18,0.05));p.push(...shift(q,bx,y0(bx,bz),bz,r));TOWN.fixed.set(K(bx,bz),'decor');}
   {const [bx,bz]=TOWN.board,q=[P(CYL8,0x6a4428,-0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(CYL8,0x6a4428,0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(BOX,0x9a6a3a,0,0.62,0,0,0,0,0.9,0.52,0.06),P(BOX,0x7a5230,0,0.92,0,0,0,0,1.0,0.07,0.12),
     P(BOX,0xf6ecd0,-0.2,0.66,0.035,0,0,0.08,0.22,0.26,0.01),P(BOX,0xf2c8d8,0.14,0.6,0.035,0,0,-0.1,0.2,0.2,0.01),P(BOX,0xd8ecf4,0.22,0.74,0.035,0,0,0.05,0.14,0.12,0.01)];p.push(...shift(q,bx,y0(bx,bz),bz,0));}
@@ -1814,6 +1814,7 @@ function enterHouse(kind,b,n){if(inside)return;$('fade').classList.add('on');SFX
     let who=null;if(n&&(n.state==='home'||S.hour>=21||S.hour<6.5)){who=n.g.clone(true);who.visible=true;who.position.set(0.9,0,-0.2);who.rotation.y=0.4;r.g.add(who);}
     inside={kind,b,n,room:r,me,who,wl:who?limbsOf(who):null,ml:null,x:0,z:r.RD/2-0.8,tx:0,tz:r.RD/2-0.8,face:Math.PI,title:r.title||(kind==='home'?'Your '+HOUSES[S.house].toLowerCase():n.name+'’s house')};
     ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');
+    if(kind==='museum'&&!(S.log||[]).some(e=>e.t==='museum'&&e.day===S.day))logEvent('museum');
     if(kind==='museum')setTimeout(()=>toast(`Grandpa Tully: “Welcome to the ${TOWN.name} Museum! Tap an exhibit to learn about it, or come chat with an old turtle.”`,'',ICON.dex),350);
     else if(kind==='vh'&&!who)toast(`${n.name} is out. You peek around the cosy ${n.pers==='scholar'?'study':n.pers==='tinkerer'?'workshop':'room'}.`);
     else if(who)setTimeout(()=>showTalk(n,`Oh! Welcome to my home! Make yourself comfortable.`),350);},450);}
@@ -1864,6 +1865,93 @@ function gatherRes(x,z){const k=K(x,z),t=TOWN.res.get(k),sh=S.shook[k]||{d:0,n:0
 function boardNews(){const w=npcs.map(n=>{const d=S.npc[n.i]||{};return d.wish&&!d.wish.done&&d.wish.day===S.day?`${n.name} wants ${nameOf(d.wish.k)}`:null;}).filter(Boolean);
   setAction(`<b>${TOWN.name} Bulletin</b><br>Market: <b>${CROPS[S.demand].name}</b> sells for 1.5× today. ${S.rain?'Rain today — crops are watered.':'Sunny skies — water your crops!'}${w.length?'<br>'+w.join(' · '):''}`,[{label:'Close',fn:clearAction}],'Notice Board');}
 
+/* =========================================================
+   Villager routines and memory.
+   Each villager follows the clock: a morning stroll, their hobby (fishing from the shore, watering flowers, reading on a
+   bench, tinkering on the doorstep, rambling the island, singing at the plaza), lunch on a bench, pair chats, an evening
+   gathering, then home. They hold props for what they're doing, and remember what you've been up to (S.log), which their
+   chat draws on.
+   To add an activity: a case in chooseActivity (where and for how long), in actPose/actTick (how it looks), and ACT_LINES.
+   ========================================================= */
+const HOBBY_ACT={fish:'fish',garden:'water',read:'read',tinker:'tinker',wander:'wander',stargaze:'sing'};
+const ACT_LINES={fish:['Shh… they’re biting.','Caught three this morning. Threw two back. Fair’s fair.','The trick is patience. And a good hat.'],
+  water:['These flowers were thirsty!','A little water and a kind word. That’s all they need.','Look at this bloom. Isn’t she lovely?'],
+  read:['Just getting to the good part of my book.','This bench is the best reading spot in town, you know.','Chapter nine. The lighthouse keeper has a secret…'],
+  tinker:['Nearly got this gizmo working! Nearly.','Hand me that… oh, never mind, found it.','If it whirrs, it works. If it smokes, it doesn’t.'],
+  wander:['What a view from up here!','I’m mapping every path on the island. Want a copy?','Found a shortcut! It took longer, but it was prettier.'],
+  sing:['La la… oh! You heard that?','I’m working on a new song about the tides.','Hum along if you know it!'],
+  chat:['We were just talking about you! All good things.','Oh, just catching up on town gossip.','You’re welcome to join us!'],
+  bench:['Nothing like a sit in the sun.','Lunch with a view. Can’t beat it.','My feet needed a rest.'],
+  stargaze:['Look, the first star is out.','Every night the sky looks a little different.','I think that one’s winking at us.']};
+
+/* ---- memory: things you did that villagers can mention ---- */
+function logEvent(t,data={}){if(!S.log)S.log=[];S.log.push({t,day:S.day,...data});if(S.log.length>30)S.log.splice(0,S.log.length-30);}
+const MEM_TPL={
+  catch:{sailor:n=>`Heard you landed a ${n}! Proper catch, that.`,scholar:n=>`A ${n}? Fascinating specimen. Did you donate it to the museum?`,dreamer:n=>`You caught a ${n}? I hope you told it something nice.`,_:n=>`I heard you caught a ${n}! Impressive!`},
+  bug:{explorer:n=>`A ${n}! Where’d you find it? I want to go too!`,homebody:n=>`A ${n}? Keep it away from my garden, dear.`,_:n=>`You caught a ${n}? The museum will be thrilled.`},
+  house:{homebody:()=>`Your new house is lovely! You’ll have to have me over for tea.`,tinkerer:()=>`Saw the work on your house. Solid joinery!`,_:()=>`Your house is looking so grand now!`},
+  decor:{scholar:n=>`I noticed your new ${n}. An interesting choice.`,dreamer:n=>`Your ${n} makes the whole town feel dreamier.`,_:n=>`I love the ${n} you put up!`},
+  island:{explorer:n=>`You made it to ${n}?! I’m so jealous. What was it like?`,sailor:n=>`${n}, eh? Tricky waters out that way. Well sailed.`,_:n=>`I heard you sailed to ${n}! Bring me back a story.`},
+  rarecrop:{homebody:n=>`A ${n}! Your farm must be very happy.`,_:n=>`Everyone’s talking about your ${n}!`},
+  museum:{scholar:()=>`I saw you at the museum. Grandpa Tully speaks very highly of you.`,_:()=>`Grandpa Tully says you’ve been a great help to the museum!`}};
+// what's worth remembering when you pick something up: new or valuable catches, and special crops
+function noteGain(key,first){if(key.startsWith('f:')||key.startsWith('b:')){const I=(key[0]==='f'?FISH:BUGS)[key.slice(2)];if(I&&!I.junk&&(first||I.price>=250))logEvent(key[0]==='f'?'catch':'bug',{name:I.name});}
+  else if(key.includes('|')&&!key.endsWith('|normal'))logEvent('rarecrop',{name:nameOf(key)});}
+function memoryLine(n){const recent=(S.log||[]).filter(e=>S.day-e.day<=2).slice(-8);if(!recent.length)return null;const e=recent[Math.floor(Math.random()*recent.length)],T0=MEM_TPL[e.t];if(!T0)return null;return(T0[n.pers]||T0._)(e.name||'');}
+function neighbourLine(n){const o=npcs.filter(q=>q!==n&&q.act);if(!o.length)return null;const q=o[Math.floor(Math.random()*o.length)];
+  const what={fish:'fishing down by the shore',water:'fussing over the flowers',read:'with their nose in a book',tinker:'tinkering again',wander:'off exploring',sing:'singing at the plaza',bench:'having lunch on a bench',chat:'chatting away',stargaze:'watching the sky'}[q.act.k];
+  return what?`Have you seen ${q.name}? ${what[0].toUpperCase()+what.slice(1)}, as usual.`:null;}
+
+/* ---- props held in the right hand ---- */
+function npcProps(n){const arm=n.limbs[1];if(!arm)return;const g=new T.Group();g.position.set(0,-0.17,0.04);arm.add(g);n.propG=g;n.props={};
+  const add=(k,parts,rx=0)=>{const m=M(parts);m.castShadow=false;m.visible=false;m.rotation.x=rx;g.add(m);n.props[k]=m;};
+  add('rod',[P(CYL6,0x9a7a4a,0,0.3,0,0,0,0,0.025,0.7,0.025),P(CYL12,0x5a5a6a,0,0.05,0.03,0,0,1.57,0.05,0.03,0.05)],1.1);
+  add('can',[P(CYL12,0xe0883a,0,0,0.08,0,0,0,0.14,0.12,0.12),P(CYL6,0xe0883a,0,0.04,0.18,1.0,0,0,0.025,0.14,0.025)],0.2);
+  add('book',[P(BOX,0x8a3a4a,0,0,0.1,0,0,0,0.16,0.02,0.12),P(BOX,0xf8f4ea,0,0.012,0.1,0,0,0,0.14,0.012,0.1)],-0.3);
+  add('hammer',[P(CYL6,0x9a6a3a,0,0.08,0,0,0,0,0.025,0.2,0.025),P(BOX,0x8a8e98,0,0.18,0,0,0,0,0.1,0.05,0.05)],0.6);
+  add('map',[P(BOX,0xf2e2b8,0,0,0.1,0,0,0,0.2,0.01,0.15),P(BOX,0xd8453a,0.03,0.008,0.12,0,0,0,0.02,0.01,0.02)],-0.4);}
+function showProp(n,k){if(!n.props)return;for(const q in n.props)n.props[q].visible=q===k;}
+
+/* ---- where to go next ---- */
+let shoreSpots=null;
+function homeShore(){if(shoreSpots)return shoreSpots;const pc=TOWN.plaza;shoreSpots=[];
+  for(const [x,z] of islands[0].sand){const c=SAND_CH.get(K(x,z));if(!c||Math.min(...c)>0.1)continue;if(Math.hypot(x-pc[0],z-pc[1])>26)continue;
+    for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(isSeaT(landMap.get(K(x+dx,z+dz)))&&landMap.get(K(x-dx,z-dz))==='sand'){shoreSpots.push([x-dx,z-dz,Math.atan2(dx,dz)]);break;}}
+  return shoreSpots;}
+const nearTile=(x,z,r=1)=>{for(let i=0;i<12;i++){const tx=x+Math.round((Math.random()-0.5)*2*r),tz=z+Math.round((Math.random()-0.5)*2*r);if(walkable(tx,tz)&&onHome(tx,tz)&&!npcBlock(tx,tz))return[tx,tz];}return null;};
+function chooseActivity(n){const h=S.hour,pc=TOWN.plaza,door=n.b.door,R=Math.random(),hob=HOBBY_ACT[PERS[n.pers].hobby]||'sing';
+  let k;if(h<8)k=R<0.6?'stroll':'water';else if(h<11)k=hob;else if(h<13)k=R<0.55?'bench':'chat';else if(h<17)k=R<0.65?hob:R<0.85?'chat':'wander';
+  else k=n.pers==='dreamer'&&h>=19?'stargaze':R<0.5?'sing':R<0.8?'chat':'bench';
+  switch(k){
+    case'fish':{const sh=homeShore();if(!sh.length)return chooseActivity2(n,'sing');const s=sh[(n.i*7+Math.floor(Math.random()*sh.length))%sh.length];return{k,to:[s[0],s[1]],face:s[2],dur:25+Math.random()*25,prop:'rod'};}
+    case'water':{const t=nearTile(door[0],door[1]+1,2)||nearTile(pc[0],pc[1],3);return t&&{k,to:t,face:Math.random()*6.28,dur:12+Math.random()*10,prop:'can'};}
+    case'read':case'bench':{const free=TOWN.benches.filter(b=>!npcs.some(q=>q!==n&&q.act&&q.act.seat&&q.act.seat[0]===b[0]&&q.act.seat[1]===b[1]));if(!free.length)return chooseActivity2(n,'sing');
+      const b=free[Math.floor(Math.random()*free.length)];return{k,to:[b[0],b[1]+1],seat:b,face:0,dur:k==='read'?30+Math.random()*20:18+Math.random()*12,prop:k==='read'?'book':null};}
+    case'tinker':{const t=[door[0],door[1]+1];return walkable(t[0],t[1])?{k,to:t,face:Math.PI,dur:20+Math.random()*15,prop:'hammer'}:chooseActivity2(n,'sing');}
+    case'wander':{const gl=islands[0].grass;for(let i=0;i<10;i++){const [x,z]=gl[Math.floor(Math.random()*gl.length)];if(walkable(x,z)&&!npcBlock(x,z)&&Math.hypot(x-pc[0],z-pc[1])<30)return{k,to:[x,z],face:Math.random()*6.28,dur:6+Math.random()*6,prop:'map'};}return null;}
+    case'chat':{const o=npcs.filter(q=>q!==n&&q.state!=='home'&&q.state!=='talk'&&!(q.act&&q.act.seat)&&(!q.act||q.act.k==='sing'||q.act.k==='chat'||q.state==='idle'));if(!o.length)return chooseActivity2(n,'sing');
+      const q=o[Math.floor(Math.random()*o.length)];const t=nearTile(Math.round(q.x),Math.round(q.z),1);return t&&{k,to:t,with:q,dur:10+Math.random()*8};}
+    case'stargaze':case'sing':{const t=nearTile(pc[0],pc[1]+1,3);return t&&{k,to:t,face:Math.random()*6.28,dur:14+Math.random()*10};}
+    default:{const t=nearTile(door[0],door[1]+2,4)||nearTile(pc[0],pc[1],4);return t&&{k:'stroll',to:t,dur:2};}}}
+function chooseActivity2(n,k){const t=nearTile(TOWN.plaza[0],TOWN.plaza[1]+1,3);return t&&{k,to:t,face:Math.random()*6.28,dur:12};}
+
+/* ---- doing it ---- */
+function startActivity(n){const a=n.act;n.state='act';n.actT=a.dur;n.t=0;showProp(n,a.prop);
+  if(a.seat){n.x=a.seat[0]+0.5-0.5;n.z=a.seat[1]+0.08;n.face=0;n.sit=true;}else if(a.face!==undefined)n.face=a.face;
+  if(a.k==='chat'&&a.with&&a.with.state!=='home'){const q=a.with;n.face=Math.atan2(q.x-n.x,q.z-n.z);if(q.state==='idle'||q.state==='act'&&!q.act.seat){q.act={k:'chat',with:n,dur:a.dur};q.state='act';q.actT=a.dur;q.face=Math.atan2(n.x-q.x,n.z-q.z);showProp(q,null);}}}
+function endActivity(n){n.act=null;n.sit=false;showProp(n,null);n.state='idle';n.wait=1.5+Math.random()*3;const L=n.limbs;if(L[2]){L[2].rotation.x=0;L[3].rotation.x=0;}}
+function actTick(n,dt,tt){const a=n.act,L=n.limbs;n.actT-=dt;
+  if(n.sit&&L[2]){L[2].rotation.x=-1.35;L[3].rotation.x=-1.35;}
+  switch(a.k){
+    case'fish':if(L[1])L[1].rotation.x=-0.9+Math.sin(tt*1.2+n.i)*0.05;if(Math.random()<dt*0.05){floatText(n.x,n.y+1.2,n.z,Math.random()<0.5?'!':'Got one!');n.happyT=1.2;}break;
+    case'water':if(L[1])L[1].rotation.x=-0.7;if(Math.random()<dt*8){const fx=n.x+Math.sin(n.face)*0.45,fz=n.z+Math.cos(n.face)*0.45;emit(fx,n.y+0.35,fz,{vy:-1,life:0.4,max:0.4,size:0.04,color:0x8ac4ff,g:6});}break;
+    case'read':if(L[1])L[1].rotation.x=-1.0;if(L[0])L[0].rotation.x=-0.9;break;
+    case'tinker':if(L[1])L[1].rotation.x=-0.6-Math.abs(Math.sin(tt*6+n.i))*0.9;if(Math.random()<dt*2)sparkle(n.x+Math.sin(n.face)*0.4,n.y+0.2,n.z+Math.cos(n.face)*0.4,0xffe08a);break;
+    case'wander':n.face+=Math.sin(tt*0.7+n.i)*dt*0.8;if(L[1])L[1].rotation.x=-0.8;break;
+    case'sing':case'stargaze':n.g.rotation.z=Math.sin(tt*2+n.i)*0.08;if(Math.random()<dt*0.6)floatText(n.x,n.y+1.2,n.z,a.k==='sing'?'♪':'✦');break;
+    case'chat':if(a.with){n.face=Math.atan2(a.with.x-n.x,a.with.z-n.z);if(Math.random()<dt*0.7)floatText(n.x,n.y+1.2,n.z,['…','!','ha ha','♥','?'][Math.floor(Math.random()*5)]);if(Math.random()<dt*0.8)n.talkT=0.8;if(a.with.state==='home')n.actT=0;}break;}
+  if(n.actT<=0){n.g.rotation.z=0;if(L[0])L[0].rotation.x=0;if(L[1])L[1].rotation.x=0;endActivity(n);}}
+function activityLine(n){return n.act&&ACT_LINES[n.act.k]?pickR(ACT_LINES[n.act.k]):null;}
 /* ---- villagers: generated neighbours with personalities, routines, friendship and daily wishes ---- */
 const SPECIES={cat:{names:['Mochi','Tabby','Olive','Miso','Pumpkin'],col:[0xf0b070,0x9a9aa8,0xf4f0ea,0x3a3440]},dog:{names:['Biscuit','Waffles','Maple','Rufus','Goldie'],col:[0xd8a868,0xf4ecd8,0x8a6040]},
   bear:{names:['Bruno','Honey','Teddy','Barley'],col:[0xa87450,0xd8b890,0x6a4a38]},rabbit:{names:['Clover','Bunnie','Mira','Coco'],col:[0xf4f0ea,0xe8c8d8,0xc8a888]},
@@ -1992,31 +2080,28 @@ function initNPCs(){for(const n of npcs)scene.remove(n.g);npcs.length=0;const R=
     const name=S0.names[Math.floor(R()*S0.names.length)],pers=pk[Math.floor(R()*pk.length)],cp=PERS[pers].cp[Math.floor(R()*PERS[pers].cp.length)];
     const col=S0.col[Math.floor(R()*S0.col.length)],shirt=[0x6ab8a8,0x5a8ae0,0xe8866a,0xd8b84a,0xf39ab0,0x9a8ad8,0x7aa86a,0xd8604a][Math.floor(R()*8)];
     const st=STYLE[pers],outfit=st.o[Math.floor(R()*st.o.length)],acc=st.a[Math.floor(R()*st.a.length)];const g=npcModel(sp,col,shirt,acc,outfit);g.scale.setScalar(0.92);scene.add(g);const i=npcs.length;if(!S.npc[i])S.npc[i]={f:0,talk:0,wish:null,gift5:0,gift10:0};
-    const n={i,name,sp,pers,cp,b,g,limbs:limbsOf(g),x:b.door[0]+0.5,z:b.door[1]+0.3,y:topY(b.door[0],b.door[1]),path:null,state:'idle',wait:R()*4,t:0,face:0};g.position.set(n.x,n.y,n.z);npcs.push(n);}}
+    const n={i,name,sp,pers,cp,b,g,limbs:limbsOf(g),x:b.door[0]+0.5,z:b.door[1]+0.3,y:topY(b.door[0],b.door[1]),path:null,state:'idle',wait:R()*4,t:0,face:0};g.position.set(n.x,n.y,n.z);npcs.push(n);npcProps(n);}shoreSpots=null;}
 const npcBlock=(x,z)=>!!S.tiles[K(x,z)]||(!!objAt(x,z)&&objAt(x,z).k!=='stonepath')||(x>=HOUSE_AT.x&&x<=HOUSE_AT.x+1&&z>=HOUSE_AT.z&&z<=HOUSE_AT.z+1)||(TOWN.fixed.has(K(x,z))&&TOWN.fixed.get(K(x,z))!=='board');
 function npcGo(n,tx,tz){const p=landPath(Math.round(n.x),Math.round(n.z),tx,tz,{block:npcBlock,cost:(x,z)=>TOWN.path.has(K(x,z))?0.45:1,max:3000});if(!p||p.length<2)return false;n.path=p.slice(1);n.state='walk';return true;}
 function updateNPCs(dt,tt){if(!npcs.length)return;const near=Math.hypot(cam.tx,cam.tz)<70;const night=S.hour>=21||S.hour<6.5;
   for(const n of npcs){if(!near){n.g.visible=false;continue;}
     if(n.state==='home'){n.g.visible=false;if(!night){n.state='idle';n.wait=1+Math.random()*3;n.x=n.b.door[0]+0.5;n.z=n.b.door[1]+0.3;}continue;}
     n.g.visible=true;n.t+=dt;
-    if(n.state==='talk'){n.face=Math.atan2(vil.x-n.x,vil.z-n.z);if(n.t>12||Math.hypot(vil.x-n.x,vil.z-n.z)>4){n.state='idle';n.wait=2;}}
-    else if(n.state==='walk'){const w=n.path&&n.path[0];if(!w){n.state=night?'goinghome':'idle';n.wait=2+Math.random()*5;}
+    if(n.state==='talk'){if(!n.sit)n.face=Math.atan2(vil.x-n.x,vil.z-n.z);if(n.t>12||Math.hypot(vil.x-n.x,vil.z-n.z)>4){if(n.act)endActivity(n);n.state='idle';n.wait=2;}}
+    else if(n.state==='act'){if(night)endActivity(n);else actTick(n,dt,tt);}
+    else if(n.state==='walk'){const w=n.path&&n.path[0];if(!w){if(n.act&&!night)startActivity(n);else{n.state=night?'goinghome':'idle';n.wait=2+Math.random()*5;}}
       else{const tx=w[0]+(w===n.path[n.path.length-1]?0:0),dx=tx-n.x,dz=w[1]-n.z,d=Math.hypot(dx,dz);if(d<0.06)n.path.shift();else{const sp=Math.min(d,dt*1.25);n.x+=dx/d*sp;n.z+=dz/d*sp;n.face=Math.atan2(dx,dz);}}}
     else if(n.state==='goinghome'){if(Math.hypot(n.x-n.b.door[0]-0.5,n.z-n.b.door[1])<1.2){n.state='home';burst(n.x,n.y+0.4,n.z,0xfff6e2,5,0.6,0.05);}else if(!npcGo(n,n.b.door[0],n.b.door[1]))n.state='home';}
     else{n.wait-=dt;if(night){if(!npcGo(n,n.b.door[0],n.b.door[1]))n.state='home';else n.state='walk';}
-      else if(n.wait<=0){n.wait=3+Math.random()*6;const r=Math.random();let t=null;const pc=TOWN.plaza;
-        if(r<0.4)t=[pc[0]+Math.round((Math.random()-0.5)*4),pc[1]+Math.round((Math.random()-0.5)*4)];
-        else if(r<0.75){const ks=[...TOWN.path.keys()];const k=ks[Math.floor(Math.random()*ks.length)];t=k.split(',').map(Number);}
-        else if(r<0.88)t=n.b.door;else t=[Math.round(vil.x+(Math.random()-0.5)*3),Math.round(vil.z+(Math.random()-0.5)*3)];
-        if(t&&walkable(t[0],t[1])&&onHome(t[0],t[1]))npcGo(n,t[0],t[1]);
-        if(Math.random()<0.25)floatText(n.x,n.y+1.1,n.z,['♪','…','♥','!'][Math.floor(Math.random()*4)]);}}
-    const ty=topY(Math.round(n.x),Math.round(n.z))||0.3;n.y=lerp(n.y,ty,Math.min(1,dt*8));
+      else if(n.wait<=0){n.wait=2+Math.random()*4;/* follow the daily routine (57-routines) */
+        const a=chooseActivity(n);if(a&&npcGo(n,a.to[0],a.to[1]))n.act=a;else if(a&&Math.hypot(a.to[0]-n.x,a.to[1]-n.z)<0.8){n.act=a;startActivity(n);}}}
+    const ty=(topY(Math.round(n.x),Math.round(n.z))||0.3)+(n.sit?0.16:0);n.y=lerp(n.y,ty,Math.min(1,dt*8));
     // face: blink every few seconds, flap the mouth while talking, happy eyes after a gift
     {n.blinkT=(n.blinkT===undefined?2+Math.random()*3:n.blinkT)-dt;let eyes='open',mouth='smile';
       if(n.happyT>0){n.happyT-=dt;eyes='happy';}else if(n.blinkT<0){eyes='blink';if(n.blinkT<-0.13)n.blinkT=2.5+Math.random()*3.5;}
       if(n.talkT>0){n.talkT-=dt;mouth=Math.sin(tt*17+n.i)>0?'talk':'smile';}
       if(eyes!==n.fe||mouth!==n.fm){n.fe=eyes;n.fm=mouth;setFace(n.g,eyes,mouth);}}
-    const walking=n.state==='walk'||n.state==='goinghome';swingLimbs(n.limbs,tt*9+n.i,walking?0.7:0);n.g.position.set(n.x,n.y+(walking?Math.abs(Math.sin(tt*9+n.i))*0.05:Math.sin(tt*2+n.i)*0.01),n.z);
+    const walking=n.state==='walk'||n.state==='goinghome';if(n.state!=='act'&&!n.sit)swingLimbs(n.limbs,tt*9+n.i,walking?0.7:0);n.g.position.set(n.x,n.y+(walking?Math.abs(Math.sin(tt*9+n.i))*0.05:Math.sin(tt*2+n.i)*0.01),n.z);
     n.g.rotation.y+=angDiff(n.g.rotation.y,n.face)*Math.min(1,dt*6);}}
 function npcWish(n){const d=S.npc[n.i];if(d.wish&&d.wish.day===S.day)return d.wish;const R=mulberry(hi(S.worldSeed|0,S.day,n.i));const lv=level();let k;
   const r=R();if(r<0.5){const un=CROP_IDS.filter(id=>CROPS[id].lvl<=lv);k='c:'+un[Math.floor(R()*un.length)];}
@@ -2027,9 +2112,10 @@ function npcWish(n){const d=S.npc[n.i];if(d.wish&&d.wish.day===S.day)return d.wi
 function invFor(k){if(k.startsWith('c:')){const id=k.slice(2);return Object.keys(S.inv).find(q=>q.split('|')[0]===id&&S.inv[q]>0)||null;}return S.inv[k]>0?k:null;}
 function npcLine(n){const P0=PERS[n.pers],h=S.hour;const ctx=[];
   if(S.rain)ctx.push('This rain is perfect for the flowers. And for naps.');if(h<9)ctx.push('Good morning! The early bird catches the… well, bugs, I suppose.');if(h>=18)ctx.push('The lanterns look so pretty this time of evening.');
-  ctx.push(`I heard ${CROPS[S.demand].name.toLowerCase()} is selling for a fortune today!`);const d=S.npc[n.i];if(d.f>=5)ctx.push('I’m really glad you moved to '+TOWN.name+', you know?');
+  ctx.push(`I heard ${CROPS[S.demand].name.toLowerCase()} is selling for a fortune today!`);const d=S.npc[n.i];if(d.f>=5)ctx.push('I’m really glad you moved to '+TOWN.name+', you know?');if(d.lastGift&&S.day-d.lastGift.day<=3)ctx.push(`I’m still enjoying that ${nameOf(d.lastGift.key)} you gave me!`,`Thanks again for the ${nameOf(d.lastGift.key)}. You remembered!`);
+  const r=Math.random(),special=r<0.35?activityLine(n):r<0.65?memoryLine(n):r<0.8?neighbourLine(n):null;if(special)return special;
   const all=[...P0.lines,...ctx];const line=all[Math.floor(Math.random()*all.length)];return Math.random()<0.35?`${line} ${n.cp[0].toUpperCase()+n.cp.slice(1)}!`:line;}
-function talkTo(n){if(n.state==='home')return;n.state='talk';n.t=0;n.path=null;walkTo(n.x,n.z);SFX.ui();const d=S.npc[n.i];
+function talkTo(n){if(n.state==='home')return;if(n.act&&n.act.k==='chat'){const q=n.act.with;if(q&&q.act&&q.act.with===n)endActivity(q);}n.state='talk';n.t=0;n.path=null;walkTo(n.x,n.z);SFX.ui();const d=S.npc[n.i];
   if(d.talk!==S.day){d.talk=S.day;d.f=Math.min(10,d.f+1);hearts(n.x,n.y+1,n.z);}
   setTimeout(()=>showTalk(n,npcLine(n)),0);}
 function showTalk(n,line){n.talkT=Math.min(2.4,0.6+line.length*0.025);const d=S.npc[n.i],w=npcWish(n),btns=[];
@@ -2038,7 +2124,7 @@ function showTalk(n,line){n.talkT=Math.min(2.4,0.6+line.length*0.025);const d=S.
     btns.push({label:have?'Give '+nameOf(have):'Need one',cls:'go',disabled:!have,fn:()=>giveWish(n,have)});}
   btns.push({label:'Chat',fn:()=>{SFX.ui();showTalk(n,npcLine(n));}},{label:'Bye',fn:()=>{clearAction();n.state='idle';n.wait=1.5;}});
   setAction(msg,btns,`${n.name} · ${PERS[n.pers].label} ${n.sp} · ♥ ${d.f}/10`);}
-function giveWish(n,key){const d=S.npc[n.i];if(!key||!S.inv[key])return;n.happyT=2.5;n.talkT=1.6;S.inv[key]--;if(!S.inv[key])delete S.inv[key];d.wish.done=true;d.f=Math.min(10,d.f+3);
+function giveWish(n,key){const d=S.npc[n.i];if(!key||!S.inv[key])return;d.lastGift={key,day:S.day};n.happyT=2.5;n.talkT=1.6;S.inv[key]--;if(!S.inv[key])delete S.inv[key];d.wish.done=true;d.f=Math.min(10,d.f+3);
   const pay=Math.round(priceOf(key)*2+60);S.shells+=pay;SFX.rare();hearts(n.x,n.y+1,n.z);addXP(8);let extra='';
   if(Math.random()<0.4){const ks=Object.keys(BUILD).filter(k=>BUILD[k].lvl<=level());const k=pickR(ks);S.store[k]=(S.store[k]||0)+1;extra=` and a <b>${BUILD[k].name}</b> (in your storage)`;}
   else{const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+3;extra=` and <b>3 ${CROPS[id].name} seeds</b>`;}
@@ -2475,7 +2561,7 @@ function itemInfo(key){const pre=key.slice(0,2),id=key.slice(2);if(pre==='f:')re
 function nameOf(key){const I=itemInfo(key);if(I)return I.name;if(key.startsWith('c:'))return CROPS[key.slice(2)].name;const [t,v]=key.split('|');return(VAR[v].name?VAR[v].name+' ':'')+CROPS[t].name;}
 function iconOf(key){if(key.startsWith('c:'))return seedIcon(key.slice(2));if(key.includes(':'))return ICON[key];return seedIcon(key.split('|')[0]);}
 function varOf(key){return key.includes(':')?'normal':key.split('|')[1];}
-function gain(key,n=1){S.inv[key]=(S.inv[key]||0)+n;const first=!S.alm[key];S.alm[key]=(S.alm[key]||0)+n;if(first&&key.includes(':'))setTimeout(()=>checkDex(key),600);return first;}
+function gain(key,n=1){S.inv[key]=(S.inv[key]||0)+n;const first=!S.alm[key];S.alm[key]=(S.alm[key]||0)+n;noteGain(key,first);if(first&&key.includes(':'))setTimeout(()=>checkDex(key),600);return first;}
 function checkDex(key){const cat=DEX_CATS.find(c=>key.startsWith(c[2]));if(!cat)return;const [id,label,pre,tab]=cat;
   if(!S.dexR[id]&&Object.keys(tab).every(k=>S.alm[pre+k])){S.dexR[id]=1;const r=5000;S.shells+=r;SFX.discover();toast(`Islandex: every ${label.toLowerCase()} recorded! +${fmt(r)} shells`,'rare',ICON.dex);}
   const [g,t]=dexCount();if(g===t&&!S.dexR.all){S.dexR.all=1;setTimeout(()=>{SFX.discover();toast('You completed the Islandex! Every creature, plant and treasure of the archipelago is yours.','rare',ICON.star);for(let i=0;i<40;i++)sparkle(vil.x+(Math.random()-0.5)*4,1,vil.z+(Math.random()-0.5)*4,0xfff0a0);},1500);}}
@@ -2679,7 +2765,7 @@ function placeBar(){const B=BUILD[placing.kind],n=S.store[placing.kind]||0,ok=ca
 function doPlace(){const B=BUILD[placing.kind];const {x,z}=placing;if(!canPlace(x,z))return;
   if(placing.fromStore){S.store[placing.kind]--;if(!S.store[placing.kind])delete S.store[placing.kind];}
   else{if(S.shells<B.cost){SFX.no();return;}S.shells-=B.cost;}
-  S.objs.push({id:S.nextId++,k:placing.kind,x,z,r:placing.rot});syncObjs();SFX.place();burst(x,topY(x,z)+0.2,z,0xf6eedb,12,1.4,0.08);walkTo(x,z);
+  S.objs.push({id:S.nextId++,k:placing.kind,x,z,r:placing.rot});logEvent('decor',{name:BUILD[placing.kind].name.toLowerCase()});syncObjs();SFX.place();burst(x,topY(x,z)+0.2,z,0xf6eedb,12,1.4,0.08);walkTo(x,z);
   if(placing.fromStore?!S.store[placing.kind]:!B.multi){endPlace();toast(`${B.name} placed.`);return;}
   const nxt=nearestValid(x,z);if(nxt)moveGhost(nxt[0],nxt[1]);else endPlace();}
 function endPlace(){if(ghost){scene.remove(ghost);ghost=null;}placing=null;cursor.visible=false;cursorT=0;clearAction();}
@@ -3146,7 +3232,7 @@ function disembark(islId){const isl=islands[islId];if(!isl)return false;const b=
   let best=null,bd=1e9;for(const [x,z] of [...isl.sand,...isl.grass]){const d=(x-b.x)**2+(z-b.z)**2;if(d<bd){bd=d;best=[x,z];}}
   if(!best||bd>10.5){toast('Sail a little closer to the shore.');return false;}
   sail=null;S.sea=false;vil.hop=0.4;vil.y=0.15;SFX.splash();goTo(best[0],best[1]);ctxSig='';
-  if(!isl.home){S.disc[isl.id]=1;toast(`Welcome to <b>${isl.name}</b>. Look for wild plants, bugs and shells, and fish from the shore.`,'',ICON.boat);}
+  if(!isl.home){if(!S.disc[isl.id]||!(S.log||[]).some(e=>e.t==='island'&&e.name===isl.name))logEvent('island',{name:isl.name});S.disc[isl.id]=1;toast(`Welcome to <b>${isl.name}</b>. Look for wild plants, bugs and shells, and fish from the shore.`,'',ICON.boat);}
   updateHUD();return true;}
 const blockedAt=(x,z)=>seaBlocked(Math.round(x),Math.round(z));
 function updateBoat(dt,tt){
@@ -3418,7 +3504,7 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.can){const R=CANS[S.can+1];if(!R||S.shells<R.cost)return;S.shells-=R.cost;S.can++;SFX.level();toast(`You got the ${R.name}! It waters a 3×3 patch.`,'rare',ICON.can);renderSheet();return;}
   if(d.land){const L=LAND_UP[S.land];if(!L||S.shells<L.cost)return;S.shells-=L.cost;S.land++;buildIsland(islands[0]);rebuildSeaGrid();syncObjs();rebuildSoil();syncAllCrops();syncLife();ensureBoat(true);SFX.level();
     toast('The tide pulls back — your island has grown!','rare',ICON.star);for(let i=0;i<30;i++)sparkle((Math.random()-0.5)*14,0.6,(Math.random()-0.5)*12,0xfff6e2);renderSheet();return;}
-  if(d.house){const HU=HOUSE_UP[S.house];if(!HU||S.shells<HU.cost)return;S.shells-=HU.cost;S.house++;syncObjs();SFX.level();burst(HOUSE_AT.x+0.5,1.5,HOUSE_AT.z+0.5,0xf6eedb,30,2.4,0.1);
+  if(d.house){const HU=HOUSE_UP[S.house];if(!HU||S.shells<HU.cost)return;S.shells-=HU.cost;S.house++;logEvent('house');syncObjs();SFX.level();burst(HOUSE_AT.x+0.5,1.5,HOUSE_AT.z+0.5,0xf6eedb,30,2.4,0.1);
     toast(S.house===3?'Your Villa is complete!':`Your new ${HOUSES[S.house]} is ready!`,'rare',THUMB['house'+S.house]);renderSheet();return;}
   if(d.mus!==undefined){S.music=d.mus==='1';renderSheet();return;}
   if(d.spd!==undefined){devSpeed=Number(d.spd);renderSheet();return;}
@@ -3772,7 +3858,7 @@ if(/[?&]debug\b/.test(location.search)){
   const tileKeys=()=>islands[0].grass.map(([x,z])=>[x,z]);
   window.DS={
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
-      islands:islands.length,town:TOWN.name,buildings:TOWN.bld.map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
+      islands:islands.length,town:TOWN.name,buildings:TOWN.bld.map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
     hour:h=>{S.hour=h;applyTime();},
     tp:(x,z)=>{S.sea=false;vil.x=vil.tx=x;vil.z=vil.tz=z;vil.path=null;cam.tx=x;cam.tz=z;},
     visit:id=>{const i=islands[id];S.disc[id]=1;const sp=(i.spots&&i.spots[1])||i.grass[0];DS.tp(sp[0]+0.6,sp[1]+0.6);},
@@ -3788,7 +3874,7 @@ if(/[?&]debug\b/.test(location.search)){
     fastTravel:id=>fastTravel(islands[id]),
     npcRouteOnLand:()=>{updateNpcBoat(0,0);const R=npcRoute;if(!R.pts)return -1;let n=0;for(let d=0;d<R.total;d+=0.25){R.d=d;updateNpcBoat(0,0);if(seaBlocked(Math.round(npcBoat.position.x),Math.round(npcBoat.position.z)))n++;}return n;},
     sailTo:id=>{const isl=islands[id];if(!S.sea){S.sea=true;const b=S.boat;vil.x=b.x;vil.z=b.z;}sailToIsland(isl);return !!sail;},
-    pick:(cx,cy)=>pick(cx,cy),lineup:(list)=>{const g=new T.Group();g.name='lineup';(list||Object.keys(SPECIES)).forEach((sp,i)=>{const L=Object.keys(STYLE),pe=L[i%L.length],st=STYLE[pe];const m=npcModel(sp,SPECIES[sp].col[0],[0x6ab8a8,0x5a8ae0,0xe8866a,0xd8b84a,0xf39ab0,0x9a8ad8][i%6],st.a[i%st.a.length],st.o[i%st.o.length]);const x=vil.x-3+(i%7)*1.0,z=vil.z-1-Math.floor(i/7)*1.4;m.position.set(x,surfY(x,z),z);g.add(m);});scene.add(g);return (list||Object.keys(SPECIES)).length;},npcAt:i=>{const n=npcs[i];return[n.x,n.z];},bldAt:t=>{const b=TOWN.bld.find(q=>q.t===t);return b?[b.x,b.z]:null;},calls:()=>{const out={};const names=new Map([[debrisRoot,'debris'],[lifeRoot,'life']]);try{names.set(cropRoot,'crops');}catch(e){}try{names.set(objRoot,'objs');}catch(e){}
+    pick:(cx,cy)=>pick(cx,cy),plaza:()=>TOWN.plaza.slice(),lineup:(list)=>{const g=new T.Group();g.name='lineup';(list||Object.keys(SPECIES)).forEach((sp,i)=>{const L=Object.keys(STYLE),pe=L[i%L.length],st=STYLE[pe];const m=npcModel(sp,SPECIES[sp].col[0],[0x6ab8a8,0x5a8ae0,0xe8866a,0xd8b84a,0xf39ab0,0x9a8ad8][i%6],st.a[i%st.a.length],st.o[i%st.o.length]);const x=vil.x-3+(i%7)*1.0,z=vil.z-1-Math.floor(i/7)*1.4;m.position.set(x,surfY(x,z),z);g.add(m);});scene.add(g);return (list||Object.keys(SPECIES)).length;},npcAt:i=>{const n=npcs[i];return[n.x,n.z];},bldAt:t=>{const b=TOWN.bld.find(q=>q.t===t);return b?[b.x,b.z]:null;},calls:()=>{const out={};const names=new Map([[debrisRoot,'debris'],[lifeRoot,'life']]);try{names.set(cropRoot,'crops');}catch(e){}try{names.set(objRoot,'objs');}catch(e){}
       scene.traverseVisible(o=>{if(!(o.isMesh||o.isPoints||o.isLine))return;let p=o,k=null;while(p&&p!==scene){if(names.has(p)){k=names.get(p);break;}const ii=islands.findIndex(i=>i.group===p||i.pgroup===p);if(ii>=0){k=ii===0?'home':'isl';break;}if(npcs.some(n=>n.g===p)){k='npc';break;}if(p===villager){k='player';break;}p=p.parent;}
         k=k||('scene:'+(o.name||o.type)+':'+(o.material&&o.material.type));out[k]=(out[k]||0)+1;});return Object.entries(out).sort((a,b)=>b[1]-a[1]).slice(0,20).map(x=>x.join(' '));},tris:()=>{const out={};const tag=o=>{let p=o;while(p){if(p.userData&&p.userData.tag)return p.userData.tag;if(islands.some(i=>i.group===p))return 'isl'+islands.findIndex(i=>i.group===p)+':'+(o.isInstancedMesh?'inst':'mesh');if(p===scene)break;p=p.parent;}return (o.isInstancedMesh?'inst:':'mesh:')+(o.material&&o.material.type)+(o.parent===scene?'@scene':'');};
       scene.traverseVisible(o=>{if(!(o.isMesh||o.isInstancedMesh||o.isPoints))return;const g=o.geometry;if(!g)return;const n=(g.index?g.index.count:g.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);const k=tag(o);out[k]=out[k]||{tris:0,n:0,shadow:0};out[k].tris+=n;out[k].n++;if(o.castShadow)out[k].shadow+=n;});

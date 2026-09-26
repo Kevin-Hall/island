@@ -85,7 +85,7 @@ function disembark(islId){const isl=islands[islId];if(!isl)return false;const b=
   let best=null,bd=1e9;for(const [x,z] of [...isl.sand,...isl.grass]){const d=(x-b.x)**2+(z-b.z)**2;if(d<bd){bd=d;best=[x,z];}}
   if(!best||bd>10.5){toast('Sail a little closer to the shore.');return false;}
   sail=null;S.sea=false;vil.hop=0.4;vil.y=0.15;SFX.splash();goTo(best[0],best[1]);ctxSig='';
-  if(!isl.home){S.disc[isl.id]=1;toast(`Welcome to <b>${isl.name}</b>. Look for wild plants, bugs and shells, and fish from the shore.`,'',ICON.boat);}
+  if(!isl.home){if(!S.disc[isl.id]||!(S.log||[]).some(e=>e.t==='island'&&e.name===isl.name))logEvent('island',{name:isl.name});S.disc[isl.id]=1;toast(`Welcome to <b>${isl.name}</b>. Look for wild plants, bugs and shells, and fish from the shore.`,'',ICON.boat);}
   updateHUD();return true;}
 const blockedAt=(x,z)=>seaBlocked(Math.round(x),Math.round(z));
 function updateBoat(dt,tt){

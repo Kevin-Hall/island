@@ -62,7 +62,7 @@ function itemInfo(key){const pre=key.slice(0,2),id=key.slice(2);if(pre==='f:')re
 function nameOf(key){const I=itemInfo(key);if(I)return I.name;if(key.startsWith('c:'))return CROPS[key.slice(2)].name;const [t,v]=key.split('|');return(VAR[v].name?VAR[v].name+' ':'')+CROPS[t].name;}
 function iconOf(key){if(key.startsWith('c:'))return seedIcon(key.slice(2));if(key.includes(':'))return ICON[key];return seedIcon(key.split('|')[0]);}
 function varOf(key){return key.includes(':')?'normal':key.split('|')[1];}
-function gain(key,n=1){S.inv[key]=(S.inv[key]||0)+n;const first=!S.alm[key];S.alm[key]=(S.alm[key]||0)+n;if(first&&key.includes(':'))setTimeout(()=>checkDex(key),600);return first;}
+function gain(key,n=1){S.inv[key]=(S.inv[key]||0)+n;const first=!S.alm[key];S.alm[key]=(S.alm[key]||0)+n;noteGain(key,first);if(first&&key.includes(':'))setTimeout(()=>checkDex(key),600);return first;}
 function checkDex(key){const cat=DEX_CATS.find(c=>key.startsWith(c[2]));if(!cat)return;const [id,label,pre,tab]=cat;
   if(!S.dexR[id]&&Object.keys(tab).every(k=>S.alm[pre+k])){S.dexR[id]=1;const r=5000;S.shells+=r;SFX.discover();toast(`Islandex: every ${label.toLowerCase()} recorded! +${fmt(r)} shells`,'rare',ICON.dex);}
   const [g,t]=dexCount();if(g===t&&!S.dexR.all){S.dexR.all=1;setTimeout(()=>{SFX.discover();toast('You completed the Islandex! Every creature, plant and treasure of the archipelago is yours.','rare',ICON.star);for(let i=0;i<40;i++)sparkle(vil.x+(Math.random()-0.5)*4,1,vil.z+(Math.random()-0.5)*4,0xfff0a0);},1500);}}

@@ -55,6 +55,7 @@ function enterHouse(kind,b,n){if(inside)return;$('fade').classList.add('on');SFX
     let who=null;if(n&&(n.state==='home'||S.hour>=21||S.hour<6.5)){who=n.g.clone(true);who.visible=true;who.position.set(0.9,0,-0.2);who.rotation.y=0.4;r.g.add(who);}
     inside={kind,b,n,room:r,me,who,wl:who?limbsOf(who):null,ml:null,x:0,z:r.RD/2-0.8,tx:0,tz:r.RD/2-0.8,face:Math.PI,title:r.title||(kind==='home'?'Your '+HOUSES[S.house].toLowerCase():n.name+'’s house')};
     ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');
+    if(kind==='museum'&&!(S.log||[]).some(e=>e.t==='museum'&&e.day===S.day))logEvent('museum');
     if(kind==='museum')setTimeout(()=>toast(`Grandpa Tully: “Welcome to the ${TOWN.name} Museum! Tap an exhibit to learn about it, or come chat with an old turtle.”`,'',ICON.dex),350);
     else if(kind==='vh'&&!who)toast(`${n.name} is out. You peek around the cosy ${n.pers==='scholar'?'study':n.pers==='tinkerer'?'workshop':'room'}.`);
     else if(who)setTimeout(()=>showTalk(n,`Oh! Welcome to my home! Make yourself comfortable.`),350);},450);}
