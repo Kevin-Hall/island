@@ -48,10 +48,10 @@ function palmParts(p,R,{n,lean,fronds,seg=4,flen=0.34,wid=0.34,cols,nuts,pitch=0
 function treeParts(kind,R,colRock){
   const p=[];
   switch(kind){
-    case'oak':trunkP(p,R,0x7a5230,0.9,0.13,0x5e3e24);canopy(p,R,[0x7cc050,0x5f9e3a,0x467e2c],0,1.3,0,0.55,11,0.62);
+    case'oak':trunkP(p,R,0x7a5230,0.9,0.13,0x5e3e24);canopy(p,R,[0x7cc050,0x5f9e3a,0x467e2c],0,1.3,0,0.55);
       if(R()<0.4)for(let i=0;i<5;i++){const a=R()*6.28;p.push(P(ICO2,0xe8453a,Math.cos(a)*0.62,1.05+R()*0.4,Math.sin(a)*0.62,0,0,0,0.1,0.1,0.1));}break;
     case'maple':case'mapleR':{const c=kind==='maple'?[0xf4a444,0xe8803a,0xc85e24]:[0xec6a4a,0xc8402a,0x982a22];
-      trunkP(p,R,0x6a4428,0.9,0.12,0x4e3020);canopy(p,R,c,0,1.3,0,0.55,11,0.6);
+      trunkP(p,R,0x6a4428,0.9,0.12,0x4e3020);canopy(p,R,c,0,1.3,0,0.55);
       for(let i=0;i<5;i++)lf(p,c[i%3],(R()-0.5)*1.4,0.02,(R()-0.5)*1.4,R()*6.28,0,0.13,0.1,0.02);break;}
     case'pine':case'snowpine':{const sn=kind==='snowpine',tip=sn?0xeef6fb:0x86cc6c,mid=sn?0x7aa898:0x4a9448,base=sn?0x2f5a4c:0x1f5230;
       p.push(P(TRUNK,0x8a5a36,0,0.55,0,0,0,0,0.3,1.1,0.3));for(let i=0;i<4;i++){const a=i*1.7+R();p.push(P(ICO2,0xc8905a,Math.cos(a)*0.12,0.3+i*0.14,Math.sin(a)*0.12,0,a,0,0.06,0.08,0.04));}
@@ -72,7 +72,7 @@ function treeParts(kind,R,colRock){
     case'dead':{p.push(P(TRUNK,0x3a3036,0,0.6,0,0,0,0,0.2,1.2,0.2));const br=(x,y,z,rz,ry,l,w)=>p.push(P(CYL6,0x3a3036,x,y,z,0,ry,rz,w,l,w));
       br(0.2,1.0,0,-0.8,0,0.55,0.08);br(-0.15,0.8,0.05,0.9,0.4,0.45,0.07);br(0.38,1.24,0,-0.2,0,0.3,0.05);br(-0.32,1.0,0.1,0.3,0.2,0.26,0.04);br(0.05,1.3,-0.1,0.5,1.2,0.35,0.05);break;}
     case'basalt':for(let i=0;i<5;i++){const h=0.4+R()*0.9,x=(R()-0.5)*0.55,z=(R()-0.5)*0.55;p.push(P(CYL6,i%2?0x2e2830:0x3a3440,x,h/2,z,0,R(),0,0.3,h,0.3),P(CYL6,0x4a4450,x,h+0.01,z,0,0,0,0.26,0.03,0.26));}break;
-    case'willow':trunkP(p,R,0x4a3a2a,0.95,0.14,0x3a2e22);canopy(p,R,[0x6a8a4a,0x4a6a3a,0x3a5a30],0,1.2,0,0.5,9,0.55);
+    case'willow':trunkP(p,R,0x4a3a2a,0.95,0.14,0x3a2e22);canopy(p,R,[0x6a8a4a,0x4a6a3a,0x3a5a30],0,1.2,0,0.5);
       for(let i=0;i<14;i++){const a=i/14*6.283+R()*0.2,r=0.55+R()*0.12;for(let k=0;k<4;k++)lf(p,k%2?0x5a7a44:0x44643a,Math.sin(a)*(r+k*0.02),1.05-k*0.2,Math.cos(a)*(r+k*0.02),a,-1.45,0.24,0.07,0.025);}break;
     case'reeds':for(let i=0;i<8;i++){const x=(R()-0.5)*0.6,z=(R()-0.5)*0.6,h=0.5+R()*0.35;p.push(P(CYL6,0x6a8a3a,x,h/2,z,0,0,(R()-0.5)*0.15,0.04,h,0.04),P(CYL12,0x7a4a2a,x,h-0.06,z,0,0,0,0.09,0.2,0.09),P(CONE4,0x6a8a3a,x,h+0.08,z,0,0,0,0.02,0.12,0.02));
       lf(p,0x5a8a34,x,0.05,z,R()*6.28,1.1,h*0.7,0.05,0.02);}break;

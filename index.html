@@ -1080,10 +1080,10 @@ function palmParts(p,R,{n,lean,fronds,seg=4,flen=0.34,wid=0.34,cols,nuts,pitch=0
 function treeParts(kind,R,colRock){
   const p=[];
   switch(kind){
-    case'oak':trunkP(p,R,0x7a5230,0.9,0.13,0x5e3e24);canopy(p,R,[0x7cc050,0x5f9e3a,0x467e2c],0,1.3,0,0.55,11,0.62);
+    case'oak':trunkP(p,R,0x7a5230,0.9,0.13,0x5e3e24);canopy(p,R,[0x7cc050,0x5f9e3a,0x467e2c],0,1.3,0,0.55);
       if(R()<0.4)for(let i=0;i<5;i++){const a=R()*6.28;p.push(P(ICO2,0xe8453a,Math.cos(a)*0.62,1.05+R()*0.4,Math.sin(a)*0.62,0,0,0,0.1,0.1,0.1));}break;
     case'maple':case'mapleR':{const c=kind==='maple'?[0xf4a444,0xe8803a,0xc85e24]:[0xec6a4a,0xc8402a,0x982a22];
-      trunkP(p,R,0x6a4428,0.9,0.12,0x4e3020);canopy(p,R,c,0,1.3,0,0.55,11,0.6);
+      trunkP(p,R,0x6a4428,0.9,0.12,0x4e3020);canopy(p,R,c,0,1.3,0,0.55);
       for(let i=0;i<5;i++)lf(p,c[i%3],(R()-0.5)*1.4,0.02,(R()-0.5)*1.4,R()*6.28,0,0.13,0.1,0.02);break;}
     case'pine':case'snowpine':{const sn=kind==='snowpine',tip=sn?0xeef6fb:0x86cc6c,mid=sn?0x7aa898:0x4a9448,base=sn?0x2f5a4c:0x1f5230;
       p.push(P(TRUNK,0x8a5a36,0,0.55,0,0,0,0,0.3,1.1,0.3));for(let i=0;i<4;i++){const a=i*1.7+R();p.push(P(ICO2,0xc8905a,Math.cos(a)*0.12,0.3+i*0.14,Math.sin(a)*0.12,0,a,0,0.06,0.08,0.04));}
@@ -1104,7 +1104,7 @@ function treeParts(kind,R,colRock){
     case'dead':{p.push(P(TRUNK,0x3a3036,0,0.6,0,0,0,0,0.2,1.2,0.2));const br=(x,y,z,rz,ry,l,w)=>p.push(P(CYL6,0x3a3036,x,y,z,0,ry,rz,w,l,w));
       br(0.2,1.0,0,-0.8,0,0.55,0.08);br(-0.15,0.8,0.05,0.9,0.4,0.45,0.07);br(0.38,1.24,0,-0.2,0,0.3,0.05);br(-0.32,1.0,0.1,0.3,0.2,0.26,0.04);br(0.05,1.3,-0.1,0.5,1.2,0.35,0.05);break;}
     case'basalt':for(let i=0;i<5;i++){const h=0.4+R()*0.9,x=(R()-0.5)*0.55,z=(R()-0.5)*0.55;p.push(P(CYL6,i%2?0x2e2830:0x3a3440,x,h/2,z,0,R(),0,0.3,h,0.3),P(CYL6,0x4a4450,x,h+0.01,z,0,0,0,0.26,0.03,0.26));}break;
-    case'willow':trunkP(p,R,0x4a3a2a,0.95,0.14,0x3a2e22);canopy(p,R,[0x6a8a4a,0x4a6a3a,0x3a5a30],0,1.2,0,0.5,9,0.55);
+    case'willow':trunkP(p,R,0x4a3a2a,0.95,0.14,0x3a2e22);canopy(p,R,[0x6a8a4a,0x4a6a3a,0x3a5a30],0,1.2,0,0.5);
       for(let i=0;i<14;i++){const a=i/14*6.283+R()*0.2,r=0.55+R()*0.12;for(let k=0;k<4;k++)lf(p,k%2?0x5a7a44:0x44643a,Math.sin(a)*(r+k*0.02),1.05-k*0.2,Math.cos(a)*(r+k*0.02),a,-1.45,0.24,0.07,0.025);}break;
     case'reeds':for(let i=0;i<8;i++){const x=(R()-0.5)*0.6,z=(R()-0.5)*0.6,h=0.5+R()*0.35;p.push(P(CYL6,0x6a8a3a,x,h/2,z,0,0,(R()-0.5)*0.15,0.04,h,0.04),P(CYL12,0x7a4a2a,x,h-0.06,z,0,0,0,0.09,0.2,0.09),P(CONE4,0x6a8a3a,x,h+0.08,z,0,0,0,0.02,0.12,0.02));
       lf(p,0x5a8a34,x,0.05,z,R()*6.28,1.1,h*0.7,0.05,0.02);}break;
@@ -1126,6 +1126,7 @@ function levelOf(isl,x,z){
 const GRASS_SLAB=new T.BoxGeometry(1,0.14,1);
 // fuzzy grass: clumps of thin tapered blades, instanced over every grass tile; they sway in the wind and part around the villager
 const grassU={uTime:{value:0},uWind:{value:1},uPl:{value:new T.Vector3(0,-99,0)}};
+let nearT=0; // near-grass rebuild timer (see updateNearGrass); set to 0 to rebuild next frame
 const grassMat=toon({vertexColors:true});grassMat.depthWrite=false;const flowerMat=toon({vertexColors:true}); // kept out of the depth buffer so the outline pass doesn't ink every blade
 const swayCompile=sh=>{Object.assign(sh.uniforms,grassU);
   sh.vertexShader='uniform float uTime;uniform float uWind;uniform vec3 uPl;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
@@ -1158,7 +1159,7 @@ function buildGrass(isl,g){const B=BIOMES[isl.biome],per=GRASS_DENS[isl.biome]||
     for(let j=0;j<per;j++,i++){im.setMatrixAt(i,clumpMat(x,z,j));im.setColorAt(i,_c.copy(bc).offsetHSL(0,0,(hash(x*3+j,z*5-j)-0.5)*0.05));}}
   isl.gHid=null;im.userData.per=per;im.renderOrder=3;im.receiveShadow=true;im.castShadow=false;im.frustumCulled=false;g.add(im);isl.gIM=im;}
 // hide the blades where something sits on the home island (tilled soil, the house, furniture)
-function refreshHomeGrass(){const isl=islands&&islands[0];if(!isl)return;if(isl.gIM){const im=isl.gIM,per=im.userData.per;if(!isl.gHid)isl.gHid=new Map();let ch=false;
+function refreshHomeGrass(){nearT=0;const isl=islands&&islands[0];if(!isl)return;if(isl.gIM){const im=isl.gIM,per=im.userData.per;if(!isl.gHid)isl.gHid=new Map();let ch=false;
   for(const [k,i0] of isl.gIdx){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||objAt(x,z)||fixedAt(x,z)||TOWN.path.has(k));if(isl.gHid.get(k)===hide)continue;isl.gHid.set(k,hide);ch=true;
     for(let j=0;j<per;j++){if(hide)im.setMatrixAt(i0+j,_m.makeScale(0,0,0));else im.setMatrixAt(i0+j,clumpMat(x,z,j));}}
   if(ch)im.instanceMatrix.needsUpdate=true;}
@@ -1166,6 +1167,30 @@ function refreshHomeGrass(){const isl=islands&&islands[0];if(!isl)return;if(isl.
     for(const [fm,i,mat] of arr){fm.setMatrixAt(i,hide?_m.makeScale(0,0,0):_m.fromArray(mat));dirty.add(fm);}}for(const fm of dirty)fm.instanceMatrix.needsUpdate=true;}
 const TUFT_GEO=merge([P(BOX,0xffffff,0,0.07,0,0.25,0,0.2,0.035,0.16,0.05),P(BOX,0xdddddd,0.06,0.06,0.03,-0.2,0.6,-0.3,0.035,0.13,0.05),P(BOX,0xeeeeee,-0.05,0.05,-0.03,0.3,1.2,0.4,0.035,0.11,0.05),P(BOX,0xd4d4d4,0.02,0.05,-0.06,-0.35,2,0.1,0.035,0.1,0.05)]);
 const riverU={uTime:{value:0}};
+
+/* ---- near grass: real 3D blade clumps on the grass around the camera, so the ground isn't flat up close.
+   One pooled InstancedMesh, refilled when the view moves a tile (or after a farm change); clumps shrink away toward
+   the edge of the circle so there's no visible border. Each blade is tinted like the painted ground under it,
+   including the big light/dark macro patches (same noise as the ground shader in 31-ground). ---- */
+const NEAR_R=7.5,NEAR_PER=4,NEAR_MAX=Math.ceil(Math.PI*NEAR_R*NEAR_R*NEAR_PER)+64,NEAR_SKIP=new Set(['snow','volcano']);
+const nearGrassMat=toon({vertexColors:true});nearGrassMat.depthWrite=false;
+nearGrassMat.onBeforeCompile=sh=>{swayCompile(sh);sh.uniforms.uNoise=pathU.uNoise;
+  sh.vertexShader='varying vec2 vGP;\n'+sh.vertexShader.replace('#include <project_vertex>','vGP=(modelMatrix*instanceMatrix*vec4(0.,0.,0.,1.)).xz;\n#include <project_vertex>');
+  sh.fragmentShader='uniform sampler2D uNoise;varying vec2 vGP;\n'+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+  {float mac_=texture2D(uNoise,vGP*0.013).r*0.65+texture2D(uNoise,vGP*0.034+vec2(3.1,1.7)).r*0.35;
+    if(mac_<0.41)diffuseColor.rgb*=vec3(0.76,0.84,0.8);else if(mac_>0.59)diffuseColor.rgb=diffuseColor.rgb*vec3(1.08,1.09,0.95)+vec3(0.05,0.055,0.0);}`);};
+let nearIM=null,nearAt='';const _nv=new T.Vector3();
+function updateNearGrass(dt){
+  if(!nearIM){nearIM=new T.InstancedMesh(BLADES,nearGrassMat,NEAR_MAX);nearIM.setColorAt(0,_c.set(0xffffff));nearIM.count=0;nearIM.frustumCulled=false;nearIM.renderOrder=3;nearIM.receiveShadow=true;scene.add(nearIM);}
+  nearIM.visible=!S.sea&&!inside;if(!nearIM.visible){nearAt='';return;}
+  nearT-=dt;const cx=Math.round(cam.tx),cz=Math.round(cam.tz),key=cx+','+cz;if(key===nearAt&&nearT>0)return;nearAt=key;nearT=1.5;
+  let i=0;const Ri=Math.ceil(NEAR_R);
+  for(let dz=-Ri;dz<=Ri;dz++)for(let dx=-Ri;dx<=Ri;dx++){const d=Math.hypot(dx,dz);if(d>NEAR_R)continue;const x=cx+dx,z=cz+dz,k=K(x,z);
+    if(landMap.get(k)!=='grass')continue;const isl=islandAt(x,z);if(!isl||NEAR_SKIP.has(isl.biome))continue;
+    if(S.tiles[k]||TOWN.path.has(k)||(isl.blocked&&isl.blocked.has(k))||objAt(x,z)||fixedAt(x,z)||debrisAt(x,z))continue;
+    const f=Math.min(1,(NEAR_R-d)/2.5),gc=groundCol(BIOMES[isl.biome].grass,x,z,isl.seed);
+    for(let j=0;j<NEAR_PER&&i<NEAR_MAX;j++,i++){clumpMat(x,z,j);if(f<1)_m.scale(_nv.set(f,f,f));nearIM.setMatrixAt(i,_m);nearIM.setColorAt(i,_c.setHex(gc).offsetHSL(0,0,(hash(x*3+j,z*5-j)-0.5)*0.05));}}
+  nearIM.count=i;nearIM.instanceMatrix.needsUpdate=true;nearIM.instanceColor.needsUpdate=true;}
 // flowing water (or lava): a toon material whose colour shimmers with world position and time
 function flowMat(col,hi,emi,fall){const m=toon({color:col,emissive:emi||0,emissiveIntensity:emi?0.9:0,side:fall?T.DoubleSide:T.FrontSide});
   m.onBeforeCompile=sh=>{sh.uniforms.uTime=riverU.uTime;
@@ -1474,7 +1499,7 @@ function cropParts(type,stage,seed=1){
       for(let i=0;i<14;i++){const x=-0.34+i/13*0.68;lf(leaf,GREENS[i%4],x,0.86*b,0,i*2.1,0.1,0.18*b,0.16*b);}
       if(ripe)for(const bx of [-0.2,0.02,0.22]){for(let row=0;row<4;row++){const n=4-row;for(let k=0;k<n;k++){const a=k/n*6.283+row;fruit.push(P(ICO2,k%3===2?0x5a2a8a:C.col,bx+Math.cos(a)*0.02*n,0.72-row*0.075,Math.sin(a)*0.02*n+0.06,0,0,0,0.07,0.07,0.07));}}
         fruit.push(P(LEAF0,0xffffff,bx+0.03,0.74,0.1,0,0,0,0.03,0.03,0.03));}break;}
-    case'peach':trunkP(leaf,R,0x7a5230,0.62*b,0.07);canopy(leaf,R,[0x7cc050,0x5f9e3a,0x467e2c],0,0.9*b,0,0.34*b,9,0.38*b);
+    case'peach':trunkP(leaf,R,0x7a5230,0.62*b,0.07);canopy(leaf,R,[0x7cc050,0x5f9e3a,0x467e2c],0,0.9*b,0,0.34*b);
       if(ripe)for(const [x,y,z] of [[0.32,0.72,0.12],[-0.3,0.8,0.14],[0.06,0.66,0.36],[-0.1,0.86,-0.34],[0.24,0.96,-0.2]])fruit.push(P(ICO2,C.col,x,y,z,0,0,0,0.17,0.17,0.17),P(ICO2,0xe8604a,x+0.04,y+0.02,z+0.05,0,0,0,0.1,0.1,0.1),P(LEAF0,0xffffff,x+0.05,y+0.06,z+0.05,0,0,0,0.035,0.03,0.03));break;
     case'dragonfruit':{const cc=[0x5aa84a,0x4a9040];leaf.push(P(CYL6,cc[0],0,0.3*b,0,0,0,0,0.13,0.6*b,0.13));
       for(let i=0;i<3;i++){const a=i*2.1+R(),x=Math.sin(a)*0.16,z=Math.cos(a)*0.16;leaf.push(P(CYL6,cc[i%2],x*0.6,0.3*b,z*0.6,Math.cos(a)*0.9,0,-Math.sin(a)*0.9,0.09,0.3*b,0.09),P(CYL6,cc[(i+1)%2],x*1.4,0.52*b,z*1.4,0,0,0,0.09,0.36*b,0.09));
@@ -3963,7 +3988,7 @@ function frame(now){
   }
   updateBoat(dt,tt);
   if(S.sea){vil.hop=Math.max(0,vil.hop-dt);villager.position.set(vil.x,0.14+Math.sin(tt*1.5)*0.04+Math.sin(vil.hop/0.35*Math.PI)*0.3*(vil.hop>0),vil.z);if(!fishing)villager.rotation.y=S.boat.r;}
-  const k=paint?0:Math.min(1,dt*3);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();cullIslands(); // hold the view still while drag-farming so tiles stay under the finger
+  const k=paint?0:Math.min(1,dt*3);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();cullIslands();updateNearGrass(dt); // hold the view still while drag-farming so tiles stay under the finger
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
   scene.fog.near=cam.dist+18-fogBoost*14;scene.fog.far=cam.dist+95-fogBoost*45;

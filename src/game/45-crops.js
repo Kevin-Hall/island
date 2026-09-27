@@ -103,7 +103,7 @@ function cropParts(type,stage,seed=1){
       for(let i=0;i<14;i++){const x=-0.34+i/13*0.68;lf(leaf,GREENS[i%4],x,0.86*b,0,i*2.1,0.1,0.18*b,0.16*b);}
       if(ripe)for(const bx of [-0.2,0.02,0.22]){for(let row=0;row<4;row++){const n=4-row;for(let k=0;k<n;k++){const a=k/n*6.283+row;fruit.push(P(ICO2,k%3===2?0x5a2a8a:C.col,bx+Math.cos(a)*0.02*n,0.72-row*0.075,Math.sin(a)*0.02*n+0.06,0,0,0,0.07,0.07,0.07));}}
         fruit.push(P(LEAF0,0xffffff,bx+0.03,0.74,0.1,0,0,0,0.03,0.03,0.03));}break;}
-    case'peach':trunkP(leaf,R,0x7a5230,0.62*b,0.07);canopy(leaf,R,[0x7cc050,0x5f9e3a,0x467e2c],0,0.9*b,0,0.34*b,9,0.38*b);
+    case'peach':trunkP(leaf,R,0x7a5230,0.62*b,0.07);canopy(leaf,R,[0x7cc050,0x5f9e3a,0x467e2c],0,0.9*b,0,0.34*b);
       if(ripe)for(const [x,y,z] of [[0.32,0.72,0.12],[-0.3,0.8,0.14],[0.06,0.66,0.36],[-0.1,0.86,-0.34],[0.24,0.96,-0.2]])fruit.push(P(ICO2,C.col,x,y,z,0,0,0,0.17,0.17,0.17),P(ICO2,0xe8604a,x+0.04,y+0.02,z+0.05,0,0,0,0.1,0.1,0.1),P(LEAF0,0xffffff,x+0.05,y+0.06,z+0.05,0,0,0,0.035,0.03,0.03));break;
     case'dragonfruit':{const cc=[0x5aa84a,0x4a9040];leaf.push(P(CYL6,cc[0],0,0.3*b,0,0,0,0,0.13,0.6*b,0.13));
       for(let i=0;i<3;i++){const a=i*2.1+R(),x=Math.sin(a)*0.16,z=Math.cos(a)*0.16;leaf.push(P(CYL6,cc[i%2],x*0.6,0.3*b,z*0.6,Math.cos(a)*0.9,0,-Math.sin(a)*0.9,0.09,0.3*b,0.09),P(CYL6,cc[(i+1)%2],x*1.4,0.52*b,z*1.4,0,0,0,0.09,0.36*b,0.09));

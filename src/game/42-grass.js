@@ -1,5 +1,6 @@
 // fuzzy grass: clumps of thin tapered blades, instanced over every grass tile; they sway in the wind and part around the villager
 const grassU={uTime:{value:0},uWind:{value:1},uPl:{value:new T.Vector3(0,-99,0)}};
+let nearT=0; // near-grass rebuild timer (see updateNearGrass); set to 0 to rebuild next frame
 const grassMat=toon({vertexColors:true});grassMat.depthWrite=false;const flowerMat=toon({vertexColors:true}); // kept out of the depth buffer so the outline pass doesn't ink every blade
 const swayCompile=sh=>{Object.assign(sh.uniforms,grassU);
   sh.vertexShader='uniform float uTime;uniform float uWind;uniform vec3 uPl;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
@@ -32,7 +33,7 @@ function buildGrass(isl,g){const B=BIOMES[isl.biome],per=GRASS_DENS[isl.biome]||
     for(let j=0;j<per;j++,i++){im.setMatrixAt(i,clumpMat(x,z,j));im.setColorAt(i,_c.copy(bc).offsetHSL(0,0,(hash(x*3+j,z*5-j)-0.5)*0.05));}}
   isl.gHid=null;im.userData.per=per;im.renderOrder=3;im.receiveShadow=true;im.castShadow=false;im.frustumCulled=false;g.add(im);isl.gIM=im;}
 // hide the blades where something sits on the home island (tilled soil, the house, furniture)
-function refreshHomeGrass(){const isl=islands&&islands[0];if(!isl)return;if(isl.gIM){const im=isl.gIM,per=im.userData.per;if(!isl.gHid)isl.gHid=new Map();let ch=false;
+function refreshHomeGrass(){nearT=0;const isl=islands&&islands[0];if(!isl)return;if(isl.gIM){const im=isl.gIM,per=im.userData.per;if(!isl.gHid)isl.gHid=new Map();let ch=false;
   for(const [k,i0] of isl.gIdx){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||objAt(x,z)||fixedAt(x,z)||TOWN.path.has(k));if(isl.gHid.get(k)===hide)continue;isl.gHid.set(k,hide);ch=true;
     for(let j=0;j<per;j++){if(hide)im.setMatrixAt(i0+j,_m.makeScale(0,0,0));else im.setMatrixAt(i0+j,clumpMat(x,z,j));}}
   if(ch)im.instanceMatrix.needsUpdate=true;}
@@ -40,3 +41,27 @@ function refreshHomeGrass(){const isl=islands&&islands[0];if(!isl)return;if(isl.
     for(const [fm,i,mat] of arr){fm.setMatrixAt(i,hide?_m.makeScale(0,0,0):_m.fromArray(mat));dirty.add(fm);}}for(const fm of dirty)fm.instanceMatrix.needsUpdate=true;}
 const TUFT_GEO=merge([P(BOX,0xffffff,0,0.07,0,0.25,0,0.2,0.035,0.16,0.05),P(BOX,0xdddddd,0.06,0.06,0.03,-0.2,0.6,-0.3,0.035,0.13,0.05),P(BOX,0xeeeeee,-0.05,0.05,-0.03,0.3,1.2,0.4,0.035,0.11,0.05),P(BOX,0xd4d4d4,0.02,0.05,-0.06,-0.35,2,0.1,0.035,0.1,0.05)]);
 const riverU={uTime:{value:0}};
+
+/* ---- near grass: real 3D blade clumps on the grass around the camera, so the ground isn't flat up close.
+   One pooled InstancedMesh, refilled when the view moves a tile (or after a farm change); clumps shrink away toward
+   the edge of the circle so there's no visible border. Each blade is tinted like the painted ground under it,
+   including the big light/dark macro patches (same noise as the ground shader in 31-ground). ---- */
+const NEAR_R=7.5,NEAR_PER=4,NEAR_MAX=Math.ceil(Math.PI*NEAR_R*NEAR_R*NEAR_PER)+64,NEAR_SKIP=new Set(['snow','volcano']);
+const nearGrassMat=toon({vertexColors:true});nearGrassMat.depthWrite=false;
+nearGrassMat.onBeforeCompile=sh=>{swayCompile(sh);sh.uniforms.uNoise=pathU.uNoise;
+  sh.vertexShader='varying vec2 vGP;\n'+sh.vertexShader.replace('#include <project_vertex>','vGP=(modelMatrix*instanceMatrix*vec4(0.,0.,0.,1.)).xz;\n#include <project_vertex>');
+  sh.fragmentShader='uniform sampler2D uNoise;varying vec2 vGP;\n'+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+  {float mac_=texture2D(uNoise,vGP*0.013).r*0.65+texture2D(uNoise,vGP*0.034+vec2(3.1,1.7)).r*0.35;
+    if(mac_<0.41)diffuseColor.rgb*=vec3(0.76,0.84,0.8);else if(mac_>0.59)diffuseColor.rgb=diffuseColor.rgb*vec3(1.08,1.09,0.95)+vec3(0.05,0.055,0.0);}`);};
+let nearIM=null,nearAt='';const _nv=new T.Vector3();
+function updateNearGrass(dt){
+  if(!nearIM){nearIM=new T.InstancedMesh(BLADES,nearGrassMat,NEAR_MAX);nearIM.setColorAt(0,_c.set(0xffffff));nearIM.count=0;nearIM.frustumCulled=false;nearIM.renderOrder=3;nearIM.receiveShadow=true;scene.add(nearIM);}
+  nearIM.visible=!S.sea&&!inside;if(!nearIM.visible){nearAt='';return;}
+  nearT-=dt;const cx=Math.round(cam.tx),cz=Math.round(cam.tz),key=cx+','+cz;if(key===nearAt&&nearT>0)return;nearAt=key;nearT=1.5;
+  let i=0;const Ri=Math.ceil(NEAR_R);
+  for(let dz=-Ri;dz<=Ri;dz++)for(let dx=-Ri;dx<=Ri;dx++){const d=Math.hypot(dx,dz);if(d>NEAR_R)continue;const x=cx+dx,z=cz+dz,k=K(x,z);
+    if(landMap.get(k)!=='grass')continue;const isl=islandAt(x,z);if(!isl||NEAR_SKIP.has(isl.biome))continue;
+    if(S.tiles[k]||TOWN.path.has(k)||(isl.blocked&&isl.blocked.has(k))||objAt(x,z)||fixedAt(x,z)||debrisAt(x,z))continue;
+    const f=Math.min(1,(NEAR_R-d)/2.5),gc=groundCol(BIOMES[isl.biome].grass,x,z,isl.seed);
+    for(let j=0;j<NEAR_PER&&i<NEAR_MAX;j++,i++){clumpMat(x,z,j);if(f<1)_m.scale(_nv.set(f,f,f));nearIM.setMatrixAt(i,_m);nearIM.setColorAt(i,_c.setHex(gc).offsetHSL(0,0,(hash(x*3+j,z*5-j)-0.5)*0.05));}}
+  nearIM.count=i;nearIM.instanceMatrix.needsUpdate=true;nearIM.instanceColor.needsUpdate=true;}
