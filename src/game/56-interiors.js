@@ -92,7 +92,8 @@ function townTap(f,x,z){const b=TOWN.bld.find(q=>x>=q.x&&x<=q.x+1&&z>=q.z&&z<=q.
   if(f==='hall'){walkTo(b.door[0]+0.5,b.door[1]);openSheet('orders');return true;}
   if(f==='vh'){const n=npcs.find(q=>q.b===b);if(!n)return true;goTo(b.door[0]+0.5,b.door[1]+0.2,()=>enterHouse('vh',b,n));return true;}
   if(f==='board'){walkTo(x,z+1);boardNews();return true;}
-  if(f==='tree'){walkTo(x,z+1);toast(`The ${TOWN.name} town tree. Villagers say it's older than the island itself.`);return true;}
+  if(f==='plot'){walkTo(b.door[0]+0.5,b.door[1]);plotTap(b);return true;}
+  if(f==='tree'){walkTo(x,z+1);const nx=nextUnlock();toast(S.scratch?`<b>${TOWN.name}'s Island Heart</b>, level ${level()}. It grows as you farm, fish, catch bugs, decorate and restore other islands.${nx?` Next at level ${nx.lv}: <b>${nx.name.toLowerCase()}</b>.`:' It is fully grown!'}`:`The ${TOWN.name} town tree. Villagers say it's older than the island itself.`,'',ICON.sprout);return true;}
   if(f==='decor'){if(TOWN.res.has(K(x,z))){gatherRes(x,z);return true;}goTo(x,z);return true;}
   return false;}
 function gatherRes(x,z){const k=K(x,z),t=TOWN.res.get(k),sh=S.shook[k]||{d:0,n:0};if(sh.d!==S.day){sh.d=S.day;sh.n=0;}S.shook[k]=sh;walkTo(x,z);vil.hop=0.2;const y=topY(x,z);

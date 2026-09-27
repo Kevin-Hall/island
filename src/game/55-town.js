@@ -34,8 +34,8 @@ const DOCK={x:1,z:12};
 function scaleParts(ps,s){return ps.map(p=>Object.assign({},p,{x:p.x*s,y:p.y*s,z:p.z*s,sx:p.sx*s,sy:p.sy*s,sz:p.sz*s}));}
 const TOWN_NAMES=[['Maple','Willow','Clover','Honey','Pebble','Juniper','Bramble','Acorn','Sunny','Misty','Hazel','Plum','Fern','Button'],['wick','brook','ton','dale','haven','ford','vale','bury','field','hollow']];
 function layoutTown(isl){
-  const R=mulberry((S.worldSeed|0)^0x70a1);TOWN.fHid=null;TOWN.flora.clear();TOWN.res.clear();TOWN.bld=[];TOWN.path.clear();TOWN.fixed.clear();TOWN.plot=[];TOWN.lamps=[];
-  TOWN.name=TOWN_NAMES[0][Math.floor(R()*TOWN_NAMES[0].length)]+TOWN_NAMES[1][Math.floor(R()*TOWN_NAMES[1].length)];
+  const R=mulberry((S.worldSeed|0)^0x70a1);TOWN.fHid=null;TOWN.flora.clear();TOWN.res.clear();TOWN.bld=[];TOWN.path.clear();TOWN.fixed.clear();TOWN.plot=[];TOWN.lamps=[];TOWN.light=null;
+  TOWN.name=TOWN_NAMES[0][Math.floor(R()*TOWN_NAMES[0].length)]+TOWN_NAMES[1][Math.floor(R()*TOWN_NAMES[1].length)];if(S.islandName)TOWN.name=S.islandName;
   const G=(x,z)=>landMap.get(K(x,z))==='grass'&&islMap.get(K(x,z))===0&&farmQ(x,z)>1.15;
   const L=(x,z)=>lvlMap.get(K(x,z))||0,taken=k=>TOWN.fixed.has(k)||TOWN.path.has(k);
   const fits=(x0,z0,w,h,pad)=>{const l=L(x0,z0);for(let dx=-pad;dx<w+pad;dx++)for(let dz=-pad;dz<h+pad;dz++){const x=x0+dx,z=z0+dz;
@@ -53,8 +53,10 @@ function layoutTown(isl){
     for(let it=0;it<900;it++){const x=Math.floor((R()-0.5)*2*(TOWN_W-3)),z=Math.floor((R()-0.5)*2*(TOWN_D-3))-1;if(!fits(x,z,2,3,1))continue;
       const d=Math.hypot(x+0.5-pc[0],z+1-pc[1]);if(d<w.d[0]||d>w.d[1])continue;let near=99;for(const b of TOWN.bld)near=Math.min(near,Math.hypot(b.x-x,b.z-z));
       const sc=(w.t==='vh'?Math.min(near,9)*0.6:-Math.abs(d-w.d[0]-1))+R()*1.5;if(sc>bs){bs=sc;best=[x,z];}}
-    if(!best)continue;const [x,z]=best,b={t:w.t,x,z,n:w.n,door:[x,z+2]};TOWN.bld.push(b);
-    for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++)TOWN.fixed.set(K(x+dx,z+dz),w.t==='home'?'house':w.t);}
+    if(!best)continue;const [x,z]=best,b={t:w.t,x,z,n:w.n,door:[x,z+2]};
+    // not built yet (Island Heart): the footprint is kept as a surveyed plot
+    b.locked=w.t==='home'?false:w.t==='vh'?!movedIn(w.n):!unlocked(w.t);TOWN.bld.push(b);
+    for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++)TOWN.fixed.set(K(x+dx,z+dz),w.t==='home'?'house':b.locked?'plot':w.t);}
   const home=TOWN.bld.find(b=>b.t==='home')||{x:pc[0]-6,z:pc[1]-1,door:[pc[0]-6,pc[1]+1]};
   HOUSE_AT.x=home.x;HOUSE_AT.z=home.z;TOWN.fixed.delete(K(home.x,home.z));TOWN.fixed.delete(K(home.x+1,home.z));TOWN.fixed.delete(K(home.x,home.z+1));TOWN.fixed.delete(K(home.x+1,home.z+1));
   const binC=[[home.x+2,home.z+1],[home.x-1,home.z+1],[home.x+2,home.z]].find(([x,z])=>G(x,z)&&!taken(K(x,z)));if(binC){BIN_AT.x=binC[0];BIN_AT.z=binC[1];}
@@ -69,27 +71,29 @@ function layoutTown(isl){
   const plotSet=new Set(TOWN.plot.map(([x,z])=>K(x,z)));
   // static town meshes
   const p=[],gl=[],tp=[]/* trees, meshed with a far LOD (addVeg) */,y0=(x,z)=>topY(x,z);
-  // town tree + benches + bulletin board
-  tp.push(...shift(scaleParts(treeParts('oak',mulberry(7),0x9a9ea8),1.55),pc[0],y0(...pc),pc[1],0.4));
+  // the Island Heart (it grows with your level) + benches + bulletin board
+  {const H=heartTreeParts(S.scratch?level():10);tp.push(...shift(H.tp,pc[0],y0(...pc),pc[1],0.4));p.push(...shift(H.p,pc[0],y0(...pc),pc[1],0.4));gl.push(...shift(H.gl,pc[0],y0(...pc),pc[1],0.4));}
   for(let i=0;i<10;i++){const a=i/10*6.283;bloom(p,[0xf2a6c8,0xffffff,0xf6d04a][i%3],0xf6d04a,pc[0]+Math.cos(a)*0.85,y0(...pc)+0.05,pc[1]+Math.sin(a)*0.85,0.07);}
-  TOWN.cafeSeats=[];{const c=TOWN.bld.find(q=>q.t==='cafe');if(c)TOWN.cafeSeats.push([c.x,c.z+1],[c.x+1,c.z+1]);}
+  TOWN.cafeSeats=[];{const c=TOWN.bld.find(q=>q.t==='cafe'&&!q.locked);if(c)TOWN.cafeSeats.push([c.x,c.z+1],[c.x+1,c.z+1]);}
   TOWN.benches=[];for(const [bx,bz,r] of [[pc[0]-2,pc[1]+2,0],[pc[0]+2,pc[1]+2,0]]){TOWN.benches.push([bx,bz]);const q=[];for(const [x,z] of [[-0.38,-0.1],[0.38,-0.1],[-0.38,0.12],[0.38,0.12]])q.push(P(BOX,0x5a3a2a,x,0.12,z,0,0,0,0.06,0.24,0.06));
     q.push(P(BOX,0xb07a44,0,0.26,0,0,0,0,0.9,0.06,0.34),P(BOX,0xb07a44,0,0.52,-0.16,0,0,0,0.9,0.18,0.05));p.push(...shift(q,bx,y0(bx,bz),bz,r));TOWN.fixed.set(K(bx,bz),'decor');}
   {const [bx,bz]=TOWN.board,q=[P(CYL8,0x6a4428,-0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(CYL8,0x6a4428,0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(BOX,0x9a6a3a,0,0.62,0,0,0,0,0.9,0.52,0.06),P(BOX,0x7a5230,0,0.92,0,0,0,0,1.0,0.07,0.12),
     P(BOX,0xf6ecd0,-0.2,0.66,0.035,0,0,0.08,0.22,0.26,0.01),P(BOX,0xf2c8d8,0.14,0.6,0.035,0,0,-0.1,0.2,0.2,0.01),P(BOX,0xd8ecf4,0.22,0.74,0.035,0,0,0.05,0.14,0.12,0.01)];p.push(...shift(q,bx,y0(bx,bz),bz,0));}
   // buildings
-  for(const b of TOWN.bld){if(b.t==='home')continue;const q=townBuilding(b,R),bx=b.x+0.5,bz=b.z+0.5,by=Math.min(y0(b.x,b.z),y0(b.x+1,b.z+1));p.push(...shift(q.p,bx,by,bz,0));gl.push(...shift(q.gl,bx,by,bz,0));
+  for(const b of TOWN.bld){if(b.t==='home')continue;const bx=b.x+0.5,bz=b.z+0.5,by=Math.min(y0(b.x,b.z),y0(b.x+1,b.z+1));
+    if(b.locked){if(b.t!=='vh'||unlocked('vh'+b.n))p.push(...shift(plotParts(b,b.t==='vh'),bx,by,bz,0));continue;}
+    const q=townBuilding(b,R);p.push(...shift(q.p,bx,by,bz,0));gl.push(...shift(q.gl,bx,by,bz,0));
     if(q.lit)TOWN.lamps.push([bx,by,bz+1.3]);}
   // lamps along the paths, trees and flowers on the open grass
   let pn=0;for(const [k,v] of TOWN.path){if(v!==1)continue;if(++pn%7)continue;const [x,z]=k.split(',').map(Number);
     const side=[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dz])=>[x+dx,z+dz]).find(([a,c])=>G(a,c)&&!taken(K(a,c))&&!plotSet.has(K(a,c)));if(!side)continue;
     const [lx,lz]=side,ly=y0(lx,lz);p.push(P(CYL8,0x3e3444,lx,ly+0.55,lz,0,0,0,0.07,1.1,0.07),P(BOX,0x3e3444,lx,ly+1.22,lz,0,0,0,0.26,0.05,0.26),P(CONE4,0x3e3444,lx,ly+1.32,lz,0,0.785,0,0.3,0.14,0.3));
     gl.push(P(BOX,0xfff0b8,lx,ly+1.1,lz,0,0,0,0.18,0.2,0.18));TOWN.lamps.push([lx,ly,lz]);TOWN.fixed.set(K(lx,lz),'decor');}
-  const kinds=['oak','oak','oak','pine','maple','bush','flowerbed','bush'];
+  const kinds=applyHomeStyle().trees;
   for(const [x,z] of isl.grass){const k=K(x,z);if(!G(x,z)||taken(k)||plotSet.has(k)||farmQ(x,z)<1.4)continue;
     if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>TOWN.path.has(K(x+dx,z+dz))||TOWN.fixed.has(K(x+dx,z+dz))&&TOWN.fixed.get(K(x+dx,z+dz))!=='decor'))continue;
     const h=hash(x*1.7+3,z*2.3-1);if(h>0.11)continue;const kd=h<0.1?kinds[Math.floor(hash(z,x)*4)]:kinds[4+Math.floor(hash(x,z)*4)];
-    tp.push(...shift(treeParts(kd,mulberry(hi(x,z,5)),0x9a9ea8),x+(hash(z,x+1)-0.5)*0.2,y0(x,z),z+(hash(x+2,z)-0.5)*0.2,hash(x,z)*6.28));TOWN.fixed.set(k,'decor');if(['oak','pine','maple'].includes(kd))TOWN.res.set(k,'tree');}
+    tp.push(...shift(treeParts(kd,mulberry(hi(x,z,5)),0x9a9ea8),x+(hash(z,x+1)-0.5)*0.2,y0(x,z),z+(hash(x+2,z)-0.5)*0.2,hash(x,z)*6.28));TOWN.fixed.set(k,'decor');if(['oak','pine','maple','mapleR','cherry','palm','palmtall','palmfan'].includes(kd))TOWN.res.set(k,'tree');}
   // town rocks to chip stone from, and a flower planter in the plaza's free corner
   {let n=0;for(const [x,z] of shuffle(isl.grass.slice(),R)){if(n>=7)break;const k=K(x,z);if(!G(x,z)||taken(k)||plotSet.has(k)||farmQ(x,z)<1.4)continue;
     if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>TOWN.path.has(K(x+dx,z+dz))))continue;rockP(p,mulberry(hi(x,z,9)),0x9a9ea8,0.75);const rp=p.splice(p.length-7,7);p.push(...shift(rp,x,y0(x,z),z,hash(x,z)*6));
@@ -99,7 +103,7 @@ function layoutTown(isl){
   // the lighthouse: on the town's coast, as far from the plaza as it can be while staying in town; its beam turns at night
   {let best=null,bd=-1;for(const [x,z] of isl.grass){const k=K(x,z);if(taken(k)||plotSet.has(k)||S.tiles[k])continue;const d=Math.hypot(x-pc[0],z-pc[1]);if(d<9||d>22||d<=bd)continue;
       if(![[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>isSeaT(landMap.get(K(x+dx,z+dz)))||landMap.get(K(x+dx,z+dz))==='sand'))continue;best=[x,z];bd=d;}
-    if(best){const [x,z]=best,y=y0(x,z);TOWN.fixed.set(K(x,z),'lighthouse');TOWN.light={x,z,y:y+2.72};
+    if(best&&unlocked('light')){const [x,z]=best,y=y0(x,z);TOWN.fixed.set(K(x,z),'lighthouse');TOWN.light={x,z,y:y+2.72};
       p.push(P(CYL12,0x9a9ea8,x,y+0.14,z,0,0,0,0.9,0.28,0.9),P(CYL12,0xf4f0ea,x,y+1.3,z,0,0,0,0.62,2.1,0.62));for(const yy of [0.75,1.45,2.1])p.push(P(CYL12,0xd8453a,x,y+yy,z,0,0,0,0.64,0.24,0.64));
       p.push(P(CYL12,0x3a3a44,x,y+2.4,z,0,0,0,0.9,0.06,0.9),P(CONE12,0xd8453a,x,y+3.02,z,0,0,0,0.62,0.34,0.62),P(ICO2,0xd8b050,x,y+3.22,z,0,0,0,0.1,0.1,0.1),P(BOX,0x5a3a2a,x,y+0.42,z+0.3,0,0,0,0.22,0.4,0.04));
       for(let i=0;i<8;i++){const a=i/8*6.283;p.push(P(BOX,0x3a3a44,x+Math.cos(a)*0.42,y+2.52,z+Math.sin(a)*0.42,0,-a,0,0.02,0.18,0.02));}

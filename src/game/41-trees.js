@@ -50,6 +50,8 @@ function treeParts(kind,R,colRock){
   switch(kind){
     case'oak':trunkP(p,R,0x7a5230,0.9,0.13,0x5e3e24);canopy(p,R,[0x7cc050,0x5f9e3a,0x467e2c],0,1.3,0,0.55);
       if(R()<0.4)for(let i=0;i<5;i++){const a=R()*6.28;p.push(P(ICO2,0xe8453a,Math.cos(a)*0.62,1.05+R()*0.4,Math.sin(a)*0.62,0,0,0,0.1,0.1,0.1));}break;
+    case'cherry':trunkP(p,R,0x6a4436,0.9,0.12,0x4e3228);canopy(p,R,[0xffd8e6,0xf4a8c4,0xd07a9a],0,1.3,0,0.55);
+      for(let i=0;i<6;i++)lf(p,[0xf8c8d8,0xffe4ee][i%2],(R()-0.5)*1.5,0.02,(R()-0.5)*1.5,R()*6.28,0,0.1,0.08,0.02);break;
     case'maple':case'mapleR':{const c=kind==='maple'?[0xf4a444,0xe8803a,0xc85e24]:[0xec6a4a,0xc8402a,0x982a22];
       trunkP(p,R,0x6a4428,0.9,0.12,0x4e3020);canopy(p,R,c,0,1.3,0,0.55);
       for(let i=0;i<5;i++)lf(p,c[i%3],(R()-0.5)*1.4,0.02,(R()-0.5)*1.4,R()*6.28,0,0.13,0.1,0.02);break;}
@@ -86,7 +88,8 @@ function vnoise(x,z,seed){const X=Math.floor(x/3),Z=Math.floor(z/3),fx=x/3-X,fz=
   const sx=fx*fx*(3-2*fx),sz=fz*fz*(3-2*fz);return lerp(lerp(h(X,Z),h(X+1,Z),sx),lerp(h(X,Z+1),h(X+1,Z+1),sx),sz);}
 function levelOf(isl,x,z){
   if(isl.home){if(farmQ(x,z)<1.2)return 0;const n=vnoise(x,z,S.worldSeed|0),hx=hash(S.worldSeed%97,3)<0.5?-9:9;
-    if(z<-0.66*TOWN_D+n*2.4&&Math.abs(x-hx*TOWN_W/16)<6+n*2.5)return 2;return z<-0.29*TOWN_D+(n-0.5)*3.6?1:0;}
+    const cl=S.home&&S.home.cliff,c1=cl?cl[0]:0.29,two=cl?cl[1]:1; // a chosen island sets how far north its cliffs start, and whether there's a second tier
+    if(two&&z<-(c1+0.37)*TOWN_D+n*2.4&&Math.abs(x-hx*TOWN_W/16)<6+n*2.5)return 2;return z<-c1*TOWN_D+(n-0.5)*3.6?1:0;}
   if(isl.biome==='swamp')return 0;
   if(isl.biome==='volcano'&&Math.hypot(x-isl.cx,z-isl.cz)<3.2)return 0;
   const d=islDist(isl,x,z),R=isl.r,n=vnoise(x,z,isl.seed);let l=0;

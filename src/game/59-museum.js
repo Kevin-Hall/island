@@ -100,7 +100,7 @@ function buildMuseum(){const RW=11,RD=9,WH=3.2,p=[],gl=[],lit=[],glass=[],water=
 
 /* ---- outside: aquarium windows and butterflies around the planters, refreshed when the collection grows ---- */
 const musShow={g:null,anim:[],sig:''};
-function museumSpot(){const b=TOWN.bld.find(q=>q.t==='museum');return b?{b,x:b.x+0.5,z:b.z+0.5,y:Math.min(topY(b.x,b.z),topY(b.x+1,b.z+1))}:null;}
+function museumSpot(){const b=TOWN.bld.find(q=>q.t==='museum'&&!q.locked);return b?{b,x:b.x+0.5,z:b.z+0.5,y:Math.min(topY(b.x,b.z),topY(b.x+1,b.z+1))}:null;}
 function refreshMuseumShow(){const at=museumSpot(),isl=islands[0];if(!at||!isl||!isl.group)return;const fish=caughtFish(),fly=caughtBugs().filter(k=>(BUGS[k].kind||'fly')!=='crawl');
   const sig=fish.length+'|'+fly.length;if(sig===musShow.sig&&musShow.g)return;musShow.sig=sig;
   if(musShow.g){isl.group.remove(musShow.g);musShow.g.traverse(o=>{if(o.geometry&&o.geometry!==BOX)o.geometry.dispose();});}

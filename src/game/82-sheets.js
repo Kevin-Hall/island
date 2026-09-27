@@ -65,13 +65,14 @@ function renderSheet(){
         for(const k of ks){const v=varOf(k);h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img class="v-${v}" src="${iconOf(k)}" alt="">${v!=='normal'?`<span class="dot" style="background:${{giant:'#6ab84a',moonlit:'#9ab8ff',golden:'#f5c542',crystal:'#7ad8f0',rainbow:'#f39ab0'}[v]}"></span>`:''}<span class="n">${S.inv[k]}</span></button>`;}
         const pad=Math.max(0,20-ks.length);for(let i=0;i<pad;i++)h+=`<div class="cell empty"></div>`;h+='</div>';}}}
   else if(sheet.kind==='shop'){$('sheetTitle').textContent='Shop';tabs([['decor','Decor'],['island','Island']]);
-    if(sheet.tab==='decor'){h+=`<p class="note">Buy something, then tap where it should go on your home island.</p><div class="sellall"><button class="pbtn" data-edit="1">Move or store existing decor</button></div><div class="grid">`;
+    if(!unlocked('shop'))h+=`<p class="note">The general store opens when your Island Heart reaches <b>level 3</b>. Until then, sell at your shipping bin and buy seeds from the Seeds tool.</p>`;
+    else if(sheet.tab==='decor'){h+=`<p class="note">Buy something, then tap where it should go on your home island.</p><div class="sellall"><button class="pbtn" data-edit="1">Move or store existing decor</button></div><div class="grid">`;
       for(const k in BUILD){const B=BUILD[k],lock=B.lvl>lv,n=S.store[k]||0;if(B.craft)continue;
         h+=`<button class="card ${lock?'lock':''}" data-buy="${k}" ${lock?'disabled':''}><img class="px" src="${THUMB[k]||''}" alt=""><span class="grow"><span class="nm">${B.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+B.lvl:(n?`${n} in storage — tap to place`:B.desc)}</span></span><span class="price">${n?'':sh(B.cost)}</span></button>`;}
       h+='</div>';}
-    else{const L=null,HU=HOUSE_UP[S.house];
+    else{const L=S.scratch&&unlocked('hall')?LAND_UP[S.land]:null,HU=HOUSE_UP[S.house];
       h+=`<p class="note">Grow your island from a tent on a sandbar to a hilltop villa.</p><div class="grid">`;
-      h+=L?`<div class="card wide"><img class="px" src="${THUMB.land}" alt=""><span class="grow"><span class="nm">Expand the island</span><br><span class="sub">Stage ${S.land+1} → ${S.land+2}. More grass, more room.${L.lvl>lv?' Needs Lv '+L.lvl+'.':''}</span></span><button class="pbtn go" data-land="1" ${L.lvl>lv||S.shells<L.cost?'disabled':''}>${fmt(L.cost)}</button></div>`
+      h+=L?`<div class="card wide"><img class="px" src="${THUMB.land}" alt=""><span class="grow"><span class="nm">Expand the farm field</span><br><span class="sub">Stage ${S.land+1} → ${S.land+2}. The field grows wider and taller (new ground comes up wild).${L.lvl>lv?' Needs Lv '+L.lvl+'.':''}</span></span><button class="pbtn go" data-land="1" ${L.lvl>lv||S.shells<L.cost?'disabled':''}>${fmt(L.cost)}</button></div>`
         :`<div class="card wide"><img class="px" src="${THUMB.land}" alt=""><span class="grow"><span class="nm">${TOWN.name}</span><br><span class="sub">Your town. Clear the farm field to the west for more room.</span></span></div>`;
       h+=HU?`<div class="card wide"><img class="px" src="${THUMB['house'+(S.house+1)]}" alt=""><span class="grow"><span class="nm">Build a ${HOUSES[S.house+1]}</span><br><span class="sub">Replaces your ${HOUSES[S.house].toLowerCase()}.${HU.lvl>lv?' Needs Lv '+HU.lvl+'.':''}</span></span><button class="pbtn go" data-house="1" ${HU.lvl>lv||S.shells<HU.cost?'disabled':''}>${fmt(HU.cost)}</button></div>`
         :`<div class="card wide"><img class="px" src="${THUMB.house3}" alt=""><span class="grow"><span class="nm">The Villa is finished</span><br><span class="sub">Now fill every page of the Islandex.</span></span></div>`;
@@ -153,7 +154,7 @@ function drawChart(){const cv=$('chart');if(!cv)return;const g=cv.getContext('2d
   g.fillStyle='#2b1e2e';g.fillRect(Math.round(X(vil.x))-4,Math.round(Y(vil.z))-4,8,8);g.fillStyle=S.sea?'#f6d04a':'#d8453a';g.fillRect(Math.round(X(vil.x))-2,Math.round(Y(vil.z))-2,4,4);
   cv.onclick=e=>{const r=cv.getBoundingClientRect();const wx=((e.clientX-r.left)/r.width*N-N/2)/sc,wz=((e.clientY-r.top)/r.height*N-N/2)/sc;
     let best=null,bd=1e9;for(const isl of disc){const d=Math.hypot(isl.cx-wx,isl.cz-wz);if(d<bd){bd=d;best=isl;}}if(best&&bd<18/sc+islR(best)){chartGo(best);}};}
-function chartGo(isl){const here=curIsl();if(here&&here.id===isl.id){toast(`You're already on ${isl.name}.`);return;}closeSheet();fastTravel(isl);}
+function chartGo(isl){if(!isl.home&&!unlocked('boat')){toast('You need your boat to reach other islands (Island Heart level 4).','',ICON.boat);return;}const here=curIsl();if(here&&here.id===isl.id){toast(`You're already on ${isl.name}.`);return;}closeSheet();fastTravel(isl);}
 $('sheetBody').addEventListener('input',e=>{if(e.target.id==='devHour'){const prev=S.hour;S.hour=Number(e.target.value);if(prev<6&&S.hour>=6&&S.hour-prev<3)dawn(false);$('devHourLbl').textContent=clockStr(S.hour);applyTime();updateHUD();}});
 $('sheetTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;sheet.tab=b.dataset.tab;SFX.ui();renderSheet();});
 $('sheetBody').addEventListener('click',e=>{

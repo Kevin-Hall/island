@@ -21,11 +21,12 @@ function updateHUD(){
   const a=LV[lv-1]||0,b=LV[lv];$('xpFill').style.width=(b?clamp((S.xp-a)/(b-a),0,1)*100:100)+'%';
   {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${S.rain?' · rain':''}${lowTide?' · low tide':''}`;$('locTxt').textContent=locName();
   refreshMuseumShow();$('bTask').classList.toggle('ready',ordersReady());$('bMenu').classList.toggle('ready',ordersReady());
+  {const nx=nextUnlock(),el=$('nextUp');el.hidden=!nx;if(nx)el.innerHTML=`<small>Heart Lv ${nx.lv}</small>${nx.name}`;}
   const [g,t]=dexCount();$('dexTxt').textContent=`Dex ${Math.floor(g/t*100)}%`;$('locTxt').hidden=!$('locTxt').textContent;
   updateCtx();
 }
 function tickShells(dt){if(shownShells!==S.shells){const d=S.shells-shownShells;shownShells+=Math.sign(d)*Math.max(1,Math.abs(d)*Math.min(1,dt*8));if(Math.abs(S.shells-shownShells)<1)shownShells=S.shells;$('shellTxt').textContent=fmt(shownShells);}}
-function addXP(n){const before=level();S.xp+=n;const after=level();if(after>before){SFX.level();
+function addXP(n){const before=level();S.xp+=n;const after=level();if(after>before&&S.scratch){heartLevelUp(before,after);return;}if(after>before){SFX.level();
   const un=[...CROP_IDS.filter(id=>CROPS[id].lvl===after).map(id=>CROPS[id].name),...Object.keys(BUILD).filter(k=>BUILD[k].lvl===after).map(k=>BUILD[k].name)];
   if(after===MYSTERY.lvl)un.push('Mystery Seeds');
   toast(`Level ${after}!${un.length?' New: '+un.join(', '):''}`,'rare',ICON.star);}}

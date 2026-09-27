@@ -2,7 +2,7 @@
    Sailing
    ========================================================= */
 function boatNear(){if(S.sea||!S.boat)return false;return Math.hypot(vil.x-S.boat.x,vil.z-S.boat.z)<8;}
-function boardBoat(then){if(S.sea)return;const b=S.boat,isl=curIsl();if(!isl)return;
+function boardBoat(then){if(S.sea)return;if(!unlocked('boat')){toast('Your old boat needs patching up. It will be seaworthy when your Island Heart reaches <b>level 4</b>.','',ICON.boat);return;}const b=S.boat,isl=curIsl();if(!isl)return;
   let best=null,bd=1e9;for(const [x,z] of [...isl.grass,...isl.sand]){const d=(x-b.x)**2+(z-b.z)**2;if(d<bd){bd=d;best=[x,z];}}
   if(!best||bd>16){toast(isl.home?'Your boat is moored elsewhere.':'Your boat is moored on another shore.');return;}
   if(fishing)endFishing();clearAction();

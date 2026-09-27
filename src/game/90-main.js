@@ -63,6 +63,8 @@ function frame(now){
    Boot
    ========================================================= */
 $('icoMenu').src=ICON.menu;$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
+// a brand-new game first chooses its island (85-islandpick), then boots; everything else boots straight away
+function bootGame(){applyHomeStyle();
 genIslands();for(const isl of islands)buildIsland(isl);rebuildSeaGrid();
 if(S.wv!==3){if(!isNew){S.sea=false;S.boat=null;S.picked={};vil.x=vil.tx=0.3;vil.z=vil.tz=2.1;}S.wv=3;}
 ensureBoat(true);if(S.sea&&isLand(Math.round(S.boat.x),Math.round(S.boat.z))){S.sea=false;S.boat=null;ensureBoat(false);}
@@ -79,9 +81,14 @@ window.addEventListener('resize',()=>{resize();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{const el=clamp((Date.now()-S.t)/1000,0,3*3600);if(el>5){const out=simulate(el);afterSim(out,'While you were away');}last=performance.now();}});
 window.addEventListener('pagehide',save);
 $('boot').remove();
-if(farmNew)setTimeout(()=>toast('Across the bridge to the west is your farm field, overgrown with weeds, rocks and stumps. Clear it to make room for crops. Tip: press and hold, then drag, to till, plant, water or harvest a whole row.','',ICON.sprout),isNew?9000:1500);
+if(S.scratch&&isNew){setTimeout(()=>toast(`Welcome to <b>${TOWN.name}</b>! That sapling in the square is your <b>Island Heart</b>. Grow crops in your garden, fish off the beach and catch bugs, and it grows, and your island with it.`,'',ICON.sprout),700);
+  setTimeout(()=>toast('Your next goal is always shown under your level. First up: a bridge to the farm field.','',ICON.star),6500);}
+else if(!S.scratch){if(farmNew)setTimeout(()=>toast('Across the bridge to the west is your farm field, overgrown with weeds, rocks and stumps. Clear it to make room for crops. Tip: press and hold, then drag, to till, plant, water or harvest a whole row.','',ICON.sprout),isNew?9000:1500);
 if(isNew){setTimeout(()=>toast('Welcome to Driftseed Isle! Tap soil to plant, and tap ripe crops to harvest.','',ICON.sprout),500);
   setTimeout(()=>toast('Your boat waits at the dock. Sail to other islands to fill your Islandex!','',ICON.boat),4200);}
 else if(!S.boatTip)setTimeout(()=>toast('New: your boat waits at the dock! Sail to new islands and fill your Islandex.','',ICON.boat),800);
+}
 if(away.length)afterSim(away,'While you were away');
 requestAnimationFrame(t=>{last=t;frame(t);});
+}
+if(isNew&&!S.home)showIslandPicker();else bootGame();

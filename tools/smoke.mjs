@@ -15,9 +15,17 @@ const ev=(f,a)=>pg.evaluate(f,a),wait=ms=>pg.waitForTimeout(ms);
 // poll instead of fixed waits: headless software rendering can drop to ~1 fps, which delays the game's own timers
 const waitFor=async(f,ms=12000)=>{const t=Date.now();while(Date.now()-t<ms){const v=await ev(f);if(v)return v;await wait(300);}return null;};
 const enter=async f=>{await ev(f);await waitFor(()=>DS.state().inside);return ev(()=>DS.state());},leave=async()=>{await ev(()=>DS.leave());await waitFor(()=>!DS.state().inside);};
-await pg.goto(pathToFileURL(join(root,'index.html')).href+'?debug');await wait(3500);
+await pg.goto(pathToFileURL(join(root,'index.html')).href+'?debug');await wait(2500);
+// a new game starts on the island-choice screen: three previews, reroll, pick one, name it
+check(await ev(()=>document.querySelectorAll('#pick .pkc canvas').length)===3,'new game offers three islands to choose from');
+await pg.click('#pkMore');await wait(300);await pg.click('.pkc[data-i="1"]');await wait(300);await pg.fill('#pkName','Testhaven');await pg.click('#pkGo');await wait(3500);
 check(await ev(()=>!!window.DS),'boots and exposes the debug API');
-let st=await ev(()=>DS.state());check(st.buildings.length>=8,`town "${st.town}" has ${st.buildings.length} buildings`);check(st.npcs.length>=5,`${st.npcs.length} villagers`);
+let st=await ev(()=>DS.state());check(st.town==='Testhaven','the island has the name you gave it');
+check(st.npcs.length===0&&(await ev(()=>DS.plots())).filter(p=>p.endsWith(':plot')).length>=8,`starts from scratch: no villagers yet, ${(await ev(()=>DS.plots())).filter(p=>p.endsWith(':plot')).length} building plots`);
+check(await ev(()=>DS.next())==='Farm bridge','the first goal is the farm bridge');
+await ev(()=>DS.setLevel(3));check(await ev(()=>DS.moveIn())===1,'a neighbour moves in the morning after their plot opens');
+await ev(()=>DS.setLevel(11));for(let i=0;i<6;i++)await ev(()=>DS.moveIn());
+st=await ev(()=>DS.state());check(st.buildings.length>=8,`fully grown, "${st.town}" has ${st.buildings.length} buildings`);check(st.npcs.length>=5,`${st.npcs.length} villagers`);
 await ev(()=>DS.hour(10));
 check((await ev(()=>DS.state())).perfPx===0,'no automatic pixel scaling');
 // drag-farming across a free row

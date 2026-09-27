@@ -97,9 +97,11 @@ function buildIsland(isl){
     for(let i=0;i<8;i++){const z=dz+0.2+i*0.5;p.push(P(BOX,i%2?0xa27a50:0x94704a,DX,0.26,z,0,0,0,0.95,0.07,0.46));}
     for(let i=0;i<4;i++){const z=dz+0.6+i;p.push(P(CYL8,0x5a3a2a,DX-0.5,0.12,z,0,0,0,0.12,0.5,0.12),P(CYL8,0x5a3a2a,DX+0.5,0.12,z,0,0,0,0.12,0.5,0.12));}
     // wooden bridge west to the farm field (two planks wide), wherever water separates them
-    isl.bridge=[];
+    // (on a chosen island it isn't built until Island Heart level 2: until then just the old posts stand in the water)
+    isl.bridge=[];const built=unlocked('bridge');
     for(const bz of [FARM.z-1,FARM.z]){let x=FARM.x,n=0;while(isLandT(landMap.get(K(x,bz)))&&n++<40)x++;
       n=0;while(n++<30){const k=K(x,bz),t=landMap.get(k);if(t==='grass'||t==='sand'||t==='river')break;
+        if(!built){if(x%2===0)p.push(P(CYL8,0x5a3a2a,x,0.08,bz+(bz===FARM.z?0.46:-0.46),0,0,0.1,0.1,0.5,0.1));x++;continue;}
         landMap.set(k,'bridge');islMap.set(k,0);if(!isl.keys.includes(k))isl.keys.push(k);isl.bridge.push([x,bz]);x++;}}
     for(const [x,z] of isl.bridge){for(let j=0;j<2;j++)p.push(P(BOX,(x+j)%2?0xa27a50:0x94704a,x-0.25+j*0.5,0.28,z,0,0,0,0.46,0.07,1.02));
       const edge=z===FARM.z-1?-0.5:z===FARM.z?0.5:0;if(edge){p.push(P(BOX,0x7a5230,x,0.52,z+edge*0.92,0,0,0,1.02,0.06,0.06),P(CYL8,0x5a3a2a,x,0.2,z+edge*0.92,0,0,0,0.1,0.72,0.1));}}

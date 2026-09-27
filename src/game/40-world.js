@@ -5,7 +5,19 @@ const TOP={grass:0.5,sand:0.3,bridge:0.32};
 // the farm field: a flat island just west of home, joined by a wooden bridge
 const FARM={x:-40,z:1};
 const TOWN_W=22,TOWN_D=17;
-function townQ(x,z){const dx=Math.abs(x)/TOWN_W,dz=Math.abs(z-0.5)/TOWN_D;return Math.pow(dx**5+dz**5,0.2)*(1+(hash(x*0.7,z*1.1)-0.5)*0.035);}
+// your island's coastline: the classic shape, carved by the bays and coves picked on the island-choice screen (S.home.shape);
+// the wobble only ever pulls the coast inward, so a chosen island never grows into the farm or its neighbours
+function townQ(x,z){const dx=Math.abs(x)/TOWN_W,dz=Math.abs(z-0.5)/TOWN_D,sh=S.home&&S.home.shape,e=sh&&sh[6]||5;let q=Math.pow(dx**e+dz**e,1/e)*(1+(hash(x*0.7,z*1.1)-0.5)*0.035);
+  if(sh){const a=Math.atan2((z-0.5)/TOWN_D,x/TOWN_W);let w=sh[0]*(0.5+0.5*Math.sin(2*a+sh[3]))+sh[1]*(0.5+0.5*Math.sin(3*a+sh[4]))+sh[2]*(0.5+0.5*Math.sin(5*a+sh[5]));
+    for(const [ca,cd,cw] of S.home.coves||[]){const d=Math.atan2(Math.sin(a-ca),Math.cos(a-ca))/cw;w+=cd*Math.exp(-d*d);}q/=1-Math.min(0.45,w);}
+  return q;}
+/* ---- home island styles, chosen with the island: ground palette, town trees and wild flowers ---- */
+const HOME_STYLES={
+  meadow: {name:'Meadow',  grass:[0x6aa843,0x74b24a,0x629e3e],sand:[0xd2ad74,0xc9a36c],trees:['oak','oak','oak','pine','maple','bush','flowerbed','bush'],blurb:'Round oaks, wildflowers and soft green hills.'},
+  tropic: {name:'Tropical',grass:[0x58b85a,0x64c464,0x4cac52],sand:[0xe6c890,0xdcbc84],trees:['palm','palmtall','oak','palmfan','bush','bush','flowerbed','bush'],blurb:'Palms, bright sand and warm turquoise shallows.'},
+  autumn: {name:'Autumn',  grass:[0x8ea440,0x9aae46,0x84983c],sand:[0xd2aa74,0xc8a06c],trees:['maple','mapleR','maple','oak','pine','bush','flowerbed','bush'],blurb:'Golden grass and maples in red and amber.'},
+  blossom:{name:'Blossom', grass:[0x7ab852,0x86c25a,0x70ae4c],sand:[0xe0bc8c,0xd6b284],trees:['cherry','cherry','oak','cherry','pine','bush','flowerbed','bush'],blurb:'Cherry trees in bloom and petals on the breeze.'}};
+function applyHomeStyle(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow']||HOME_STYLES.meadow;BIOMES.home.grass=st.grass;BIOMES.home.sand=st.sand;return st;}
 // each island expansion (S.land) also grows the field, west and north/south, away from the bridge. How far it can grow
 // depends on the world: the widest/tallest pair of factors (each up to 1.9×) whose shallows stay 2+ tiles clear of every
 // other island, picked for the most area

@@ -6,7 +6,7 @@ if(/[?&]debug\b/.test(location.search)){
   const tileKeys=()=>islands[0].grass.map(([x,z])=>[x,z]);
   window.DS={
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
-      islands:islands.length,town:TOWN.name,buildings:TOWN.bld.map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
+      islands:islands.length,town:TOWN.name,buildings:TOWN.bld.filter(b=>!b.locked).map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
     hour:h=>{S.hour=h;applyTime();},
     tp:(x,z)=>{S.sea=false;vil.x=vil.tx=x;vil.z=vil.tz=z;vil.path=null;cam.tx=x;cam.tz=z;},
     visit:id=>{const i=islands[id];S.disc[id]=1;const sp=(i.spots&&i.spots[1])||i.grass[0];DS.tp(sp[0]+0.6,sp[1]+0.6);},
@@ -26,6 +26,9 @@ if(/[?&]debug\b/.test(location.search)){
     // a text map of tiles: g grass, s sand, b bridge, r river, . sea; P town path, T tilled, O object, F fixed, D debris
     grid:(x0,z0,x1,z1)=>{const out=[];for(let z=z0;z<=z1;z++){let l='';for(let x=x0;x<=x1;x++){const k=K(x,z),t=landMap.get(k);l+=S.tiles[k]?'T':objAt(x,z)?'O':fixedAt(x,z)?'F':debrisAt(x,z)?'D':TOWN.path.has(k)?'P':t==='grass'?'g':t==='sand'?'s':t==='bridge'?'b':t==='river'?'r':t?t[0]:'.';}out.push(String(z).padStart(3)+' '+l);}return out.join('\n');},
     showcase:()=>loadShowcase(),
+    // Island Heart: jump to a level (as if earned, without the card), and run a morning's move-in
+    setLevel:n=>{S.xp=LV[n-1]||0;rebuildHome();initNPCs();updateHUD();return level();},moveIn:()=>{morningMoveIn();return npcs.length;},
+    next:()=>{const u=nextUnlock();return u&&u.name;},xp:n=>{addXP(n);return level();},plots:()=>TOWN.bld.map(b=>b.t+(b.t==='vh'?b.n:'')+(b.locked?':plot':'')),
     // every crop at one stage, rendered at the same scale on a patch of soil (data URLs), for eyeballing the models
     cropGallery:(stage=3,size=160)=>CROP_IDS.map((id,i)=>{const c=cropParts(id,stage,i*97+5),g=new T.Group();if(c.leaf.length)g.add(M(c.leaf));if(c.fruit.length)g.add(M(c.fruit));g.scale.setScalar(0.95);
       const w=new T.Group();w.add(g);w.add(M([P(BOX,0x5e3c2a,0,-0.03,0,0,0,0,1,0.06,1)]));const box=new T.Mesh(new T.BoxGeometry(1.1,1.5,1.1));box.position.y=0.7;box.visible=false;w.add(box);return [id,snapThumb(w,size)];}),
