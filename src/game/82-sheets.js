@@ -128,6 +128,8 @@ function renderSheet(){
     h+=`<div class="setrow"><span>Weather</span><span class="seg"><button data-wx="clear" class="${S.rain?'':'on'}">Clear</button><button data-wx="rain" class="${S.rain?'on':''}">Rain</button></span></div>`;
     h+=`<div class="setrow"><span>Night sky</span><span class="seg"><button data-dev="star">Shooting star</button><button data-dev="meteor" class="${S.meteor?'on':''}">Meteor shower</button></span></div>`;
     h+=`<div class="setrow"><span>Skip ahead</span><span class="seg"><button data-dev="morning">Next morning</button><button data-dev="shells">+1,000 shells</button></span></div>`;
+    h+=`<div class="setrow"><span>Showcase farm</span><span class="seg"><button data-dev="showcase">${S.showcase?'Rebuild':'Load'}</button>${hasRealSave()?'<button data-dev="realsave">Restore my save</button>':''}</span></div>`;
+    h+=`<div class="setrow"><span class="note" style="margin:0">Loads a fully built late-game farm: a big fenced field with sprinkler plots, an orchard, flower beds and a windmill, plus a Villa, max tools and every island restored. Your own save is backed up first.</span></div>`;
     h+=`<div class="setrow"><span>Start over</span><button class="pbtn warn" data-reset="1">Reset world</button></div>`;}
   body.innerHTML=h;
   if(sheet.kind==='chart')drawChart();
@@ -140,7 +142,7 @@ function drawChart(){const cv=$('chart');if(!cv)return;const g=cv.getContext('2d
   g.fillStyle='#3565cc';g.fillRect(0,0,N,N);g.fillStyle='rgba(255,255,255,.12)';for(let x=0;x<N;x+=20)for(let y=0;y<N;y+=20)g.fillRect(x,y,2,2);
   const px=2,hex=c=>'#'+c.toString(16).padStart(6,'0');
   for(const isl of disc){const R=islR(isl)/0.62+2.2;const B=BIOMES[isl.biome];
-    for(let wx=isl.home?Math.min(-R,FARM.x-11):-R;wx<=R;wx+=px/sc)for(let wz=-R;wz<=R;wz+=px/sc){const t=tileTypeI(isl,Math.round(isl.cx+wx),Math.round(isl.cz+wz));if(!t)continue;
+    for(let wx=isl.home?Math.min(-R,farmWest()):-R;wx<=R;wx+=px/sc)for(let wz=-R;wz<=R;wz+=px/sc){const t=tileTypeI(isl,Math.round(isl.cx+wx),Math.round(isl.cz+wz));if(!t)continue;
       g.fillStyle=t==='grass'?hex(B.grass[0]):t==='sand'?hex(B.sand[0]):t==='s1'?'#7ea6e8':'#5584da';
       g.fillRect(Math.round(X(isl.cx+wx)/px)*px,Math.round(Y(isl.cz+wz)/px)*px,px,px);}}
   for(const isl of disc)if(isl.rtiles){g.fillStyle=isl.lava?'#e0582a':'#5a9ae8';for(const q of isl.rtiles)g.fillRect(Math.round(X(q.x-0.5)),Math.round(Y(q.z-0.5)),Math.max(2,Math.ceil(sc)),Math.max(2,Math.ceil(sc)));}
@@ -173,7 +175,7 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.rod){const R=RODS[S.rod+1];if(!R||S.shells<R.cost)return;S.shells-=R.cost;S.rod++;setRod();SFX.level();toast(`You got the ${R.name}!`,'rare',ICON.rod);renderSheet();return;}
   if(d.can){const R=CANS[S.can+1];if(!R||S.shells<R.cost)return;S.shells-=R.cost;S.can++;SFX.level();toast(`You got the ${R.name}! It waters a 3×3 patch.`,'rare',ICON.can);renderSheet();return;}
   if(d.land){const L=LAND_UP[S.land];if(!L||S.shells<L.cost)return;S.shells-=L.cost;S.land++;buildIsland(islands[0]);rebuildSeaGrid();syncObjs();rebuildSoil();syncAllCrops();syncLife();ensureBoat(true);SFX.level();
-    toast('The tide pulls back — your island has grown!','rare',ICON.star);for(let i=0;i<30;i++)sparkle((Math.random()-0.5)*14,0.6,(Math.random()-0.5)*12,0xfff6e2);renderSheet();return;}
+    toast('The tide pulls back — your island and farm field have grown!','rare',ICON.star);for(let i=0;i<30;i++)sparkle((Math.random()-0.5)*14,0.6,(Math.random()-0.5)*12,0xfff6e2);renderSheet();return;}
   if(d.house){const HU=HOUSE_UP[S.house];if(!HU||S.shells<HU.cost)return;S.shells-=HU.cost;S.house++;logEvent('house');syncObjs();SFX.level();burst(HOUSE_AT.x+0.5,1.5,HOUSE_AT.z+0.5,0xf6eedb,30,2.4,0.1);
     toast(S.house===3?'Your Villa is complete!':`Your new ${HOUSES[S.house]} is ready!`,'rare',THUMB['house'+S.house]);renderSheet();return;}
   if(d.mus!==undefined){S.music=d.mus==='1';renderSheet();return;}
@@ -182,6 +184,8 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.dev==='star'){if(nightF<0.5){S.hour=22;applyTime();}spawnShootingStar();closeSheet();return;}
   if(d.dev==='meteor'){S.meteor=!S.meteor;if(S.meteor&&nightF<0.5){S.hour=21.5;applyTime();}renderSheet();return;}
   if(d.dev==='morning'){closeSheet();sleep();return;}
+  if(d.dev==='showcase'){if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Tap again to load';return;}loadShowcase();return;}
+  if(d.dev==='realsave'){restoreRealSave();return;}
   if(d.dev==='shells'){S.shells+=1000;SFX.coin();return;}
   if(d.snd!==undefined){S.sound=d.snd==='1';setWaveVol();if(S.sound)startWaves();renderSheet();return;}
   if(d.px!==undefined){S.pxAdj=Number(d.px);resize();renderSheet();return;}

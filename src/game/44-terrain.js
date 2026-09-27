@@ -53,7 +53,7 @@ function buildIsland(isl){
   if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);riverSurf.delete(k);bridgeY.delete(k);}
   const g=new T.Group();isl.group=g;isl.heartG=null;isl.residentG=null;isl.flats=[];isl.veg=[];isl.lowOn=false;isl.casters=null;isl.shadowOn=undefined;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
   const span=Math.ceil(islR(isl)/0.62+3),B=islandBiome(isl);
-  for(let x=isl.home?Math.min(isl.cx-span,FARM.x-11):isl.cx-span;x<=isl.cx+span;x++)for(let z=isl.cz-span;z<=isl.cz+span;z++){
+  for(let x=isl.home?Math.min(isl.cx-span,farmWest()):isl.cx-span;x<=isl.cx+span;x++)for(let z=isl.cz-span;z<=isl.cz+span;z++){
     const t=tileTypeI(isl,x,z);if(!t)continue;const k=K(x,z);
     if(landMap.has(k)&&islMap.get(k)!==isl.id)continue;
     landMap.set(k,t);islMap.set(k,isl.id);isl.keys.push(k);

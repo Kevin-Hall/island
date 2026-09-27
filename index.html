@@ -979,7 +979,23 @@ const TOP={grass:0.5,sand:0.3,bridge:0.32};
 const FARM={x:-40,z:1};
 const TOWN_W=22,TOWN_D=17;
 function townQ(x,z){const dx=Math.abs(x)/TOWN_W,dz=Math.abs(z-0.5)/TOWN_D;return Math.pow(dx**5+dz**5,0.2)*(1+(hash(x*0.7,z*1.1)-0.5)*0.035);}
-function farmQ(x,z){const dx=Math.abs(x-FARM.x)/7.6,dz=Math.abs(z-FARM.z)/6.6;return Math.pow(dx**4+dz**4,0.25)*(1+(hash(x*1.3,z*2.1)-0.5)*0.06);}
+// each island expansion (S.land) also grows the field, west and north/south, away from the bridge. How far it can grow
+// depends on the world: the widest/tallest pair of factors (each up to 1.9×) whose shallows stay 2+ tiles clear of every
+// other island, picked for the most area
+let farmMaxG=null;
+function farmFits(gx,gz,pts){const cx=FARM.x-7.6*(gx-1);
+  for(const [x,z] of pts){const dx=Math.abs(x-cx)/(7.6*gx),dz=Math.abs(z-FARM.z)/(6.6*gz);if(Math.pow(dx**4+dz**4,0.25)<1.45)return false;}return true;}
+function farmGrowMax(){if(farmMaxG)return farmMaxG;if(islands.length<2)return{x:1,z:1};
+  // every tile (shallows included) of the other islands anywhere near the field
+  const pts=[];for(const o of islands){if(o.home||Math.hypot(o.cx-FARM.x,o.cz-FARM.z)>80)continue;const sp=Math.ceil(islR(o)/0.62+3);
+    for(let x=o.cx-sp;x<=o.cx+sp;x++)for(let z=o.cz-sp;z<=o.cz+sp;z++)if(Math.abs(x-FARM.x)<45&&Math.abs(z-FARM.z)<40&&tileTypeI(o,x,z))pts.push([x,z]);}
+  let best={x:1,z:1},ba=1;
+  for(let i=18;i>=0;i--)for(let j=18;j>=0;j--){const gx=1+i*0.05,gz=1+j*0.05,a=gx*gz-Math.abs(gx-gz)*0.05;if(a>ba&&farmFits(gx,gz,pts)){ba=a;best={x:gx,z:gz};}}
+  return farmMaxG=best;}
+const farmGrow=()=>{const m=farmGrowMax(),t=Math.min(S.land||0,6)/6;return{x:1+(m.x-1)*t,z:1+(m.z-1)*t};};
+const farmCX=()=>FARM.x-7.6*(farmGrow().x-1);
+const farmWest=()=>Math.floor(farmCX()-7.6*farmGrow().x*1.3)-1; // the westmost column the field (with its shallows) can reach
+function farmQ(x,z){const g=farmGrow(),dx=Math.abs(x-farmCX())/(7.6*g.x),dz=Math.abs(z-FARM.z)/(6.6*g.z);return Math.pow(dx**4+dz**4,0.25)*(1+(hash(x*1.3,z*2.1)-0.5)*0.06);}
 const landMap=new Map(),islMap=new Map();let landList=[];
 let islands=[];
 const isLandT=t=>t==='grass'||t==='sand'||t==='bridge';
@@ -1003,7 +1019,7 @@ function tileTypeI(isl,x,z){const R=islR(isl),d=islDist(isl,x,z),b=BIOMES[isl.bi
   if(isl.home){const q=townQ(x,z),bw=0.05+0.11*clamp(z/TOWN_D,0,1);t=q<1-bw?'grass':q<1?'sand':q<1.07?'s1':q<1.15?'s2':null;}
   if(isl.home){const q=farmQ(x,z),f=q<0.83?'grass':q<1?'sand':q<1.13?'s1':q<1.28?'s2':null;if(f&&(!t||TRANK[f]>TRANK[t]))t=f;}
   return t;}
-function genIslands(){
+function genIslands(){farmMaxG=null;
   const R=mulberry(S.worldSeed);
   islands=[{id:0,cx:0,cz:0,biome:'home',name:'Home',home:true,seed:S.worldSeed|0,riverN:1,rw:2}];
   const bl=shuffle(BIOME_IDS.slice(),R);const used=new Set();
@@ -1307,7 +1323,7 @@ function buildIsland(isl){
   if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);riverSurf.delete(k);bridgeY.delete(k);}
   const g=new T.Group();isl.group=g;isl.heartG=null;isl.residentG=null;isl.flats=[];isl.veg=[];isl.lowOn=false;isl.casters=null;isl.shadowOn=undefined;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
   const span=Math.ceil(islR(isl)/0.62+3),B=islandBiome(isl);
-  for(let x=isl.home?Math.min(isl.cx-span,FARM.x-11):isl.cx-span;x<=isl.cx+span;x++)for(let z=isl.cz-span;z<=isl.cz+span;z++){
+  for(let x=isl.home?Math.min(isl.cx-span,farmWest()):isl.cx-span;x<=isl.cx+span;x++)for(let z=isl.cz-span;z<=isl.cz+span;z++){
     const t=tileTypeI(isl,x,z);if(!t)continue;const k=K(x,z);
     if(landMap.has(k)&&islMap.get(k)!==isl.id)continue;
     landMap.set(k,t);islMap.set(k,isl.id);isl.keys.push(k);
@@ -1403,7 +1419,12 @@ function rebuildSoil(){
   if(soilIM){scene.remove(soilIM);soilIM.dispose();}
   const keys=Object.keys(S.tiles);
   soilIM=new T.InstancedMesh(SOIL_GEO,vcMat,Math.max(1,keys.length));soilIM.count=keys.length;soilIM.receiveShadow=true;soilIM.frustumCulled=false;
-  keys.forEach((k,i)=>{const [x,z]=k.split(',').map(Number);_m.makeTranslation(x,topY(x,z)+0.03,z);soilIM.setMatrixAt(i,_m);soilIM.setColorAt(i,_c.set(S.tiles[k].w?0x5e3c2a:0x9a6a44));});
+  // each slab reaches out to meet tilled neighbours, so a plot reads as one bed of soil, not separate squares
+  // (fruit trees keep just a small ring of dirt, so an orchard stays on grass)
+  const tree=q=>{const c=S.tiles[q]&&S.tiles[q].crop;return !!c&&CROPS[c.t]&&CROPS[c.t].kind==='tree';};
+  keys.forEach((k,i)=>{const [x,z]=k.split(',').map(Number),y=topY(x,z),tr=tree(k),n=(a,b)=>{const q=K(x+a,z+b);return !tr&&!!S.tiles[q]&&!tree(q)&&Math.abs(topY(x+a,z+b)-y)<0.05;};
+    const e=tr?0.17:0.45,l=n(-1,0)?0.5:e,r=n(1,0)?0.5:e,f=n(0,-1)?0.5:e,b=n(0,1)?0.5:e;
+    _m.makeScale((l+r)/0.9,1,(f+b)/0.9);_m.setPosition(x+(r-l)/2,y+0.03,z+(b-f)/2);soilIM.setMatrixAt(i,_m);soilIM.setColorAt(i,_c.set(S.tiles[k].w?0x5e3c2a:0x9a6a44));});
   if(!keys.length)soilIM.setColorAt(0,_c.set(0));
   scene.add(soilIM);refreshHomeGrass();
 }
@@ -1515,8 +1536,27 @@ function cropParts(type,stage,seed=1){
 }
 const cropRoot=new T.Group();scene.add(cropRoot);
 const cropMeshes=new Map();
+/* All ordinary crop meshes are baked into one batched mesh (one draw call for the whole farm); they sway in its vertex
+   shader around their own base (aSway = base x, base y, phase). Only special-material parts (rare variants) stay as
+   their own meshes in each crop's group. flushCrops rebuilds the batch at most once a frame. */
+const cropBatchMat=toon({vertexColors:true});
+cropBatchMat.onBeforeCompile=sh=>{sh.uniforms.uTime=grassU.uTime;sh.vertexShader='uniform float uTime;attribute vec3 aSway;\n'+sh.vertexShader.replace('#include <begin_vertex>',
+  '#include <begin_vertex>\n  transformed.x+=(transformed.y-aSway.y)*sin(uTime*1.6+aSway.z)*0.035;');};
+let cropBatch=null,cropDirty=false;
+function flushCrops(){if(!cropDirty)return;cropDirty=false;
+  if(cropBatch){cropRoot.remove(cropBatch);cropBatch.geometry.dispose();cropBatch=null;}
+  let n=0;for(const e of cropMeshes.values())if(e.bake)n+=e.bake.n;if(!n)return;
+  const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3),sw=new Float32Array(n*3);let o=0;
+  for(const e of cropMeshes.values()){const B=e.bake;if(!B)continue;pos.set(B.pos,o*3);nor.set(B.nor,o*3);col.set(B.col,o*3);for(let i=0;i<B.n;i++){sw[(o+i)*3]=B.px;sw[(o+i)*3+1]=B.py;sw[(o+i)*3+2]=B.ph;}o+=B.n;}
+  const bg=new T.BufferGeometry();bg.setAttribute('position',new T.BufferAttribute(pos,3));bg.setAttribute('normal',new T.BufferAttribute(nor,3));bg.setAttribute('color',new T.BufferAttribute(col,3));bg.setAttribute('aSway',new T.BufferAttribute(sw,3));
+  cropBatch=new T.Mesh(bg,cropBatchMat);cropBatch.castShadow=cropBatch.receiveShadow=true;cropBatch.frustumCulled=false;cropRoot.add(cropBatch);}
+// move a crop group's plain meshes into its bake (world-space arrays) for the batch
+function bakeCrop(e){const g=e.g;g.updateMatrixWorld(true);const parts=g.children.filter(c=>c.isMesh&&c.material===vcMat&&!c.geometry.index&&c.geometry.attributes.color);if(!parts.length)return;
+  let n=0;for(const c of parts)n+=c.geometry.attributes.position.count;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3);let o=0;
+  for(const c of parts){const G=c.geometry,g2=G.clone();g2.applyMatrix4(c.matrixWorld);pos.set(g2.attributes.position.array,o*3);nor.set(g2.attributes.normal.array,o*3);col.set(G.attributes.color.array,o*3);o+=G.attributes.position.count;g2.dispose();G.dispose();g.remove(c);}
+  e.bake={n,pos,nor,col,px:g.position.x,py:g.position.y,ph:g.userData.ph};}
 function syncCrop(k){
-  const old=cropMeshes.get(k);if(old){cropRoot.remove(old.g);old.g.traverse(o=>{if(o.geometry)o.geometry.dispose();});cropMeshes.delete(k);}
+  const old=cropMeshes.get(k);if(old){cropRoot.remove(old.g);old.g.traverse(o=>{if(o.geometry)o.geometry.dispose();});cropMeshes.delete(k);cropDirty=true;}
   const t=S.tiles[k];if(!t||!t.crop)return;const c=t.crop;
   const [x,z]=k.split(',').map(Number);const st=stageOf(c.p);
   const {leaf,fruit}=cropParts(c.t,st,x*73856093^z*19349663);const g=new T.Group();
@@ -1525,9 +1565,9 @@ function syncCrop(k){
   g.scale.setScalar(st===3&&c.v==='giant'?1.3:0.95);
   g.position.set(x,topY(x,z)+0.06,z);g.rotation.y=CROPS[c.t].kind==='flower'?cam.yaw:hash(x,z)*6.28;
   g.userData.tile={x,z};g.userData.ph=hash(z,x)*6;
-  cropRoot.add(g);cropMeshes.set(k,{g,s:st,v:c.v});
+  cropRoot.add(g);const e={g,s:st,v:c.v};cropMeshes.set(k,e);bakeCrop(e);cropDirty=true;
 }
-function syncAllCrops(){for(const k of [...cropMeshes.keys()])syncCrop(k);for(const k in S.tiles)syncCrop(k);}
+function syncAllCrops(){for(const k of [...cropMeshes.keys()])syncCrop(k);for(const k in S.tiles)syncCrop(k);flushCrops();}
 
 /* =========================================================
    Object models (decor, house, bin)
@@ -2285,8 +2325,16 @@ function syncObjs(){
   OBJ_IDX.len=-1;setTimeout(refreshHomeGrass,0);
   while(objRoot.children.length){const c=objRoot.children[0];objRoot.remove(c);c.traverse(o=>{if(o.geometry&&o.geometry!==POOL_GEO)o.geometry.dispose();});}
   anims.length=0;
-  for(const o of S.objs){const g=objGroup(o.k,o.id,o.r||0);g.position.set(o.x,topY(o.x,o.z),o.z);g.userData.tile={x:o.x,z:o.z};g.userData.obj=o;objRoot.add(g);
+  const batch=[];
+  for(const o of S.objs){const g=objGroup(o.k,o.id,o.r||0);g.position.set(o.x,topY(o.x,o.z),o.z);g.userData.tile={x:o.x,z:o.z};g.userData.obj=o;
+    // still decor (fences, paths, hedges…) is merged into one mesh below, so a big farm doesn't cost a draw call per piece
+    if(!g.userData.anim&&!g.userData.sparkle&&g.children.every(c=>c.isMesh&&c.material===vcMat&&!c.children.length&&!c.geometry.index&&c.geometry.attributes.color)){g.updateMatrixWorld(true);for(const c of g.children)batch.push(c);continue;}
+    objRoot.add(g);
     if(g.userData.anim)anims.push(g.userData.anim);if(g.userData.sparkle)anims.push(()=>{if(Math.random()<0.02)sparkle(o.x,topY(o.x,o.z)+0.25,o.z,0xffe27a);});}
+  if(batch.length){let n=0;for(const c of batch)n+=c.geometry.attributes.position.count;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3);let o=0;
+    for(const c of batch){const G=c.geometry,g2=G.clone();g2.applyMatrix4(c.matrixWorld);pos.set(g2.attributes.position.array,o*3);nor.set(g2.attributes.normal.array,o*3);col.set(G.attributes.color.array,o*3);o+=G.attributes.position.count;g2.dispose();G.dispose();}
+    const bg=new T.BufferGeometry();bg.setAttribute('position',new T.BufferAttribute(pos,3));bg.setAttribute('normal',new T.BufferAttribute(nor,3));bg.setAttribute('color',new T.BufferAttribute(col,3));
+    const bm=new T.Mesh(bg,vcMat);bm.castShadow=bm.receiveShadow=true;bm.frustumCulled=false;objRoot.add(bm);}
   houseMesh=houseGroup(S.house);houseMesh.position.set(HOUSE_AT.x+0.5,Math.min(topY(HOUSE_AT.x,HOUSE_AT.z),topY(HOUSE_AT.x+1,HOUSE_AT.z+1))||0.3,HOUSE_AT.z+0.5);
   objRoot.add(houseMesh);
   binMesh=binGroup();binMesh.position.set(BIN_AT.x,topY(BIN_AT.x,BIN_AT.z),BIN_AT.z);binMesh.rotation.y=-0.2;objRoot.add(binMesh);
@@ -3657,6 +3705,8 @@ function renderSheet(){
     h+=`<div class="setrow"><span>Weather</span><span class="seg"><button data-wx="clear" class="${S.rain?'':'on'}">Clear</button><button data-wx="rain" class="${S.rain?'on':''}">Rain</button></span></div>`;
     h+=`<div class="setrow"><span>Night sky</span><span class="seg"><button data-dev="star">Shooting star</button><button data-dev="meteor" class="${S.meteor?'on':''}">Meteor shower</button></span></div>`;
     h+=`<div class="setrow"><span>Skip ahead</span><span class="seg"><button data-dev="morning">Next morning</button><button data-dev="shells">+1,000 shells</button></span></div>`;
+    h+=`<div class="setrow"><span>Showcase farm</span><span class="seg"><button data-dev="showcase">${S.showcase?'Rebuild':'Load'}</button>${hasRealSave()?'<button data-dev="realsave">Restore my save</button>':''}</span></div>`;
+    h+=`<div class="setrow"><span class="note" style="margin:0">Loads a fully built late-game farm: a big fenced field with sprinkler plots, an orchard, flower beds and a windmill, plus a Villa, max tools and every island restored. Your own save is backed up first.</span></div>`;
     h+=`<div class="setrow"><span>Start over</span><button class="pbtn warn" data-reset="1">Reset world</button></div>`;}
   body.innerHTML=h;
   if(sheet.kind==='chart')drawChart();
@@ -3669,7 +3719,7 @@ function drawChart(){const cv=$('chart');if(!cv)return;const g=cv.getContext('2d
   g.fillStyle='#3565cc';g.fillRect(0,0,N,N);g.fillStyle='rgba(255,255,255,.12)';for(let x=0;x<N;x+=20)for(let y=0;y<N;y+=20)g.fillRect(x,y,2,2);
   const px=2,hex=c=>'#'+c.toString(16).padStart(6,'0');
   for(const isl of disc){const R=islR(isl)/0.62+2.2;const B=BIOMES[isl.biome];
-    for(let wx=isl.home?Math.min(-R,FARM.x-11):-R;wx<=R;wx+=px/sc)for(let wz=-R;wz<=R;wz+=px/sc){const t=tileTypeI(isl,Math.round(isl.cx+wx),Math.round(isl.cz+wz));if(!t)continue;
+    for(let wx=isl.home?Math.min(-R,farmWest()):-R;wx<=R;wx+=px/sc)for(let wz=-R;wz<=R;wz+=px/sc){const t=tileTypeI(isl,Math.round(isl.cx+wx),Math.round(isl.cz+wz));if(!t)continue;
       g.fillStyle=t==='grass'?hex(B.grass[0]):t==='sand'?hex(B.sand[0]):t==='s1'?'#7ea6e8':'#5584da';
       g.fillRect(Math.round(X(isl.cx+wx)/px)*px,Math.round(Y(isl.cz+wz)/px)*px,px,px);}}
   for(const isl of disc)if(isl.rtiles){g.fillStyle=isl.lava?'#e0582a':'#5a9ae8';for(const q of isl.rtiles)g.fillRect(Math.round(X(q.x-0.5)),Math.round(Y(q.z-0.5)),Math.max(2,Math.ceil(sc)),Math.max(2,Math.ceil(sc)));}
@@ -3702,7 +3752,7 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.rod){const R=RODS[S.rod+1];if(!R||S.shells<R.cost)return;S.shells-=R.cost;S.rod++;setRod();SFX.level();toast(`You got the ${R.name}!`,'rare',ICON.rod);renderSheet();return;}
   if(d.can){const R=CANS[S.can+1];if(!R||S.shells<R.cost)return;S.shells-=R.cost;S.can++;SFX.level();toast(`You got the ${R.name}! It waters a 3×3 patch.`,'rare',ICON.can);renderSheet();return;}
   if(d.land){const L=LAND_UP[S.land];if(!L||S.shells<L.cost)return;S.shells-=L.cost;S.land++;buildIsland(islands[0]);rebuildSeaGrid();syncObjs();rebuildSoil();syncAllCrops();syncLife();ensureBoat(true);SFX.level();
-    toast('The tide pulls back — your island has grown!','rare',ICON.star);for(let i=0;i<30;i++)sparkle((Math.random()-0.5)*14,0.6,(Math.random()-0.5)*12,0xfff6e2);renderSheet();return;}
+    toast('The tide pulls back — your island and farm field have grown!','rare',ICON.star);for(let i=0;i<30;i++)sparkle((Math.random()-0.5)*14,0.6,(Math.random()-0.5)*12,0xfff6e2);renderSheet();return;}
   if(d.house){const HU=HOUSE_UP[S.house];if(!HU||S.shells<HU.cost)return;S.shells-=HU.cost;S.house++;logEvent('house');syncObjs();SFX.level();burst(HOUSE_AT.x+0.5,1.5,HOUSE_AT.z+0.5,0xf6eedb,30,2.4,0.1);
     toast(S.house===3?'Your Villa is complete!':`Your new ${HOUSES[S.house]} is ready!`,'rare',THUMB['house'+S.house]);renderSheet();return;}
   if(d.mus!==undefined){S.music=d.mus==='1';renderSheet();return;}
@@ -3711,6 +3761,8 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.dev==='star'){if(nightF<0.5){S.hour=22;applyTime();}spawnShootingStar();closeSheet();return;}
   if(d.dev==='meteor'){S.meteor=!S.meteor;if(S.meteor&&nightF<0.5){S.hour=21.5;applyTime();}renderSheet();return;}
   if(d.dev==='morning'){closeSheet();sleep();return;}
+  if(d.dev==='showcase'){if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Tap again to load';return;}loadShowcase();return;}
+  if(d.dev==='realsave'){restoreRealSave();return;}
   if(d.dev==='shells'){S.shells+=1000;SFX.coin();return;}
   if(d.snd!==undefined){S.sound=d.snd==='1';setWaveVol();if(S.sound)startWaves();renderSheet();return;}
   if(d.px!==undefined){S.pxAdj=Number(d.px);resize();renderSheet();return;}
@@ -3963,6 +4015,85 @@ function updateAtmos(dt,tt){
 let fogBoost=0;
 
 /* =========================================================
+   Dev: the showcase farm. One tap turns this save into a late-game, hand-planned farm (what a player who has
+   put in the hours could build): the field grown to full size and fenced, a stone avenue and cross path, sprinkler-fed
+   vegetable plots, an orchard round a windmill, striped flower beds with beehives, and lanterns and planters along
+   the paths. It also maxes progress (Villa, tools, level, every island found and restored, a full museum).
+   The real save is copied to SAVE_KEY+'-real' first, and "Restore my save" puts it back.
+   ========================================================= */
+const REAL_KEY=SAVE_KEY+'-real';
+const hasRealSave=()=>{try{return !!localStorage.getItem(REAL_KEY);}catch(e){return false;}};
+function restoreRealSave(){let s=null;try{s=localStorage.getItem(REAL_KEY);}catch(e){}if(!s)return;
+  resetting=true;try{localStorage.setItem(SAVE_KEY,s);localStorage.removeItem(REAL_KEY);}catch(e){}location.reload();}
+
+function loadShowcase(){
+  try{if(!S.showcase)localStorage.setItem(REAL_KEY,JSON.stringify(S));}catch(e){toast('Could not back up your save, so the showcase was not loaded.');return;}
+  S.showcase=1;
+  // late-game progress
+  S.land=LAND_UP.length;S.house=HOUSE_UP.length;S.rod=RODS.length-1;S.can=CANS.length-1;
+  S.xp=Math.max(S.xp,LV[LV.length-1]);S.shells=Math.max(S.shells,250000);S.earned=Math.max(S.earned,1200000);S.harvested=Math.max(S.harvested||0,4800);S.day=Math.max(S.day,120);
+  S.boat=null;S.tut=2;S.tipTools=1;S.tipSeed=1;S.tipPaint=1;S.boatTip=1;S.farmInit=1;S.farmClear=1;S.hour=9.5;S.rain=false;S.sea=false;
+  for(const isl of islands)if(!isl.home){S.disc[isl.id]=1;S.restore[isl.id]=RESTORE_N;}
+  for(const [cat,,pre,tab] of DEX_CATS)for(const k in tab)S.alm[pre+k]=1;
+  for(const id of CROP_IDS){for(const v of VARIANTS)S.alm[id+'|'+v.id]=1;S.almR[id]=1;}
+  buildIsland(islands[0]); // the field grows with S.land
+  layShowcaseFarm();
+  const g=showcaseGate;vil.x=vil.tx=g[0]-1.5;vil.z=vil.tz=g[1]+0.5;
+  S.showcaseNew=1;save();resetting=true;location.reload();}
+
+let showcaseGate=[FARM.x,FARM.z];
+function layShowcaseFarm(){
+  const home=islands[0],F=new Set(),occ=new Set();let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;
+  for(const [x,z] of home.grass)if(farmQ(x,z)<1){F.add(K(x,z));x0=Math.min(x0,x);x1=Math.max(x1,x);z0=Math.min(z0,z);z1=Math.max(z1,z);}
+  const inField=(x,z)=>farmQ(x,z)<1.3&&islMap.get(K(x,z))===0&&x<FARM.x+12;
+  S.debris=[];S.weeds=[];S.finds=(S.finds||[]).filter(f=>!inField(Math.round(f.x),Math.round(f.z)));
+  S.objs=S.objs.filter(o=>!inField(o.x,o.z));for(const k of Object.keys(S.tiles)){const [x,z]=k.split(',').map(Number);if(inField(x,z))delete S.tiles[k];}
+  const has=(x,z)=>F.has(K(x,z)),ring=(x,z)=>has(x,z)&&[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>!has(x+a,z+b));
+  const free=(x,z)=>has(x,z)&&!occ.has(K(x,z)),inner=(x,z)=>free(x,z)&&!ring(x,z);
+  const obj=(k,x,z,r=0)=>{if(!free(x,z))return false;occ.add(K(x,z));S.objs.push({id:S.nextId++,k,x,z,r});return true;};
+  const R=mulberry((S.worldSeed|0)^0x5c0a);
+  const crop=(t,x,z,ripe=0.85)=>{if(!inner(x,z))return false;occ.add(K(x,z));const r=R(),on=r<ripe;
+    const v=!on?null:r<0.035?'golden':r<0.05?'crystal':r<0.055?'rainbow':r<0.14?'giant':'normal';
+    S.tiles[K(x,z)]={w:1,crop:{t,p:on?1:0.55+R()*0.35,v,m:0}};return true;};
+  const GZ=[FARM.z-1,FARM.z],PX=Math.round((x0+x1)/2)-1;showcaseGate=[x1,FARM.z];
+  // fence ring with an open gate where the bridge comes in; posts either side of the gate get flower pots
+  for(const k of F){const [x,z]=k.split(',').map(Number);if(!ring(x,z))continue;
+    if(GZ.includes(z)&&x>PX){obj('stonepath',x,z);continue;}
+    if(x===x1&&(z===GZ[0]-1||z===GZ[1]+1)){obj('flowerpot',x,z);continue;}
+    obj('fence',x,z,has(x,z-1)&&has(x,z+1)?Math.PI/2:0);}
+  // a two-wide stone avenue from the gate, and a cross path through the middle
+  for(let x=x0;x<=x1;x++)for(const z of GZ)obj('stonepath',x,z);
+  for(let z=z0;z<=z1;z++)if(!GZ.includes(z))obj('stonepath',PX,z);
+  // the avenue's edges: tulip planters and lanterns on the vegetable side, hedges on the orchard side, pots on the garden side
+  for(let x=x0+1;x<x1;x++){if(x===PX)continue;const n=GZ[0]-1,s=GZ[1]+1,lamp=(x-PX)%4===2||(x-PX)%4===-2;
+    if(lamp){obj('lantern',x,n);obj('lantern',x,s);continue;}
+    if(x>PX){obj('planter',x,n);if(x===PX+1)obj('well',x,s);else if(x===x1-2)obj('signpost',x,s,-Math.PI/2);else obj('planter',x,s);}
+    else{obj('hedge',x,n);if(x===PX-1)obj('bench',x,s,Math.PI);else if(x===PX-3)obj('birdhouse',x,s);else if(x===PX-5)obj('gnome',x,s);else obj('flowerpot',x,s);}}
+  // east: packed 3×3 vegetable plots, each round a sprinkler (a few round a scarecrow, beehive or lucky clover); leftover edges
+  // get a border of sunflowers along the fence and wheat elsewhere
+  const plots=(dir,list,centres)=>{let b=0;
+    for(let cz=(dir<0?GZ[0]:GZ[1])+dir*3;cz>z0&&cz<z1;cz+=dir*3)for(let cx=PX+2;cx<x1;cx+=3){if(!inner(cx,cz))continue;
+      const t=list[b%list.length],c=centres[b%centres.length];b++;obj(c,cx,cz);for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)if(dx||dz)crop(t,cx+dx,cz+dz);}};
+  plots(-1,['tomato','corn','cabbage','pepper','carrot','eggplant','potato','onion'],['sprinkler','sprinkler','scarecrow','sprinkler','sprinkler','beehive']);
+  plots(1,['pumpkin','strawberry','blueberry','watermelon','lettuce','wheat','radish','turnip'],['sprinkler','clover','sprinkler','sprinkler','scarecrow','sprinkler']);
+  for(const k of F){const [x,z]=k.split(',').map(Number);if(x<=PX||!inner(x,z)||z===GZ[0]-1||z===GZ[1]+1)continue;
+    crop([[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>ring(x+a,z+b))?'sunflower':'wheat',x,z,0.95);}
+  // north-west: a windmill in the far corner with hay bales, then an orchard of fruit trees on a two-tile grid, and a trellis row by the avenue
+  {let wm=null;for(let s=2;s<8&&!wm;s++)for(let dx=0;dx<=s&&!wm;dx++){const x=x0+1+dx,z=z0+1+(s-dx);if(inner(x,z)&&inner(x+1,z)&&inner(x,z+1)&&inner(x+1,z+1))wm=[x,z];}
+    if(wm){obj('windmill',wm[0],wm[1],Math.PI*0.25);occ.add(K(wm[0]+1,wm[1]));occ.add(K(wm[0],wm[1]+1));obj('haybale',wm[0]+1,wm[1]+1);obj('haybale',wm[0]+2,wm[1]);}}
+  const trellisZ=GZ[0]-2;for(let x=x0+1;x<PX;x++)crop((x-PX)%2?'grape':'peas',x,trellisZ,0.95);
+  for(let z=trellisZ-2;z>z0;z-=2)for(let x=PX-2;x>x0;x-=2){const t=((PX-x)/2+(trellisZ-z)/2)%3;crop(t===0?'peach':t===1?'starfruit':'peach',x,z,0.95);}
+  for(let z=trellisZ-3;z>z0;z-=4){const x=PX-3;if(inner(x,z))obj('beehive',x,z);}
+  // south-west: striped flower beds (two rows each, a grass row between), beehives along the path end
+  const beds=['tulip','lavender','sunflower','moonflower','tulip','lavender'];let row=0;
+  for(let z=GZ[1]+2;z<z1;z++,row++){const band=Math.floor(row/3),gap=row%3===2;if(gap)continue;
+    for(let x=x0+1;x<PX;x++){if(x===PX-1&&row%3===0){obj('beehive',x,z);continue;}crop(beds[band%beds.length],x,z,0.95);}}
+  // wildflowers along the inside of the fence
+  for(const k of F){const [x,z]=k.split(',').map(Number);if(inner(x,z)&&[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>ring(x+a,z+b))&&hash(x*2.3,z*1.7)<0.45)obj('flowers',x,z);}
+}
+// shown once after the reload
+if(S.showcaseNew){delete S.showcaseNew;setTimeout(()=>toast('Showcase farm loaded. Your own save is kept safe: open the Island menu and tap <b>Restore my save</b> to go back.','rare',ICON.sprout),1600);}
+/* =========================================================
    Main loop
    ========================================================= */
 let last=performance.now(),tt=0,saveT=0,hudT=0;
@@ -3992,7 +4123,7 @@ function frame(now){
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
   scene.fog.near=cam.dist+18-fogBoost*14;scene.fog.far=cam.dist+95-fogBoost*45;
-  for(const {g} of cropMeshes.values())g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;
+  flushCrops();for(const {g} of cropMeshes.values())if(g.children.length)g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);
   for(const a of anims)a(tt,dt);
@@ -4074,6 +4205,9 @@ if(/[?&]debug\b/.test(location.search)){
     specimen:(list,x,z)=>{list.forEach((w,i)=>{const [a,b]=w.split(':'),R=mulberry(i+7),X=x+i*1.3;let g;
       if(a==='tree')g=M(treeParts(b,R,0x9a9ea8));else if(a==='debris')g=M(debrisParts(b,R));else if(a==='plant')g=plantGroup(b,i+7);else{const c=cropParts(b,3,i+7);g=new T.Group();g.add(M(c.leaf));if(c.fruit.length)g.add(M(c.fruit));g.scale.setScalar(0.95);}
       g.position.set(X,topY(X,z),z);scene.add(g);});},
+    // a text map of tiles: g grass, s sand, b bridge, r river, . sea; P town path, T tilled, O object, F fixed, D debris
+    grid:(x0,z0,x1,z1)=>{const out=[];for(let z=z0;z<=z1;z++){let l='';for(let x=x0;x<=x1;x++){const k=K(x,z),t=landMap.get(k);l+=S.tiles[k]?'T':objAt(x,z)?'O':fixedAt(x,z)?'F':debrisAt(x,z)?'D':TOWN.path.has(k)?'P':t==='grass'?'g':t==='sand'?'s':t==='bridge'?'b':t==='river'?'r':t?t[0]:'.';}out.push(String(z).padStart(3)+' '+l);}return out.join('\n');},
+    showcase:()=>loadShowcase(),
     ripen:()=>{for(const k in S.tiles){const t=S.tiles[k];if(t.crop)t.crop.p=1;}syncAllCrops();},
     fish:()=>{const isl=curIsl();if(!isl)return false;const [x,z]=isl.sand[0];DS.tp(x,z);startFishing(x+3,z+3);return !!fishing;},
     fastTravel:id=>fastTravel(islands[id]),

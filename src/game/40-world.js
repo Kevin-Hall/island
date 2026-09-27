@@ -6,7 +6,23 @@ const TOP={grass:0.5,sand:0.3,bridge:0.32};
 const FARM={x:-40,z:1};
 const TOWN_W=22,TOWN_D=17;
 function townQ(x,z){const dx=Math.abs(x)/TOWN_W,dz=Math.abs(z-0.5)/TOWN_D;return Math.pow(dx**5+dz**5,0.2)*(1+(hash(x*0.7,z*1.1)-0.5)*0.035);}
-function farmQ(x,z){const dx=Math.abs(x-FARM.x)/7.6,dz=Math.abs(z-FARM.z)/6.6;return Math.pow(dx**4+dz**4,0.25)*(1+(hash(x*1.3,z*2.1)-0.5)*0.06);}
+// each island expansion (S.land) also grows the field, west and north/south, away from the bridge. How far it can grow
+// depends on the world: the widest/tallest pair of factors (each up to 1.9×) whose shallows stay 2+ tiles clear of every
+// other island, picked for the most area
+let farmMaxG=null;
+function farmFits(gx,gz,pts){const cx=FARM.x-7.6*(gx-1);
+  for(const [x,z] of pts){const dx=Math.abs(x-cx)/(7.6*gx),dz=Math.abs(z-FARM.z)/(6.6*gz);if(Math.pow(dx**4+dz**4,0.25)<1.45)return false;}return true;}
+function farmGrowMax(){if(farmMaxG)return farmMaxG;if(islands.length<2)return{x:1,z:1};
+  // every tile (shallows included) of the other islands anywhere near the field
+  const pts=[];for(const o of islands){if(o.home||Math.hypot(o.cx-FARM.x,o.cz-FARM.z)>80)continue;const sp=Math.ceil(islR(o)/0.62+3);
+    for(let x=o.cx-sp;x<=o.cx+sp;x++)for(let z=o.cz-sp;z<=o.cz+sp;z++)if(Math.abs(x-FARM.x)<45&&Math.abs(z-FARM.z)<40&&tileTypeI(o,x,z))pts.push([x,z]);}
+  let best={x:1,z:1},ba=1;
+  for(let i=18;i>=0;i--)for(let j=18;j>=0;j--){const gx=1+i*0.05,gz=1+j*0.05,a=gx*gz-Math.abs(gx-gz)*0.05;if(a>ba&&farmFits(gx,gz,pts)){ba=a;best={x:gx,z:gz};}}
+  return farmMaxG=best;}
+const farmGrow=()=>{const m=farmGrowMax(),t=Math.min(S.land||0,6)/6;return{x:1+(m.x-1)*t,z:1+(m.z-1)*t};};
+const farmCX=()=>FARM.x-7.6*(farmGrow().x-1);
+const farmWest=()=>Math.floor(farmCX()-7.6*farmGrow().x*1.3)-1; // the westmost column the field (with its shallows) can reach
+function farmQ(x,z){const g=farmGrow(),dx=Math.abs(x-farmCX())/(7.6*g.x),dz=Math.abs(z-FARM.z)/(6.6*g.z);return Math.pow(dx**4+dz**4,0.25)*(1+(hash(x*1.3,z*2.1)-0.5)*0.06);}
 const landMap=new Map(),islMap=new Map();let landList=[];
 let islands=[];
 const isLandT=t=>t==='grass'||t==='sand'||t==='bridge';
@@ -30,7 +46,7 @@ function tileTypeI(isl,x,z){const R=islR(isl),d=islDist(isl,x,z),b=BIOMES[isl.bi
   if(isl.home){const q=townQ(x,z),bw=0.05+0.11*clamp(z/TOWN_D,0,1);t=q<1-bw?'grass':q<1?'sand':q<1.07?'s1':q<1.15?'s2':null;}
   if(isl.home){const q=farmQ(x,z),f=q<0.83?'grass':q<1?'sand':q<1.13?'s1':q<1.28?'s2':null;if(f&&(!t||TRANK[f]>TRANK[t]))t=f;}
   return t;}
-function genIslands(){
+function genIslands(){farmMaxG=null;
   const R=mulberry(S.worldSeed);
   islands=[{id:0,cx:0,cz:0,biome:'home',name:'Home',home:true,seed:S.worldSeed|0,riverN:1,rw:2}];
   const bl=shuffle(BIOME_IDS.slice(),R);const used=new Set();

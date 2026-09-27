@@ -29,15 +29,15 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 20-state, 21-sprites | Save state (`S`, `freshState`, `load`, `save`); UI icons (`SPR`, `ICON`). Sprites are small character grids that `sprite()` upgrades when drawn: Scale2x smoothing, rim light and shade, a tinted outline, painted at 3× |
 | 30-render | Renderer, pixel post-pass, geometry helpers (`P`, `PG` gradient parts, `merge`, `M`), shared materials, lights, sea, sky |
 | 31-ground | Painted ground textures (grass, path, sand, cliff) and `worldMat`, which maps them in world space so tiles join up without seams. Dirt paths are painted into the grass from a blurred mask (`setPathMask`), so their edges curve instead of following tiles |
-| 40–44 world | Island generation (`genIslands`); trees and bushes (`treeParts`, `canopy`, `bushClump`, gradient leaf `card`s); grass blades (`updateNearGrass`: a pooled clump mesh around the camera; whole-island blades off by default, see `GRASS_DENS`); rivers and waterfalls (`carveRivers`); terrain meshes with rounded corners (`buildIsland`, `rtileGeo`); island culling |
-| 45-crops | Soil and crop models (`cropParts`) |
+| 40–44 world | Island generation (`genIslands`); the farm field's shape (`farmQ`), which grows with island expansions as far as neighbouring islands allow (`farmGrowMax`); trees and bushes (`treeParts`, `canopy`, `bushClump`, gradient leaf `card`s); grass blades (`updateNearGrass`: a pooled clump mesh around the camera; whole-island blades off by default, see `GRASS_DENS`); rivers and waterfalls (`carveRivers`); terrain meshes with rounded corners (`buildIsland`, `rtileGeo`); island culling |
+| 45-crops | Soil (tilled tiles join into beds) and crop models (`cropParts`). All plain crop meshes are baked into one batched mesh that sways in its shader (`bakeCrop`, `flushCrops`) |
 | 50-objects | Decor, house and bin models (`objGroup`, `houseGroup`, `roof`) |
 | 55-town | Town layout (`layoutTown`): plaza, paths, civic buildings (hall, shop with sign, museum, harbour café), villager homes in their owner's style (`homeStyle`: boathouse on stilts, thatched round cottage, brick workshop, hill burrow, lookout, keeper's cottage), the lighthouse and its night beam, lamps, trees, flowers, benches and café seats |
 | 56-interiors | Enterable rooms: separate `roomScene`, furniture (`furn`), room tapping |
 | 59-museum | The walk-in museum (`buildMuseum`): fish tanks, butterfly garden, bug terrariums and a centrepiece, all filled from `S.alm`; Grandpa Tully the sea-turtle curator; the outdoor showcase (`refreshMuseumShow`) |
 | 57-villagers | Species (`SPECIES` names and colours, `BODY` build, snout, ears and tail), personalities (`PERS`: sailor, dreamer, tinkerer, homebody, explorer, scholar) and what they wear (`STYLE`), models (`npcModel` with outfits and headwear), faces (`setFace`: blink, happy, talk), routines, chat, wishes, friendship |
 | 57-routines | Villager daily routines (`chooseActivity`, `startActivity`, `actTick`): hobbies at real spots with held props, bench sitting, pair chats. Also memory: `logEvent` fills `S.log`, and `memoryLine`, `neighbourLine` and `activityLine` feed chat |
-| 58-crafting | `RECIPES`, crafting, consumables |
+| 58-crafting | `RECIPES`, crafting, consumables; `syncObjs` builds placed decor, merging still pieces (fences, paths, hedges…) into one mesh |
 | 61-player | Player looks (`LOOKS`, `applyLook`, `setLook`): the bunny or any `npcModel` species, in fur and outfit colours saved as `S.look`. The body is always `villager.children[0]`. |
 | 60–64 | Ambient life (villager, boat, gulls, particles); time of day and offline simulation; synth audio |
 | 71-tools | Tool bar and held tools (`TOOLS`, `equip`); `toolTap` decides what a tap does with the equipped tool; `actAt` walks up, faces the tile and swings |
@@ -46,6 +46,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 82-sheets | The bottom bar's menu (`showApps`) and bottom sheets: Pockets (inventory and crafting), shop, seeds, orders, Islandex, chart, settings |
 | 84-input | Tap, drag, pinch and picking (`pick`, `onTap`) |
 | 86–87 | New-game setup; atmosphere (foam, footprints, sky events, motes, music) |
+| 88-showcase | Dev **Showcase farm** (`loadShowcase`, `layShowcaseFarm`): backs up the save to `SAVE_KEY+'-real'`, maxes progress, lays out a planned late-game farm and reloads; `restoreRealSave` undoes it |
 | 90-main | Main loop (`frame`) and boot |
 | 95-debug | `window.DS` (only with `?debug`) |
 

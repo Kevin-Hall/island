@@ -27,8 +27,16 @@ function syncObjs(){
   OBJ_IDX.len=-1;setTimeout(refreshHomeGrass,0);
   while(objRoot.children.length){const c=objRoot.children[0];objRoot.remove(c);c.traverse(o=>{if(o.geometry&&o.geometry!==POOL_GEO)o.geometry.dispose();});}
   anims.length=0;
-  for(const o of S.objs){const g=objGroup(o.k,o.id,o.r||0);g.position.set(o.x,topY(o.x,o.z),o.z);g.userData.tile={x:o.x,z:o.z};g.userData.obj=o;objRoot.add(g);
+  const batch=[];
+  for(const o of S.objs){const g=objGroup(o.k,o.id,o.r||0);g.position.set(o.x,topY(o.x,o.z),o.z);g.userData.tile={x:o.x,z:o.z};g.userData.obj=o;
+    // still decor (fences, paths, hedges…) is merged into one mesh below, so a big farm doesn't cost a draw call per piece
+    if(!g.userData.anim&&!g.userData.sparkle&&g.children.every(c=>c.isMesh&&c.material===vcMat&&!c.children.length&&!c.geometry.index&&c.geometry.attributes.color)){g.updateMatrixWorld(true);for(const c of g.children)batch.push(c);continue;}
+    objRoot.add(g);
     if(g.userData.anim)anims.push(g.userData.anim);if(g.userData.sparkle)anims.push(()=>{if(Math.random()<0.02)sparkle(o.x,topY(o.x,o.z)+0.25,o.z,0xffe27a);});}
+  if(batch.length){let n=0;for(const c of batch)n+=c.geometry.attributes.position.count;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3);let o=0;
+    for(const c of batch){const G=c.geometry,g2=G.clone();g2.applyMatrix4(c.matrixWorld);pos.set(g2.attributes.position.array,o*3);nor.set(g2.attributes.normal.array,o*3);col.set(G.attributes.color.array,o*3);o+=G.attributes.position.count;g2.dispose();G.dispose();}
+    const bg=new T.BufferGeometry();bg.setAttribute('position',new T.BufferAttribute(pos,3));bg.setAttribute('normal',new T.BufferAttribute(nor,3));bg.setAttribute('color',new T.BufferAttribute(col,3));
+    const bm=new T.Mesh(bg,vcMat);bm.castShadow=bm.receiveShadow=true;bm.frustumCulled=false;objRoot.add(bm);}
   houseMesh=houseGroup(S.house);houseMesh.position.set(HOUSE_AT.x+0.5,Math.min(topY(HOUSE_AT.x,HOUSE_AT.z),topY(HOUSE_AT.x+1,HOUSE_AT.z+1))||0.3,HOUSE_AT.z+0.5);
   objRoot.add(houseMesh);
   binMesh=binGroup();binMesh.position.set(BIN_AT.x,topY(BIN_AT.x,BIN_AT.z),BIN_AT.z);binMesh.rotation.y=-0.2;objRoot.add(binMesh);

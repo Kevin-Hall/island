@@ -7,7 +7,12 @@ function rebuildSoil(){
   if(soilIM){scene.remove(soilIM);soilIM.dispose();}
   const keys=Object.keys(S.tiles);
   soilIM=new T.InstancedMesh(SOIL_GEO,vcMat,Math.max(1,keys.length));soilIM.count=keys.length;soilIM.receiveShadow=true;soilIM.frustumCulled=false;
-  keys.forEach((k,i)=>{const [x,z]=k.split(',').map(Number);_m.makeTranslation(x,topY(x,z)+0.03,z);soilIM.setMatrixAt(i,_m);soilIM.setColorAt(i,_c.set(S.tiles[k].w?0x5e3c2a:0x9a6a44));});
+  // each slab reaches out to meet tilled neighbours, so a plot reads as one bed of soil, not separate squares
+  // (fruit trees keep just a small ring of dirt, so an orchard stays on grass)
+  const tree=q=>{const c=S.tiles[q]&&S.tiles[q].crop;return !!c&&CROPS[c.t]&&CROPS[c.t].kind==='tree';};
+  keys.forEach((k,i)=>{const [x,z]=k.split(',').map(Number),y=topY(x,z),tr=tree(k),n=(a,b)=>{const q=K(x+a,z+b);return !tr&&!!S.tiles[q]&&!tree(q)&&Math.abs(topY(x+a,z+b)-y)<0.05;};
+    const e=tr?0.17:0.45,l=n(-1,0)?0.5:e,r=n(1,0)?0.5:e,f=n(0,-1)?0.5:e,b=n(0,1)?0.5:e;
+    _m.makeScale((l+r)/0.9,1,(f+b)/0.9);_m.setPosition(x+(r-l)/2,y+0.03,z+(b-f)/2);soilIM.setMatrixAt(i,_m);soilIM.setColorAt(i,_c.set(S.tiles[k].w?0x5e3c2a:0x9a6a44));});
   if(!keys.length)soilIM.setColorAt(0,_c.set(0));
   scene.add(soilIM);refreshHomeGrass();
 }
@@ -119,8 +124,27 @@ function cropParts(type,stage,seed=1){
 }
 const cropRoot=new T.Group();scene.add(cropRoot);
 const cropMeshes=new Map();
+/* All ordinary crop meshes are baked into one batched mesh (one draw call for the whole farm); they sway in its vertex
+   shader around their own base (aSway = base x, base y, phase). Only special-material parts (rare variants) stay as
+   their own meshes in each crop's group. flushCrops rebuilds the batch at most once a frame. */
+const cropBatchMat=toon({vertexColors:true});
+cropBatchMat.onBeforeCompile=sh=>{sh.uniforms.uTime=grassU.uTime;sh.vertexShader='uniform float uTime;attribute vec3 aSway;\n'+sh.vertexShader.replace('#include <begin_vertex>',
+  '#include <begin_vertex>\n  transformed.x+=(transformed.y-aSway.y)*sin(uTime*1.6+aSway.z)*0.035;');};
+let cropBatch=null,cropDirty=false;
+function flushCrops(){if(!cropDirty)return;cropDirty=false;
+  if(cropBatch){cropRoot.remove(cropBatch);cropBatch.geometry.dispose();cropBatch=null;}
+  let n=0;for(const e of cropMeshes.values())if(e.bake)n+=e.bake.n;if(!n)return;
+  const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3),sw=new Float32Array(n*3);let o=0;
+  for(const e of cropMeshes.values()){const B=e.bake;if(!B)continue;pos.set(B.pos,o*3);nor.set(B.nor,o*3);col.set(B.col,o*3);for(let i=0;i<B.n;i++){sw[(o+i)*3]=B.px;sw[(o+i)*3+1]=B.py;sw[(o+i)*3+2]=B.ph;}o+=B.n;}
+  const bg=new T.BufferGeometry();bg.setAttribute('position',new T.BufferAttribute(pos,3));bg.setAttribute('normal',new T.BufferAttribute(nor,3));bg.setAttribute('color',new T.BufferAttribute(col,3));bg.setAttribute('aSway',new T.BufferAttribute(sw,3));
+  cropBatch=new T.Mesh(bg,cropBatchMat);cropBatch.castShadow=cropBatch.receiveShadow=true;cropBatch.frustumCulled=false;cropRoot.add(cropBatch);}
+// move a crop group's plain meshes into its bake (world-space arrays) for the batch
+function bakeCrop(e){const g=e.g;g.updateMatrixWorld(true);const parts=g.children.filter(c=>c.isMesh&&c.material===vcMat&&!c.geometry.index&&c.geometry.attributes.color);if(!parts.length)return;
+  let n=0;for(const c of parts)n+=c.geometry.attributes.position.count;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3);let o=0;
+  for(const c of parts){const G=c.geometry,g2=G.clone();g2.applyMatrix4(c.matrixWorld);pos.set(g2.attributes.position.array,o*3);nor.set(g2.attributes.normal.array,o*3);col.set(G.attributes.color.array,o*3);o+=G.attributes.position.count;g2.dispose();G.dispose();g.remove(c);}
+  e.bake={n,pos,nor,col,px:g.position.x,py:g.position.y,ph:g.userData.ph};}
 function syncCrop(k){
-  const old=cropMeshes.get(k);if(old){cropRoot.remove(old.g);old.g.traverse(o=>{if(o.geometry)o.geometry.dispose();});cropMeshes.delete(k);}
+  const old=cropMeshes.get(k);if(old){cropRoot.remove(old.g);old.g.traverse(o=>{if(o.geometry)o.geometry.dispose();});cropMeshes.delete(k);cropDirty=true;}
   const t=S.tiles[k];if(!t||!t.crop)return;const c=t.crop;
   const [x,z]=k.split(',').map(Number);const st=stageOf(c.p);
   const {leaf,fruit}=cropParts(c.t,st,x*73856093^z*19349663);const g=new T.Group();
@@ -129,7 +153,7 @@ function syncCrop(k){
   g.scale.setScalar(st===3&&c.v==='giant'?1.3:0.95);
   g.position.set(x,topY(x,z)+0.06,z);g.rotation.y=CROPS[c.t].kind==='flower'?cam.yaw:hash(x,z)*6.28;
   g.userData.tile={x,z};g.userData.ph=hash(z,x)*6;
-  cropRoot.add(g);cropMeshes.set(k,{g,s:st,v:c.v});
+  cropRoot.add(g);const e={g,s:st,v:c.v};cropMeshes.set(k,e);bakeCrop(e);cropDirty=true;
 }
-function syncAllCrops(){for(const k of [...cropMeshes.keys()])syncCrop(k);for(const k in S.tiles)syncCrop(k);}
+function syncAllCrops(){for(const k of [...cropMeshes.keys()])syncCrop(k);for(const k in S.tiles)syncCrop(k);flushCrops();}
 

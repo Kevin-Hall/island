@@ -23,6 +23,9 @@ if(/[?&]debug\b/.test(location.search)){
     specimen:(list,x,z)=>{list.forEach((w,i)=>{const [a,b]=w.split(':'),R=mulberry(i+7),X=x+i*1.3;let g;
       if(a==='tree')g=M(treeParts(b,R,0x9a9ea8));else if(a==='debris')g=M(debrisParts(b,R));else if(a==='plant')g=plantGroup(b,i+7);else{const c=cropParts(b,3,i+7);g=new T.Group();g.add(M(c.leaf));if(c.fruit.length)g.add(M(c.fruit));g.scale.setScalar(0.95);}
       g.position.set(X,topY(X,z),z);scene.add(g);});},
+    // a text map of tiles: g grass, s sand, b bridge, r river, . sea; P town path, T tilled, O object, F fixed, D debris
+    grid:(x0,z0,x1,z1)=>{const out=[];for(let z=z0;z<=z1;z++){let l='';for(let x=x0;x<=x1;x++){const k=K(x,z),t=landMap.get(k);l+=S.tiles[k]?'T':objAt(x,z)?'O':fixedAt(x,z)?'F':debrisAt(x,z)?'D':TOWN.path.has(k)?'P':t==='grass'?'g':t==='sand'?'s':t==='bridge'?'b':t==='river'?'r':t?t[0]:'.';}out.push(String(z).padStart(3)+' '+l);}return out.join('\n');},
+    showcase:()=>loadShowcase(),
     ripen:()=>{for(const k in S.tiles){const t=S.tiles[k];if(t.crop)t.crop.p=1;}syncAllCrops();},
     fish:()=>{const isl=curIsl();if(!isl)return false;const [x,z]=isl.sand[0];DS.tp(x,z);startFishing(x+3,z+3);return !!fishing;},
     fastTravel:id=>fastTravel(islands[id]),
