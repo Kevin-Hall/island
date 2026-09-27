@@ -37,7 +37,7 @@ function debrisParts(k,R){const p=[];switch(k){
   case'weed':for(let i=0;i<10;i++)lf(p,[0x5a8a34,0x6a9a3a,0x4a7a2a][i%3],(R()-0.5)*0.3,0,(R()-0.5)*0.3,R()*6.28,1.0+R()*0.4,0.3+R()*0.15,0.06,0.025);
     if(R()<0.6)for(let i=0;i<2;i++)bloom(p,[0xf6d04a,0xffffff][i],0xf6d04a,(R()-0.5)*0.3,0.26,(R()-0.5)*0.3,0.05);break;
   case'twig':for(let i=0;i<3;i++)p.push(P(CYL6,i%2?0x7a5230:0x6a4428,(R()-0.5)*0.3,0.03,(R()-0.5)*0.3,1.57,R()*3,0,0.04,0.4+R()*0.2,0.04));lf(p,0x6a9a3a,0.05,0.04,0,R()*6,0.2,0.12,0.07);break;
-  case'bush':p.push(P(ICO2,0x4a7a2e,0,0.22,0,0,R()*3,0,0.6,0.42,0.6));for(let i=0;i<20;i++){const a=R()*6.283,e=R()*1.1;lf(p,[0x4a7a2e,0x5a8a34,0x3a6a28][i%3],Math.sin(a)*0.28*Math.cos(e),0.2+Math.sin(e)*0.2,Math.cos(a)*0.28*Math.cos(e),a,0.2+e*0.5,0.2,0.12);}
+  case'bush':bushClump(p,R,[0x8ab858,0x4a7a2e,0x2a4a1e],0.8,0.6);
     for(let i=0;i<4;i++){const a=R()*6.28;p.push(P(CYL6,0x6a4a2a,Math.sin(a)*0.25,0.36,Math.cos(a)*0.25,Math.cos(a)*0.8,0,-Math.sin(a)*0.8,0.02,0.26,0.02));}break;
   case'rock':rockP(p,R,0x9a9ea8,0.55);break;
   case'boulder':rockP(p,R,0x8e929c,1.05);p.push(P(ICO2,0x5a8a44,0.05,0.42,0,0,R()*3,0,0.5,0.1,0.42));break;
@@ -111,8 +111,7 @@ function openBottle(){SFX.rare();const lv=level(),r=Math.random();let msg;
    ========================================================= */
 function plantGroup(id,seed){const Pd=PLANTS[id],R=mulberry(seed),g=new T.Group(),p=[],f=[];const col=Pd.col,dk=Pd.dk,cc=Pd.c||'#f6d04a';
   switch(Pd.kind){
-    case'berry':p.push(P(ICO,0x3a7a30,0,0.22,0,0,R()*3,0,0.62,0.42,0.62));
-      for(let i=0;i<26;i++){const a=R()*6.283,e=R()*1.1,x=Math.sin(a)*0.3*Math.cos(e),y=0.2+Math.sin(e)*0.2,z=Math.cos(a)*0.3*Math.cos(e);lf(p,GREENS[i%4],x,y,z,a,0.2+e*0.5,0.2,0.13);}
+    case'berry':bushClump(p,R,[0x9ad060,0x4a8a34,0x285a24],0.85);
       for(let c=0;c<4;c++){const a=c*1.57+R()*0.5;berries(f,col,dk,Math.sin(a)*0.28,0.24+R()*0.12,Math.cos(a)*0.28,0.06,3,R);}break;
     case'flower':
       if(id==='waterlily'){p.push(P(CYL8,0x4f9a3a,0,0.02,0,0,0,0,0.6,0.02,0.6),P(CYL8,0x6ab84a,0.28,0.025,0.15,0,0,0,0.34,0.02,0.34));bloom(f,col,cc,0,0.07,0,0.17,8,0.45);bloom(f,dk,cc,0.28,0.06,0.15,0.08,6,0.5);break;}

@@ -32,18 +32,21 @@ function wildflowers(p,R,cols,n,spread=0.32){for(let s=0;s<n;s++){const x=(R()-0
   if(R()<0.3)spike(p,c,0xffffff,x,h,z,0.04);else bloom(p,c,R()<0.5?0xf6d04a:0xffffff,x,h,z,0.085);}}
 
 function cropParts(type,stage,seed=1){
+  // crop leaves are rounded blades shaded dark at the base to light at the tip (like the trees), not flat facets
+  const lf=(p,col,x,y,z,ry,tilt,len,wid)=>{const c=Math.cos(tilt);card(p,x,y,z,[Math.sin(ry)*c,Math.sin(tilt),Math.cos(ry)*c],len,wid*1.3,lerpHex(col,0xf4ffd0,0.28),lerpHex(col,0x1e3a1a,0.35));};
+  const rosette=(p,R,n,len,wid,y,tilt,cols=GREENS)=>{for(let i=0;i<n;i++){const a=i/n*6.283+R()*0.45,l=len*(0.8+R()*0.4);lf(p,cols[i%cols.length],0,y+R()*0.03,0,a,tilt+R()*0.25,l,wid);}};
   const C=CROPS[type],R=mulberry(seed),leaf=[],fruit=[];const G1=0x4f9a3a,G2=0x6ab84a,G3=0x3a7a30,GL=0x8cc85a;
   if(stage===0){for(let i=0;i<4;i++)leaf.push(P(ICO,0x4a3020,(R()-0.5)*0.3,0.02,(R()-0.5)*0.3,0,R()*3,0,0.09,0.04,0.09));leaf.push(P(LEAF0,GL,0,0.05,0,0,0,0,0.04,0.07,0.04));return{leaf,fruit};}
   if(stage===1){stemP(leaf,G2,0,0,0.13);lf(leaf,GL,0,0.12,0,0.3,0.35,0.16,0.1);lf(leaf,G2,0,0.12,0,0.3+Math.PI,0.35,0.16,0.1);lf(leaf,GL,0,0.13,0,1.8,0.9,0.08,0.05);return{leaf,fruit};}
   const b=stage===3?1:0.65,ripe=stage===3;
   switch(type){
     case'turnip':rosette(leaf,R,8,0.42*b,0.16*b,0.02,1.0);
-      if(ripe)fruit.push(P(ICO,C.col,0,0.1,0,0,0,0,0.32,0.28,0.32),P(ICO,C.top,0,0.19,0,0,0,0,0.29,0.12,0.29),P(CONE8,C.col,0,-0.03,0,Math.PI,0,0,0.08,0.12,0.08),P(ICO,0xffffff,0.09,0.15,0.1,0,0,0,0.06,0.05,0.05));break;
+      if(ripe)fruit.push(P(ICO2,C.col,0,0.1,0,0,0,0,0.32,0.28,0.32),P(ICO,C.top,0,0.19,0,0,0,0,0.29,0.12,0.29),P(CONE8,C.col,0,-0.03,0,Math.PI,0,0,0.08,0.12,0.08),P(ICO,0xffffff,0.09,0.15,0.1,0,0,0,0.06,0.05,0.05));break;
     case'carrot':for(let i=0;i<10;i++)lf(leaf,GREENS[i%4],0,0.04,0,i/10*6.283+R()*0.3,1.1+R()*0.25,0.48*b,0.07*b);
       if(ripe)fruit.push(P(CONE8,C.col,0,0.03,0,Math.PI,0,0,0.2,0.1,0.2),P(CYL8,0xd8741e,0,0.075,0,0,0,0,0.19,0.02,0.19));break;
     case'potato':rosette(leaf,R,9,0.3*b,0.17*b,0.05,0.45);rosette(leaf,R,6,0.24*b,0.15*b,0.13*b,0.95);
       if(ripe){for(let i=0;i<3;i++){const a=i*2.1+R();bloom(leaf,0xf4eefa,0xf6d04a,Math.sin(a)*0.12,0.3,Math.cos(a)*0.12,0.06);}
-        fruit.push(P(ICO,C.col,0.22,0.04,0.12,0,1,0,0.2,0.14,0.16),P(ICO,C.col,-0.16,0.03,0.2,0,2,0,0.16,0.12,0.14));}break;
+        fruit.push(P(ICO2,C.col,0.22,0.04,0.12,0,1,0,0.2,0.14,0.16),P(ICO2,C.col,-0.16,0.03,0.2,0,2,0,0.16,0.12,0.14));}break;
     case'strawberry':for(let i=0;i<5;i++){const a=i/5*6.283+R()*0.3,px=Math.sin(a)*0.14*b,pz=Math.cos(a)*0.14*b;leaf.push(P(CYL6,G2,px/2,0.06,pz/2,Math.cos(a)*0.8,0,-Math.sin(a)*0.8,0.02,0.16,0.02));
         for(let j=0;j<3;j++)lf(leaf,GREENS[(i+j)%4],px,0.1*b,pz,a+(j-1)*0.65,0.2,0.15*b,0.12*b);}
       if(ripe){for(let i=0;i<4;i++){const a=i*1.57+0.6,x=Math.sin(a)*0.24,z=Math.cos(a)*0.24;fruit.push(P(CONE8,C.col,x,0.07,z,Math.PI,0,0,0.13,0.15,0.13),P(LEAF0,0xffffff,x+0.03,0.1,z+0.03,0,0,0,0.03,0.03,0.03));
@@ -51,11 +54,11 @@ function cropParts(type,stage,seed=1){
     case'tomato':leaf.push(P(BOX,0x9a7a4a,0.05,0.45*b,0.05,0,0,0,0.03,0.9*b,0.03));stemP(leaf,G1,0,0,0.8*b);
       for(let i=0;i<7;i++)lf(leaf,GREENS[i%4],0,0.12+i*0.1*b,0,i*2.4,0.3,0.28*b,0.15*b);
       if(ripe)for(let i=0;i<5;i++){const a=i*1.26+0.3,y=0.25+i*0.1,x=Math.sin(a)*0.15,z=Math.cos(a)*0.15;
-        fruit.push(P(ICO,C.col,x,y,z,0,0,0,0.15,0.13,0.15),P(LEAF0,0xffffff,x+0.04,y+0.04,z+0.04,0,0,0,0.035,0.03,0.035));leaf.push(P(LEAF0,G3,x,y+0.07,z,0,a,0,0.07,0.02,0.07));}break;
+        fruit.push(P(ICO2,C.col,x,y,z,0,0,0,0.15,0.13,0.15),P(LEAF0,0xffffff,x+0.04,y+0.04,z+0.04,0,0,0,0.035,0.03,0.035));leaf.push(P(LEAF0,G3,x,y+0.07,z,0,a,0,0.07,0.02,0.07));}break;
     case'corn':leaf.push(P(CYL6,G1,0,0.55*b,0,0,0,0,0.06,1.1*b,0.06));
       for(let i=0;i<7;i++)lf(leaf,GREENS[i%4],0,(0.15+i*0.13)*b,0,i*2.25,0.35,0.52*b,0.09*b);
       if(ripe){for(let i=0;i<6;i++)leaf.push(P(BOX,0xd8b060,Math.sin(i)*0.05,1.15,Math.cos(i)*0.05,Math.sin(i)*0.4,0,Math.cos(i)*0.4,0.015,0.16,0.015));
-        for(const [a,y] of [[0.6,0.5],[3.4,0.66]]){const x=Math.sin(a)*0.1,z=Math.cos(a)*0.1;fruit.push(P(ICO,C.col,x,y,z,0,0,Math.sin(a)*0.3,0.1,0.3,0.1));lf(leaf,GL,x,y-0.12,z,a,1.3,0.26,0.1);lf(leaf,G2,x,y-0.12,z,a+0.6,1.2,0.24,0.09);}}break;
+        for(const [a,y] of [[0.6,0.5],[3.4,0.66]]){const x=Math.sin(a)*0.1,z=Math.cos(a)*0.1;fruit.push(P(ICO2,C.col,x,y,z,0,0,Math.sin(a)*0.3,0.1,0.3,0.1));lf(leaf,GL,x,y-0.12,z,a,1.3,0.26,0.1);lf(leaf,G2,x,y-0.12,z,a+0.6,1.2,0.24,0.09);}}break;
     case'sunflower':{const h=1.05*b;stemP(leaf,G1,0,0,h);for(let i=0;i<5;i++)lf(leaf,GREENS[i%4],0,0.15+i*0.16*b,0,i*2.5,0.2,0.3*b,0.22*b);
       if(ripe){const y=h+0.05;for(let k=0;k<14;k++){const a=k/14*6.283;fruit.push(P(ICO,k%2?C.col:0xf0a020,Math.cos(a)*0.2,y+Math.sin(a)*0.2,0.03,0,0,a,0.18,0.08,0.03));}
         fruit.push(P(CYL8,C.center,0,y,0.05,Math.PI/2,0,0,0.26,0.06,0.26),P(CYL8,0x3a2418,0,y,0.07,Math.PI/2,0,0,0.16,0.04,0.16));}break;}
@@ -88,7 +91,7 @@ function cropParts(type,stage,seed=1){
     case'eggplant':stemP(leaf,G1,0,0,0.5*b);for(let i=0;i<7;i++)lf(leaf,[0x4f8a3a,0x5f9a44,0x3e7a30][i%3],0,0.12+i*0.06*b,0,i*2.4,0.3,0.3*b,0.22*b);
       if(ripe)for(let i=0;i<3;i++){const a=i*2.1+0.3,x=Math.sin(a)*0.17,z=Math.cos(a)*0.17,y=0.2+i*0.03;
         fruit.push(P(ICO2,C.col,x,y,z,Math.cos(a)*0.4,0,-Math.sin(a)*0.4,0.13,0.3,0.13),P(LEAF0,0xffffff,x+0.04,y+0.06,z+0.04,0,0,0,0.035,0.05,0.03));leaf.push(P(ICO,0x3e7a30,x,y+0.14,z,0,a,0,0.1,0.05,0.1));}break;
-    case'blueberry':leaf.push(P(ICO2,0x3e7a30,0,0.26*b,0,0,0,0,0.5*b,0.42*b,0.5*b));for(let i=0;i<26;i++){const a=R()*6.283,e=R()*1.2;lf(leaf,GREENS[i%4],Math.sin(a)*0.22*b*Math.cos(e),(0.22+Math.sin(e)*0.2)*b,Math.cos(a)*0.22*b*Math.cos(e),a,0.2+e*0.5,0.14*b,0.09*b);}
+    case'blueberry':bushClump(leaf,R,[0x9ad060,0x4a8a34,0x285a24],0.9*b);
       if(ripe)for(let i=0;i<5;i++){const a=i*1.26;berries(fruit,C.col,0x2a3a8a,Math.sin(a)*0.24,0.22+R()*0.14,Math.cos(a)*0.24,0.045,4,R);}break;
     case'lavender':for(let i=0;i<9;i++){const a=R()*6.283,r=Math.sqrt(R())*0.18,x=Math.cos(a)*r,z=Math.sin(a)*r,h=(0.34+R()*0.14)*b;leaf.push(P(CYL6,0x6a9a4a,x,h/2,z,(R()-0.5)*0.2,0,(R()-0.5)*0.2,0.02,h,0.02));
         lf(leaf,0x7aa860,x,0.03,z,R()*6.28,0.9,0.18*b,0.05);if(ripe)spike(fruit,C.col,0x6a4ab0,x,h,z,0.05);}break;
@@ -123,7 +126,7 @@ function syncCrop(k){
   const {leaf,fruit}=cropParts(c.t,st,x*73856093^z*19349663);const g=new T.Group();
   if(leaf.length)g.add(M(leaf));
   if(fruit.length){const v=c.v&&c.v!=='normal'&&c.v!=='giant'?c.v:null;g.add(M(fruit,v?VMAT[v]:vcMat));}
-  g.scale.setScalar(st===3&&c.v==='giant'?1.2:0.8);
+  g.scale.setScalar(st===3&&c.v==='giant'?1.3:0.95);
   g.position.set(x,topY(x,z)+0.06,z);g.rotation.y=CROPS[c.t].kind==='flower'?cam.yaw:hash(x,z)*6.28;
   g.userData.tile={x,z};g.userData.ph=hash(z,x)*6;
   cropRoot.add(g);cropMeshes.set(k,{g,s:st,v:c.v});

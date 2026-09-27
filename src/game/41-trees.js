@@ -4,12 +4,16 @@ const LEAF_CARD=new T.SphereGeometry(0.5,6,3),LEAF_CARD_LO=new T.SphereGeometry(
 function card(p,x,y,z,d,len,wid,cTip,cBase){const tilt=Math.acos(clamp(d[1],-1,1)),ry=Math.atan2(d[0],d[2]);
   p.push(PG(LEAF_CARD,cTip,cBase,x+d[0]*len/2,y+d[1]*len/2,z+d[2]*len/2,tilt,ry,0,wid,len,wid*0.3));}
 // a round canopy shingled with leaf cards that droop outward; tips lighten toward the top, like Animal Crossing's trees
-function canopy(p,R,cols,cx,cy,cz,rad){const Rr=rad*1.55;p.push(P(ICO2,cols[2],cx,cy,cz,0,R()*3,0,Rr*1.3,Rr*1.1,Rr*1.3));
-  const N=Math.round(30+Rr*26),ga=Math.PI*(3-Math.sqrt(5));
+function canopy(p,R,cols,cx,cy,cz,rad,nn){const Rr=rad*1.55;p.push(P(ICO2,cols[2],cx,cy,cz,0,R()*3,0,Rr*1.3,Rr*1.1,Rr*1.3));
+  const N=nn||Math.round(30+Rr*26),ga=Math.PI*(3-Math.sqrt(5));
   for(let i=0;i<N;i++){const yy=1-(i+0.5)/N*1.8;if(yy<-0.7)continue;const r=Math.sqrt(Math.max(0,1-yy*yy)),a=i*ga+R()*0.2,dx=Math.cos(a)*r,dz=Math.sin(a)*r;
     // each leaf hangs outward-and-down from a point on the canopy's surface
     const hx=dx*0.6,hy=-1+yy*0.25,hz=dz*0.6,hl=Math.hypot(hx,hy,hz),d=[-hx/hl,-hy/hl,-hz/hl],h=(yy+1)/2;
     const len=Rr*(0.52+R()*0.1),sx=cx+dx*Rr*0.78,sy=cy+yy*Rr*0.66+0.1*Rr,sz=cz+dz*Rr*0.78;card(p,sx+d[0]*len*0.25,sy+d[1]*len*0.25,sz+d[2]*len*0.25,[hx/hl,hy/hl,hz/hl],len,Rr*0.5,lerpHex(cols[1],cols[0],0.35+h*0.65),lerpHex(cols[2],cols[1],h*0.5));}}
+// a dense, lumpy bush: one tall leafy mound with three lower lobes around it, lit on top (s scales it, q thins the leaves; returns the top height)
+function bushClump(p,R,cols,s=1,q=1){const a0=R()*6.283;canopy(p,R,cols,0,0.34*s,0,0.16*s,Math.round(30*q));
+  for(let i=0;i<3;i++){const a=a0+i*2.094+(R()-0.5)*0.5,r=(0.19+R()*0.05)*s;canopy(p,R,cols,Math.cos(a)*r,(0.2+R()*0.05)*s,Math.sin(a)*r,(0.1+R()*0.025)*s,Math.round(18*q));}
+  return 0.55*s;}
 function trunkP(p,R,col,h,w=0.13,dk){p.push(P(TRUNK,col,0,(h+0.45)/2,0,0,R()*3,0,w*2,h+0.45,w*2),P(CYL8,col,0,h+0.3,0,0,0,0,w*1.5,0.3,w*1.5));
   for(let i=0;i<4;i++){const a=i/4*6.283+R();p.push(P(CYL6,dk||col,Math.cos(a)*w*1.1,0.05,Math.sin(a)*w*1.1,Math.sin(a)*0.9,0,-Math.cos(a)*0.9,0.07,0.24,0.07));}
   for(let i=0;i<3;i++){const a=i/3*6.283+R(),y=h*(0.62+R()*0.25);p.push(P(CYL6,col,Math.cos(a)*0.16,y+0.1,Math.sin(a)*0.16,Math.sin(a)*0.8,0,-Math.cos(a)*0.8,0.06,0.42,0.06));}
@@ -60,7 +64,7 @@ function treeParts(kind,R,colRock){
     case'palmtall':palmParts(p,R,{n:13,lean:(R()<0.5?-1:1)*(0.55+R()*0.3),fronds:9,flen:0.37,cols:[0x3a8a3a,0x9ade6a],nuts:2});break;
     case'palmfan':palmParts(p,R,{n:4,lean:0,fronds:11,seg:2,flen:0.44,wid:0.5,pitch:0.95,droop:0.35,spread:0.7,cols:[0x2a6e38,0x72c05a],nuts:0,trunk:[0x8a6a3e,0x7a5a34]});break;
     case'palmtwin':palmParts(p,R,{n:8,lean:-0.5,fronds:7,cols:[0x2f7a34,0x8ad05a],nuts:2,ox:-0.14});palmParts(p,R,{n:11,lean:0.55,fronds:8,cols:[0x3a8a3a,0x94d862],nuts:0,ox:0.14});break;
-    case'bush':canopy(p,R,[0x8ad060,0x5aa040,0x2e6a2a],0,0.3,0,0.2);if(R()<0.5)for(let i=0;i<5;i++){const a=R()*6.28;bloom(p,0xffffff,0xf6d04a,Math.sin(a)*0.3,0.42+R()*0.12,Math.cos(a)*0.3,0.07);}break;
+    case'bush':{const s=1.1+R()*0.2,top=bushClump(p,R,[0xa8e070,0x5aa040,0x2a5e28],s);if(R()<0.5){const bc=pickR2([0xffffff,0xf8b8c8,0xf6d04a],R);for(let i=0;i<6;i++){const a=R()*6.28,r=R()*0.3*s;bloom(p,bc,0xf6d04a,Math.sin(a)*r,top-0.04-r*0.35,Math.cos(a)*r,0.07);}}break;}
     case'flowerbed':wildflowers(p,R,[0xf7f2e8,0xf2a6c8,0xf6d04a,0xb8a8f2],9,0.36);for(let i=0;i<10;i++)lf(p,GREENS[i%4],(R()-0.5)*0.6,0.02,(R()-0.5)*0.6,R()*6.28,0.35,0.16,0.07);break;
     case'rockM':rockP(p,R,colRock,0.85);p.push(P(ICO2,0x5a8a44,0,0.36,0,0,R()*3,0,0.52,0.12,0.44),P(ICO2,0x6a9a4a,0.1,0.38,0.08,0,0,0,0.3,0.1,0.26));for(let i=0;i<6;i++)lf(p,GREENS[i%4],(R()-0.5)*0.4,0.38,(R()-0.5)*0.3,R()*6.28,0.4,0.12,0.06);break;
     case'rock':rockP(p,R,colRock,0.75);break;

@@ -17,6 +17,12 @@ if(/[?&]debug\b/.test(location.search)){
     give:(items)=>{Object.assign(S.inv,items||{'m:wood':14,'m:stone':11,'m:fiber':9,'g:shell':4,'f:sardine':2,'tomato|normal':3,'tomato|golden':1});updateHUD();},
     craft:i=>craft(i),sheet:(k,tab)=>openSheet(k,tab),closeSheet:()=>closeSheet(),
     enterHome:()=>enterHouse('home'),enterNpc:i=>{const n=npcs[i];enterHouse('vh',n.b,n);},leave:()=>leaveHouse(),
+    // a demo row of crops (each id at growth p, 0..1) on free farm ground; returns the first tile
+    farm:(ids,p=1,rows=1)=>{const r=DS.freeRow(ids.length);if(!r)return null;for(let j=0;j<rows;j++)ids.forEach((id,i)=>{const x=r[0]+i,z=r[1]+j,k=K(x,z);if(!S.tiles[k]&&!canTill(x,z))return;S.tiles[k]={w:1,crop:{t:id,p:Array.isArray(p)?p[j]:p,v:null,m:0}};});rebuildSoil();syncAllCrops();return r;},
+    // drop sample models in a row for a close look: 'tree:bush', 'debris:bush', 'plant:blueberry', 'crop:tomato'
+    specimen:(list,x,z)=>{list.forEach((w,i)=>{const [a,b]=w.split(':'),R=mulberry(i+7),X=x+i*1.3;let g;
+      if(a==='tree')g=M(treeParts(b,R,0x9a9ea8));else if(a==='debris')g=M(debrisParts(b,R));else if(a==='plant')g=plantGroup(b,i+7);else{const c=cropParts(b,3,i+7);g=new T.Group();g.add(M(c.leaf));if(c.fruit.length)g.add(M(c.fruit));g.scale.setScalar(0.95);}
+      g.position.set(X,topY(X,z),z);scene.add(g);});},
     ripen:()=>{for(const k in S.tiles){const t=S.tiles[k];if(t.crop)t.crop.p=1;}syncAllCrops();},
     fish:()=>{const isl=curIsl();if(!isl)return false;const [x,z]=isl.sand[0];DS.tp(x,z);startFishing(x+3,z+3);return !!fishing;},
     fastTravel:id=>fastTravel(islands[id]),

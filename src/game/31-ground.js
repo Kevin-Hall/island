@@ -7,9 +7,13 @@
 function patternTex(size,draw){const cv=document.createElement('canvas');cv.width=cv.height=size;const g=cv.getContext('2d');draw(g,size,mulberry(size*7+draw.length));
   const t=new T.CanvasTexture(cv);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=T.NearestFilter;t.minFilter=T.LinearMipmapLinearFilter;return t;}
 const shade=v=>`rgb(${v},${v},${v})`;
+// painted grass: little tufts of three or four blades (dark strokes with a lit edge), scattered so the tiling doesn't show
 const GRASS_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(236);g.fillRect(0,0,n,n);
-  for(let cy=0;cy<8;cy++)for(let cx=0;cx<8;cx++){if(R()<0.18)continue;const x=cx*8+2+R()*4,y=cy*8+2+R()*4,s=2.2+R()*1.6,up=R()<0.5?1:-1;
-    g.fillStyle=R()<0.78?shade(196):shade(255);g.beginPath();g.moveTo(x,y-s*up);g.lineTo(x-s,y+s*0.8*up);g.lineTo(x+s,y+s*0.8*up);g.closePath();g.fill();}});
+  const px=(x,y,v)=>{g.fillStyle=shade(v);g.fillRect(((Math.round(x)%n)+n)%n,((Math.round(y)%n)+n)%n,1,1);};
+  for(let i=0;i<30;i++){const x=R()*n,y=R()*n,blades=3+Math.floor(R()*2),dark=R()<0.8;
+    for(let b=0;b<blades;b++){const lean=(b-(blades-1)/2)*0.55+(R()-0.5)*0.3,h=3+Math.floor(R()*3);
+      for(let k=0;k<h;k++){px(x+b*1.2+lean*k,y-k,dark?(k===h-1?210:192):250);if(dark&&k>0&&R()<0.5)px(x+b*1.2+lean*k+1,y-k,224);}}}
+  for(let i=0;i<40;i++)px(R()*n,R()*n,R()<0.6?216:248);});
 const PATH_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(238);g.fillRect(0,0,n,n);
   for(let i=0;i<70;i++){const x=R()*n,y=R()*n,r=1+R()*3.2;g.fillStyle=R()<0.55?shade(214):shade(250);g.beginPath();g.arc(x,y,r,0,6.283);g.fill();if(x<r*2||y<r*2){g.beginPath();g.arc(x+n,y+n,r,0,6.283);g.fill();}}});
 const SAND_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(244);g.fillRect(0,0,n,n);for(let i=0;i<140;i++){g.fillStyle=R()<0.7?shade(222):shade(255);g.fillRect(Math.floor(R()*n),Math.floor(R()*n),1+(R()<0.2),1);}});
@@ -53,8 +57,11 @@ function pathGrassMat(){const m=worldMat(GRASS_TEX,0.36),base=m.onBeforeCompile;
   m.onBeforeCompile=function(sh){base(sh);Object.assign(sh.uniforms,pathU);
     sh.fragmentShader='uniform sampler2D uPM;uniform vec4 uPMo;uniform sampler2D uPTex;uniform sampler2D uNoise;\n'+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
     if(an_.y>0.6){vec2 q_=vWP.xz;vec2 wob_=vec2(sin(q_.y*1.3+sin(q_.x*0.7)*1.6),sin(q_.x*1.1+cos(q_.y*0.6)*1.6))*0.13;
+      // big soft patches of lighter and darker grass, their edges roughened by the tuft pattern (painterly pixel-art ground)
+      {float tf_=texture2D(map,q_*0.36).r,mac_=texture2D(uNoise,q_*0.013).r*0.65+texture2D(uNoise,q_*0.034+vec2(3.1,1.7)).r*0.35+(tf_-0.9)*0.55;
+        if(mac_<0.41)diffuseColor.rgb*=vec3(0.76,0.84,0.8);else if(mac_>0.59)diffuseColor.rgb=diffuseColor.rgb*vec3(1.08,1.09,0.95)+vec3(0.05,0.055,0.0);}
       vec4 pm_=texture2D(uPM,(q_+wob_-uPMo.xy)*uPMo.zw);
-      if(pm_.r>0.004){float m_=pm_.r+(texture2D(uNoise,q_*0.6).r-0.5)*0.24;float e_=step(0.46,m_);
+      if(pm_.r>0.004){float m_=pm_.r+(texture2D(uNoise,q_*0.6).r-0.5)*0.24-(0.93-texture2D(map,q_*0.36).r)*0.9;/* tufts spill over the path edge */float e_=step(0.46,m_);
         vec3 pc_=mix(vec3(0.80,0.643,0.416),vec3(0.847,0.714,0.502),clamp(pm_.g/max(pm_.r,0.01),0.,1.))*texture2D(uPTex,q_*0.42).rgb;
         float rim_=smoothstep(0.3,0.46,m_)*(1.-e_);diffuseColor.rgb=mix(diffuseColor.rgb*(1.-rim_*0.16),pc_,e_);}}`);};
   return m;}

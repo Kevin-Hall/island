@@ -910,9 +910,13 @@ const stars=new T.Points(starGeo,starMat);stars.frustumCulled=false;scene.add(st
 function patternTex(size,draw){const cv=document.createElement('canvas');cv.width=cv.height=size;const g=cv.getContext('2d');draw(g,size,mulberry(size*7+draw.length));
   const t=new T.CanvasTexture(cv);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=T.NearestFilter;t.minFilter=T.LinearMipmapLinearFilter;return t;}
 const shade=v=>`rgb(${v},${v},${v})`;
+// painted grass: little tufts of three or four blades (dark strokes with a lit edge), scattered so the tiling doesn't show
 const GRASS_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(236);g.fillRect(0,0,n,n);
-  for(let cy=0;cy<8;cy++)for(let cx=0;cx<8;cx++){if(R()<0.18)continue;const x=cx*8+2+R()*4,y=cy*8+2+R()*4,s=2.2+R()*1.6,up=R()<0.5?1:-1;
-    g.fillStyle=R()<0.78?shade(196):shade(255);g.beginPath();g.moveTo(x,y-s*up);g.lineTo(x-s,y+s*0.8*up);g.lineTo(x+s,y+s*0.8*up);g.closePath();g.fill();}});
+  const px=(x,y,v)=>{g.fillStyle=shade(v);g.fillRect(((Math.round(x)%n)+n)%n,((Math.round(y)%n)+n)%n,1,1);};
+  for(let i=0;i<30;i++){const x=R()*n,y=R()*n,blades=3+Math.floor(R()*2),dark=R()<0.8;
+    for(let b=0;b<blades;b++){const lean=(b-(blades-1)/2)*0.55+(R()-0.5)*0.3,h=3+Math.floor(R()*3);
+      for(let k=0;k<h;k++){px(x+b*1.2+lean*k,y-k,dark?(k===h-1?210:192):250);if(dark&&k>0&&R()<0.5)px(x+b*1.2+lean*k+1,y-k,224);}}}
+  for(let i=0;i<40;i++)px(R()*n,R()*n,R()<0.6?216:248);});
 const PATH_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(238);g.fillRect(0,0,n,n);
   for(let i=0;i<70;i++){const x=R()*n,y=R()*n,r=1+R()*3.2;g.fillStyle=R()<0.55?shade(214):shade(250);g.beginPath();g.arc(x,y,r,0,6.283);g.fill();if(x<r*2||y<r*2){g.beginPath();g.arc(x+n,y+n,r,0,6.283);g.fill();}}});
 const SAND_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(244);g.fillRect(0,0,n,n);for(let i=0;i<140;i++){g.fillStyle=R()<0.7?shade(222):shade(255);g.fillRect(Math.floor(R()*n),Math.floor(R()*n),1+(R()<0.2),1);}});
@@ -956,8 +960,11 @@ function pathGrassMat(){const m=worldMat(GRASS_TEX,0.36),base=m.onBeforeCompile;
   m.onBeforeCompile=function(sh){base(sh);Object.assign(sh.uniforms,pathU);
     sh.fragmentShader='uniform sampler2D uPM;uniform vec4 uPMo;uniform sampler2D uPTex;uniform sampler2D uNoise;\n'+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
     if(an_.y>0.6){vec2 q_=vWP.xz;vec2 wob_=vec2(sin(q_.y*1.3+sin(q_.x*0.7)*1.6),sin(q_.x*1.1+cos(q_.y*0.6)*1.6))*0.13;
+      // big soft patches of lighter and darker grass, their edges roughened by the tuft pattern (painterly pixel-art ground)
+      {float tf_=texture2D(map,q_*0.36).r,mac_=texture2D(uNoise,q_*0.013).r*0.65+texture2D(uNoise,q_*0.034+vec2(3.1,1.7)).r*0.35+(tf_-0.9)*0.55;
+        if(mac_<0.41)diffuseColor.rgb*=vec3(0.76,0.84,0.8);else if(mac_>0.59)diffuseColor.rgb=diffuseColor.rgb*vec3(1.08,1.09,0.95)+vec3(0.05,0.055,0.0);}
       vec4 pm_=texture2D(uPM,(q_+wob_-uPMo.xy)*uPMo.zw);
-      if(pm_.r>0.004){float m_=pm_.r+(texture2D(uNoise,q_*0.6).r-0.5)*0.24;float e_=step(0.46,m_);
+      if(pm_.r>0.004){float m_=pm_.r+(texture2D(uNoise,q_*0.6).r-0.5)*0.24-(0.93-texture2D(map,q_*0.36).r)*0.9;/* tufts spill over the path edge */float e_=step(0.46,m_);
         vec3 pc_=mix(vec3(0.80,0.643,0.416),vec3(0.847,0.714,0.502),clamp(pm_.g/max(pm_.r,0.01),0.,1.))*texture2D(uPTex,q_*0.42).rgb;
         float rim_=smoothstep(0.3,0.46,m_)*(1.-e_);diffuseColor.rgb=mix(diffuseColor.rgb*(1.-rim_*0.16),pc_,e_);}}`);};
   return m;}
@@ -1029,12 +1036,16 @@ const LEAF_CARD=new T.SphereGeometry(0.5,6,3),LEAF_CARD_LO=new T.SphereGeometry(
 function card(p,x,y,z,d,len,wid,cTip,cBase){const tilt=Math.acos(clamp(d[1],-1,1)),ry=Math.atan2(d[0],d[2]);
   p.push(PG(LEAF_CARD,cTip,cBase,x+d[0]*len/2,y+d[1]*len/2,z+d[2]*len/2,tilt,ry,0,wid,len,wid*0.3));}
 // a round canopy shingled with leaf cards that droop outward; tips lighten toward the top, like Animal Crossing's trees
-function canopy(p,R,cols,cx,cy,cz,rad){const Rr=rad*1.55;p.push(P(ICO2,cols[2],cx,cy,cz,0,R()*3,0,Rr*1.3,Rr*1.1,Rr*1.3));
-  const N=Math.round(30+Rr*26),ga=Math.PI*(3-Math.sqrt(5));
+function canopy(p,R,cols,cx,cy,cz,rad,nn){const Rr=rad*1.55;p.push(P(ICO2,cols[2],cx,cy,cz,0,R()*3,0,Rr*1.3,Rr*1.1,Rr*1.3));
+  const N=nn||Math.round(30+Rr*26),ga=Math.PI*(3-Math.sqrt(5));
   for(let i=0;i<N;i++){const yy=1-(i+0.5)/N*1.8;if(yy<-0.7)continue;const r=Math.sqrt(Math.max(0,1-yy*yy)),a=i*ga+R()*0.2,dx=Math.cos(a)*r,dz=Math.sin(a)*r;
     // each leaf hangs outward-and-down from a point on the canopy's surface
     const hx=dx*0.6,hy=-1+yy*0.25,hz=dz*0.6,hl=Math.hypot(hx,hy,hz),d=[-hx/hl,-hy/hl,-hz/hl],h=(yy+1)/2;
     const len=Rr*(0.52+R()*0.1),sx=cx+dx*Rr*0.78,sy=cy+yy*Rr*0.66+0.1*Rr,sz=cz+dz*Rr*0.78;card(p,sx+d[0]*len*0.25,sy+d[1]*len*0.25,sz+d[2]*len*0.25,[hx/hl,hy/hl,hz/hl],len,Rr*0.5,lerpHex(cols[1],cols[0],0.35+h*0.65),lerpHex(cols[2],cols[1],h*0.5));}}
+// a dense, lumpy bush: one tall leafy mound with three lower lobes around it, lit on top (s scales it, q thins the leaves; returns the top height)
+function bushClump(p,R,cols,s=1,q=1){const a0=R()*6.283;canopy(p,R,cols,0,0.34*s,0,0.16*s,Math.round(30*q));
+  for(let i=0;i<3;i++){const a=a0+i*2.094+(R()-0.5)*0.5,r=(0.19+R()*0.05)*s;canopy(p,R,cols,Math.cos(a)*r,(0.2+R()*0.05)*s,Math.sin(a)*r,(0.1+R()*0.025)*s,Math.round(18*q));}
+  return 0.55*s;}
 function trunkP(p,R,col,h,w=0.13,dk){p.push(P(TRUNK,col,0,(h+0.45)/2,0,0,R()*3,0,w*2,h+0.45,w*2),P(CYL8,col,0,h+0.3,0,0,0,0,w*1.5,0.3,w*1.5));
   for(let i=0;i<4;i++){const a=i/4*6.283+R();p.push(P(CYL6,dk||col,Math.cos(a)*w*1.1,0.05,Math.sin(a)*w*1.1,Math.sin(a)*0.9,0,-Math.cos(a)*0.9,0.07,0.24,0.07));}
   for(let i=0;i<3;i++){const a=i/3*6.283+R(),y=h*(0.62+R()*0.25);p.push(P(CYL6,col,Math.cos(a)*0.16,y+0.1,Math.sin(a)*0.16,Math.sin(a)*0.8,0,-Math.cos(a)*0.8,0.06,0.42,0.06));}
@@ -1085,7 +1096,7 @@ function treeParts(kind,R,colRock){
     case'palmtall':palmParts(p,R,{n:13,lean:(R()<0.5?-1:1)*(0.55+R()*0.3),fronds:9,flen:0.37,cols:[0x3a8a3a,0x9ade6a],nuts:2});break;
     case'palmfan':palmParts(p,R,{n:4,lean:0,fronds:11,seg:2,flen:0.44,wid:0.5,pitch:0.95,droop:0.35,spread:0.7,cols:[0x2a6e38,0x72c05a],nuts:0,trunk:[0x8a6a3e,0x7a5a34]});break;
     case'palmtwin':palmParts(p,R,{n:8,lean:-0.5,fronds:7,cols:[0x2f7a34,0x8ad05a],nuts:2,ox:-0.14});palmParts(p,R,{n:11,lean:0.55,fronds:8,cols:[0x3a8a3a,0x94d862],nuts:0,ox:0.14});break;
-    case'bush':canopy(p,R,[0x8ad060,0x5aa040,0x2e6a2a],0,0.3,0,0.2);if(R()<0.5)for(let i=0;i<5;i++){const a=R()*6.28;bloom(p,0xffffff,0xf6d04a,Math.sin(a)*0.3,0.42+R()*0.12,Math.cos(a)*0.3,0.07);}break;
+    case'bush':{const s=1.1+R()*0.2,top=bushClump(p,R,[0xa8e070,0x5aa040,0x2a5e28],s);if(R()<0.5){const bc=pickR2([0xffffff,0xf8b8c8,0xf6d04a],R);for(let i=0;i<6;i++){const a=R()*6.28,r=R()*0.3*s;bloom(p,bc,0xf6d04a,Math.sin(a)*r,top-0.04-r*0.35,Math.cos(a)*r,0.07);}}break;}
     case'flowerbed':wildflowers(p,R,[0xf7f2e8,0xf2a6c8,0xf6d04a,0xb8a8f2],9,0.36);for(let i=0;i<10;i++)lf(p,GREENS[i%4],(R()-0.5)*0.6,0.02,(R()-0.5)*0.6,R()*6.28,0.35,0.16,0.07);break;
     case'rockM':rockP(p,R,colRock,0.85);p.push(P(ICO2,0x5a8a44,0,0.36,0,0,R()*3,0,0.52,0.12,0.44),P(ICO2,0x6a9a4a,0.1,0.38,0.08,0,0,0,0.3,0.1,0.26));for(let i=0;i<6;i++)lf(p,GREENS[i%4],(R()-0.5)*0.4,0.38,(R()-0.5)*0.3,R()*6.28,0.4,0.12,0.06);break;
     case'rock':rockP(p,R,colRock,0.75);break;
@@ -1392,18 +1403,21 @@ function wildflowers(p,R,cols,n,spread=0.32){for(let s=0;s<n;s++){const x=(R()-0
   if(R()<0.3)spike(p,c,0xffffff,x,h,z,0.04);else bloom(p,c,R()<0.5?0xf6d04a:0xffffff,x,h,z,0.085);}}
 
 function cropParts(type,stage,seed=1){
+  // crop leaves are rounded blades shaded dark at the base to light at the tip (like the trees), not flat facets
+  const lf=(p,col,x,y,z,ry,tilt,len,wid)=>{const c=Math.cos(tilt);card(p,x,y,z,[Math.sin(ry)*c,Math.sin(tilt),Math.cos(ry)*c],len,wid*1.3,lerpHex(col,0xf4ffd0,0.28),lerpHex(col,0x1e3a1a,0.35));};
+  const rosette=(p,R,n,len,wid,y,tilt,cols=GREENS)=>{for(let i=0;i<n;i++){const a=i/n*6.283+R()*0.45,l=len*(0.8+R()*0.4);lf(p,cols[i%cols.length],0,y+R()*0.03,0,a,tilt+R()*0.25,l,wid);}};
   const C=CROPS[type],R=mulberry(seed),leaf=[],fruit=[];const G1=0x4f9a3a,G2=0x6ab84a,G3=0x3a7a30,GL=0x8cc85a;
   if(stage===0){for(let i=0;i<4;i++)leaf.push(P(ICO,0x4a3020,(R()-0.5)*0.3,0.02,(R()-0.5)*0.3,0,R()*3,0,0.09,0.04,0.09));leaf.push(P(LEAF0,GL,0,0.05,0,0,0,0,0.04,0.07,0.04));return{leaf,fruit};}
   if(stage===1){stemP(leaf,G2,0,0,0.13);lf(leaf,GL,0,0.12,0,0.3,0.35,0.16,0.1);lf(leaf,G2,0,0.12,0,0.3+Math.PI,0.35,0.16,0.1);lf(leaf,GL,0,0.13,0,1.8,0.9,0.08,0.05);return{leaf,fruit};}
   const b=stage===3?1:0.65,ripe=stage===3;
   switch(type){
     case'turnip':rosette(leaf,R,8,0.42*b,0.16*b,0.02,1.0);
-      if(ripe)fruit.push(P(ICO,C.col,0,0.1,0,0,0,0,0.32,0.28,0.32),P(ICO,C.top,0,0.19,0,0,0,0,0.29,0.12,0.29),P(CONE8,C.col,0,-0.03,0,Math.PI,0,0,0.08,0.12,0.08),P(ICO,0xffffff,0.09,0.15,0.1,0,0,0,0.06,0.05,0.05));break;
+      if(ripe)fruit.push(P(ICO2,C.col,0,0.1,0,0,0,0,0.32,0.28,0.32),P(ICO,C.top,0,0.19,0,0,0,0,0.29,0.12,0.29),P(CONE8,C.col,0,-0.03,0,Math.PI,0,0,0.08,0.12,0.08),P(ICO,0xffffff,0.09,0.15,0.1,0,0,0,0.06,0.05,0.05));break;
     case'carrot':for(let i=0;i<10;i++)lf(leaf,GREENS[i%4],0,0.04,0,i/10*6.283+R()*0.3,1.1+R()*0.25,0.48*b,0.07*b);
       if(ripe)fruit.push(P(CONE8,C.col,0,0.03,0,Math.PI,0,0,0.2,0.1,0.2),P(CYL8,0xd8741e,0,0.075,0,0,0,0,0.19,0.02,0.19));break;
     case'potato':rosette(leaf,R,9,0.3*b,0.17*b,0.05,0.45);rosette(leaf,R,6,0.24*b,0.15*b,0.13*b,0.95);
       if(ripe){for(let i=0;i<3;i++){const a=i*2.1+R();bloom(leaf,0xf4eefa,0xf6d04a,Math.sin(a)*0.12,0.3,Math.cos(a)*0.12,0.06);}
-        fruit.push(P(ICO,C.col,0.22,0.04,0.12,0,1,0,0.2,0.14,0.16),P(ICO,C.col,-0.16,0.03,0.2,0,2,0,0.16,0.12,0.14));}break;
+        fruit.push(P(ICO2,C.col,0.22,0.04,0.12,0,1,0,0.2,0.14,0.16),P(ICO2,C.col,-0.16,0.03,0.2,0,2,0,0.16,0.12,0.14));}break;
     case'strawberry':for(let i=0;i<5;i++){const a=i/5*6.283+R()*0.3,px=Math.sin(a)*0.14*b,pz=Math.cos(a)*0.14*b;leaf.push(P(CYL6,G2,px/2,0.06,pz/2,Math.cos(a)*0.8,0,-Math.sin(a)*0.8,0.02,0.16,0.02));
         for(let j=0;j<3;j++)lf(leaf,GREENS[(i+j)%4],px,0.1*b,pz,a+(j-1)*0.65,0.2,0.15*b,0.12*b);}
       if(ripe){for(let i=0;i<4;i++){const a=i*1.57+0.6,x=Math.sin(a)*0.24,z=Math.cos(a)*0.24;fruit.push(P(CONE8,C.col,x,0.07,z,Math.PI,0,0,0.13,0.15,0.13),P(LEAF0,0xffffff,x+0.03,0.1,z+0.03,0,0,0,0.03,0.03,0.03));
@@ -1411,11 +1425,11 @@ function cropParts(type,stage,seed=1){
     case'tomato':leaf.push(P(BOX,0x9a7a4a,0.05,0.45*b,0.05,0,0,0,0.03,0.9*b,0.03));stemP(leaf,G1,0,0,0.8*b);
       for(let i=0;i<7;i++)lf(leaf,GREENS[i%4],0,0.12+i*0.1*b,0,i*2.4,0.3,0.28*b,0.15*b);
       if(ripe)for(let i=0;i<5;i++){const a=i*1.26+0.3,y=0.25+i*0.1,x=Math.sin(a)*0.15,z=Math.cos(a)*0.15;
-        fruit.push(P(ICO,C.col,x,y,z,0,0,0,0.15,0.13,0.15),P(LEAF0,0xffffff,x+0.04,y+0.04,z+0.04,0,0,0,0.035,0.03,0.035));leaf.push(P(LEAF0,G3,x,y+0.07,z,0,a,0,0.07,0.02,0.07));}break;
+        fruit.push(P(ICO2,C.col,x,y,z,0,0,0,0.15,0.13,0.15),P(LEAF0,0xffffff,x+0.04,y+0.04,z+0.04,0,0,0,0.035,0.03,0.035));leaf.push(P(LEAF0,G3,x,y+0.07,z,0,a,0,0.07,0.02,0.07));}break;
     case'corn':leaf.push(P(CYL6,G1,0,0.55*b,0,0,0,0,0.06,1.1*b,0.06));
       for(let i=0;i<7;i++)lf(leaf,GREENS[i%4],0,(0.15+i*0.13)*b,0,i*2.25,0.35,0.52*b,0.09*b);
       if(ripe){for(let i=0;i<6;i++)leaf.push(P(BOX,0xd8b060,Math.sin(i)*0.05,1.15,Math.cos(i)*0.05,Math.sin(i)*0.4,0,Math.cos(i)*0.4,0.015,0.16,0.015));
-        for(const [a,y] of [[0.6,0.5],[3.4,0.66]]){const x=Math.sin(a)*0.1,z=Math.cos(a)*0.1;fruit.push(P(ICO,C.col,x,y,z,0,0,Math.sin(a)*0.3,0.1,0.3,0.1));lf(leaf,GL,x,y-0.12,z,a,1.3,0.26,0.1);lf(leaf,G2,x,y-0.12,z,a+0.6,1.2,0.24,0.09);}}break;
+        for(const [a,y] of [[0.6,0.5],[3.4,0.66]]){const x=Math.sin(a)*0.1,z=Math.cos(a)*0.1;fruit.push(P(ICO2,C.col,x,y,z,0,0,Math.sin(a)*0.3,0.1,0.3,0.1));lf(leaf,GL,x,y-0.12,z,a,1.3,0.26,0.1);lf(leaf,G2,x,y-0.12,z,a+0.6,1.2,0.24,0.09);}}break;
     case'sunflower':{const h=1.05*b;stemP(leaf,G1,0,0,h);for(let i=0;i<5;i++)lf(leaf,GREENS[i%4],0,0.15+i*0.16*b,0,i*2.5,0.2,0.3*b,0.22*b);
       if(ripe){const y=h+0.05;for(let k=0;k<14;k++){const a=k/14*6.283;fruit.push(P(ICO,k%2?C.col:0xf0a020,Math.cos(a)*0.2,y+Math.sin(a)*0.2,0.03,0,0,a,0.18,0.08,0.03));}
         fruit.push(P(CYL8,C.center,0,y,0.05,Math.PI/2,0,0,0.26,0.06,0.26),P(CYL8,0x3a2418,0,y,0.07,Math.PI/2,0,0,0.16,0.04,0.16));}break;}
@@ -1448,7 +1462,7 @@ function cropParts(type,stage,seed=1){
     case'eggplant':stemP(leaf,G1,0,0,0.5*b);for(let i=0;i<7;i++)lf(leaf,[0x4f8a3a,0x5f9a44,0x3e7a30][i%3],0,0.12+i*0.06*b,0,i*2.4,0.3,0.3*b,0.22*b);
       if(ripe)for(let i=0;i<3;i++){const a=i*2.1+0.3,x=Math.sin(a)*0.17,z=Math.cos(a)*0.17,y=0.2+i*0.03;
         fruit.push(P(ICO2,C.col,x,y,z,Math.cos(a)*0.4,0,-Math.sin(a)*0.4,0.13,0.3,0.13),P(LEAF0,0xffffff,x+0.04,y+0.06,z+0.04,0,0,0,0.035,0.05,0.03));leaf.push(P(ICO,0x3e7a30,x,y+0.14,z,0,a,0,0.1,0.05,0.1));}break;
-    case'blueberry':leaf.push(P(ICO2,0x3e7a30,0,0.26*b,0,0,0,0,0.5*b,0.42*b,0.5*b));for(let i=0;i<26;i++){const a=R()*6.283,e=R()*1.2;lf(leaf,GREENS[i%4],Math.sin(a)*0.22*b*Math.cos(e),(0.22+Math.sin(e)*0.2)*b,Math.cos(a)*0.22*b*Math.cos(e),a,0.2+e*0.5,0.14*b,0.09*b);}
+    case'blueberry':bushClump(leaf,R,[0x9ad060,0x4a8a34,0x285a24],0.9*b);
       if(ripe)for(let i=0;i<5;i++){const a=i*1.26;berries(fruit,C.col,0x2a3a8a,Math.sin(a)*0.24,0.22+R()*0.14,Math.cos(a)*0.24,0.045,4,R);}break;
     case'lavender':for(let i=0;i<9;i++){const a=R()*6.283,r=Math.sqrt(R())*0.18,x=Math.cos(a)*r,z=Math.sin(a)*r,h=(0.34+R()*0.14)*b;leaf.push(P(CYL6,0x6a9a4a,x,h/2,z,(R()-0.5)*0.2,0,(R()-0.5)*0.2,0.02,h,0.02));
         lf(leaf,0x7aa860,x,0.03,z,R()*6.28,0.9,0.18*b,0.05);if(ripe)spike(fruit,C.col,0x6a4ab0,x,h,z,0.05);}break;
@@ -1483,7 +1497,7 @@ function syncCrop(k){
   const {leaf,fruit}=cropParts(c.t,st,x*73856093^z*19349663);const g=new T.Group();
   if(leaf.length)g.add(M(leaf));
   if(fruit.length){const v=c.v&&c.v!=='normal'&&c.v!=='giant'?c.v:null;g.add(M(fruit,v?VMAT[v]:vcMat));}
-  g.scale.setScalar(st===3&&c.v==='giant'?1.2:0.8);
+  g.scale.setScalar(st===3&&c.v==='giant'?1.3:0.95);
   g.position.set(x,topY(x,z)+0.06,z);g.rotation.y=CROPS[c.t].kind==='flower'?cam.yaw:hash(x,z)*6.28;
   g.userData.tile={x,z};g.userData.ph=hash(z,x)*6;
   cropRoot.add(g);cropMeshes.set(k,{g,s:st,v:c.v});
@@ -2895,7 +2909,7 @@ function debrisParts(k,R){const p=[];switch(k){
   case'weed':for(let i=0;i<10;i++)lf(p,[0x5a8a34,0x6a9a3a,0x4a7a2a][i%3],(R()-0.5)*0.3,0,(R()-0.5)*0.3,R()*6.28,1.0+R()*0.4,0.3+R()*0.15,0.06,0.025);
     if(R()<0.6)for(let i=0;i<2;i++)bloom(p,[0xf6d04a,0xffffff][i],0xf6d04a,(R()-0.5)*0.3,0.26,(R()-0.5)*0.3,0.05);break;
   case'twig':for(let i=0;i<3;i++)p.push(P(CYL6,i%2?0x7a5230:0x6a4428,(R()-0.5)*0.3,0.03,(R()-0.5)*0.3,1.57,R()*3,0,0.04,0.4+R()*0.2,0.04));lf(p,0x6a9a3a,0.05,0.04,0,R()*6,0.2,0.12,0.07);break;
-  case'bush':p.push(P(ICO2,0x4a7a2e,0,0.22,0,0,R()*3,0,0.6,0.42,0.6));for(let i=0;i<20;i++){const a=R()*6.283,e=R()*1.1;lf(p,[0x4a7a2e,0x5a8a34,0x3a6a28][i%3],Math.sin(a)*0.28*Math.cos(e),0.2+Math.sin(e)*0.2,Math.cos(a)*0.28*Math.cos(e),a,0.2+e*0.5,0.2,0.12);}
+  case'bush':bushClump(p,R,[0x8ab858,0x4a7a2e,0x2a4a1e],0.8,0.6);
     for(let i=0;i<4;i++){const a=R()*6.28;p.push(P(CYL6,0x6a4a2a,Math.sin(a)*0.25,0.36,Math.cos(a)*0.25,Math.cos(a)*0.8,0,-Math.sin(a)*0.8,0.02,0.26,0.02));}break;
   case'rock':rockP(p,R,0x9a9ea8,0.55);break;
   case'boulder':rockP(p,R,0x8e929c,1.05);p.push(P(ICO2,0x5a8a44,0.05,0.42,0,0,R()*3,0,0.5,0.1,0.42));break;
@@ -2969,8 +2983,7 @@ function openBottle(){SFX.rare();const lv=level(),r=Math.random();let msg;
    ========================================================= */
 function plantGroup(id,seed){const Pd=PLANTS[id],R=mulberry(seed),g=new T.Group(),p=[],f=[];const col=Pd.col,dk=Pd.dk,cc=Pd.c||'#f6d04a';
   switch(Pd.kind){
-    case'berry':p.push(P(ICO,0x3a7a30,0,0.22,0,0,R()*3,0,0.62,0.42,0.62));
-      for(let i=0;i<26;i++){const a=R()*6.283,e=R()*1.1,x=Math.sin(a)*0.3*Math.cos(e),y=0.2+Math.sin(e)*0.2,z=Math.cos(a)*0.3*Math.cos(e);lf(p,GREENS[i%4],x,y,z,a,0.2+e*0.5,0.2,0.13);}
+    case'berry':bushClump(p,R,[0x9ad060,0x4a8a34,0x285a24],0.85);
       for(let c=0;c<4;c++){const a=c*1.57+R()*0.5;berries(f,col,dk,Math.sin(a)*0.28,0.24+R()*0.12,Math.cos(a)*0.28,0.06,3,R);}break;
     case'flower':
       if(id==='waterlily'){p.push(P(CYL8,0x4f9a3a,0,0.02,0,0,0,0,0.6,0.02,0.6),P(CYL8,0x6ab84a,0.28,0.025,0.15,0,0,0,0.34,0.02,0.34));bloom(f,col,cc,0,0.07,0,0.17,8,0.45);bloom(f,dk,cc,0.28,0.06,0.15,0.08,6,0.5);break;}
@@ -4030,6 +4043,12 @@ if(/[?&]debug\b/.test(location.search)){
     give:(items)=>{Object.assign(S.inv,items||{'m:wood':14,'m:stone':11,'m:fiber':9,'g:shell':4,'f:sardine':2,'tomato|normal':3,'tomato|golden':1});updateHUD();},
     craft:i=>craft(i),sheet:(k,tab)=>openSheet(k,tab),closeSheet:()=>closeSheet(),
     enterHome:()=>enterHouse('home'),enterNpc:i=>{const n=npcs[i];enterHouse('vh',n.b,n);},leave:()=>leaveHouse(),
+    // a demo row of crops (each id at growth p, 0..1) on free farm ground; returns the first tile
+    farm:(ids,p=1,rows=1)=>{const r=DS.freeRow(ids.length);if(!r)return null;for(let j=0;j<rows;j++)ids.forEach((id,i)=>{const x=r[0]+i,z=r[1]+j,k=K(x,z);if(!S.tiles[k]&&!canTill(x,z))return;S.tiles[k]={w:1,crop:{t:id,p:Array.isArray(p)?p[j]:p,v:null,m:0}};});rebuildSoil();syncAllCrops();return r;},
+    // drop sample models in a row for a close look: 'tree:bush', 'debris:bush', 'plant:blueberry', 'crop:tomato'
+    specimen:(list,x,z)=>{list.forEach((w,i)=>{const [a,b]=w.split(':'),R=mulberry(i+7),X=x+i*1.3;let g;
+      if(a==='tree')g=M(treeParts(b,R,0x9a9ea8));else if(a==='debris')g=M(debrisParts(b,R));else if(a==='plant')g=plantGroup(b,i+7);else{const c=cropParts(b,3,i+7);g=new T.Group();g.add(M(c.leaf));if(c.fruit.length)g.add(M(c.fruit));g.scale.setScalar(0.95);}
+      g.position.set(X,topY(X,z),z);scene.add(g);});},
     ripen:()=>{for(const k in S.tiles){const t=S.tiles[k];if(t.crop)t.crop.p=1;}syncAllCrops();},
     fish:()=>{const isl=curIsl();if(!isl)return false;const [x,z]=isl.sand[0];DS.tp(x,z);startFishing(x+3,z+3);return !!fishing;},
     fastTravel:id=>fastTravel(islands[id]),
