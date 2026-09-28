@@ -68,7 +68,7 @@ function carveRivers(isl,g){const R=mulberry(isl.seed^0x71e5),B=BIOMES[isl.biome
   if(!lava){const fo=[],pb=[],Rb=mulberry(isl.seed^0xba2c);
     for(const q of list)for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const k2=K(q.x+dx,q.z+dz),t2=landMap.get(k2);if(riverSurf.has(k2)||t2==='bridge'||!isLandT(t2))continue;
       const ex=q.x+dx*0.42,ez=q.z+dz*0.42;fo.push(P(BOX,0xffffff,ex,q.surf+0.012,ez,0,0,0,dz?0.96:0.12,0.01,dx?0.96:0.12));
-      if(Rb()<0.45){const s=0.1+Rb()*0.1,ox=dz?(Rb()-0.5)*0.8:0,oz=dx?(Rb()-0.5)*0.8:0;pb.push(PG(SPH_LO,0xb4b0a8,0x76726c,q.x+dx*0.5+ox,q.surf+0.03,q.z+dz*0.5+oz,0,Rb()*3,0,s*1.4,s*0.7,s));}
+      if(Rb()<0.45){const s=0.1+Rb()*0.1,ox=dz?(Rb()-0.5)*0.8:0,oz=dx?(Rb()-0.5)*0.8:0;pb.push(PG(SPH_LO,0x8a909c,0x565c68,q.x+dx*0.5+ox,q.surf+0.03,q.z+dz*0.5+oz,0,Rb()*3,0,s*1.4,s*0.7,s));}
       if(Rb()<0.18&&t2==='grass'){const bx=q.x+dx*0.62+(dz?(Rb()-0.5)*0.6:0),bz=q.z+dz*0.62+(dx?(Rb()-0.5)*0.6:0),by=topY(q.x+dx,q.z+dz);for(let i=0;i<4;i++){const h=0.28+Rb()*0.25;pb.push(P(CYL5,i%2?0x5a8a3a:0x6a9a44,bx+(Rb()-0.5)*0.16,by+h/2,bz+(Rb()-0.5)*0.16,(Rb()-0.5)*0.3,0,(Rb()-0.5)*0.3,0.025,h,0.025));}}}
     if(fo.length){const m=M(fo,new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.55,depthWrite:false}));m.castShadow=false;m.receiveShadow=false;g.add(m);}
     if(pb.length){const m=M(pb);m.castShadow=false;g.add(m);}}

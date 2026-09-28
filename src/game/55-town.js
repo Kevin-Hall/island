@@ -111,7 +111,7 @@ function layoutTown(isl){
     tp.push(...shift(treeParts(kd,mulberry(hi(x,z,5)),0x9a9ea8),x+(hash(z,x+1)-0.5)*0.2,y0(x,z),z+(hash(x+2,z)-0.5)*0.2,hash(x,z)*6.28));TOWN.fixed.set(k,'decor');if(['oak','pine','maple','mapleR','cherry','palm','palmtall','palmfan'].includes(kd))TOWN.res.set(k,'tree');}
   // town rocks to chip stone from, and a flower planter in the plaza's free corner
   if(!S.scratch){let n=0;for(const [x,z] of shuffle(isl.grass.slice(),R)){if(n>=7)break;const k=K(x,z);if(!G(x,z)||taken(k)||plotSet.has(k)||farmQ(x,z)<1.4)continue;
-    if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>TOWN.path.has(K(x+dx,z+dz))))continue;rockP(p,mulberry(hi(x,z,9)),0x9a9ea8,0.75);const rp=p.splice(p.length-7,7);p.push(...shift(rp,x,y0(x,z),z,hash(x,z)*6));
+    if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>TOWN.path.has(K(x+dx,z+dz))))continue;const rp=[];rockP(rp,mulberry(hi(x,z,9)),0x9a9ea8,0.75);p.push(...shift(rp,x,y0(x,z),z,hash(x,z)*6));
     TOWN.fixed.set(k,'decor');TOWN.res.set(k,'rock');n++;}}
   if(!S.scratch){const [px,pz]=[pc[0]-2,pc[1]-2];const q=[P(BOX,0xb0a898,0,0.15,0,0,0,0,0.8,0.3,0.8),P(BOX,0x5a3a2a,0,0.31,0,0,0,0,0.7,0.02,0.7)];wildflowers(q,mulberry(3),[0xf2a6c8,0xf6d04a,0xffffff,0xe86a5a],8,0.3);
     p.push(...shift(q.slice(0,2),px,y0(px,pz),pz,0),...shift(q.slice(2),px,y0(px,pz)+0.31,pz,0));TOWN.fixed.set(K(px,pz),'decor');}

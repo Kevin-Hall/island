@@ -45,8 +45,8 @@ function debrisParts(k,R,v){const p=[];switch(k){
     if(v!==1){const x=(R()-0.5)*0.12,z=(R()-0.5)*0.12;p.push(P(CYL6,0x5a9a3a,x,0.13,z,0,0,0,0.015,0.2,0.015));dots(p,R,1,x,0.23,z,0,0,[v?0xffffff:0xf6d04a],v?0xf6d04a:undefined,0.05);}break;
   case'twig':for(let i=0;i<3;i++)p.push(P(CYL6,i%2?0x7a5230:0x6a4428,(R()-0.5)*0.3,0.03,(R()-0.5)*0.3,1.57,R()*3,0,0.04,0.4+R()*0.2,0.04));lf(p,0x6a9a3a,0.05,0.04,0,R()*6,0.2,0.12,0.07);break;
   case'bush':return bushParts(v);
-  case'rock':rockP(p,R,0x9a9ea8,0.55);break;
-  case'boulder':rockP(p,R,0x8e929c,1.05);p.push(P(ICO2,0x5a8a44,0.05,0.42,0,0,R()*3,0,0.5,0.1,0.42));break;
+  case'rock':rockP(p,R,0x9a9ea8,0.7);break;
+  case'boulder':rockP(p,R,0x8e929c,1.2);break;
   case'stump':p.push(P(CYL12,0x7a5230,0,0.16,0,0,0,0,0.44,0.32,0.44),P(CYL12,0xd8b078,0,0.325,0,0,0,0,0.38,0.02,0.38),P(CYL12,0xb08a58,0,0.33,0,0,0,0,0.22,0.02,0.22),P(CYL12,0xd8b078,0,0.335,0,0,0,0,0.1,0.02,0.1));
     for(let i=0;i<4;i++){const a=i*1.57+R()*0.4;p.push(P(CYL6,0x6a4428,Math.cos(a)*0.22,0.05,Math.sin(a)*0.22,Math.sin(a)*1.1,0,-Math.cos(a)*1.1,0.08,0.26,0.08));}
     if(R()<0.5)p.push(P(CYL6,0xf2ead8,0.2,0.08,0.18,0,0,0,0.04,0.12,0.04),P(ICO2,0xd8453a,0.2,0.15,0.18,0,0,0,0.12,0.06,0.12));break;}
@@ -54,7 +54,7 @@ function debrisParts(k,R,v){const p=[];switch(k){
 // wild bushes change with the seasons too: v0 a plain round bush, v1 a flowering one (azalea pink in spring, hydrangea blue
 // in summer), v2 a berry bush; autumn turns them rust and gold, winter tucks them under a cap of snow
 const BUSH_COLS={spring:[0xa0dc6c,0x58a846,0x2c6630],summer:[0x86c85a,0x48943c,0x245a2a],autumn:[0xe8a848,0xc8742e,0x8a4a22],winter:[0x6a9a6a,0x4a7a52,0x2c4e3a]};
-function bushParts(v){const s=season(),R=mulberry(hi(v,57,S.worldSeed|0)),p=[],c=(s==='autumn'&&v===0)?[0xa8c860,0x6a9a3e,0x3a6a2a]:BUSH_COLS[s],sc=0.82;
+function bushParts(v){const s=season(),R=mulberry(hi(v,57,S.worldSeed|0)),p=[],c=(s==='autumn'&&v===0)?[0xa8c860,0x6a9a3e,0x3a6a2a]:BUSH_COLS[s],sc=0.7;
   bushClump(p,R,c,sc);
   if(v===1&&s==='spring')dots(p,R,10,0,0.3*sc,0,0.5*sc,0.38*sc,[0xf8a8c8,0xf490b8,0xffffff],0xf6d04a,0.075);
   if(v===1&&s==='summer')for(let i=0;i<6;i++){const a=i*1.05+R()*0.4,up=i%2,x=Math.cos(a)*(up?0.22:0.42)*sc,z=Math.sin(a)*(up?0.22:0.42)*sc,y=(up?0.58:0.4)*sc,col=[0x7a9af0,0xa47ae0,0x6ab0f0][i%3];
@@ -72,7 +72,7 @@ function syncDebris(){while(debrisRoot.children.length){const c=debrisRoot.child
   const groups=new Map();for(const d of S.debris){const id=d.k+d.v;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(d);}
   for(const [,list] of groups){if(list[0].k==='tree'){const mk=lo=>{const im=new T.InstancedMesh(debrisGeo('tree',list[0].v,lo),leafMat,list.length);im.castShadow=!lo;im.receiveShadow=true;im.frustumCulled=false;for(let i=0;i<list.length;i++)im.setColorAt(i,_c.setHex(0xffffff));debrisRoot.add(im);return im;};
       const gr={hi:mk(false),lo:mk(true),es:list.map(d=>{const e={im:null,i:0,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};treeLOD(gr);treeGroups.push(gr);addBlobs(list,0.62);continue;}
-    const im=new T.InstancedMesh(debrisGeo(list[0].k,list[0].v),list[0].k==='bush'?leafMat:vcMat,list.length);im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;
+    const im=new T.InstancedMesh(debrisGeo(list[0].k,list[0].v),list[0].k==='bush'?bushMat:vcMat,list.length);im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;
     /* white instance colours: vcMat's cached program may expect them (r128 shares one program per material) */
     list.forEach((d,i)=>{im.setColorAt(i,_c.setHex(0xffffff));const e={im,i,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,shake:0};setDebrisMatrix(e,0);debMesh.set(K(d.x,d.z),e);});debrisRoot.add(im);if(list[0].k==='bush')addBlobs(list,0.42);}}
 function setDebrisMatrix(e,tilt){_e.set(0,e.r,tilt,'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(e.x,e.y,e.z),_q,_s.set(e.sc||1,e.sc||1,e.sc||1));e.im.setMatrixAt(e.i,_m);e.im.instanceMatrix.needsUpdate=true;}

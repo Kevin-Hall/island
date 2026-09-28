@@ -161,6 +161,24 @@ leafMat.onBeforeCompile=sh=>{sh.uniforms.uT=leafU.uT;sh.uniforms.uWind=leafU.uWi
     .replace('#include <begin_vertex>','#include <begin_vertex>\n{vec4 lp=vec4(transformed,1.);\n#ifdef USE_INSTANCING\nlp=instanceMatrix*lp;\n#endif\nvLeafP=(modelMatrix*lp).xyz;\nfloat hh=max(0.,transformed.y-.45),gu=.6+.4*sin(uT*.35+vLeafP.x*.08+vLeafP.z*.05);\ntransformed.x+=sin(uT*1.6+vLeafP.x*.7+vLeafP.z*.4)*.028*hh*gu*uWind;transformed.z+=cos(uT*1.3+vLeafP.z*.6)*.022*hh*gu*uWind;}');
   sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vLeafP;\nfloat lh(vec3 p){return fract(sin(dot(p,vec3(12.9898,78.233,37.719)))*43758.5453);}')
     .replace('#include <color_fragment>','#include <color_fragment>\n{float ln=lh(floor(vLeafP*7.))*.55+lh(floor(vLeafP*3.))*.45;diffuseColor.rgb*=.8+.36*ln;}');};
+// bushes, painted like pixel-art shrubs: a round dome covered in little pointed leaves (dark ones hanging down the sides, light
+// ones on the sunlit top), laid out in world space on the dome's surface, with the same gentle wind sway as the trees
+const bushMat=new T.MeshToonMaterial({gradientMap:leafGrad,vertexColors:true});
+bushMat.onBeforeCompile=sh=>{sh.uniforms.uT=leafU.uT;sh.uniforms.uWind=leafU.uWind;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vBP;varying vec3 vBN;varying vec3 vBL;uniform float uT;uniform float uWind;')
+    .replace('#include <begin_vertex>','#include <begin_vertex>\n{vec4 lp=vec4(transformed,1.);vec4 ln=vec4(objectNormal,0.);\n#ifdef USE_INSTANCING\nlp=instanceMatrix*lp;ln=instanceMatrix*ln;\n#endif\nvBL=transformed;vBP=(modelMatrix*lp).xyz;vBN=normalize((modelMatrix*ln).xyz);\nfloat hh=max(0.,transformed.y-.2);transformed.x+=sin(uT*1.7+vBP.x*.8+vBP.z*.5)*.03*hh*uWind;transformed.z+=cos(uT*1.4+vBP.z*.7)*.024*hh*uWind;}');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vBP;varying vec3 vBN;varying vec3 vBL;\nfloat bh(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}')
+    .replace('#include <color_fragment>',`#include <color_fragment>
+    {vec3 n=normalize(vBN);float up=clamp(n.y,0.,1.);
+     // surface coordinates: around-and-down on the sides, straight across on the top
+     // (in the bush's own space: rings of leaves round the dome, rows going up it)
+     vec2 uv=vec2(atan(vBL.z,vBL.x)*1.75,vBL.y*6.);if(up>.8)uv=vBL.xz*5.;
+     float row=floor(uv.y);uv.x+=mod(row,2.)*.5;vec2 c=floor(uv),f=fract(uv);float h=bh(c);
+     // a leaf: a pointed shape hanging tip-down from the top of its cell
+     float leaf=step(abs(f.x-.5)*2.,1.-f.y*.95+.05);float edge=leaf*(1.-step(abs(f.x-.5)*2.+.28,1.-f.y));
+     float tone=mix(.7,1.02,leaf)*(.93+.12*h);tone=mix(tone,tone*.84,edge);
+     tone*=mix(.8,1.08,smoothstep(-.3,.8,n.y));      // dark underneath, bright on top
+     diffuseColor.rgb*=tone;}`);};
 const glowMat=toon({vertexColors:true,emissive:0xffc460,emissiveIntensity:0});
 const lumMat=toon({vertexColors:true,emissive:0x444444,emissiveIntensity:1});
 const goldMat=toon({color:0xf5c542,emissive:0x6a4200,emissiveIntensity:.7});
