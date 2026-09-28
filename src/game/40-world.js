@@ -57,13 +57,14 @@ function surfY(x,z){const tx=Math.round(x),tz=Math.round(z),c=landMap.get(K(tx,t
 const riverSurf=new Map(),bridgeY=new Map();let riverList=[];
 const waterY=(x,z)=>riverSurf.get(K(Math.round(x),Math.round(z)))||0;
 function homeD(x,z){const a=Math.atan2(z,x);const f=1+0.10*Math.sin(3*a+0.7)+0.07*Math.sin(5*a+2.1)+0.05*Math.sin(7*a+4.0);return Math.hypot(x*0.82,z)/f;}
-function islR(isl){return isl.home?TOWN_W:isl.r;}
+const homeScale=()=>S.home&&S.home.scale||1; // a preset island can be bigger than the usual home island
+function islR(isl){return isl.home?TOWN_W*homeScale():isl.r;}
 function islDist(isl,x,z){if(isl.home)return townQ(x,z)*TOWN_W;const dx=x-isl.cx,dz=z-isl.cz,a=Math.atan2(dz,dx);
   const f=1+0.12*Math.sin(3*a+isl.p1)+0.08*Math.sin(5*a+isl.p2)+0.06*Math.sin(2*a+isl.p3);return Math.hypot(dx*isl.sx,dz)/f;}
 const TRANK={grass:4,sand:3,s1:2,s2:1};
 function tileTypeI(isl,x,z){const R=islR(isl),d=islDist(isl,x,z),b=BIOMES[isl.biome].beach||1.25;
   let t=d<R-b?'grass':d<R?'sand':d<R+1.0?'s1':d<R+2.1?'s2':null;
-  if(isl.home){const q=townQ(x,z),bw=0.06+0.07*clamp(z/TOWN_D,0,1);/* a narrow ribbon of beach, widest on the south shore */t=q<1-bw?'grass':q<1?'sand':q<1.07?'s1':q<1.15?'s2':null;}
+  if(isl.home){const q=townQ(x,z),bw=(0.06+0.07*clamp(z/(TOWN_D*homeScale()),0,1))/Math.sqrt(homeScale());/* a narrow ribbon of beach, widest on the south shore */t=q<1-bw?'grass':q<1?'sand':q<1.07?'s1':q<1.15?'s2':null;}
   if(isl.home){const q=farmQ(x,z),f=q<0.83?'grass':q<1?'sand':q<1.13?'s1':q<1.28?'s2':null;if(f&&(!t||TRANK[f]>TRANK[t]))t=f;}
   return t;}
 function genIslands(){farmMaxG=null;
@@ -73,8 +74,8 @@ function genIslands(){farmMaxG=null;
   for(let i=0;i<13;i++){
     const biome=i<bl.length?bl[i]:bl[Math.floor(R()*bl.length)],B=BIOMES[biome];
     const r=5.2+R()*3.6;let cx=0,cz=0,ok=false;
-    for(let t=0;t<90&&!ok;t++){const a=R()*6.283,d=36+i*6+R()*10+t*0.6;cx=Math.round(Math.cos(a)*d);cz=Math.round(Math.sin(a)*d);
-      ok=islands.every(o=>Math.hypot(o.cx-cx,o.cz-cz)>(o.home?40:o.r0/0.7)+r/0.7+9)&&Math.hypot(FARM.x-cx,FARM.z-cz)>13+r*1.2/0.7+7;}
+    for(let t=0;t<90&&!ok;t++){const a=R()*6.283,d=36+(homeScale()-1)*30+i*6+R()*10+t*0.6;cx=Math.round(Math.cos(a)*d);cz=Math.round(Math.sin(a)*d);
+      ok=islands.every(o=>Math.hypot(o.cx-cx,o.cz-cz)>(o.home?40*homeScale():o.r0/0.7)+r/0.7+9)&&Math.hypot(FARM.x-cx,FARM.z-cz)>13+r*1.2/0.7+7;}
     if(!ok)continue;
     let name='';for(let t=0;t<30;t++){name=B.names[0][Math.floor(R()*B.names[0].length)]+' '+B.names[1][Math.floor(R()*B.names[1].length)];if(!used.has(name))break;}used.add(name);
     islands.push({id:islands.length,cx,cz,r:r*1.2,r0:r,riverN:r*1.2>=9.4&&biome!=='volcano'?1:0,rw:1,biome,name,sx:0.78+R()*0.4,p1:R()*6.28,p2:R()*6.28,p3:R()*6.28,seed:Math.floor(R()*1e9)});
@@ -84,8 +85,8 @@ function genIslands(){farmMaxG=null;
   const gb=shuffle(BIOME_IDS.slice(),G);
   for(let i=0;i<5;i++){
     const biome=gb[i],B=BIOMES[biome],r=15+G()*4;let cx=0,cz=0,ok=false;
-    for(let t=0;t<120&&!ok;t++){const a=G()*6.283,d=92+i*14+G()*16+t*0.7;cx=Math.round(Math.cos(a)*d);cz=Math.round(Math.sin(a)*d);
-      ok=islands.every(o=>Math.hypot(o.cx-cx,o.cz-cz)>(o.home?40:o.r/0.7)+r/0.7+10);}
+    for(let t=0;t<120&&!ok;t++){const a=G()*6.283,d=92+(homeScale()-1)*30+i*14+G()*16+t*0.7;cx=Math.round(Math.cos(a)*d);cz=Math.round(Math.sin(a)*d);
+      ok=islands.every(o=>Math.hypot(o.cx-cx,o.cz-cz)>(o.home?40*homeScale():o.r/0.7)+r/0.7+10);}
     if(!ok)continue;
     let name='';for(let t=0;t<30;t++){name='Great '+B.names[0][Math.floor(G()*B.names[0].length)]+' '+B.names[1][Math.floor(G()*B.names[1].length)];if(!used.has(name))break;}used.add(name);
     islands.push({id:islands.length,cx,cz,r,biome,name,grand:true,riverN:biome==='volcano'?1:1+(G()<0.5?1:0),rw:2,sx:0.8+G()*0.35,p1:G()*6.28,p2:G()*6.28,p3:G()*6.28,seed:Math.floor(G()*1e9)});

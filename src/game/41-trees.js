@@ -98,7 +98,7 @@ function vnoise(x,z,seed){const X=Math.floor(x/3),Z=Math.floor(z/3),fx=x/3-X,fz=
 function levelOf(isl,x,z){
   if(isl.home){if(farmQ(x,z)<1.2)return 0;const n=vnoise(x,z,S.worldSeed|0),hx=hash(S.worldSeed%97,3)<0.5?-9:9;
     const cl=S.home&&S.home.cliff,c1=cl?cl[0]:0.29,two=cl?cl[1]:1; // a chosen island sets how far north its cliffs start, and whether there's a second tier
-    if(two&&z<-(c1+0.37)*TOWN_D+n*2.4&&Math.abs(x-hx*TOWN_W/16)<6+n*2.5)return 2;return z<-c1*TOWN_D+(n-0.5)*3.6?1:0;}
+    const hs=homeScale();if(two&&z<-(c1+0.37)*TOWN_D*hs+n*2.4&&Math.abs(x-hx*TOWN_W*hs/16)<(6+n*2.5)*hs)return 2;return z<-c1*TOWN_D*hs+(n-0.5)*3.6?1:0;}
   if(isl.biome==='swamp')return 0;
   if(isl.biome==='volcano'&&Math.hypot(x-isl.cx,z-isl.cz)<3.2)return 0;
   const d=islDist(isl,x,z),R=isl.r,n=vnoise(x,z,isl.seed);let l=0;

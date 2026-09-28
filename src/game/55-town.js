@@ -41,7 +41,7 @@ function layoutTown(isl){
   const fits=(x0,z0,w,h,pad)=>{const l=L(x0,z0);for(let dx=-pad;dx<w+pad;dx++)for(let dz=-pad;dz<h+pad;dz++){const x=x0+dx,z=z0+dz;
     if(!G(x,z)||taken(K(x,z)))return false;if(dx>=0&&dx<w&&dz>=0&&dz<h&&L(x,z)!==l)return false;}return true;};
   // dock: the south beach column nearest x=1 with no river nearby
-  const d0=S.home&&S.home.dockX!==undefined?S.home.dockX:1;for(let r=0;r<12;r++){let ok=false;for(const x of [d0+r,d0-r]){let zz=null;for(let z=0;z<24;z++)if(isLandT(landMap.get(K(x,z)))&&landMap.get(K(x,z))!=='bridge')zz=z;
+  const d0=S.home&&S.home.dockX!==undefined?S.home.dockX:1;for(let r=0;r<12;r++){let ok=false;for(const x of [d0+r,d0-r]){let zz=null;for(let z=0;z<24*homeScale();z++)if(isLandT(landMap.get(K(x,z)))&&landMap.get(K(x,z))!=='bridge')zz=z;
       if(zz!==null&&landMap.get(K(x,zz))==='sand'&&![...Array(7)].some((_,i)=>riverSurf.has(K(x-3+i,zz))||riverSurf.has(K(x-3+i,zz-2)))){DOCK.x=x;DOCK.z=zz;ok=true;break;}}if(ok)break;}
   let pc=null,plotSet=new Set(),home=null;
   if(S.scratch){// a wild island: only what you've built stands; the Island Heart grows where you planted your driftseed
@@ -115,7 +115,7 @@ function layoutTown(isl){
   if(!S.scratch){const [px,pz]=[pc[0]-2,pc[1]-2];const q=[P(BOX,0xb0a898,0,0.15,0,0,0,0,0.8,0.3,0.8),P(BOX,0x5a3a2a,0,0.31,0,0,0,0,0.7,0.02,0.7)];wildflowers(q,mulberry(3),[0xf2a6c8,0xf6d04a,0xffffff,0xe86a5a],8,0.3);
     p.push(...shift(q.slice(0,2),px,y0(px,pz),pz,0),...shift(q.slice(2),px,y0(px,pz)+0.31,pz,0));TOWN.fixed.set(K(px,pz),'decor');}
   // the lighthouse: on the town's coast, as far from the plaza as it can be while staying in town; its beam turns at night
-  {let best=null,bd=-1;for(const [x,z] of isl.grass){const k=K(x,z);if(taken(k)||plotSet.has(k)||S.tiles[k])continue;const d=Math.hypot(x-pc[0],z-pc[1]);if(d<9||d>22||d<=bd)continue;
+  {let best=null,bd=-1;for(const [x,z] of isl.grass){const k=K(x,z);if(taken(k)||plotSet.has(k)||S.tiles[k])continue;const d=Math.hypot(x-pc[0],z-pc[1]);if(d<9*homeScale()||d>22*homeScale()||d<=bd)continue;
       if(![[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>isSeaT(landMap.get(K(x+dx,z+dz)))||landMap.get(K(x+dx,z+dz))==='sand'))continue;best=[x,z];bd=d;}
     if(best&&unlocked('light')){const [x,z]=best,y=y0(x,z);TOWN.fixed.set(K(x,z),'lighthouse');TOWN.light={x,z,y:y+2.72};
       p.push(P(CYL12,0x9a9ea8,x,y+0.14,z,0,0,0,0.9,0.28,0.9),P(CYL12,0xf4f0ea,x,y+1.3,z,0,0,0,0.62,2.1,0.62));for(const yy of [0.75,1.45,2.1])p.push(P(CYL12,0xd8453a,x,y+yy,z,0,0,0,0.64,0.24,0.64));
@@ -132,7 +132,7 @@ function layoutTown(isl){
   {const lists=FLORA_GEOS.map(()=>[]),clov=[],peb=[];
     const wild=S.scratch?new Set(S.debris.filter(d=>d.k!=='weed').map(d=>K(d.x,d.z))):null;
     for(const [x,z] of isl.grass){const k=K(x,z);if(!G(x,z)||taken(k)||farmQ(x,z)<1.3||(wild&&wild.has(k)))continue;const h=hash(x*4.1-2,z*3.3+7);
-      if(wild&&season()==='winter')continue;/* no wildflowers under the snow */if(h<0.34)lists[floraIndex(x,z)].push([x,z]);else if(h<0.43)clov.push([x,z]);}
+      if(wild&&season()==='winter')continue;/* no wildflowers under the snow */const fd=Math.pow(homeScale(),-1.5)/* a big preset island spreads its flowers thinner */;if(h<0.34*fd)lists[floraIndex(x,z)].push([x,z]);else if(h<0.43*fd&&h>=0.34*fd)clov.push([x,z]);}
     for(const [k,v] of TOWN.path){if(v!==1)continue;const [x,z]=k.split(',').map(Number);for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(G(x+dx,z+dz)&&!TOWN.path.has(K(x+dx,z+dz))&&hash(x*7+dx,z*5+dz)<0.35)peb.push([x+dx*0.46,z+dz*0.46,x,z]);}
     const mk=(geo,list,mat,track)=>{if(!list.length)return null;const im=new T.InstancedMesh(geo,mat,list.length);list.forEach(([x,z,tx,tz],i)=>{const tile=tx===undefined?[x,z]:[tx,tz];
         _e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x+(tx===undefined?(hash(z,x)-0.5)*0.4:0),y0(...tile),z+(tx===undefined?(hash(x+1,z)-0.5)*0.4:0)),_q,_s.set(0.9,0.9+hash(z*2,x)*0.2,0.9));im.setMatrixAt(i,_m);
