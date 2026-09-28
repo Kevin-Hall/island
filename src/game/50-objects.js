@@ -72,6 +72,8 @@ function houseGroup(lv){
     for(let i=0;i<6;i++){const a=i/6*6.28;p.push(P(BOX,0x8a8e98,0.62+Math.cos(a)*0.2,0.05,0.8+Math.sin(a)*0.2,0,a,0,0.1,0.08,0.1));}
     p.push(P(BOX,0x6a4228,0.62,0.07,0.8,0,0.5,0,0.3,0.06,0.07),P(BOX,0x6a4228,0.62,0.07,0.8,0,-0.5,0,0.3,0.06,0.07));
     for(let i=0;i<4;i++)p.push(P(BOX,i%3?0xf4f0ea:0xd8453a,-0.72+(i%2)*0.3,0.02,0.62+Math.floor(i/2)*0.3,0,0,0,0.3,0.03,0.3));
+    // a fire pit with two log seats pulled up to it
+    for(const sd of [-1,1])p.push(P(CYL6,0x8a5a34,0.62,0.1,0.8+sd*0.46,0,0,1.57,0.13,0.62,0.13),P(CYL6,0xd8b078,0.62+0.31,0.1,0.8+sd*0.46,0,0,1.57,0.11,0.02,0.11),P(CYL6,0xd8b078,0.62-0.31,0.1,0.8+sd*0.46,0,0,1.57,0.11,0.02,0.11));
     gl.push(P(CONE4,0xffa040,0.62,0.2,0.8,0,0.5,0,0.16,0.26,0.16),P(CONE4,0xffe070,0.62,0.18,0.8,0,0,0,0.08,0.16,0.08));
     g.add(pool(0.03,0.9).translateX(0.62).translateZ(0.8));
   }else if(lv===1){

@@ -92,9 +92,19 @@ function buildIsland(isl){
   flat(a1,s1Mat,0.012,1);flat(a2,s2Mat,0.006,2);
   // dark, wave-worn rocks poking out of the shallows here and there
   {const rp=[];for(const [x,z] of [...a1,...a2]){const h=hash(x*1.37+isl.id,z*2.11);if(h>0.03)continue;const s=0.35+hash(z,x)*0.4,ox=(hash(x,z*3)-0.5)*0.5,oz=(hash(z*5,x)-0.5)*0.5;
-      rp.push(PG(SPH,0x6e7a88,0x3e4854,x+ox,0.02,z+oz,0,h*200,0,s,s*0.55,s*0.85),PG(SPH_LO,0x7a8694,0x46505c,x+ox+s*0.35,0,z+oz+s*0.2,0,0,0,s*0.5,s*0.3,s*0.45));}
+      rp.push(PG(SPH,0x6e7a88,0x3e4854,x+ox,0.02,z+oz,0,h*200,0,s,s*0.55,s*0.85),PG(SPH_LO,0x7a8694,0x46505c,x+ox+s*0.35,0,z+oz+s*0.2,0,0,0,s*0.5,s*0.3,s*0.45));
+      if(h<0.018)rp.push(PG(SPH_LO,0x7cbc50,0x3e7a30,x+ox-s*0.1,s*0.24,z+oz-s*0.05,0,0,0,s*0.5,s*0.22,s*0.46));/* a cap of green on some */}
     if(rp.length){const m=M(rp);m.castShadow=false;g.add(m);}}
   const blocked=new Set();
+  // mossy boulders along the top of the beach, with a tuft or two of grass and a small stone beside them
+  {const bp=[];for(const [x,z] of isl.sand){const h=hash(x*2.71+isl.id*3,z*1.93);if(h>0.075||Math.abs(x-DOCK.x)<2&&isl.home)continue;
+      if(![[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>{const t=landMap.get(K(x+dx,z+dz));return t==='grass'||t==='s1';}))continue;
+      const y=topY(x,z),s=0.5+hash(z,x)*0.35,R2=mulberry(Math.floor(h*1e6));rockP(bp,R2,0x8a8e98,s);const n=bp.length;
+      for(let i=n-2;i<n;i++)Object.assign(bp[i],{x:bp[i].x+x,y:bp[i].y+y,z:bp[i].z+z});
+      bp.push(PG(SPH_LO,0x86c456,0x4a8a34,x-s*0.1,y+s*0.36,z+s*0.05,0,h*50,0,s*0.58,s*0.2,s*0.5));
+      for(let i=0;i<3;i++){const a=i*2.1+h*9,r=s*0.55;bp.push(P(CONE5,0x6aa843,x+Math.cos(a)*r,y+0.1,z+Math.sin(a)*r,0,a,0,0.09,0.2,0.09));}
+      blocked.add(K(x,z));}
+    if(bp.length)g.add(M(bp));}
   if(isl.home){
     const DX=DOCK.x;isl.dockZ=DOCK.z;const dz=DOCK.z;
     const p=[];

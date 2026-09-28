@@ -4,7 +4,7 @@
 const canvas=$('c');
 const renderer=new T.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
 renderer.setPixelRatio(1);
-renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.BasicShadowMap;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap; // soft-edged little shadows
 const scene=new T.Scene();const skyHz=new T.Color(0xbfe0ff),skyZen=new T.Color(0x3c8ce8),skyGlow=new T.Color(0xffffff);let skyGA=0;
 scene.fog=new T.Fog(0xbfe0ff,40,150);
 const NEAR=1.5,FAR=640;
@@ -30,13 +30,13 @@ const postMat=new T.ShaderMaterial({
       float e=step(max(.35,d*.018),dn-d)*step(d,cf*.6);
       c=mix(c,c*vec3(.36,.32,.46),e*.9*(1.-smoothstep(140.,260.,d))); // outlines fade out on the far islands
       // lighting: bright things (sand, foam, sunlit leaves, clouds) bloom softly into their neighbours
-      vec3 gl=vec3(0.);for(int i=0;i<4;i++){vec2 o=vec2(i<2?-2.:2.,mod(float(i),2.)<1.?-2.:2.)*px;gl+=max(texture2D(tC,vUv+o).rgb-.7,0.);}
-      c+=gl*vec3(.34,.31,.24)*gw;
+      vec3 gl=vec3(0.);for(int i=0;i<4;i++){vec2 o=vec2(i<2?-2.:2.,mod(float(i),2.)<1.?-2.:2.)*px;gl+=max(texture2D(tC,vUv+o).rgb-.8,0.);}
+      c+=gl*vec3(.09,.08,.06)*gw; // just a whisper of glow off the sand and surf
       // a sunny grade: a touch more colour, warm highlights, cool shadows, and a warm haze out towards the horizon
       float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.+.04*gw);
       c*=mix(vec3(1.),mix(vec3(.96,.98,1.05),vec3(1.04,1.,.95),smoothstep(.25,.85,l)),gw);
-      c=mix(c,c*vec3(1.05,1.,.93)+vec3(.05,.035,.0),smoothstep(110.,300.,d)*step(d,cf*.6)*.55*gw);
-      vec2 vg=vUv-.5;c*=1.-dot(vg,vg)*.32;
+      c=mix(c,c*vec3(1.04,1.,.95)+vec3(.03,.02,.0),smoothstep(110.,300.,d)*step(d,cf*.6)*.45*gw);
+      vec2 vg=vUv-.5;c*=1.-dot(vg,vg)*.14;
       float b=bayer(gl_FragCoord.xy)-.5;
       c=floor(c*levels+b+.5)/levels;
       gl_FragColor=vec4(c,1.);

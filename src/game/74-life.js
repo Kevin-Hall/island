@@ -31,6 +31,11 @@ let weedSlow=new Set();
 /* ---- farm debris: weeds, twigs, bushes, rocks, stumps and boulders to clear (Stardew-style) ---- */
 const DEBRIS={weed:{hp:1},twig:{hp:1},bush:{hp:2},rock:{hp:2},stump:{hp:3},boulder:{hp:4},tree:{hp:5}}; // trees: the wild island's forests (53-wild)
 const debGeo={},debMesh=new Map(),debrisRoot=new T.Group();scene.add(debrisRoot);
+// a soft round shadow blob under every tree and bush (cheap: one instanced disc per batch), so they sit on the ground
+const BLOB_GEO=new T.CircleGeometry(0.5,12).rotateX(-Math.PI/2),blobMat=new T.MeshBasicMaterial({color:0x1e3a2e,transparent:true,opacity:0.22,depthWrite:false});
+function addBlobs(list,r){const sb=new T.InstancedMesh(BLOB_GEO,blobMat,list.length);sb.frustumCulled=false;sb.renderOrder=1;
+  list.forEach((d,i)=>{const s=(d.sc||1)*r;_e.set(0,0,0);_q.setFromEuler(_e);_m.compose(_v.set(d.x+0.12,topY(d.x,d.z)+0.015,d.z+0.1),_q,_s.set(s*2.2,1,s*1.7));sb.setMatrixAt(i,_m);});
+  sb.instanceMatrix.needsUpdate=true;debrisRoot.add(sb);}
 function debrisAt(x,z){return S.debris.find(d=>d.x===x&&d.z===z)||null;}
 function debrisParts(k,R,v){const p=[];switch(k){
   case'tree':return wildTreeParts(v);
@@ -65,10 +70,10 @@ function treeLOD(gr){let a=0,b=0;for(const e of gr.es){const near=Math.hypot(e.x
 function syncDebris(){while(debrisRoot.children.length){const c=debrisRoot.children[0];debrisRoot.remove(c);c.dispose();}debMesh.clear();treeGroups.length=0;lodAt=null;
   const groups=new Map();for(const d of S.debris){const id=d.k+d.v;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(d);}
   for(const [,list] of groups){if(list[0].k==='tree'){const mk=lo=>{const im=new T.InstancedMesh(debrisGeo('tree',list[0].v,lo),leafMat,list.length);im.castShadow=!lo;im.receiveShadow=true;im.frustumCulled=false;for(let i=0;i<list.length;i++)im.setColorAt(i,_c.setHex(0xffffff));debrisRoot.add(im);return im;};
-      const gr={hi:mk(false),lo:mk(true),es:list.map(d=>{const e={im:null,i:0,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};treeLOD(gr);treeGroups.push(gr);continue;}
+      const gr={hi:mk(false),lo:mk(true),es:list.map(d=>{const e={im:null,i:0,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};treeLOD(gr);treeGroups.push(gr);addBlobs(list,0.62);continue;}
     const im=new T.InstancedMesh(debrisGeo(list[0].k,list[0].v),list[0].k==='bush'?leafMat:vcMat,list.length);im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;
     /* white instance colours: vcMat's cached program may expect them (r128 shares one program per material) */
-    list.forEach((d,i)=>{im.setColorAt(i,_c.setHex(0xffffff));const e={im,i,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,shake:0};setDebrisMatrix(e,0);debMesh.set(K(d.x,d.z),e);});debrisRoot.add(im);}}
+    list.forEach((d,i)=>{im.setColorAt(i,_c.setHex(0xffffff));const e={im,i,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,shake:0};setDebrisMatrix(e,0);debMesh.set(K(d.x,d.z),e);});debrisRoot.add(im);if(list[0].k==='bush')addBlobs(list,0.42);}}
 function setDebrisMatrix(e,tilt){_e.set(0,e.r,tilt,'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(e.x,e.y,e.z),_q,_s.set(e.sc||1,e.sc||1,e.sc||1));e.im.setMatrixAt(e.i,_m);e.im.instanceMatrix.needsUpdate=true;}
 function newDebris(x,z,k){return{x,z,k,v:Math.floor(Math.random()*3),r:Math.random()*6.28,hp:DEBRIS[k].hp};}
 function genDebris(){const R=mulberry(S.worldSeed^0xfa12);
