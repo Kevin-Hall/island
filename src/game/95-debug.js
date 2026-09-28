@@ -35,11 +35,14 @@ if(/[?&]debug\b/.test(location.search)){
     setLevel:n=>{S.xp=LV[n-1]||0;grantKits();rebuildHome();initNPCs();updateHUD();return level();},moveIn:()=>{morningMoveIn();return npcs.length;},
     next:()=>{const u=nextUnlock();return u&&u.name;},xp:n=>{addXP(n);return level();},plots:()=>TOWN.bld.map(b=>b.t+(b.t==='vh'?b.n:'')+(b.locked?':plot':'')),
     // every crop at one stage, rendered at the same scale on a patch of soil (data URLs), for eyeballing the models
-    treeGallery:(size=200)=>{const out=[],so=S.seasonOv;const add=(name,parts)=>{const w=new T.Group();w.add(M(parts));const box=new T.Mesh(new T.BoxGeometry(2.4,3.4,2.4));box.position.y=1.5;box.visible=false;w.add(box);w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,2,0.06,2)]));out.push([name,snapThumb(w,size)]);};
+    critters:()=>{const o={};for(const c of critters)o[c.k]=(o[c.k]||0)+1;return o;},spawnCritter:k=>spawnCritter(k),
+    treeGallery:(size=200)=>{const out=[],so=S.seasonOv;const add=(name,parts,sm)=>{const w=new T.Group();w.add(M(parts));const box=new T.Mesh(sm?new T.BoxGeometry(1.3,1.3,1.3):new T.BoxGeometry(2.4,3.4,2.4));box.position.y=sm?0.5:1.5;box.visible=false;w.add(box);w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,2,0.06,2)]));out.push([name,snapThumb(w,size)]);};
       for(const k of ['oak','pine','maple','cherry','bush','snowpine'])add(k,treeParts(k,mulberry(7),0x9a9ea8));
       for(const se of ['spring','summer','autumn','winter']){S.seasonOv=se;for(const v of [0,2,3])add(se+' '+v,wildTreeParts(v));}
       for(const lv of [1,2,4,7,11]){const q=seedTreeParts(lv);add('heart '+lv,[...q.tp,...q.p,...q.gl]);}
-      add('bush debris',debrisParts('bush',mulberry(3)));S.seasonOv=so;return out;},
+      for(const se of ['spring','summer','autumn','winter']){S.seasonOv=se;for(const v of [0,1,2])add('bush '+se+' '+v,bushParts(v),1);}
+      for(const v of [0,1,2])add('weed '+v,debrisParts('weed',mulberry(3+v),v),1);add('rock',debrisParts('rock',mulberry(3)),1);add('boulder',debrisParts('boulder',mulberry(4)),1);S.seasonOv=so;return out;},
+    critGallery:(size=160)=>Object.keys(CRIT).map(k=>{const g=critModel(k,1),w=new T.Group();w.add(g);w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,1.4,0.06,1.4)]));const s=k==='deer'?1.3:0.6,box=new T.Mesh(new T.BoxGeometry(s,s,s));box.position.y=s/2;box.visible=false;w.add(box);g.rotation.y=0.6;return [k,snapThumb(w,size)];}),
     cropGallery:(stage=3,size=160)=>CROP_IDS.map((id,i)=>{const c=cropParts(id,stage,i*97+5),g=new T.Group();if(c.leaf.length)g.add(M(c.leaf));if(c.fruit.length)g.add(M(c.fruit));g.scale.setScalar(0.95);
       const w=new T.Group();w.add(g);w.add(M([P(BOX,0x5e3c2a,0,-0.03,0,0,0,0,1,0.06,1)]));const box=new T.Mesh(new T.BoxGeometry(1.1,1.5,1.1));box.position.y=0.7;box.visible=false;w.add(box);return [id,snapThumb(w,size)];}),
     ripen:()=>{for(const k in S.tiles){const t=S.tiles[k];if(t.crop)t.crop.p=1;}syncAllCrops();},

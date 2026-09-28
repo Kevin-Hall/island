@@ -22,8 +22,7 @@ function findGroup(k,seed){const p=[],g=new T.Group();
     case'fossil':p.push(P(CYL8,0xb8b0a0,0,0.03,0,0,0,0,0.34,0.05,0.34),P(BOX,0x8a8478,0,0.07,0,0,0,0,0.2,0.02,0.04),P(BOX,0x8a8478,0,0.07,0,0,1.2,0,0.14,0.02,0.04),P(BOX,0x8a8478,0,0.07,0,0,2.4,0,0.1,0.02,0.04));break;
     case'starfrag':for(let i=0;i<5;i++){const a=i/5*6.28;p.push(P(OCT,0xffe070,Math.sin(a)*0.1,0.08,Math.cos(a)*0.1,0,a,Math.PI/2,0.1,0.18,0.1));}p.push(P(ICO,0xfff4b0,0,0.08,0,0,0,0,0.14,0.14,0.14));break;
     case'crate':p.push(P(BOX,0xa27a50,0,0.1,0,0,0,0,0.5,0.4,0.5),P(BOX,0x6a4a30,0,0.1,0,0,0,0,0.52,0.06,0.52),P(BOX,0x6a4a30,0,0.1,0,0,0,0,0.06,0.42,0.52));break;
-    case'weed':{const R=mulberry(seed);for(let i=0;i<6;i++)p.push(P(BOX,i%2?0x3d6e2c:0x4f8a34,(R()-0.5)*0.34,0.1,(R()-0.5)*0.34,(R()-0.5)*0.6,R()*3,(R()-0.5)*0.6,0.05,0.2+R()*0.14,0.1));
-      if(R()<0.4)p.push(P(BOX,0xf6d04a,(R()-0.5)*0.2,0.26,(R()-0.5)*0.2,0,0,0,0.07,0.05,0.07));break;}
+    case'weed':p.push(...debrisParts('weed',mulberry(seed),seed%3));break;
   }
   g.add(M(p,k==='starfrag'?lumMat:vcMat));return g;}
 function findAt(x,z){return S.finds.find(f=>f.x===x&&f.z===z)||null;}
@@ -35,18 +34,30 @@ const debGeo={},debMesh=new Map(),debrisRoot=new T.Group();scene.add(debrisRoot)
 function debrisAt(x,z){return S.debris.find(d=>d.x===x&&d.z===z)||null;}
 function debrisParts(k,R,v){const p=[];switch(k){
   case'tree':return wildTreeParts(v);
-  case'weed':for(let i=0;i<10;i++)lf(p,[0x5a8a34,0x6a9a3a,0x4a7a2a][i%3],(R()-0.5)*0.3,0,(R()-0.5)*0.3,R()*6.28,1.0+R()*0.4,0.3+R()*0.15,0.06,0.025);
-    if(R()<0.6)for(let i=0;i<2;i++)bloom(p,[0xf6d04a,0xffffff][i],0xf6d04a,(R()-0.5)*0.3,0.26,(R()-0.5)*0.3,0.05);break;
+  // a weed: a low, soft clump of round leaves, sometimes with a dandelion or daisy poking out
+  case'weed':for(let i=0;i<5;i++){const a=i*1.257+R()*0.4,r=i?0.1+R()*0.06:0,s=0.16+R()*0.06;p.push(PG(SPH_LO,[0x78b448,0x68a43e,0x5a9636][i%3],0x3e7428,Math.cos(a)*r,0.05+(i?0:0.04),Math.sin(a)*r,0,a,0,s*1.2,s*0.8,s));}
+    if(v!==1){const x=(R()-0.5)*0.12,z=(R()-0.5)*0.12;p.push(P(CYL6,0x5a9a3a,x,0.13,z,0,0,0,0.015,0.2,0.015));dots(p,R,1,x,0.23,z,0,0,[v?0xffffff:0xf6d04a],v?0xf6d04a:undefined,0.05);}break;
   case'twig':for(let i=0;i<3;i++)p.push(P(CYL6,i%2?0x7a5230:0x6a4428,(R()-0.5)*0.3,0.03,(R()-0.5)*0.3,1.57,R()*3,0,0.04,0.4+R()*0.2,0.04));lf(p,0x6a9a3a,0.05,0.04,0,R()*6,0.2,0.12,0.07);break;
-  case'bush':bushClump(p,R,[0x8ab858,0x4a7a2e,0x2a4a1e],0.8,0.6);
-    for(let i=0;i<4;i++){const a=R()*6.28;p.push(P(CYL6,0x6a4a2a,Math.sin(a)*0.25,0.36,Math.cos(a)*0.25,Math.cos(a)*0.8,0,-Math.sin(a)*0.8,0.02,0.26,0.02));}break;
+  case'bush':return bushParts(v);
   case'rock':rockP(p,R,0x9a9ea8,0.55);break;
   case'boulder':rockP(p,R,0x8e929c,1.05);p.push(P(ICO2,0x5a8a44,0.05,0.42,0,0,R()*3,0,0.5,0.1,0.42));break;
   case'stump':p.push(P(CYL12,0x7a5230,0,0.16,0,0,0,0,0.44,0.32,0.44),P(CYL12,0xd8b078,0,0.325,0,0,0,0,0.38,0.02,0.38),P(CYL12,0xb08a58,0,0.33,0,0,0,0,0.22,0.02,0.22),P(CYL12,0xd8b078,0,0.335,0,0,0,0,0.1,0.02,0.1));
     for(let i=0;i<4;i++){const a=i*1.57+R()*0.4;p.push(P(CYL6,0x6a4428,Math.cos(a)*0.22,0.05,Math.sin(a)*0.22,Math.sin(a)*1.1,0,-Math.cos(a)*1.1,0.08,0.26,0.08));}
     if(R()<0.5)p.push(P(CYL6,0xf2ead8,0.2,0.08,0.18,0,0,0,0.04,0.12,0.04),P(ICO2,0xd8453a,0.2,0.15,0.18,0,0,0,0.12,0.06,0.12));break;}
   return p;}
-function debrisGeo(k,v,lo){const id=k+v+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo':''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v);debGeo[id]=merge(lo?lowParts(parts):parts);}return debGeo[id];}
+// wild bushes change with the seasons too: v0 a plain round bush, v1 a flowering one (azalea pink in spring, hydrangea blue
+// in summer), v2 a berry bush; autumn turns them rust and gold, winter tucks them under a cap of snow
+const BUSH_COLS={spring:[0xa0dc6c,0x58a846,0x2c6630],summer:[0x86c85a,0x48943c,0x245a2a],autumn:[0xe8a848,0xc8742e,0x8a4a22],winter:[0x6a9a6a,0x4a7a52,0x2c4e3a]};
+function bushParts(v){const s=season(),R=mulberry(hi(v,57,S.worldSeed|0)),p=[],c=(s==='autumn'&&v===0)?[0xa8c860,0x6a9a3e,0x3a6a2a]:BUSH_COLS[s],sc=0.82;
+  bushClump(p,R,c,sc);
+  if(v===1&&s==='spring')dots(p,R,10,0,0.3*sc,0,0.5*sc,0.38*sc,[0xf8a8c8,0xf490b8,0xffffff],0xf6d04a,0.075);
+  if(v===1&&s==='summer')for(let i=0;i<6;i++){const a=i*1.05+R()*0.4,up=i%2,x=Math.cos(a)*(up?0.22:0.42)*sc,z=Math.sin(a)*(up?0.22:0.42)*sc,y=(up?0.58:0.4)*sc,col=[0x7a9af0,0xa47ae0,0x6ab0f0][i%3];
+    p.push(PG(SPH_LO,lerpHex(col,0xffffff,0.3),col,x,y,z,0,0,0,0.2,0.17,0.2));}
+  if(v===2&&s!=='winter')for(let i=0;i<7;i++){const a=R()*6.283,t=0.3+R()*0.6,x=Math.cos(a)*0.46*sc*Math.sin(t*1.3),z=Math.sin(a)*0.46*sc*Math.sin(t*1.3),y=0.3*sc+0.34*sc*Math.cos(t*1.3);
+    p.push(P(SPH_XS,s==='autumn'?0x6a3a8a:0xd83848,x,y,z,0,0,0,0.08,0.08,0.08));}
+  if(s==='winter')p.push(PG(SPH_LO,0xffffff,0xdce8f2,0,0.52*sc,0,0,0,0,0.78*sc,0.3*sc,0.78*sc));
+  return p;}
+function debrisGeo(k,v,lo){const id=k+v+(k==='bush'?season():'')+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo':''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v);debGeo[id]=merge(lo?lowParts(parts):parts);}return debGeo[id];}
 // debris is drawn instanced: one batch per model variant (a handful of draw calls for the whole field); debMesh maps a tile to its slot
 // wild trees come in two builds: full detail near the camera, a lighter one further off (treeLOD re-sorts them as you move)
 const treeGroups=[];let lodAt=null,lodT=0;
@@ -183,7 +194,7 @@ function bugGroup(B){const g=new T.Group(),kind=B.kind||'fly',wm=B.glow?lumMat:v
     P(ICO,0xffffff,sd*0.22*s,0.007,0.1*s,0,0,0,0.02*s,0.01,0.02*s),P(ICO,0xffffff,sd*0.19*s,0.007,0.06*s,0,0,0,0.015*s,0.01,0.015*s)],wm);
   const wl=wing(-1),wr=wing(1);g.add(wl,wr);g.userData={wl,wr};return g;}
 function spawnBug(){const isl=curIsl();if(!isl||!isl.grass.length)return;const night=isNight();if(S.rain&&!night)return;
-  const near=bugs.filter(b=>b.isl===isl.id);if(near.length>=(night?3:5))return;
+  const near=bugs.filter(b=>b.isl===isl.id);if(near.length>=(night?4:7))return;
   const flowers=isl.home?S.objs.filter(o=>o.k==='flowers'):[];
   const id=pickW(BUGS,k=>(BUGS[k].time==='night')===night&&BUGS[k].bio.includes(isl.biome),(k,v)=>v.w*(v.w<5?0.45:1)*(v.w<10?1+flowers.length*0.2:1));if(!id)return;
   let hx,hz;if(flowers.length&&Math.random()<0.6){const f=pickR(flowers);hx=f.x;hz=f.z;}else[hx,hz]=pickR(isl.grass);

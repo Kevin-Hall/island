@@ -70,7 +70,9 @@ if(!prebuilt){genIslands();for(const isl of islands)buildIsland(isl);rebuildSeaG
 if(S.wv!==3){if(!isNew){S.sea=false;S.boat=null;S.picked={};vil.x=vil.tx=0.3;vil.z=vil.tz=2.1;}S.wv=3;}
 ensureBoat(true);if(S.sea&&isLand(Math.round(S.boat.x),Math.round(S.boat.z))){S.sea=false;S.boat=null;ensureBoat(false);}
 if(isNew)setupNew();
-grantKits();const farmNew=!S.farmInit;if(farmNew){genDebris();if(S.scratch)genWild();S.farmInit=1;}
+grantKits();const farmNew=!S.farmInit;if(farmNew){genDebris();if(S.scratch)genWild();S.farmInit=1;S.tidy=1;}
+// wild islands from before the tidier woods: thin out most of the loose weeds and twigs
+if(S.wild&&!S.tidy){S.tidy=1;S.debris=S.debris.filter(d=>!((d.k==='weed'||d.k==='twig')&&Math.random()<0.7));}
 if(isNew||(!S.sea&&!walkable(Math.round(vil.x),Math.round(vil.z)))){if(S.scratch){vil.x=vil.tx=DOCK.x+0.5;vil.z=vil.tz=DOCK.z-1.2;}else{vil.x=vil.tx=TOWN.plaza[0]+0.5;vil.z=vil.tz=TOWN.plaza[1]+2.4;}}
 if(S.sea){vil.x=vil.tx=S.boat.x;vil.z=vil.tz=S.boat.z;}
 syncObjs();rebuildSoil();if(!S.orders.length)makeOrders();syncLife();setRod();initNPCs();

@@ -3,39 +3,34 @@ const lerpHex=(a,b,t)=>_a.set(a).lerp(_b.set(b),t).getHex();
 const LEAF_CARD=new T.SphereGeometry(0.5,6,3),LEAF_CARD_LO=new T.SphereGeometry(0.5,4,2); // a rounded, low-poly leaf blade (36 triangles)
 function card(p,x,y,z,d,len,wid,cTip,cBase){const tilt=Math.acos(clamp(d[1],-1,1)),ry=Math.atan2(d[0],d[2]);
   p.push(PG(LEAF_CARD,cTip,cBase,x+d[0]*len/2,y+d[1]*len/2,z+d[2]*len/2,tilt,ry,0,wid,len,wid*0.3));}
-// a round canopy shingled with leaf cards that droop outward; tips lighten toward the top, like Animal Crossing's trees
-// a tree crown in the style of pixel-art foliage: a dark core (the shadowed inside of the crown), rings of rounded leaf
-// clumps each lit on top and dark underneath, a bright crown, light leaf highlights on top and a jagged fringe of leaves
-// under the rim. cols = [light, mid, dark]; nn scales the leaf detail (bushes pass fewer)
-function canopy(p,R,cols,cx,cy,cz,rad,nn){const Rr=rad*1.55,[L,Mc,Dk]=cols,hl=lerpHex(L,0xfff6c0,0.22),sh=lerpHex(Dk,0x0a1a16,0.4),q=(nn||44)/44;
-  p.push(PG(ICO2,Mc,sh,cx,cy-Rr*0.08,cz,0,R()*3,0,Rr*1.6,Rr*1.25,Rr*1.6));
-  const ring=(n,rr,y,s,top,bot,geo=ICO2)=>{const a0=R()*6.28;for(let i=0;i<n;i++){const a=a0+i/n*6.283+(R()-0.5)*0.45,sz=Rr*s*(0.85+R()*0.3);
-    p.push(PG(geo,top,bot,cx+Math.cos(a)*Rr*rr,cy+Rr*y+(R()-0.5)*Rr*0.14,cz+Math.sin(a)*Rr*rr,0,R()*3,0,sz,sz*0.84,sz));}};
-  const r0=p.length;ring(6,0.7,-0.2,0.86,lerpHex(L,Mc,0.45),Dk,ICO);for(let i=r0+1;i<p.length;i+=2)p[i].lo='drop';ring(4,0.38,0.24,0.84,lerpHex(L,Mc,0.15),lerpHex(Mc,Dk,0.3));
-  p.push(PG(ICO2,L,Mc,cx+(R()-0.5)*Rr*0.2,cy+Rr*0.55,cz+(R()-0.5)*Rr*0.2,0,R()*3,0,Rr*0.86,Rr*0.66,Rr*0.86));
-  // light leaf highlights catching the sun on top
-  for(let i=0,n=Math.round(9*q);i<n;i++){const a=R()*6.28,r=Rr*(0.2+R()*0.5),y=cy+Rr*(0.62-r/Rr*0.55);
-    p.push(Object.assign(P(LEAF0,hl,cx+Math.cos(a)*r,y,cz+Math.sin(a)*r,0,a,0,Rr*0.3,Rr*0.1,Rr*0.22),{lo:'drop'}));}
-  // the ragged underside: leaves hanging out and down from the rim
-  for(let i=0,n=Math.round(12*q);i<n;i++){const a=i/n*6.283+R()*0.3,r=Rr*(0.95+R()*0.12);
-    card(p,cx+Math.cos(a)*r*0.9,cy-Rr*0.32+(R()-0.5)*Rr*0.1,cz+Math.sin(a)*r*0.9,[Math.cos(a)*0.7,-0.7,Math.sin(a)*0.7],Rr*0.36,Rr*0.26,Mc,Dk);}}
-// a dense, lumpy bush: one tall leafy mound with three lower lobes around it, lit on top (s scales it, q thins the leaves; returns the top height)
-function bushClump(p,R,cols,s=1,q=1){const [L,Mc,Dk]=cols,sh=lerpHex(Dk,0x0a1a16,0.4);
-  // a rounded mound: dark core, four side clumps and a sunlit top, then a crown of leaf tufts and a ragged skirt
-  p.push(PG(ICO2,Mc,sh,0,0.26*s,0,0,R()*3,0,0.8*s,0.56*s,0.8*s));
-  const a0=R()*6.283;for(let i=0;i<4;i++){const a=a0+i*1.571+(R()-0.5)*0.4,sz=(0.4+R()*0.08)*s;p.push(PG(ICO,lerpHex(L,Mc,0.4),Dk,Math.cos(a)*0.22*s,(0.22+R()*0.05)*s,Math.sin(a)*0.22*s,0,R()*3,0,sz,sz*0.82,sz));}
-  p.push(PG(ICO2,L,Mc,0,0.42*s,0,0,R()*3,0,0.52*s,0.4*s,0.52*s));
-  for(let i=0,n=Math.round(7*q);i<n;i++){const a=i/n*6.283+R()*0.4;card(p,Math.cos(a)*0.1*s,0.55*s,Math.sin(a)*0.1*s,[Math.cos(a)*0.55,0.83,Math.sin(a)*0.55],0.2*s,0.14*s,lerpHex(L,0xfff6c0,0.2),Mc);}
-  for(let i=0,n=Math.round(8*q);i<n;i++){const a=i/n*6.283+R()*0.3;card(p,Math.cos(a)*0.36*s,0.14*s,Math.sin(a)*0.36*s,[Math.cos(a)*0.75,-0.65,Math.sin(a)*0.75],0.2*s,0.15*s,Mc,Dk);}
-  return 0.55*s;}
-function trunkP(p,R,col,h,w=0.13,dk){p.push(P(TRUNK,col,0,(h+0.45)/2,0,0,R()*3,0,w*2,h+0.45,w*2),P(CYL8,col,0,h+0.3,0,0,0,0,w*1.5,0.3,w*1.5));
-  for(let i=0;i<4;i++){const a=i/4*6.283+R();p.push(P(CYL6,dk||col,Math.cos(a)*w*1.1,0.05,Math.sin(a)*w*1.1,Math.sin(a)*0.9,0,-Math.cos(a)*0.9,0.07,0.24,0.07));}
-  for(let i=0;i<3;i++){const a=i/3*6.283+R(),y=h*(0.62+R()*0.25);p.push(Object.assign(P(CYL6,col,Math.cos(a)*0.16,y+0.1,Math.sin(a)*0.16,Math.sin(a)*0.8,0,-Math.cos(a)*0.8,0.06,0.42,0.06),{lo:'drop'}));}
-  for(let i=0;i<3;i++)p.push(Object.assign(P(BOX,dk||col,Math.cos(i*2.1)*w*0.95,0.2+i*0.18,Math.sin(i*2.1)*w*0.95,0,i*2.1,0,0.03,0.12,0.03),{lo:'drop'}));}
+// a tree crown the way Animal Crossing draws one: a soft, rounded cloud of foliage (a big body, a dome on top and a few
+// bulges round the sides), smooth-shaded so the toon ramp lays clean bands of light across it: sunlit on top, cool and
+// dark underneath. No loose leaves or spikes. cols = [light, mid, dark]; the crown reaches about 1.7*rad from its centre
+function canopy(p,R,cols,cx,cy,cz,rad){const [L,Mc,Dk]=cols,sh=lerpHex(Dk,0x14261e,0.3),a0=R()*6.283;
+  p.push(PG(SPH,Mc,sh,cx,cy,cz,0,a0,0,rad*2.6,rad*2.1,rad*2.6));
+  for(let i=0;i<4;i++){const a=a0+i*1.571+(R()-0.5)*0.5,r=rad*(0.95+R()*0.12),s=rad*(1.35+R()*0.25);
+    p.push(PG(SPH,lerpHex(L,Mc,0.5),Dk,cx+Math.cos(a)*r,cy-rad*(0.12+R()*0.12),cz+Math.sin(a)*r,0,a,0,s,s*0.86,s));}
+  p.push(PG(SPH,L,lerpHex(L,Mc,0.6),cx+(R()-0.5)*rad*0.2,cy+rad*0.72,cz+(R()-0.5)*rad*0.2,0,a0,0,rad*1.9,rad*1.5,rad*1.9));
+  const a1=a0+0.8;p.push(PG(SPH,L,Mc,cx+Math.cos(a1)*rad*0.55,cy+rad*0.42,cz+Math.sin(a1)*rad*0.55,0,0,0,rad*1.3,rad*1.1,rad*1.3));}
+// a round, leafy bush: a soft mound with a few lobes, lit on top (s scales it; returns the top height)
+function bushClump(p,R,cols,s=1){const [L,Mc,Dk]=cols,sh=lerpHex(Dk,0x14261e,0.3),a0=R()*6.283;
+  p.push(PG(SPH,Mc,sh,0,0.3*s,0,0,a0,0,0.92*s,0.66*s,0.92*s));
+  for(let i=0;i<3;i++){const a=a0+i*2.094+(R()-0.5)*0.4,sz=(0.52+R()*0.08)*s;p.push(PG(SPH,lerpHex(L,Mc,0.45),Dk,Math.cos(a)*0.28*s,0.24*s,Math.sin(a)*0.28*s,0,a,0,sz,sz*0.8,sz));}
+  p.push(PG(SPH,lerpHex(L,Mc,0.3),lerpHex(L,Mc,0.7),0.04*s,0.5*s,-0.02*s,0,0,0,0.6*s,0.44*s,0.6*s));
+  return 0.62*s;}
+// little flowers dotted over a crown or a bush (a disc of petals round a centre), all soft round shapes
+function dots(p,R,n,cx,cy,cz,rx,ry,cols,cc,sz=0.07){for(let i=0;i<n;i++){const a=R()*6.283,t=0.15+R()*0.75,x=cx+Math.cos(a)*rx*Math.sin(t*1.4),z=cz+Math.sin(a)*rx*Math.sin(t*1.4),y=cy+ry*Math.cos(t*1.4);
+  p.push(P(SPH_LO,cols[i%cols.length],x,y,z,0,0,0,sz*2,sz*0.9,sz*2));if(cc!==undefined)p.push(P(SPH_XS,cc,x,y+sz*0.35,z,0,0,0,sz*0.8,sz*0.5,sz*0.8));}}
+// round fruit hanging on the outside of a crown (apples, cherries…), each with a glint of light
+function fruit(p,R,n,col,cx,cy,cz,rad){const a0=R()*6.283;for(let i=0;i<n;i++){const a=a0+i/n*6.283+(R()-0.5)*0.5,r=rad*(1.45+R()*0.15),y=cy+rad*(-0.35+R()*0.45),x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;
+  p.push(P(SPH_LO,col,x,y,z,0,0,0,0.17,0.16,0.17),P(SPH_XS,0xffffff,x-0.03,y+0.04,z+0.03,0,0,0,0.04,0.03,0.04));}}
+// a smooth, slightly tapered trunk with a flared foot
+function trunkP(p,R,col,h,w=0.13,dk){p.push(PG(STRUNK,col,dk||col,0,(h+0.45)/2,0,0,R()*3,0,w*2,h+0.45,w*2),PG(SPH_LO,dk||col,col,0,0.05,0,0,0,0,w*3.4,0.3,w*3.4));}
 const PALMS=['palm','palmtall','palmfan','palmtwin'];
 // the far-away version of a batch of tree parts: a third of the leaf cards and palm leaflets (a bit bigger, so the silhouette holds)
 function lowParts(parts){let n=0,m=0;const out=[];for(const p of parts){
-  if(p.lo==='drop')continue;if(p.geo===ICO2&&p.c2!==undefined){out.push(Object.assign({},p,{geo:ICO}));continue;}if(p.lo==='wide'){out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.8}));continue;}/* palm fronds: keep every main blade, wider, drop the side blades */
+  if(p.lo==='drop')continue;if(p.geo===ICO2&&p.c2!==undefined){out.push(Object.assign({},p,{geo:ICO}));continue;}
+  if(p.geo===SPH){out.push(Object.assign({},p,{geo:SPH_LO}));continue;}if(p.geo===SPH_LO&&Math.max(p.sx,p.sz)<0.2){if(m++%2)continue;out.push(p);continue;}if(p.geo===SCONE){out.push(Object.assign({},p,{geo:SCONE_LO}));continue;}if(p.lo==='wide'){out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.8}));continue;}/* palm fronds: keep every main blade, wider, drop the side blades */
   if(p.geo===LEAF_CARD){if(n++%3)continue;out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.4,sy:p.sy*1.15,sz:p.sz*1.4}));}
   else if(p.geo===LEAF0&&p.sx<0.16){if(m++%3)continue;out.push(Object.assign({},p,{sx:p.sx*1.7}));}
   else if(p.geo===BOX&&p.sx<0.06&&p.sz>0.1){if(m++%2)continue;out.push(Object.assign({},p,{sz:p.sz*2}));}/* palm frond stems: every other, doubled */
@@ -63,26 +58,24 @@ function treeParts(kind,R,colRock){
   const p=[];
   switch(kind){
     case'oak':trunkP(p,R,0x7a5230,0.9,0.13,0x5e3e24);canopy(p,R,[0x6cb04a,0x4c8e3a,0x2f6a2c],0,1.3,0,0.55);
-      if(R()<0.4)for(let i=0;i<5;i++){const a=R()*6.28;p.push(P(ICO2,0xe8453a,Math.cos(a)*0.62,1.05+R()*0.4,Math.sin(a)*0.62,0,0,0,0.1,0.1,0.1));}break;
+      if(R()<0.4)fruit(p,R,5,0xe8453a,0,1.3,0,0.55);break;
     case'cherry':trunkP(p,R,0x6a4436,0.9,0.12,0x4e3228);canopy(p,R,[0xffd8e6,0xf4a8c4,0xd07a9a],0,1.3,0,0.55);
       for(let i=0;i<6;i++)lf(p,[0xf8c8d8,0xffe4ee][i%2],(R()-0.5)*1.5,0.02,(R()-0.5)*1.5,R()*6.28,0,0.1,0.08,0.02);break;
     case'maple':case'mapleR':{const c=kind==='maple'?[0xf4a444,0xe8803a,0xc85e24]:[0xec6a4a,0xc8402a,0x982a22];
       trunkP(p,R,0x6a4428,0.9,0.12,0x4e3020);canopy(p,R,c,0,1.3,0,0.55);
       for(let i=0;i<5;i++)lf(p,c[i%3],(R()-0.5)*1.4,0.02,(R()-0.5)*1.4,R()*6.28,0,0.13,0.1,0.02);break;}
     case'pine':case'snowpine':{const sn=kind==='snowpine',tip=0x8ad470,mid=0x3e9448,base=0x1a4a2c;
-      p.push(PG(TRUNK,0x7a4e30,0x5a3622,0,0.45,0,0,0,0,0.3,0.9,0.3));for(let i=0;i<4;i++){const a=i*1.7+R();p.push(P(CYL6,0x6a4428,Math.cos(a)*0.14,0.06,Math.sin(a)*0.14,Math.sin(a)*1.1,0,-Math.cos(a)*1.1,0.07,0.26,0.07));}
-      // stacked tiers, each dark at its skirt and lighter towards the top, with a scalloped edge and sunlit needle tufts
-      for(let i=0;i<5;i++){const t=i/4,y=0.62+i*0.42,rad=1.08-t*0.72,h=0.78-t*0.16,top=lerpHex(mid,tip,0.25+t*0.5),bot=lerpHex(base,mid,t*0.35);
-        p.push(PG(CONE12,top,bot,0,y+h/2,0,0,R(),0,rad*2,h,rad*2));
-        const n=Math.round(12-t*5);for(let k=0;k<n;k++){const a=k/n*6.283+i*0.5+R()*0.15;card(p,Math.cos(a)*rad*0.78,y+0.06,Math.sin(a)*rad*0.78,[Math.cos(a)*0.62,-0.78,Math.sin(a)*0.62],rad*0.42,0.24-t*0.06,bot,lerpHex(base,0x0a1a16,0.3));}
-        for(let k=0;k<Math.round(5-t*2);k++){const a=R()*6.28,r=rad*(0.3+R()*0.3);card(p,Math.cos(a)*r,y+h*(0.55-r/rad*0.45),Math.sin(a)*r,[Math.cos(a)*0.6,0.8,Math.sin(a)*0.6],0.2,0.12,lerpHex(tip,0xfff6c0,0.3),tip);}
-        if(sn)p.push(PG(CONE12,0xffffff,0xd8e8f0,0,y+h*0.72,0,0,R(),0,rad*1.5,h*0.5,rad*1.5));}
-      p.push(PG(CONE8,sn?0xffffff:lerpHex(tip,0xfff6c0,0.3),tip,0,2.72,0,0,0,0,0.3,0.42,0.3));break;}
+      p.push(PG(STRUNK,0x7a4e30,0x5a3622,0,0.4,0,0,0,0,0.3,0.8,0.3),PG(SPH_LO,0x5a3622,0x7a4e30,0,0.04,0,0,0,0,0.46,0.24,0.46));
+      // a cedar in the island style: four soft, rounded tiers, each dark under its skirt and lighter towards its top
+      for(let i=0;i<4;i++){const t=i/3,y=0.55+i*0.5,rad=1.0-t*0.58,h=0.95-t*0.2,top=lerpHex(mid,tip,0.3+t*0.45),bot=lerpHex(base,mid,t*0.3);
+        p.push(PG(SPH_LO,bot,lerpHex(base,0x0a1a16,0.3),0,y+0.06,0,0,0,0,rad*1.9,0.2,rad*1.9),PG(SCONE,top,bot,0,y+h/2,0,0,R(),0,rad*2,h,rad*2));
+        if(sn)p.push(PG(SCONE,0xffffff,0xdce8f2,0,y+h*0.74,0,0,R(),0,rad*1.12,h*0.52,rad*1.12));}
+      p.push(PG(SPH_LO,sn?0xffffff:lerpHex(tip,0xfff6c0,0.3),tip,0,2.76,0,0,0,0,0.18,0.22,0.18));break;}
     case'palm':palmParts(p,R,{n:9,lean:(R()-0.5)*0.6,fronds:8,cols:[0x2f7a34,0x8ad05a],nuts:3});break;
     case'palmtall':palmParts(p,R,{n:13,lean:(R()<0.5?-1:1)*(0.55+R()*0.3),fronds:9,flen:0.37,cols:[0x3a8a3a,0x9ade6a],nuts:2});break;
     case'palmfan':palmParts(p,R,{n:4,lean:0,fronds:11,seg:2,flen:0.44,wid:0.5,pitch:0.95,droop:0.35,spread:0.7,cols:[0x2a6e38,0x72c05a],nuts:0,trunk:[0x8a6a3e,0x7a5a34]});break;
     case'palmtwin':palmParts(p,R,{n:8,lean:-0.5,fronds:7,cols:[0x2f7a34,0x8ad05a],nuts:2,ox:-0.14});palmParts(p,R,{n:11,lean:0.55,fronds:8,cols:[0x3a8a3a,0x94d862],nuts:0,ox:0.14});break;
-    case'bush':{const s=1.1+R()*0.2,top=bushClump(p,R,[0xa8e070,0x5aa040,0x2a5e28],s);if(R()<0.5){const bc=pickR2([0xffffff,0xf8b8c8,0xf6d04a],R);for(let i=0;i<6;i++){const a=R()*6.28,r=R()*0.3*s;bloom(p,bc,0xf6d04a,Math.sin(a)*r,top-0.04-r*0.35,Math.cos(a)*r,0.07);}}break;}
+    case'bush':{const s=1.05+R()*0.2;bushClump(p,R,[0x9ad868,0x52a044,0x2a6030],s);if(R()<0.5){const bc=pickR2([[0xffffff,0xf4f0ff],[0xf8b8c8,0xf49ab4],[0xb8c4f8,0xa0a8f0]],R);dots(p,R,9,0,0.34*s,0,0.46*s,0.34*s,bc,0xf6d04a,0.06*s);}break;}
     case'flowerbed':wildflowers(p,R,[0xf7f2e8,0xf2a6c8,0xf6d04a,0xb8a8f2],9,0.36);for(let i=0;i<10;i++)lf(p,GREENS[i%4],(R()-0.5)*0.6,0.02,(R()-0.5)*0.6,R()*6.28,0.35,0.16,0.07);break;
     case'rockM':rockP(p,R,colRock,0.85);p.push(P(ICO2,0x5a8a44,0,0.36,0,0,R()*3,0,0.52,0.12,0.44),P(ICO2,0x6a9a4a,0.1,0.38,0.08,0,0,0,0.3,0.1,0.26));for(let i=0;i<6;i++)lf(p,GREENS[i%4],(R()-0.5)*0.4,0.38,(R()-0.5)*0.3,R()*6.28,0.4,0.12,0.06);break;
     case'rock':rockP(p,R,colRock,0.75);break;
@@ -97,9 +90,9 @@ function treeParts(kind,R,colRock){
   }
   return p;
 }
-function rockP(p,R,col,s){const c2=new T.Color(col).multiplyScalar(0.86).getHex(),c3=new T.Color(col).lerp(new T.Color(0xffffff),0.18).getHex();
-  p.push(P(ICO,col,0,0.17*s,0,R(),R()*3,R()*0.3,0.8*s,0.5*s,0.68*s),P(ICO,c3,0.05*s,0.3*s,-0.02,R(),R()*3,0,0.52*s,0.24*s,0.46*s),P(ICO,c2,0.3*s,0.1*s,0.18*s,R(),R()*3,0,0.4*s,0.3*s,0.38*s));
-  for(let i=0;i<4;i++){const a=R()*6.28;p.push(P(ICO,i%2?c2:col,Math.cos(a)*0.45*s,0.03,Math.sin(a)*0.45*s,R(),R(),R(),0.12,0.08,0.1));}}
+// a smooth, rounded stone (lit on top) with a smaller one leaning on it
+function rockP(p,R,col,s){const c2=new T.Color(col).multiplyScalar(0.72).getHex(),c3=new T.Color(col).multiplyScalar(0.94).getHex();
+  p.push(PG(SPH,c3,c2,0,0.2*s,0,R()*0.3,R()*3,R()*0.2,0.84*s,0.52*s,0.7*s),PG(SPH_LO,c3,c2,0.32*s,0.1*s,0.2*s,0,R()*3,0,0.38*s,0.26*s,0.34*s));}
 function vnoise(x,z,seed){const X=Math.floor(x/3),Z=Math.floor(z/3),fx=x/3-X,fz=z/3-Z,o=seed%997;const h=(a,b)=>hash(a*1.7+o,b*2.3-o);
   const sx=fx*fx*(3-2*fx),sz=fz*fz*(3-2*fz);return lerp(lerp(h(X,Z),h(X+1,Z),sx),lerp(h(X,Z+1),h(X+1,Z+1),sx),sz);}
 function levelOf(isl,x,z){

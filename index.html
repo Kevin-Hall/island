@@ -855,7 +855,13 @@ const _m=new T.Matrix4(),_q=new T.Quaternion(),_e=new T.Euler(),_v=new T.Vector3
    version of the same shape (a 180-triangle sphere becomes 20 or 80 triangles, a 14-sided stem becomes 6-sided).
    This keeps flowers, crops and critters cheap enough to scatter by the thousand. */
 const ICO0=new T.IcosahedronGeometry(0.5,0),CYL5=new T.CylinderGeometry(0.5,0.5,1,5),CONE5=new T.ConeGeometry(0.5,1,5);
+/* smooth-shaded shapes (their own rounded normals are kept, so the toon ramp paints soft bands across them instead of
+   facets): the rounded crowns, bushes, pebbles and critters that give the island its soft, cosy look */
+const smoothG=g=>{g.userData.smooth=true;return g;};
+const SPH=smoothG(new T.SphereGeometry(0.5,14,10)),SPH_LO=smoothG(new T.SphereGeometry(0.5,8,6)),SPH_XS=smoothG(new T.SphereGeometry(0.5,6,4)),
+  SCONE=smoothG(new T.ConeGeometry(0.5,1,16,1,true)),SCONE_LO=smoothG(new T.ConeGeometry(0.5,1,8,1,true)),STRUNK=smoothG(new T.CylinderGeometry(0.36,0.5,1,10,1,true)),SCYL=smoothG(new T.CylinderGeometry(0.5,0.5,1,10));
 function lodGeo(p){const g=p.geo,big=Math.max(p.sx,p.sy,p.sz),rad=Math.max(p.sx,p.sz);
+  if(g===SPH)return big<0.12?SPH_XS:big<0.35?SPH_LO:g;if(g===SPH_LO)return big<0.12?SPH_XS:g;
   if(g===ICO2)return big<0.13?ICO0:big<0.4?ICO:g;
   if(g===ICO)return big<0.13?ICO0:g;
   if(g===CYL12||g===CYL8)return rad<0.07?CYL5:rad<0.2?CYL6:g;
@@ -870,7 +876,7 @@ function merge(parts){
   const gs=[];let total=0;
   for(const p of parts){
     const g0=lodGeo(p),g=g0.index?g0.toNonIndexed():g0.clone();
-    g.computeVertexNormals();
+    if(!g0.userData.smooth)g.computeVertexNormals();
     let ys=null;if(p.c2!==undefined){const a=g.attributes.position.array;ys=new Float32Array(a.length/3);let y0=1e9,y1=-1e9;for(let i=0;i<ys.length;i++){ys[i]=a[i*3+1];y0=Math.min(y0,ys[i]);y1=Math.max(y1,ys[i]);}for(let i=0;i<ys.length;i++)ys[i]=(ys[i]-y0)/((y1-y0)||1);}
     _e.set(p.rx,p.ry,p.rz,'YXZ');_q.setFromEuler(_e);_v.set(p.x,p.y,p.z);_s.set(p.sx,p.sy,p.sz);_m.compose(_v,_q,_s);
     g.applyMatrix4(_m);gs.push([g,p.color,ys,p.c2]);total+=g.attributes.position.count;
@@ -1098,39 +1104,34 @@ const lerpHex=(a,b,t)=>_a.set(a).lerp(_b.set(b),t).getHex();
 const LEAF_CARD=new T.SphereGeometry(0.5,6,3),LEAF_CARD_LO=new T.SphereGeometry(0.5,4,2); // a rounded, low-poly leaf blade (36 triangles)
 function card(p,x,y,z,d,len,wid,cTip,cBase){const tilt=Math.acos(clamp(d[1],-1,1)),ry=Math.atan2(d[0],d[2]);
   p.push(PG(LEAF_CARD,cTip,cBase,x+d[0]*len/2,y+d[1]*len/2,z+d[2]*len/2,tilt,ry,0,wid,len,wid*0.3));}
-// a round canopy shingled with leaf cards that droop outward; tips lighten toward the top, like Animal Crossing's trees
-// a tree crown in the style of pixel-art foliage: a dark core (the shadowed inside of the crown), rings of rounded leaf
-// clumps each lit on top and dark underneath, a bright crown, light leaf highlights on top and a jagged fringe of leaves
-// under the rim. cols = [light, mid, dark]; nn scales the leaf detail (bushes pass fewer)
-function canopy(p,R,cols,cx,cy,cz,rad,nn){const Rr=rad*1.55,[L,Mc,Dk]=cols,hl=lerpHex(L,0xfff6c0,0.22),sh=lerpHex(Dk,0x0a1a16,0.4),q=(nn||44)/44;
-  p.push(PG(ICO2,Mc,sh,cx,cy-Rr*0.08,cz,0,R()*3,0,Rr*1.6,Rr*1.25,Rr*1.6));
-  const ring=(n,rr,y,s,top,bot,geo=ICO2)=>{const a0=R()*6.28;for(let i=0;i<n;i++){const a=a0+i/n*6.283+(R()-0.5)*0.45,sz=Rr*s*(0.85+R()*0.3);
-    p.push(PG(geo,top,bot,cx+Math.cos(a)*Rr*rr,cy+Rr*y+(R()-0.5)*Rr*0.14,cz+Math.sin(a)*Rr*rr,0,R()*3,0,sz,sz*0.84,sz));}};
-  const r0=p.length;ring(6,0.7,-0.2,0.86,lerpHex(L,Mc,0.45),Dk,ICO);for(let i=r0+1;i<p.length;i+=2)p[i].lo='drop';ring(4,0.38,0.24,0.84,lerpHex(L,Mc,0.15),lerpHex(Mc,Dk,0.3));
-  p.push(PG(ICO2,L,Mc,cx+(R()-0.5)*Rr*0.2,cy+Rr*0.55,cz+(R()-0.5)*Rr*0.2,0,R()*3,0,Rr*0.86,Rr*0.66,Rr*0.86));
-  // light leaf highlights catching the sun on top
-  for(let i=0,n=Math.round(9*q);i<n;i++){const a=R()*6.28,r=Rr*(0.2+R()*0.5),y=cy+Rr*(0.62-r/Rr*0.55);
-    p.push(Object.assign(P(LEAF0,hl,cx+Math.cos(a)*r,y,cz+Math.sin(a)*r,0,a,0,Rr*0.3,Rr*0.1,Rr*0.22),{lo:'drop'}));}
-  // the ragged underside: leaves hanging out and down from the rim
-  for(let i=0,n=Math.round(12*q);i<n;i++){const a=i/n*6.283+R()*0.3,r=Rr*(0.95+R()*0.12);
-    card(p,cx+Math.cos(a)*r*0.9,cy-Rr*0.32+(R()-0.5)*Rr*0.1,cz+Math.sin(a)*r*0.9,[Math.cos(a)*0.7,-0.7,Math.sin(a)*0.7],Rr*0.36,Rr*0.26,Mc,Dk);}}
-// a dense, lumpy bush: one tall leafy mound with three lower lobes around it, lit on top (s scales it, q thins the leaves; returns the top height)
-function bushClump(p,R,cols,s=1,q=1){const [L,Mc,Dk]=cols,sh=lerpHex(Dk,0x0a1a16,0.4);
-  // a rounded mound: dark core, four side clumps and a sunlit top, then a crown of leaf tufts and a ragged skirt
-  p.push(PG(ICO2,Mc,sh,0,0.26*s,0,0,R()*3,0,0.8*s,0.56*s,0.8*s));
-  const a0=R()*6.283;for(let i=0;i<4;i++){const a=a0+i*1.571+(R()-0.5)*0.4,sz=(0.4+R()*0.08)*s;p.push(PG(ICO,lerpHex(L,Mc,0.4),Dk,Math.cos(a)*0.22*s,(0.22+R()*0.05)*s,Math.sin(a)*0.22*s,0,R()*3,0,sz,sz*0.82,sz));}
-  p.push(PG(ICO2,L,Mc,0,0.42*s,0,0,R()*3,0,0.52*s,0.4*s,0.52*s));
-  for(let i=0,n=Math.round(7*q);i<n;i++){const a=i/n*6.283+R()*0.4;card(p,Math.cos(a)*0.1*s,0.55*s,Math.sin(a)*0.1*s,[Math.cos(a)*0.55,0.83,Math.sin(a)*0.55],0.2*s,0.14*s,lerpHex(L,0xfff6c0,0.2),Mc);}
-  for(let i=0,n=Math.round(8*q);i<n;i++){const a=i/n*6.283+R()*0.3;card(p,Math.cos(a)*0.36*s,0.14*s,Math.sin(a)*0.36*s,[Math.cos(a)*0.75,-0.65,Math.sin(a)*0.75],0.2*s,0.15*s,Mc,Dk);}
-  return 0.55*s;}
-function trunkP(p,R,col,h,w=0.13,dk){p.push(P(TRUNK,col,0,(h+0.45)/2,0,0,R()*3,0,w*2,h+0.45,w*2),P(CYL8,col,0,h+0.3,0,0,0,0,w*1.5,0.3,w*1.5));
-  for(let i=0;i<4;i++){const a=i/4*6.283+R();p.push(P(CYL6,dk||col,Math.cos(a)*w*1.1,0.05,Math.sin(a)*w*1.1,Math.sin(a)*0.9,0,-Math.cos(a)*0.9,0.07,0.24,0.07));}
-  for(let i=0;i<3;i++){const a=i/3*6.283+R(),y=h*(0.62+R()*0.25);p.push(Object.assign(P(CYL6,col,Math.cos(a)*0.16,y+0.1,Math.sin(a)*0.16,Math.sin(a)*0.8,0,-Math.cos(a)*0.8,0.06,0.42,0.06),{lo:'drop'}));}
-  for(let i=0;i<3;i++)p.push(Object.assign(P(BOX,dk||col,Math.cos(i*2.1)*w*0.95,0.2+i*0.18,Math.sin(i*2.1)*w*0.95,0,i*2.1,0,0.03,0.12,0.03),{lo:'drop'}));}
+// a tree crown the way Animal Crossing draws one: a soft, rounded cloud of foliage (a big body, a dome on top and a few
+// bulges round the sides), smooth-shaded so the toon ramp lays clean bands of light across it: sunlit on top, cool and
+// dark underneath. No loose leaves or spikes. cols = [light, mid, dark]; the crown reaches about 1.7*rad from its centre
+function canopy(p,R,cols,cx,cy,cz,rad){const [L,Mc,Dk]=cols,sh=lerpHex(Dk,0x14261e,0.3),a0=R()*6.283;
+  p.push(PG(SPH,Mc,sh,cx,cy,cz,0,a0,0,rad*2.6,rad*2.1,rad*2.6));
+  for(let i=0;i<4;i++){const a=a0+i*1.571+(R()-0.5)*0.5,r=rad*(0.95+R()*0.12),s=rad*(1.35+R()*0.25);
+    p.push(PG(SPH,lerpHex(L,Mc,0.5),Dk,cx+Math.cos(a)*r,cy-rad*(0.12+R()*0.12),cz+Math.sin(a)*r,0,a,0,s,s*0.86,s));}
+  p.push(PG(SPH,L,lerpHex(L,Mc,0.6),cx+(R()-0.5)*rad*0.2,cy+rad*0.72,cz+(R()-0.5)*rad*0.2,0,a0,0,rad*1.9,rad*1.5,rad*1.9));
+  const a1=a0+0.8;p.push(PG(SPH,L,Mc,cx+Math.cos(a1)*rad*0.55,cy+rad*0.42,cz+Math.sin(a1)*rad*0.55,0,0,0,rad*1.3,rad*1.1,rad*1.3));}
+// a round, leafy bush: a soft mound with a few lobes, lit on top (s scales it; returns the top height)
+function bushClump(p,R,cols,s=1){const [L,Mc,Dk]=cols,sh=lerpHex(Dk,0x14261e,0.3),a0=R()*6.283;
+  p.push(PG(SPH,Mc,sh,0,0.3*s,0,0,a0,0,0.92*s,0.66*s,0.92*s));
+  for(let i=0;i<3;i++){const a=a0+i*2.094+(R()-0.5)*0.4,sz=(0.52+R()*0.08)*s;p.push(PG(SPH,lerpHex(L,Mc,0.45),Dk,Math.cos(a)*0.28*s,0.24*s,Math.sin(a)*0.28*s,0,a,0,sz,sz*0.8,sz));}
+  p.push(PG(SPH,lerpHex(L,Mc,0.3),lerpHex(L,Mc,0.7),0.04*s,0.5*s,-0.02*s,0,0,0,0.6*s,0.44*s,0.6*s));
+  return 0.62*s;}
+// little flowers dotted over a crown or a bush (a disc of petals round a centre), all soft round shapes
+function dots(p,R,n,cx,cy,cz,rx,ry,cols,cc,sz=0.07){for(let i=0;i<n;i++){const a=R()*6.283,t=0.15+R()*0.75,x=cx+Math.cos(a)*rx*Math.sin(t*1.4),z=cz+Math.sin(a)*rx*Math.sin(t*1.4),y=cy+ry*Math.cos(t*1.4);
+  p.push(P(SPH_LO,cols[i%cols.length],x,y,z,0,0,0,sz*2,sz*0.9,sz*2));if(cc!==undefined)p.push(P(SPH_XS,cc,x,y+sz*0.35,z,0,0,0,sz*0.8,sz*0.5,sz*0.8));}}
+// round fruit hanging on the outside of a crown (apples, cherries…), each with a glint of light
+function fruit(p,R,n,col,cx,cy,cz,rad){const a0=R()*6.283;for(let i=0;i<n;i++){const a=a0+i/n*6.283+(R()-0.5)*0.5,r=rad*(1.45+R()*0.15),y=cy+rad*(-0.35+R()*0.45),x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;
+  p.push(P(SPH_LO,col,x,y,z,0,0,0,0.17,0.16,0.17),P(SPH_XS,0xffffff,x-0.03,y+0.04,z+0.03,0,0,0,0.04,0.03,0.04));}}
+// a smooth, slightly tapered trunk with a flared foot
+function trunkP(p,R,col,h,w=0.13,dk){p.push(PG(STRUNK,col,dk||col,0,(h+0.45)/2,0,0,R()*3,0,w*2,h+0.45,w*2),PG(SPH_LO,dk||col,col,0,0.05,0,0,0,0,w*3.4,0.3,w*3.4));}
 const PALMS=['palm','palmtall','palmfan','palmtwin'];
 // the far-away version of a batch of tree parts: a third of the leaf cards and palm leaflets (a bit bigger, so the silhouette holds)
 function lowParts(parts){let n=0,m=0;const out=[];for(const p of parts){
-  if(p.lo==='drop')continue;if(p.geo===ICO2&&p.c2!==undefined){out.push(Object.assign({},p,{geo:ICO}));continue;}if(p.lo==='wide'){out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.8}));continue;}/* palm fronds: keep every main blade, wider, drop the side blades */
+  if(p.lo==='drop')continue;if(p.geo===ICO2&&p.c2!==undefined){out.push(Object.assign({},p,{geo:ICO}));continue;}
+  if(p.geo===SPH){out.push(Object.assign({},p,{geo:SPH_LO}));continue;}if(p.geo===SPH_LO&&Math.max(p.sx,p.sz)<0.2){if(m++%2)continue;out.push(p);continue;}if(p.geo===SCONE){out.push(Object.assign({},p,{geo:SCONE_LO}));continue;}if(p.lo==='wide'){out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.8}));continue;}/* palm fronds: keep every main blade, wider, drop the side blades */
   if(p.geo===LEAF_CARD){if(n++%3)continue;out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.4,sy:p.sy*1.15,sz:p.sz*1.4}));}
   else if(p.geo===LEAF0&&p.sx<0.16){if(m++%3)continue;out.push(Object.assign({},p,{sx:p.sx*1.7}));}
   else if(p.geo===BOX&&p.sx<0.06&&p.sz>0.1){if(m++%2)continue;out.push(Object.assign({},p,{sz:p.sz*2}));}/* palm frond stems: every other, doubled */
@@ -1158,26 +1159,24 @@ function treeParts(kind,R,colRock){
   const p=[];
   switch(kind){
     case'oak':trunkP(p,R,0x7a5230,0.9,0.13,0x5e3e24);canopy(p,R,[0x6cb04a,0x4c8e3a,0x2f6a2c],0,1.3,0,0.55);
-      if(R()<0.4)for(let i=0;i<5;i++){const a=R()*6.28;p.push(P(ICO2,0xe8453a,Math.cos(a)*0.62,1.05+R()*0.4,Math.sin(a)*0.62,0,0,0,0.1,0.1,0.1));}break;
+      if(R()<0.4)fruit(p,R,5,0xe8453a,0,1.3,0,0.55);break;
     case'cherry':trunkP(p,R,0x6a4436,0.9,0.12,0x4e3228);canopy(p,R,[0xffd8e6,0xf4a8c4,0xd07a9a],0,1.3,0,0.55);
       for(let i=0;i<6;i++)lf(p,[0xf8c8d8,0xffe4ee][i%2],(R()-0.5)*1.5,0.02,(R()-0.5)*1.5,R()*6.28,0,0.1,0.08,0.02);break;
     case'maple':case'mapleR':{const c=kind==='maple'?[0xf4a444,0xe8803a,0xc85e24]:[0xec6a4a,0xc8402a,0x982a22];
       trunkP(p,R,0x6a4428,0.9,0.12,0x4e3020);canopy(p,R,c,0,1.3,0,0.55);
       for(let i=0;i<5;i++)lf(p,c[i%3],(R()-0.5)*1.4,0.02,(R()-0.5)*1.4,R()*6.28,0,0.13,0.1,0.02);break;}
     case'pine':case'snowpine':{const sn=kind==='snowpine',tip=0x8ad470,mid=0x3e9448,base=0x1a4a2c;
-      p.push(PG(TRUNK,0x7a4e30,0x5a3622,0,0.45,0,0,0,0,0.3,0.9,0.3));for(let i=0;i<4;i++){const a=i*1.7+R();p.push(P(CYL6,0x6a4428,Math.cos(a)*0.14,0.06,Math.sin(a)*0.14,Math.sin(a)*1.1,0,-Math.cos(a)*1.1,0.07,0.26,0.07));}
-      // stacked tiers, each dark at its skirt and lighter towards the top, with a scalloped edge and sunlit needle tufts
-      for(let i=0;i<5;i++){const t=i/4,y=0.62+i*0.42,rad=1.08-t*0.72,h=0.78-t*0.16,top=lerpHex(mid,tip,0.25+t*0.5),bot=lerpHex(base,mid,t*0.35);
-        p.push(PG(CONE12,top,bot,0,y+h/2,0,0,R(),0,rad*2,h,rad*2));
-        const n=Math.round(12-t*5);for(let k=0;k<n;k++){const a=k/n*6.283+i*0.5+R()*0.15;card(p,Math.cos(a)*rad*0.78,y+0.06,Math.sin(a)*rad*0.78,[Math.cos(a)*0.62,-0.78,Math.sin(a)*0.62],rad*0.42,0.24-t*0.06,bot,lerpHex(base,0x0a1a16,0.3));}
-        for(let k=0;k<Math.round(5-t*2);k++){const a=R()*6.28,r=rad*(0.3+R()*0.3);card(p,Math.cos(a)*r,y+h*(0.55-r/rad*0.45),Math.sin(a)*r,[Math.cos(a)*0.6,0.8,Math.sin(a)*0.6],0.2,0.12,lerpHex(tip,0xfff6c0,0.3),tip);}
-        if(sn)p.push(PG(CONE12,0xffffff,0xd8e8f0,0,y+h*0.72,0,0,R(),0,rad*1.5,h*0.5,rad*1.5));}
-      p.push(PG(CONE8,sn?0xffffff:lerpHex(tip,0xfff6c0,0.3),tip,0,2.72,0,0,0,0,0.3,0.42,0.3));break;}
+      p.push(PG(STRUNK,0x7a4e30,0x5a3622,0,0.4,0,0,0,0,0.3,0.8,0.3),PG(SPH_LO,0x5a3622,0x7a4e30,0,0.04,0,0,0,0,0.46,0.24,0.46));
+      // a cedar in the island style: four soft, rounded tiers, each dark under its skirt and lighter towards its top
+      for(let i=0;i<4;i++){const t=i/3,y=0.55+i*0.5,rad=1.0-t*0.58,h=0.95-t*0.2,top=lerpHex(mid,tip,0.3+t*0.45),bot=lerpHex(base,mid,t*0.3);
+        p.push(PG(SPH_LO,bot,lerpHex(base,0x0a1a16,0.3),0,y+0.06,0,0,0,0,rad*1.9,0.2,rad*1.9),PG(SCONE,top,bot,0,y+h/2,0,0,R(),0,rad*2,h,rad*2));
+        if(sn)p.push(PG(SCONE,0xffffff,0xdce8f2,0,y+h*0.74,0,0,R(),0,rad*1.12,h*0.52,rad*1.12));}
+      p.push(PG(SPH_LO,sn?0xffffff:lerpHex(tip,0xfff6c0,0.3),tip,0,2.76,0,0,0,0,0.18,0.22,0.18));break;}
     case'palm':palmParts(p,R,{n:9,lean:(R()-0.5)*0.6,fronds:8,cols:[0x2f7a34,0x8ad05a],nuts:3});break;
     case'palmtall':palmParts(p,R,{n:13,lean:(R()<0.5?-1:1)*(0.55+R()*0.3),fronds:9,flen:0.37,cols:[0x3a8a3a,0x9ade6a],nuts:2});break;
     case'palmfan':palmParts(p,R,{n:4,lean:0,fronds:11,seg:2,flen:0.44,wid:0.5,pitch:0.95,droop:0.35,spread:0.7,cols:[0x2a6e38,0x72c05a],nuts:0,trunk:[0x8a6a3e,0x7a5a34]});break;
     case'palmtwin':palmParts(p,R,{n:8,lean:-0.5,fronds:7,cols:[0x2f7a34,0x8ad05a],nuts:2,ox:-0.14});palmParts(p,R,{n:11,lean:0.55,fronds:8,cols:[0x3a8a3a,0x94d862],nuts:0,ox:0.14});break;
-    case'bush':{const s=1.1+R()*0.2,top=bushClump(p,R,[0xa8e070,0x5aa040,0x2a5e28],s);if(R()<0.5){const bc=pickR2([0xffffff,0xf8b8c8,0xf6d04a],R);for(let i=0;i<6;i++){const a=R()*6.28,r=R()*0.3*s;bloom(p,bc,0xf6d04a,Math.sin(a)*r,top-0.04-r*0.35,Math.cos(a)*r,0.07);}}break;}
+    case'bush':{const s=1.05+R()*0.2;bushClump(p,R,[0x9ad868,0x52a044,0x2a6030],s);if(R()<0.5){const bc=pickR2([[0xffffff,0xf4f0ff],[0xf8b8c8,0xf49ab4],[0xb8c4f8,0xa0a8f0]],R);dots(p,R,9,0,0.34*s,0,0.46*s,0.34*s,bc,0xf6d04a,0.06*s);}break;}
     case'flowerbed':wildflowers(p,R,[0xf7f2e8,0xf2a6c8,0xf6d04a,0xb8a8f2],9,0.36);for(let i=0;i<10;i++)lf(p,GREENS[i%4],(R()-0.5)*0.6,0.02,(R()-0.5)*0.6,R()*6.28,0.35,0.16,0.07);break;
     case'rockM':rockP(p,R,colRock,0.85);p.push(P(ICO2,0x5a8a44,0,0.36,0,0,R()*3,0,0.52,0.12,0.44),P(ICO2,0x6a9a4a,0.1,0.38,0.08,0,0,0,0.3,0.1,0.26));for(let i=0;i<6;i++)lf(p,GREENS[i%4],(R()-0.5)*0.4,0.38,(R()-0.5)*0.3,R()*6.28,0.4,0.12,0.06);break;
     case'rock':rockP(p,R,colRock,0.75);break;
@@ -1192,9 +1191,9 @@ function treeParts(kind,R,colRock){
   }
   return p;
 }
-function rockP(p,R,col,s){const c2=new T.Color(col).multiplyScalar(0.86).getHex(),c3=new T.Color(col).lerp(new T.Color(0xffffff),0.18).getHex();
-  p.push(P(ICO,col,0,0.17*s,0,R(),R()*3,R()*0.3,0.8*s,0.5*s,0.68*s),P(ICO,c3,0.05*s,0.3*s,-0.02,R(),R()*3,0,0.52*s,0.24*s,0.46*s),P(ICO,c2,0.3*s,0.1*s,0.18*s,R(),R()*3,0,0.4*s,0.3*s,0.38*s));
-  for(let i=0;i<4;i++){const a=R()*6.28;p.push(P(ICO,i%2?c2:col,Math.cos(a)*0.45*s,0.03,Math.sin(a)*0.45*s,R(),R(),R(),0.12,0.08,0.1));}}
+// a smooth, rounded stone (lit on top) with a smaller one leaning on it
+function rockP(p,R,col,s){const c2=new T.Color(col).multiplyScalar(0.72).getHex(),c3=new T.Color(col).multiplyScalar(0.94).getHex();
+  p.push(PG(SPH,c3,c2,0,0.2*s,0,R()*0.3,R()*3,R()*0.2,0.84*s,0.52*s,0.7*s),PG(SPH_LO,c3,c2,0.32*s,0.1*s,0.2*s,0,R()*3,0,0.38*s,0.26*s,0.34*s));}
 function vnoise(x,z,seed){const X=Math.floor(x/3),Z=Math.floor(z/3),fx=x/3-X,fz=z/3-Z,o=seed%997;const h=(a,b)=>hash(a*1.7+o,b*2.3-o);
   const sx=fx*fx*(3-2*fx),sz=fz*fz*(3-2*fz);return lerp(lerp(h(X,Z),h(X+1,Z),sx),lerp(h(X,Z+1),h(X+1,Z+1),sx),sz);}
 function levelOf(isl,x,z){
@@ -1766,15 +1765,16 @@ function bareTree(p,R,snow){trunkP(p,R,0x6a5444,0.9,0.13,0x4e3e32);
   for(let i=0;i<7;i++){const a=i/7*6.283+R()*0.4,tl=0.55+R()*0.4,L=0.55+R()*0.3,y=0.95+R()*0.5,x=Math.cos(a)*Math.sin(tl)*L*0.5,z=Math.sin(a)*Math.sin(tl)*L*0.5;
     p.push(P(CYL6,0x5e4a3c,x,y+Math.cos(tl)*L*0.5,z,Math.sin(a)*tl,0,-Math.cos(a)*tl,0.05,L,0.05));
     const tx=Math.cos(a)*Math.sin(tl)*L,ty=y+Math.cos(tl)*L,tz=Math.sin(a)*Math.sin(tl)*L;for(let k=0;k<2;k++){const b2=a+(k?0.6:-0.6);p.push(P(CYL6,0x6a5444,tx+Math.cos(b2)*0.12,ty+0.1,tz+Math.sin(b2)*0.12,Math.sin(b2)*0.7,0,-Math.cos(b2)*0.7,0.03,0.3,0.03));}
-    if(snow)p.push(P(ICO,0xf4f8fa,tx,ty+0.03,tz,0,R()*3,0,0.16,0.06,0.16));}
-  if(snow)p.push(P(ICO2,0xf4f8fa,0,1.02,0,0,0,0,0.34,0.08,0.34));}
+    if(snow)p.push(P(SPH_LO,0xf4f8fa,tx,ty+0.03,tz,0,R()*3,0,0.16,0.07,0.16));}
+  if(snow)p.push(P(SPH_LO,0xf4f8fa,0,1.02,0,0,0,0,0.34,0.09,0.34));}
 function wildTreeParts(v){const s=season(),R=mulberry(hi(v,31,S.worldSeed|0)),p=[];v%=4;
   if(v===1)return treeParts(s==='winter'?'snowpine':'pine',R,0x9a9ea8);
   if(s==='winter'){bareTree(p,R,true);return p;}
-  const cols=TREE_COLS[s][v];trunkP(p,R,0x7a5230,0.9,0.13,0x5e3e24);canopy(p,R,cols,0,1.3,0,0.55);
-  if(s==='spring'&&v!==3)for(let i=0;i<7;i++){const a=R()*6.28,r=0.5+R()*0.3;bloom(p,[0xffffff,0xf8d8e4][i%2],0xf6d04a,Math.cos(a)*r,1.2+R()*0.6,Math.sin(a)*r,0.08);}
-  if(s==='summer'&&v===3)for(let i=0;i<6;i++){const a=i*1.1+R(),r=0.62;p.push(P(ICO2,0xe0402e,Math.cos(a)*r,1.05+R()*0.45,Math.sin(a)*r,0,0,0,0.13,0.13,0.13),P(LEAF0,0xffffff,Math.cos(a)*r-0.03,1.1+R()*0.4,Math.sin(a)*r+0.04,0,0,0,0.03,0.03,0.03));}
-  if(s==='autumn')for(let i=0;i<8;i++)lf(p,cols[i%3],(R()-0.5)*1.5,0.02,(R()-0.5)*1.5,R()*6.28,0,0.12,0.09,0.02);
+  const cols=TREE_COLS[s][v];trunkP(p,R,0x7a5230,0.85,0.13,0x5e3e24);canopy(p,R,cols,0,1.3,0,0.55);
+  if(s==='spring'&&v===0)dots(p,R,12,0,1.55,0,0.78,0.52,[0xffffff,0xfbe0ea],0xf6d04a,0.08);
+  if(s==='summer'&&v===3)fruit(p,R,6,0xe0402e,0,1.3,0,0.55);
+  if(s==='autumn'&&v===3)fruit(p,R,5,0xf08a2a,0,1.3,0,0.55);
+  if(s==='autumn')for(let i=0;i<6;i++)p.push(P(SPH_XS,cols[i%3],(R()-0.5)*1.6,0.02,(R()-0.5)*1.6,0,R()*3,0,0.16,0.02,0.11));
   return p;}
 const wildTreeKinds=()=>['wild',season()];
 
@@ -1795,10 +1795,11 @@ function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S
   for(const [x,z] of isl.grass){const k=K(x,z);if(keep.has(k)||farmQ(x,z)<1.3||S.debris.some(d=>d.x===x&&d.z===z))continue;
     const f=vnoise(x*0.9+sd,z*0.9-sd,sd)*0.7+vnoise(x*2.3,z*2.3,sd+3)*0.3,r=R();let kd=null;
     const forest=f>0.72-fAmt*0.3,thicket=f>0.6-fAmt*0.3;
-    if(cliffEdge(x,z)&&r<0.3)kd=r<0.09?'boulder':'rock';
-    else if(forest&&!wet(x,z))kd=r<0.6?'tree':r<0.75?'bush':r<0.86?'weed':null;
-    else if(thicket)kd=r<0.16?'tree':r<0.42?'bush':r<0.55?'weed':r<0.6?'twig':null;
-    else kd=r<0.05?'weed':r<0.075?'twig':r<0.095?'rock':r<0.11?'bush':null;
+    if(cliffEdge(x,z)&&r<0.16)kd=r<0.05?'boulder':'rock';
+    // tidy, readable woods: trees with a few bushes at their feet, bushy edges, and open meadows with only the odd weed or stone
+    else if(forest&&!wet(x,z))kd=r<0.55?'tree':r<0.64?'bush':null;
+    else if(thicket)kd=r<0.16?'tree':r<0.34?'bush':r<0.38?'weed':null;
+    else kd=r<0.022?'weed':r<0.03?'twig':r<0.04?'rock':r<0.055?'bush':null;
     if(!kd)continue;const d=newDebris(x,z,kd);d.v=Math.floor(R()*(kd==='tree'?4:3));d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}}
 
 /* ---- paths wear in where you walk: every step onto a grass tile counts, and a well-trodden tile turns to path ---- */
@@ -3324,8 +3325,7 @@ function findGroup(k,seed){const p=[],g=new T.Group();
     case'fossil':p.push(P(CYL8,0xb8b0a0,0,0.03,0,0,0,0,0.34,0.05,0.34),P(BOX,0x8a8478,0,0.07,0,0,0,0,0.2,0.02,0.04),P(BOX,0x8a8478,0,0.07,0,0,1.2,0,0.14,0.02,0.04),P(BOX,0x8a8478,0,0.07,0,0,2.4,0,0.1,0.02,0.04));break;
     case'starfrag':for(let i=0;i<5;i++){const a=i/5*6.28;p.push(P(OCT,0xffe070,Math.sin(a)*0.1,0.08,Math.cos(a)*0.1,0,a,Math.PI/2,0.1,0.18,0.1));}p.push(P(ICO,0xfff4b0,0,0.08,0,0,0,0,0.14,0.14,0.14));break;
     case'crate':p.push(P(BOX,0xa27a50,0,0.1,0,0,0,0,0.5,0.4,0.5),P(BOX,0x6a4a30,0,0.1,0,0,0,0,0.52,0.06,0.52),P(BOX,0x6a4a30,0,0.1,0,0,0,0,0.06,0.42,0.52));break;
-    case'weed':{const R=mulberry(seed);for(let i=0;i<6;i++)p.push(P(BOX,i%2?0x3d6e2c:0x4f8a34,(R()-0.5)*0.34,0.1,(R()-0.5)*0.34,(R()-0.5)*0.6,R()*3,(R()-0.5)*0.6,0.05,0.2+R()*0.14,0.1));
-      if(R()<0.4)p.push(P(BOX,0xf6d04a,(R()-0.5)*0.2,0.26,(R()-0.5)*0.2,0,0,0,0.07,0.05,0.07));break;}
+    case'weed':p.push(...debrisParts('weed',mulberry(seed),seed%3));break;
   }
   g.add(M(p,k==='starfrag'?lumMat:vcMat));return g;}
 function findAt(x,z){return S.finds.find(f=>f.x===x&&f.z===z)||null;}
@@ -3337,18 +3337,30 @@ const debGeo={},debMesh=new Map(),debrisRoot=new T.Group();scene.add(debrisRoot)
 function debrisAt(x,z){return S.debris.find(d=>d.x===x&&d.z===z)||null;}
 function debrisParts(k,R,v){const p=[];switch(k){
   case'tree':return wildTreeParts(v);
-  case'weed':for(let i=0;i<10;i++)lf(p,[0x5a8a34,0x6a9a3a,0x4a7a2a][i%3],(R()-0.5)*0.3,0,(R()-0.5)*0.3,R()*6.28,1.0+R()*0.4,0.3+R()*0.15,0.06,0.025);
-    if(R()<0.6)for(let i=0;i<2;i++)bloom(p,[0xf6d04a,0xffffff][i],0xf6d04a,(R()-0.5)*0.3,0.26,(R()-0.5)*0.3,0.05);break;
+  // a weed: a low, soft clump of round leaves, sometimes with a dandelion or daisy poking out
+  case'weed':for(let i=0;i<5;i++){const a=i*1.257+R()*0.4,r=i?0.1+R()*0.06:0,s=0.16+R()*0.06;p.push(PG(SPH_LO,[0x78b448,0x68a43e,0x5a9636][i%3],0x3e7428,Math.cos(a)*r,0.05+(i?0:0.04),Math.sin(a)*r,0,a,0,s*1.2,s*0.8,s));}
+    if(v!==1){const x=(R()-0.5)*0.12,z=(R()-0.5)*0.12;p.push(P(CYL6,0x5a9a3a,x,0.13,z,0,0,0,0.015,0.2,0.015));dots(p,R,1,x,0.23,z,0,0,[v?0xffffff:0xf6d04a],v?0xf6d04a:undefined,0.05);}break;
   case'twig':for(let i=0;i<3;i++)p.push(P(CYL6,i%2?0x7a5230:0x6a4428,(R()-0.5)*0.3,0.03,(R()-0.5)*0.3,1.57,R()*3,0,0.04,0.4+R()*0.2,0.04));lf(p,0x6a9a3a,0.05,0.04,0,R()*6,0.2,0.12,0.07);break;
-  case'bush':bushClump(p,R,[0x8ab858,0x4a7a2e,0x2a4a1e],0.8,0.6);
-    for(let i=0;i<4;i++){const a=R()*6.28;p.push(P(CYL6,0x6a4a2a,Math.sin(a)*0.25,0.36,Math.cos(a)*0.25,Math.cos(a)*0.8,0,-Math.sin(a)*0.8,0.02,0.26,0.02));}break;
+  case'bush':return bushParts(v);
   case'rock':rockP(p,R,0x9a9ea8,0.55);break;
   case'boulder':rockP(p,R,0x8e929c,1.05);p.push(P(ICO2,0x5a8a44,0.05,0.42,0,0,R()*3,0,0.5,0.1,0.42));break;
   case'stump':p.push(P(CYL12,0x7a5230,0,0.16,0,0,0,0,0.44,0.32,0.44),P(CYL12,0xd8b078,0,0.325,0,0,0,0,0.38,0.02,0.38),P(CYL12,0xb08a58,0,0.33,0,0,0,0,0.22,0.02,0.22),P(CYL12,0xd8b078,0,0.335,0,0,0,0,0.1,0.02,0.1));
     for(let i=0;i<4;i++){const a=i*1.57+R()*0.4;p.push(P(CYL6,0x6a4428,Math.cos(a)*0.22,0.05,Math.sin(a)*0.22,Math.sin(a)*1.1,0,-Math.cos(a)*1.1,0.08,0.26,0.08));}
     if(R()<0.5)p.push(P(CYL6,0xf2ead8,0.2,0.08,0.18,0,0,0,0.04,0.12,0.04),P(ICO2,0xd8453a,0.2,0.15,0.18,0,0,0,0.12,0.06,0.12));break;}
   return p;}
-function debrisGeo(k,v,lo){const id=k+v+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo':''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v);debGeo[id]=merge(lo?lowParts(parts):parts);}return debGeo[id];}
+// wild bushes change with the seasons too: v0 a plain round bush, v1 a flowering one (azalea pink in spring, hydrangea blue
+// in summer), v2 a berry bush; autumn turns them rust and gold, winter tucks them under a cap of snow
+const BUSH_COLS={spring:[0xa0dc6c,0x58a846,0x2c6630],summer:[0x86c85a,0x48943c,0x245a2a],autumn:[0xe8a848,0xc8742e,0x8a4a22],winter:[0x6a9a6a,0x4a7a52,0x2c4e3a]};
+function bushParts(v){const s=season(),R=mulberry(hi(v,57,S.worldSeed|0)),p=[],c=(s==='autumn'&&v===0)?[0xa8c860,0x6a9a3e,0x3a6a2a]:BUSH_COLS[s],sc=0.82;
+  bushClump(p,R,c,sc);
+  if(v===1&&s==='spring')dots(p,R,10,0,0.3*sc,0,0.5*sc,0.38*sc,[0xf8a8c8,0xf490b8,0xffffff],0xf6d04a,0.075);
+  if(v===1&&s==='summer')for(let i=0;i<6;i++){const a=i*1.05+R()*0.4,up=i%2,x=Math.cos(a)*(up?0.22:0.42)*sc,z=Math.sin(a)*(up?0.22:0.42)*sc,y=(up?0.58:0.4)*sc,col=[0x7a9af0,0xa47ae0,0x6ab0f0][i%3];
+    p.push(PG(SPH_LO,lerpHex(col,0xffffff,0.3),col,x,y,z,0,0,0,0.2,0.17,0.2));}
+  if(v===2&&s!=='winter')for(let i=0;i<7;i++){const a=R()*6.283,t=0.3+R()*0.6,x=Math.cos(a)*0.46*sc*Math.sin(t*1.3),z=Math.sin(a)*0.46*sc*Math.sin(t*1.3),y=0.3*sc+0.34*sc*Math.cos(t*1.3);
+    p.push(P(SPH_XS,s==='autumn'?0x6a3a8a:0xd83848,x,y,z,0,0,0,0.08,0.08,0.08));}
+  if(s==='winter')p.push(PG(SPH_LO,0xffffff,0xdce8f2,0,0.52*sc,0,0,0,0,0.78*sc,0.3*sc,0.78*sc));
+  return p;}
+function debrisGeo(k,v,lo){const id=k+v+(k==='bush'?season():'')+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo':''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v);debGeo[id]=merge(lo?lowParts(parts):parts);}return debGeo[id];}
 // debris is drawn instanced: one batch per model variant (a handful of draw calls for the whole field); debMesh maps a tile to its slot
 // wild trees come in two builds: full detail near the camera, a lighter one further off (treeLOD re-sorts them as you move)
 const treeGroups=[];let lodAt=null,lodT=0;
@@ -3485,7 +3497,7 @@ function bugGroup(B){const g=new T.Group(),kind=B.kind||'fly',wm=B.glow?lumMat:v
     P(ICO,0xffffff,sd*0.22*s,0.007,0.1*s,0,0,0,0.02*s,0.01,0.02*s),P(ICO,0xffffff,sd*0.19*s,0.007,0.06*s,0,0,0,0.015*s,0.01,0.015*s)],wm);
   const wl=wing(-1),wr=wing(1);g.add(wl,wr);g.userData={wl,wr};return g;}
 function spawnBug(){const isl=curIsl();if(!isl||!isl.grass.length)return;const night=isNight();if(S.rain&&!night)return;
-  const near=bugs.filter(b=>b.isl===isl.id);if(near.length>=(night?3:5))return;
+  const near=bugs.filter(b=>b.isl===isl.id);if(near.length>=(night?4:7))return;
   const flowers=isl.home?S.objs.filter(o=>o.k==='flowers'):[];
   const id=pickW(BUGS,k=>(BUGS[k].time==='night')===night&&BUGS[k].bio.includes(isl.biome),(k,v)=>v.w*(v.w<5?0.45:1)*(v.w<10?1+flowers.length*0.2:1));if(!id)return;
   let hx,hz;if(flowers.length&&Math.random()<0.6){const f=pickR(flowers);hx=f.x;hz=f.z;}else[hx,hz]=pickR(isl.grass);
@@ -3533,6 +3545,139 @@ function shooCrow(){if(!crow||crow.state==='out')return;crow.state='out';crow.t=
   burst(crowG.position.x,crowG.position.y,crowG.position.z,0x2a2436,8,1.4,0.07);floatText(crow.x,1.2,crow.z,'Shoo!');addXP(3);
   if(Math.random()<0.4){gain('g:feather');setTimeout(()=>floatText(crow.x,1.2,crow.z,'+ Crow Feather'),400);}}
 
+/* =========================================================
+   Critters (not saved): the small animals that make the island feel lived in. Songbirds hop and peck in the grass,
+   rabbits nibble at the meadow edges, squirrels scamper round the trees, frogs sit by the river, crabs scuttle on the
+   sand, bees drift between flowers, and now and then a deer steps out of the woods. They come and go around you with the
+   time of day and the season, and each one bolts in its own way if you get too close: birds fly off, rabbits and deer
+   bound away into the undergrowth, squirrels dash up a tree, frogs plop into the water and crabs dig into the sand.
+   They're scenery, not catches (the net is for bugs, 74-life).
+   ========================================================= */
+const critters=[];let critT=1;
+// kind: habitat, how many near you at once (by time of day), flee distance, walking speed
+const CRIT={
+  bird:{n:[5,0],flee:2.6,sp:1.1},rabbit:{n:[2,1],flee:3,sp:1.3},squirrel:{n:[2,0],flee:2.5,sp:1.8},
+  frog:{n:[2,2],flee:2,sp:1.2},crab:{n:[3,2],flee:2.2,sp:0.7},bee:{n:[3,0],flee:0,sp:1},deer:{n:[1,0],flee:5,sp:1.1}};
+const critSeason=()=>{const i=S.sea?null:curIsl();return i&&i.home?season():'summer';};
+function critWant(k){const night=isNight(),s=critSeason(),n=CRIT[k].n[night?1:0];
+  if(s==='winter'&&(k==='frog'||k==='bee'))return 0;if(s==='winter'&&k==='bird')return 2;if(s==='autumn'&&k==='bee')return 1;
+  if(S.rain&&(k==='bee'||k==='bird'))return 0;return n;}
+
+// ---- the models: soft, round little animals (built facing +z) ----
+const CRIT_COLS={bird:[[0x9a6a44,0xe8d8b8,0x7a5234],[0x8a6048,0xe8703a,0x5a4034],[0x5a8ae0,0xf0e4d0,0x3a64b0]]};
+function critModel(k,v){const g=new T.Group(),p=[],e=(x,y,z,s=0.035)=>p.push(P(SPH_XS,0x2a2230,x,y,z,0,0,0,s,s,s),P(SPH_XS,0xffffff,x+s*0.2,y+s*0.25,z+s*0.3,0,0,0,s*0.35,s*0.35,s*0.35));
+  let wings=null,tail=null;const wint=critSeason()==='winter';
+  switch(k){
+    case'bird':{const [b,bl,dk]=CRIT_COLS.bird[v%3];p.push(PG(SPH,b,dk,0,0.12,0,0,0,0,0.2,0.17,0.26),P(SPH_LO,bl,0,0.1,0.05,0,0,0,0.15,0.12,0.16),PG(SPH_LO,b,dk,0,0.21,0.1,0,0,0,0.15,0.14,0.15),
+        P(CONE5,0xf0b040,0,0.2,0.19,1.57,0,0,0.04,0.07,0.035),P(BOX,dk,0,0.14,-0.14,-0.35,0,0,0.07,0.015,0.12),P(CYL5,0xe0a040,0.04,0.03,0,0,0,0,0.012,0.06,0.012),P(CYL5,0xe0a040,-0.04,0.03,0,0,0,0,0.012,0.06,0.012));
+      e(0.055,0.23,0.15,0.025);e(-0.055,0.23,0.15,0.025);
+      const w=sd=>{const m=M([PG(SPH_LO,b,dk,sd*0.06,0,0,0,0,0,0.12,0.03,0.18)]);m.position.set(sd*0.07,0.14,-0.01);return m;};wings=[w(-1),w(1)];break;}
+    case'rabbit':{const c=wint?0xf4f2ee:[0xc8a888,0x9a8272,0xd8c0a0][v%3],dk=lerpHex(c,0x5a4a40,0.35);
+      p.push(PG(SPH,c,dk,0,0.15,-0.02,0,0,0,0.26,0.24,0.32),PG(SPH,c,dk,0,0.25,0.14,0,0,0,0.2,0.19,0.19),P(SPH_LO,0xffffff,0,0.17,-0.18,0,0,0,0.1,0.1,0.1),P(SPH_XS,0xf4a0b0,0,0.24,0.235,0,0,0,0.04,0.03,0.03));
+      for(const sd of [-1,1])p.push(PG(SPH_LO,c,dk,sd*0.05,0.4,0.11,-0.2,0,sd*0.18,0.06,0.22,0.045),P(SPH_XS,0xf0b0bc,sd*0.05,0.4,0.125,-0.2,0,sd*0.18,0.03,0.16,0.02),P(SPH_LO,c,sd*0.08,0.05,0.1,0,0,0,0.07,0.06,0.11));
+      e(0.075,0.28,0.2,0.03);e(-0.075,0.28,0.2,0.03);break;}
+    case'squirrel':{const c=0xc0662e,dk=0x8a4420;
+      p.push(PG(SPH,c,dk,0,0.12,0,0,0,0,0.16,0.2,0.22),P(SPH_LO,0xf0dcc0,0,0.12,0.06,0,0,0,0.11,0.15,0.1),PG(SPH_LO,c,dk,0,0.24,0.08,0,0,0,0.14,0.13,0.14),P(SPH_XS,0x2a2230,0,0.23,0.155,0,0,0,0.025,0.02,0.02));
+      for(const sd of [-1,1])p.push(P(CONE5,c,sd*0.04,0.32,0.07,0,0,sd*0.2,0.035,0.06,0.03));
+      e(0.05,0.26,0.13,0.022);e(-0.05,0.26,0.13,0.022);
+      tail=M([PG(SPH_LO,0xd87838,dk,0,0.12,0,0,0,0,0.12,0.26,0.12),PG(SPH_LO,0xe08a44,c,0,0.26,0.04,0.5,0,0,0.11,0.16,0.1)]);tail.position.set(0,0.06,-0.1);tail.rotation.x=-0.3;break;}
+    case'frog':{const c=[0x6ab84a,0x5aa848,0x8ac04a][v%3],dk=lerpHex(c,0x1a3a1a,0.45);
+      p.push(PG(SPH,c,dk,0,0.07,0,0,0,0,0.22,0.13,0.24),P(SPH_LO,0xe8f0b8,0,0.05,0.05,0,0,0,0.16,0.08,0.14));
+      for(const sd of [-1,1])p.push(PG(SPH_LO,c,dk,sd*0.06,0.13,0.06,0,0,0,0.08,0.08,0.08),P(SPH_LO,dk,sd*0.1,0.03,-0.06,0,0,0,0.09,0.05,0.13),P(SPH_XS,dk,sd*0.08,0.02,0.1,0,0,0,0.06,0.03,0.06));
+      e(0.075,0.155,0.085,0.03);e(-0.075,0.155,0.085,0.03);break;}
+    case'crab':{const c=0xe0603a,dk=0xa83a24;
+      p.push(PG(SPH,c,dk,0,0.07,0,0,0,0,0.24,0.1,0.18));
+      for(const sd of [-1,1]){p.push(PG(SPH_LO,c,dk,sd*0.13,0.07,0.1,0,sd*0.4,0,0.08,0.06,0.1),P(CYL5,dk,sd*0.03,0.12,0.06,0,0,0,0.012,0.06,0.012));e(sd*0.03,0.16,0.06,0.022);
+        for(let i=0;i<3;i++)p.push(P(CYL5,dk,sd*0.13,0.03,-0.04+i*0.05,0,0,sd*1.1,0.015,0.1,0.015));}break;}
+    case'bee':{p.push(P(SPH_LO,0xf6c83a,0,0,0,0,0,0,0.07,0.07,0.1),P(SCYL,0x2a2230,0,0,-0.012,1.57,0,0,0.072,0.02,0.072),P(SCYL,0x2a2230,0,0,-0.04,1.57,0,0,0.06,0.016,0.06),P(SPH_XS,0x2a2230,0,0.005,0.05,0,0,0,0.045,0.045,0.04));
+      const w=sd=>{const m=M([P(SPH_XS,0xf4f8ff,sd*0.04,0,0,0,0,0,0.08,0.012,0.05)]);m.position.set(sd*0.01,0.035,0);return m;};wings=[w(-1),w(1)];break;}
+    case'deer':{const c=0xb07a4a,dk=0x7a5030,lg=0x8a5a36;
+      p.push(PG(SPH,c,dk,0,0.5,0,0,0,0,0.3,0.28,0.58),P(SPH_LO,0xf4ead8,0,0.46,0.02,0,0,0,0.22,0.18,0.4),PG(SCYL,c,dk,0,0.66,0.24,-0.5,0,0,0.1,0.28,0.1),PG(SPH_LO,c,dk,0,0.8,0.33,0,0,0,0.16,0.16,0.2),
+        PG(SPH_LO,c,dk,0,0.76,0.43,0,0,0,0.1,0.09,0.12),P(SPH_XS,0x2a2230,0,0.77,0.49,0,0,0,0.04,0.03,0.03),P(SPH_LO,0xffffff,0,0.56,-0.28,0,0,0,0.08,0.1,0.06));
+      for(const sd of [-1,1])p.push(P(SPH_LO,c,sd*0.09,0.9,0.3,0,0,sd*0.7,0.05,0.13,0.03));
+      for(const [x,z] of [[0.08,0.18],[-0.08,0.18],[0.08,-0.18],[-0.08,-0.18]])p.push(P(SCYL,lg,x,0.2,z,0,0,0,0.075,0.4,0.075),P(SPH_XS,0x4a3020,x,0.02,z,0,0,0,0.08,0.05,0.09));
+      for(let i=0;i<6;i++)p.push(P(SPH_XS,0xf4ead8,(i%2?0.08:-0.08)+(i%3)*0.02,0.6,-0.18+i*0.07,0,0,0,0.035,0.02,0.035));
+      e(0.065,0.83,0.4,0.028);e(-0.065,0.83,0.4,0.028);break;}
+  }
+  const body=M(p);g.add(body);if(wings)g.add(...wings);if(tail)g.add(tail);g.userData={body,wings,tail};return g;}
+
+// ---- where each kind lives ----
+function critGround(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&!debrisAt(x,z)&&!objAt(x,z)&&!fixedAt(x,z)&&!riverSurf.has(k);}
+function nearTree(x,z,r){for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const d=debrisAt(x+dx,z+dz);if(d&&d.k==='tree')return[x+dx,z+dz];}return null;}
+function nearWater(x,z,r){for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)if(riverSurf.has(K(x+dx,z+dz)))return[x+dx,z+dz];return null;}
+function critHabitat(k,x,z){
+  switch(k){
+    case'crab':return landMap.get(K(x,z))==='sand'&&!objAt(x,z);
+    case'frog':return critGround(x,z)&&!!nearWater(x,z,1);
+    case'squirrel':return critGround(x,z)&&!!nearTree(x,z,1);
+    case'deer':return critGround(x,z)&&!!nearTree(x,z,2)&&!nearWater(x,z,1);
+    case'bee':return critGround(x,z)||(TOWN.flora&&TOWN.flora.has(K(x,z)));
+    default:return critGround(x,z)&&!S.tiles[K(x,z)];}}
+const critY=(x,z)=>surfY(x,z)||topY(Math.round(x),Math.round(z))||0.3;
+const critLvl=(x,z)=>lvlMap.get(K(Math.round(x),Math.round(z)))||0;
+
+function spawnCritter(k){const a=Math.random()*6.283,d=(k==='deer'?8:4)+Math.random()*(k==='deer'?4:8);
+  for(let it=0;it<14;it++){const x=Math.round(vil.x+Math.cos(a+it*0.45)*d),z=Math.round(vil.z+Math.sin(a+it*0.45)*d);if(!critHabitat(k,x,z))continue;
+    const n=k==='bird'?1+Math.floor(Math.random()*3):1;
+    for(let i=0;i<n;i++){const v=Math.floor(Math.random()*3),g=critModel(k,k==='bird'&&i>0?critters[critters.length-1].v:v),cx=x+(Math.random()-0.5)*0.8,cz=z+(Math.random()-0.5)*0.8;
+      const c={k,v,g,x:cx,z:cz,y:critY(cx,cz),state:'idle',t:Math.random()*2,wait:1+Math.random()*3,tx:cx,tz:cz,ph:Math.random()*6.28,out:0,hx:x,hz:z,sc:k==='deer'?1:1.1};
+      g.position.set(cx,c.y,cz);g.rotation.y=Math.random()*6.28;g.scale.setScalar(0.01);scene.add(g);critters.push(c);}
+    if(k==='deer'&&!S.sawDeer){S.sawDeer=1;setTimeout(()=>toast('A deer has stepped out of the trees! Creep closer slowly… or not at all.','rare',ICON.star),600);}
+    return true;}
+  return false;}
+function dropCritter(i){const c=critters[i];scene.remove(c.g);c.g.traverse(o=>{if(o.geometry)o.geometry.dispose();});critters.splice(i,1);}
+
+// pick somewhere nearby of the same kind of ground to wander to
+function critWander(c){const r=c.k==='deer'?3:c.k==='crab'?1.5:2;for(let it=0;it<8;it++){const x=c.hx+(Math.random()-0.5)*2*r,z=c.hz+(Math.random()-0.5)*2*r,rx=Math.round(x),rz=Math.round(z);
+    if(critHabitat(c.k,rx,rz)&&critLvl(rx,rz)===critLvl(c.x,c.z)){c.tx=x;c.tz=z;c.state='move';c.t=0;return;}}c.wait=1+Math.random()*2;}
+function critFlee(c){c.state='flee';c.t=0;const a=Math.atan2(c.z-vil.z,c.x-vil.x);c.fx=Math.cos(a);c.fz=Math.sin(a);
+  if(c.k==='squirrel'){const t=nearTree(Math.round(c.x),Math.round(c.z),2);if(t){c.tree=t;}}
+  if(c.k==='frog'){const w=nearWater(Math.round(c.x),Math.round(c.z),2);if(w)c.water=w;}}
+
+function updateCritters(dt,tt){
+  // keep a lively population around you
+  critT-=dt;if(critT<=0){critT=1.2;if(!S.sea&&!inside){const ks=Object.keys(CRIT).filter(k=>critters.filter(c=>c.k===k).length<critWant(k));
+      if(ks.length){const k=ks[Math.floor(Math.random()*ks.length)];if(k!=='deer'||Math.random()<0.15)spawnCritter(k);}}}
+  for(let i=critters.length-1;i>=0;i--){const c=critters[i],g=c.g,u=g.userData;c.t+=dt;
+    const far=Math.hypot(c.x-vil.x,c.z-vil.z);if(far>26||S.sea){dropCritter(i);continue;}
+    if(c.state!=='flee'&&c.state!=='gone'&&c.k!=='bee'&&far<CRIT[c.k].flee*(vil.idle>1.5?0.6:1))critFlee(c);
+    let hop=0,sq=1;
+    if(c.k==='bee'){// drifts in lazy loops round its flowers, wings a blur
+      const a=c.t*0.9+c.ph;c.x=c.hx+Math.cos(a)*0.7+Math.sin(c.t*2.1)*0.2;c.z=c.hz+Math.sin(a*1.3)*0.6;c.y=critY(c.hx,c.hz)+0.35+Math.sin(c.t*3)*0.08;
+      g.rotation.y=a+Math.PI/2;const f=Math.sin(tt*60)*0.6;u.wings[0].rotation.z=f;u.wings[1].rotation.z=-f;if(c.t>40)c.state='gone';}
+    else if(c.state==='idle'){c.wait-=dt;
+      if(c.k==='bird'){const pk=Math.sin(c.t*5+c.ph)>0.7;u.body.rotation.x=pk?0.45:0;if(Math.random()<dt*0.4)g.rotation.y+=(Math.random()-0.5)*2;}
+      if(c.k==='rabbit'){u.body.rotation.x=Math.sin(c.t*9)>0.8?0.15:0;}
+      if(c.k==='squirrel'){u.tail.rotation.x=-0.3+Math.sin(c.t*6)*0.25;}
+      if(c.k==='frog'){sq=1+Math.sin(c.t*4)*0.06;}
+      if(c.k==='deer'){u.body.rotation.x=Math.sin(c.t*0.6+c.ph)>0.2?0.35:0;}
+      if(c.wait<=0)critWander(c);}
+    else if(c.state==='move'){const dx=c.tx-c.x,dz=c.tz-c.z,d=Math.hypot(dx,dz),sp=CRIT[c.k].sp*(c.k==='bird'?0.6:1);u.body.rotation.x=0;
+      if(d<0.05){c.state='idle';c.wait=1+Math.random()*(c.k==='deer'?6:4);}
+      else{const st=Math.min(d,sp*dt);c.x+=dx/d*st;c.z+=dz/d*st;
+        g.rotation.y=c.k==='crab'?Math.atan2(dx,dz)+Math.PI/2:Math.atan2(dx,dz);
+        if(c.k==='bird'||c.k==='rabbit'||c.k==='frog')hop=Math.abs(Math.sin(c.t*(c.k==='bird'?14:8)))*(c.k==='rabbit'?0.16:0.07);
+        if(c.k==='squirrel')hop=Math.abs(Math.sin(c.t*12))*0.05;if(c.k==='deer')hop=Math.abs(Math.sin(c.t*5))*0.03;}
+      c.y=critY(c.x,c.z);}
+    else if(c.state==='flee'){const T0=c.t;
+      if(c.k==='bird'){// up and away
+        c.x+=c.fx*dt*3;c.z+=c.fz*dt*3;c.y+=dt*(1.5+T0*1.5);g.rotation.y=Math.atan2(c.fx,c.fz);const f=Math.sin(tt*30)*0.9;u.wings[0].rotation.z=f;u.wings[1].rotation.z=-f;if(T0>3)c.state='gone';}
+      else if(c.k==='squirrel'&&c.tree){const [tx,tz]=c.tree,dx=tx-c.x,dz=tz-c.z,d=Math.hypot(dx,dz);
+        if(d>0.15){c.x+=dx/d*dt*3.5;c.z+=dz/d*dt*3.5;g.rotation.y=Math.atan2(dx,dz);c.y=critY(c.x,c.z);hop=Math.abs(Math.sin(c.t*16))*0.05;}
+        else{c.y+=dt*1.6;g.rotation.x=-1.3;if(c.y>critY(tx,tz)+1.1)c.state='gone';}}
+      else if(c.k==='frog'&&c.water){const [wx,wz]=c.water,dx=wx-c.x,dz=wz-c.z,d=Math.hypot(dx,dz);
+        if(d>0.2){c.x+=dx/d*dt*2.5;c.z+=dz/d*dt*2.5;g.rotation.y=Math.atan2(dx,dz);c.y=critY(c.x,c.z);hop=Math.abs(Math.sin(c.t*9))*0.18;}
+        else{burst(c.x,c.y+0.05,c.z,0xbfe6ff,10,1.2,0.05);c.state='gone';c.out=1;}}
+      else if(c.k==='crab'){// scuttles off sideways and digs in
+        if(T0<0.8){c.x+=c.fx*dt*1.8;c.z+=c.fz*dt*1.8;g.rotation.y=Math.atan2(c.fx,c.fz)+Math.PI/2;c.y=critY(c.x,c.z);}
+        else{c.y-=dt*0.35;if(Math.random()<dt*10)emit(c.x,c.y+0.12,c.z,{vx:(Math.random()-0.5),vy:0.8,vz:(Math.random()-0.5),life:0.4,max:0.4,size:0.04,color:0xe8d4a8,g:3});if(T0>1.4)c.state='gone';}}
+      else{// rabbits, deer and cornered critters: bound away and slip into the undergrowth
+        const sp=c.k==='deer'?4.5:3.5;c.x+=c.fx*dt*sp;c.z+=c.fz*dt*sp;g.rotation.y=Math.atan2(c.fx,c.fz);c.y=critY(c.x,c.z);
+        hop=Math.abs(Math.sin(c.t*(c.k==='deer'?7:11)))*(c.k==='deer'?0.35:0.22);if(T0>2.2)c.state='gone';}}
+    if(c.state==='gone'){c.out+=dt*3;if(c.out>=1){dropCritter(i);continue;}}
+    // fade in when they arrive, shrink away when they leave
+    const vis=c.state==='gone'?1-c.out:Math.min(1,c.t*2+(c.state==='idle'?0:1));g.scale.set(c.sc*vis,c.sc*vis*sq,c.sc*vis);
+    g.position.set(c.x,c.y+hop,c.z);}}
 /* =========================================================
    Fishing (from any shore, or from the boat)
    ========================================================= */
@@ -3936,7 +4081,7 @@ function updateLife(dt,tt){
     checkDiscovery();const ci=curIsl();if((ci?ci.id:-1)!==ffIsl)placeFireflies(ci);}
   for(const i of islands){if(!i.pgroup)continue;for(const m of i.pgroup.children){const Pd=PLANTS[m.userData.plant.id];if(Pd.w<5&&Math.random()<dt*1.2)sparkle(m.position.x,0.8,m.position.z,0xfff0a0);}
     if(i.vent&&Math.random()<dt*3&&Math.hypot(i.cx-cam.tx,i.cz-cam.tz)<50)emit(i.vent[0]+(Math.random()-0.5)*0.6,i.vent[1],i.vent[2]+(Math.random()-0.5)*0.6,{vy:0.9,vx:0.2,life:3,max:3,size:0.28,color:Math.random()<0.3?0xf06a2a:0x8a8490});}
-  updateBugs(dt,tt);updateCrow(dt,tt);updateFishing(dt,tt);updateFlotsam(dt,tt);}
+  updateBugs(dt,tt);updateCritters(dt,tt);updateCrow(dt,tt);updateFishing(dt,tt);updateFlotsam(dt,tt);}
 
 /* =========================================================
    Thumbnails of 3D models for the shop
@@ -4587,7 +4732,9 @@ if(!prebuilt){genIslands();for(const isl of islands)buildIsland(isl);rebuildSeaG
 if(S.wv!==3){if(!isNew){S.sea=false;S.boat=null;S.picked={};vil.x=vil.tx=0.3;vil.z=vil.tz=2.1;}S.wv=3;}
 ensureBoat(true);if(S.sea&&isLand(Math.round(S.boat.x),Math.round(S.boat.z))){S.sea=false;S.boat=null;ensureBoat(false);}
 if(isNew)setupNew();
-grantKits();const farmNew=!S.farmInit;if(farmNew){genDebris();if(S.scratch)genWild();S.farmInit=1;}
+grantKits();const farmNew=!S.farmInit;if(farmNew){genDebris();if(S.scratch)genWild();S.farmInit=1;S.tidy=1;}
+// wild islands from before the tidier woods: thin out most of the loose weeds and twigs
+if(S.wild&&!S.tidy){S.tidy=1;S.debris=S.debris.filter(d=>!((d.k==='weed'||d.k==='twig')&&Math.random()<0.7));}
 if(isNew||(!S.sea&&!walkable(Math.round(vil.x),Math.round(vil.z)))){if(S.scratch){vil.x=vil.tx=DOCK.x+0.5;vil.z=vil.tz=DOCK.z-1.2;}else{vil.x=vil.tx=TOWN.plaza[0]+0.5;vil.z=vil.tz=TOWN.plaza[1]+2.4;}}
 if(S.sea){vil.x=vil.tx=S.boat.x;vil.z=vil.tz=S.boat.z;}
 syncObjs();rebuildSoil();if(!S.orders.length)makeOrders();syncLife();setRod();initNPCs();
@@ -4648,11 +4795,14 @@ if(/[?&]debug\b/.test(location.search)){
     setLevel:n=>{S.xp=LV[n-1]||0;grantKits();rebuildHome();initNPCs();updateHUD();return level();},moveIn:()=>{morningMoveIn();return npcs.length;},
     next:()=>{const u=nextUnlock();return u&&u.name;},xp:n=>{addXP(n);return level();},plots:()=>TOWN.bld.map(b=>b.t+(b.t==='vh'?b.n:'')+(b.locked?':plot':'')),
     // every crop at one stage, rendered at the same scale on a patch of soil (data URLs), for eyeballing the models
-    treeGallery:(size=200)=>{const out=[],so=S.seasonOv;const add=(name,parts)=>{const w=new T.Group();w.add(M(parts));const box=new T.Mesh(new T.BoxGeometry(2.4,3.4,2.4));box.position.y=1.5;box.visible=false;w.add(box);w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,2,0.06,2)]));out.push([name,snapThumb(w,size)]);};
+    critters:()=>{const o={};for(const c of critters)o[c.k]=(o[c.k]||0)+1;return o;},spawnCritter:k=>spawnCritter(k),
+    treeGallery:(size=200)=>{const out=[],so=S.seasonOv;const add=(name,parts,sm)=>{const w=new T.Group();w.add(M(parts));const box=new T.Mesh(sm?new T.BoxGeometry(1.3,1.3,1.3):new T.BoxGeometry(2.4,3.4,2.4));box.position.y=sm?0.5:1.5;box.visible=false;w.add(box);w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,2,0.06,2)]));out.push([name,snapThumb(w,size)]);};
       for(const k of ['oak','pine','maple','cherry','bush','snowpine'])add(k,treeParts(k,mulberry(7),0x9a9ea8));
       for(const se of ['spring','summer','autumn','winter']){S.seasonOv=se;for(const v of [0,2,3])add(se+' '+v,wildTreeParts(v));}
       for(const lv of [1,2,4,7,11]){const q=seedTreeParts(lv);add('heart '+lv,[...q.tp,...q.p,...q.gl]);}
-      add('bush debris',debrisParts('bush',mulberry(3)));S.seasonOv=so;return out;},
+      for(const se of ['spring','summer','autumn','winter']){S.seasonOv=se;for(const v of [0,1,2])add('bush '+se+' '+v,bushParts(v),1);}
+      for(const v of [0,1,2])add('weed '+v,debrisParts('weed',mulberry(3+v),v),1);add('rock',debrisParts('rock',mulberry(3)),1);add('boulder',debrisParts('boulder',mulberry(4)),1);S.seasonOv=so;return out;},
+    critGallery:(size=160)=>Object.keys(CRIT).map(k=>{const g=critModel(k,1),w=new T.Group();w.add(g);w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,1.4,0.06,1.4)]));const s=k==='deer'?1.3:0.6,box=new T.Mesh(new T.BoxGeometry(s,s,s));box.position.y=s/2;box.visible=false;w.add(box);g.rotation.y=0.6;return [k,snapThumb(w,size)];}),
     cropGallery:(stage=3,size=160)=>CROP_IDS.map((id,i)=>{const c=cropParts(id,stage,i*97+5),g=new T.Group();if(c.leaf.length)g.add(M(c.leaf));if(c.fruit.length)g.add(M(c.fruit));g.scale.setScalar(0.95);
       const w=new T.Group();w.add(g);w.add(M([P(BOX,0x5e3c2a,0,-0.03,0,0,0,0,1,0.06,1)]));const box=new T.Mesh(new T.BoxGeometry(1.1,1.5,1.1));box.position.y=0.7;box.visible=false;w.add(box);return [id,snapThumb(w,size)];}),
     ripen:()=>{for(const k in S.tiles){const t=S.tiles[k];if(t.crop)t.crop.p=1;}syncAllCrops();},

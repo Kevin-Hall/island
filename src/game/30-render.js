@@ -93,7 +93,13 @@ const _m=new T.Matrix4(),_q=new T.Quaternion(),_e=new T.Euler(),_v=new T.Vector3
    version of the same shape (a 180-triangle sphere becomes 20 or 80 triangles, a 14-sided stem becomes 6-sided).
    This keeps flowers, crops and critters cheap enough to scatter by the thousand. */
 const ICO0=new T.IcosahedronGeometry(0.5,0),CYL5=new T.CylinderGeometry(0.5,0.5,1,5),CONE5=new T.ConeGeometry(0.5,1,5);
+/* smooth-shaded shapes (their own rounded normals are kept, so the toon ramp paints soft bands across them instead of
+   facets): the rounded crowns, bushes, pebbles and critters that give the island its soft, cosy look */
+const smoothG=g=>{g.userData.smooth=true;return g;};
+const SPH=smoothG(new T.SphereGeometry(0.5,14,10)),SPH_LO=smoothG(new T.SphereGeometry(0.5,8,6)),SPH_XS=smoothG(new T.SphereGeometry(0.5,6,4)),
+  SCONE=smoothG(new T.ConeGeometry(0.5,1,16,1,true)),SCONE_LO=smoothG(new T.ConeGeometry(0.5,1,8,1,true)),STRUNK=smoothG(new T.CylinderGeometry(0.36,0.5,1,10,1,true)),SCYL=smoothG(new T.CylinderGeometry(0.5,0.5,1,10));
 function lodGeo(p){const g=p.geo,big=Math.max(p.sx,p.sy,p.sz),rad=Math.max(p.sx,p.sz);
+  if(g===SPH)return big<0.12?SPH_XS:big<0.35?SPH_LO:g;if(g===SPH_LO)return big<0.12?SPH_XS:g;
   if(g===ICO2)return big<0.13?ICO0:big<0.4?ICO:g;
   if(g===ICO)return big<0.13?ICO0:g;
   if(g===CYL12||g===CYL8)return rad<0.07?CYL5:rad<0.2?CYL6:g;
@@ -108,7 +114,7 @@ function merge(parts){
   const gs=[];let total=0;
   for(const p of parts){
     const g0=lodGeo(p),g=g0.index?g0.toNonIndexed():g0.clone();
-    g.computeVertexNormals();
+    if(!g0.userData.smooth)g.computeVertexNormals();
     let ys=null;if(p.c2!==undefined){const a=g.attributes.position.array;ys=new Float32Array(a.length/3);let y0=1e9,y1=-1e9;for(let i=0;i<ys.length;i++){ys[i]=a[i*3+1];y0=Math.min(y0,ys[i]);y1=Math.max(y1,ys[i]);}for(let i=0;i<ys.length;i++)ys[i]=(ys[i]-y0)/((y1-y0)||1);}
     _e.set(p.rx,p.ry,p.rz,'YXZ');_q.setFromEuler(_e);_v.set(p.x,p.y,p.z);_s.set(p.sx,p.sy,p.sz);_m.compose(_v,_q,_s);
     g.applyMatrix4(_m);gs.push([g,p.color,ys,p.c2]);total+=g.attributes.position.count;

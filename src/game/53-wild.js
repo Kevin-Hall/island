@@ -15,15 +15,16 @@ function bareTree(p,R,snow){trunkP(p,R,0x6a5444,0.9,0.13,0x4e3e32);
   for(let i=0;i<7;i++){const a=i/7*6.283+R()*0.4,tl=0.55+R()*0.4,L=0.55+R()*0.3,y=0.95+R()*0.5,x=Math.cos(a)*Math.sin(tl)*L*0.5,z=Math.sin(a)*Math.sin(tl)*L*0.5;
     p.push(P(CYL6,0x5e4a3c,x,y+Math.cos(tl)*L*0.5,z,Math.sin(a)*tl,0,-Math.cos(a)*tl,0.05,L,0.05));
     const tx=Math.cos(a)*Math.sin(tl)*L,ty=y+Math.cos(tl)*L,tz=Math.sin(a)*Math.sin(tl)*L;for(let k=0;k<2;k++){const b2=a+(k?0.6:-0.6);p.push(P(CYL6,0x6a5444,tx+Math.cos(b2)*0.12,ty+0.1,tz+Math.sin(b2)*0.12,Math.sin(b2)*0.7,0,-Math.cos(b2)*0.7,0.03,0.3,0.03));}
-    if(snow)p.push(P(ICO,0xf4f8fa,tx,ty+0.03,tz,0,R()*3,0,0.16,0.06,0.16));}
-  if(snow)p.push(P(ICO2,0xf4f8fa,0,1.02,0,0,0,0,0.34,0.08,0.34));}
+    if(snow)p.push(P(SPH_LO,0xf4f8fa,tx,ty+0.03,tz,0,R()*3,0,0.16,0.07,0.16));}
+  if(snow)p.push(P(SPH_LO,0xf4f8fa,0,1.02,0,0,0,0,0.34,0.09,0.34));}
 function wildTreeParts(v){const s=season(),R=mulberry(hi(v,31,S.worldSeed|0)),p=[];v%=4;
   if(v===1)return treeParts(s==='winter'?'snowpine':'pine',R,0x9a9ea8);
   if(s==='winter'){bareTree(p,R,true);return p;}
-  const cols=TREE_COLS[s][v];trunkP(p,R,0x7a5230,0.9,0.13,0x5e3e24);canopy(p,R,cols,0,1.3,0,0.55);
-  if(s==='spring'&&v!==3)for(let i=0;i<7;i++){const a=R()*6.28,r=0.5+R()*0.3;bloom(p,[0xffffff,0xf8d8e4][i%2],0xf6d04a,Math.cos(a)*r,1.2+R()*0.6,Math.sin(a)*r,0.08);}
-  if(s==='summer'&&v===3)for(let i=0;i<6;i++){const a=i*1.1+R(),r=0.62;p.push(P(ICO2,0xe0402e,Math.cos(a)*r,1.05+R()*0.45,Math.sin(a)*r,0,0,0,0.13,0.13,0.13),P(LEAF0,0xffffff,Math.cos(a)*r-0.03,1.1+R()*0.4,Math.sin(a)*r+0.04,0,0,0,0.03,0.03,0.03));}
-  if(s==='autumn')for(let i=0;i<8;i++)lf(p,cols[i%3],(R()-0.5)*1.5,0.02,(R()-0.5)*1.5,R()*6.28,0,0.12,0.09,0.02);
+  const cols=TREE_COLS[s][v];trunkP(p,R,0x7a5230,0.85,0.13,0x5e3e24);canopy(p,R,cols,0,1.3,0,0.55);
+  if(s==='spring'&&v===0)dots(p,R,12,0,1.55,0,0.78,0.52,[0xffffff,0xfbe0ea],0xf6d04a,0.08);
+  if(s==='summer'&&v===3)fruit(p,R,6,0xe0402e,0,1.3,0,0.55);
+  if(s==='autumn'&&v===3)fruit(p,R,5,0xf08a2a,0,1.3,0,0.55);
+  if(s==='autumn')for(let i=0;i<6;i++)p.push(P(SPH_XS,cols[i%3],(R()-0.5)*1.6,0.02,(R()-0.5)*1.6,0,R()*3,0,0.16,0.02,0.11));
   return p;}
 const wildTreeKinds=()=>['wild',season()];
 
@@ -44,10 +45,11 @@ function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S
   for(const [x,z] of isl.grass){const k=K(x,z);if(keep.has(k)||farmQ(x,z)<1.3||S.debris.some(d=>d.x===x&&d.z===z))continue;
     const f=vnoise(x*0.9+sd,z*0.9-sd,sd)*0.7+vnoise(x*2.3,z*2.3,sd+3)*0.3,r=R();let kd=null;
     const forest=f>0.72-fAmt*0.3,thicket=f>0.6-fAmt*0.3;
-    if(cliffEdge(x,z)&&r<0.3)kd=r<0.09?'boulder':'rock';
-    else if(forest&&!wet(x,z))kd=r<0.6?'tree':r<0.75?'bush':r<0.86?'weed':null;
-    else if(thicket)kd=r<0.16?'tree':r<0.42?'bush':r<0.55?'weed':r<0.6?'twig':null;
-    else kd=r<0.05?'weed':r<0.075?'twig':r<0.095?'rock':r<0.11?'bush':null;
+    if(cliffEdge(x,z)&&r<0.16)kd=r<0.05?'boulder':'rock';
+    // tidy, readable woods: trees with a few bushes at their feet, bushy edges, and open meadows with only the odd weed or stone
+    else if(forest&&!wet(x,z))kd=r<0.55?'tree':r<0.64?'bush':null;
+    else if(thicket)kd=r<0.16?'tree':r<0.34?'bush':r<0.38?'weed':null;
+    else kd=r<0.022?'weed':r<0.03?'twig':r<0.04?'rock':r<0.055?'bush':null;
     if(!kd)continue;const d=newDebris(x,z,kd);d.v=Math.floor(R()*(kd==='tree'?4:3));d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}}
 
 /* ---- paths wear in where you walk: every step onto a grass tile counts, and a well-trodden tile turns to path ---- */
