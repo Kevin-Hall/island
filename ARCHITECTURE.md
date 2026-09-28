@@ -23,7 +23,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 
 | Module | What lives there |
 |---|---|
-| 00-core | three.js check, curved-world vertex shader, tiny utilities (`clamp`, `hash`, `mulberry`, `K`) |
+| 00-core | three.js check, the long-lens camera (`LENS`) and curved-world vertex shader (flat for `CURVE_R0` round the middle of the view, then bending away to a horizon; JS mirrors are `curveDropFor`/`curveY`/`horizonA` in 30-render; materials with the `NO_CURVE` define, like the sky's, stay unbent), tiny utilities (`clamp`, `hash`, `mulberry`, `K`) |
 | 10-data | **Data registries:** `CROPS`, `VARIANTS`, `BUILD`, `BIOMES`, `FISH`, `BUGS`, `PLANTS`, `FINDS`, `MATS`/`CONSUM`, rods, cans, house tiers, level curve |
 | 22-toolicons | Tool icons painted as shaded vector illustrations (`paintIcon`); they override the sprite versions in `ICON` |
 | 20-state, 21-sprites | Save state (`S`, `freshState`, `load`, `save`); UI icons (`SPR`, `ICON`). Sprites are small character grids that `sprite()` upgrades when drawn: Scale2x smoothing, rim light and shade, a tinted outline, painted at 3× |

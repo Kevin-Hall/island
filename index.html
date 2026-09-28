@@ -299,21 +299,24 @@ const $=id=>document.getElementById(id);
    (shadow depth passes stay flat so shadows line up with lighting)
    ========================================================= */
 // the camera is a long lens, far back (LENS× the distance of a 36° lens, for the same framing), so the island reads almost
-// flat, like a diorama, with near and far trees the same size; the curve is eased to match so the horizon still shows
-const LENS=1.8,CURVE=0.0042/Math.pow(LENS,1.5);
+// flat, like a diorama, with near and far trees the same size. The world is flat for CURVE_R0 around the middle of the
+// view and bends away beyond it (a little planet), so the island stays whole while the sea rolls over to a horizon
+const LENS=1.8,CURVE=0.02,CURVE_R0=14;
 T.ShaderChunk.project_vertex=`
 vec4 mvPosition = vec4( transformed, 1.0 );
 #ifdef USE_INSTANCING
 	mvPosition = instanceMatrix * mvPosition;
 #endif
-#if defined( DEPTH_PACKING ) || defined( DISTANCE )
+#if defined( DEPTH_PACKING ) || defined( DISTANCE ) || defined( NO_CURVE )
 	mvPosition = modelViewMatrix * mvPosition;
 #else
 	vec4 cw_ = modelMatrix * mvPosition;
 	vec3 vt_ = viewMatrix[3].xyz;
 	vec3 cp_ = -vec3( dot( viewMatrix[0].xyz, vt_ ), dot( viewMatrix[1].xyz, vt_ ), dot( viewMatrix[2].xyz, vt_ ) );
-	vec2 cd_ = cw_.xz - cp_.xz;
-	cw_.y -= dot( cd_, cd_ ) * ${CURVE.toFixed(5)};
+	vec3 bk_ = vec3( viewMatrix[0].z, viewMatrix[1].z, viewMatrix[2].z );
+	vec2 tg_ = cp_.xz - bk_.xz * ( cp_.y / max( 0.05, bk_.y ) );
+	float r_ = max( 0.0, length( cw_.xz - tg_ ) - ${CURVE_R0.toFixed(2)} );
+	cw_.y -= r_ * r_ * ${CURVE.toFixed(5)};
 	mvPosition = viewMatrix * cw_;
 #endif
 gl_Position = projectionMatrix * mvPosition;
@@ -792,7 +795,7 @@ const postMat=new T.ShaderMaterial({
       float n1=lin(vUv+vec2(px.x,0.)),n2=lin(vUv-vec2(px.x,0.)),n3=lin(vUv+vec2(0.,px.y)),n4=lin(vUv-vec2(0.,px.y));
       float dn=max(max(n1>fz?d:n1,n2>fz?d:n2),max(n3>fz?d:n3,n4>fz?d:n4));
       float e=step(max(.35,d*.018),dn-d)*step(d,cf*.6);
-      c=mix(c,c*vec3(.36,.32,.46),e*.9);
+      c=mix(c,c*vec3(.36,.32,.46),e*.9*(1.-smoothstep(140.,260.,d))); // outlines fade out on the far islands
       float b=bayer(gl_FragCoord.xy)-.5;
       c=floor(c*levels+b+.5)/levels;
       gl_FragColor=vec4(c,1.);
@@ -825,8 +828,8 @@ function updateSkyDome(){const u=skyMat.uniforms;u.zen.value.copy(skyZen);u.hz.v
 const PERF={px:0}; // reserved for future auto-quality; automatic pixel scaling is off (it compounded after the app was backgrounded)
 function resize(){
   const cw=window.innerWidth,ch=window.innerHeight;
-  const base=clamp(Math.round(Math.min(cw,ch)/190),2,6);
-  PX=clamp(base+S.pxAdj+PERF.px,1,9);
+  const base=clamp(Math.round(Math.min(cw,ch)/130)/2,1.5,5); // fine pixels (a phone draws about 260 across), in half steps
+  PX=clamp(base+S.pxAdj*0.5+PERF.px,1,9);
   W=Math.max(1,Math.ceil(cw/PX));H=Math.max(1,Math.ceil(ch/PX));
   renderer.setSize(W,H,false);
   if(rt){rt.depthTexture.dispose();rt.dispose();}
@@ -839,13 +842,20 @@ function resize(){
 const cam={yaw:Math.PI*0.27,pitch:0.5,dist:30,tx:0,tz:0.3};
 function fitZoom(){const a=window.innerWidth/window.innerHeight;cam.dist=clamp(25/Math.max(0.55,a),22,46);}
 function applyCam(){
-  const hd=camD()*Math.cos(cam.pitch);
-  camera.position.set(cam.tx+Math.sin(cam.yaw)*hd,Math.sin(cam.pitch)*camD(),cam.tz+Math.cos(cam.yaw)*hd);
-  camera.lookAt(cam.tx,0.4-hd*hd*CURVE,cam.tz);
+  // the view leads a little ahead of you, so you stand in the lower half of the screen with the island opening out beyond
+  const hd=camD()*Math.cos(cam.pitch),lead=cam.dist*0.1,tx=cam.tx-Math.sin(cam.yaw)*lead,tz=cam.tz-Math.cos(cam.yaw)*lead;
+  camera.position.set(tx+Math.sin(cam.yaw)*hd,Math.sin(cam.pitch)*camD(),tz+Math.cos(cam.yaw)*hd);
+  camera.lookAt(tx,0.4,tz);
   camera.updateMatrixWorld();
 }
 const _pv=new T.Vector3();
-function curveY(x,z){const dx=x-camera.position.x,dz=z-camera.position.z;return-(dx*dx+dz*dz)*CURVE;}
+// how far the curved world has dropped at (x,z) as a given camera sees it (mirrors project_vertex in 00-core)
+function curveDropFor(cm,x,z){const e=cm.matrixWorld.elements,t=e[13]/Math.max(0.05,e[9]),r=Math.max(0,Math.hypot(x-(e[12]-e[8]*t),z-(e[14]-e[10]*t))-CURVE_R0);return r*r*CURVE;}
+function curveY(x,z){return-curveDropFor(camera,x,z);}
+// the angle below level at which the sea meets the sky (the flattest line of sight that still grazes the curved world)
+let _hzKey='',_hzA=0.3;
+function horizonA(){const h=Math.max(0.05,camera.position.y),H0=h/Math.tan(Math.max(0.05,cam.pitch)),key=h.toFixed(2)+'|'+H0.toFixed(2);if(key===_hzKey)return _hzA;_hzKey=key;
+  let m=1e9;for(let s=0;s<400;s+=0.5){const q=(h+CURVE*s*s)/(H0+CURVE_R0+s);if(q<m)m=q;}return _hzA=Math.atan(m);}
 function toScreen(x,y,z){_pv.set(x,y+curveY(x,z),z).project(camera);return[(_pv.x+1)/2*window.innerWidth,(1-_pv.y)/2*window.innerHeight,_pv.z];}
 
 /* =========================================================
@@ -1039,7 +1049,7 @@ const HOME_STYLES={
 function applyHomeStyle(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow']||HOME_STYLES.meadow;BIOMES.home.grass=S.wild?SEASON_GRASS[season()]:st.grass;BIOMES.home.sand=st.sand;return st;}
 /* ---- real seasons (a wild island follows the calendar: northern-hemisphere months, or S.seasonOv from the dev tools) ---- */
 function season(){if(S.seasonOv)return S.seasonOv;const m=new Date(typeof gameNow==='function'?gameNow():Date.now()).getMonth();return m===11||m<2?'winter':m<5?'spring':m<9?'summer':'autumn';} // leaves turn in October and November, as they do in the woods
-const SEASON_GRASS={spring:[0x82ca50,0x8ed25a,0x78c048],summer:[0x74c046,0x80c850,0x6ab63e],autumn:[0x98b048,0xa4b850,0x8ea842],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
+const SEASON_GRASS={spring:[0x82ca50,0x8ed25a,0x78c048],summer:[0x6cba44,0x78c24c,0x62ae3c],autumn:[0x98b048,0xa4b850,0x8ea842],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
 let seasonNow=null;
 // when the season turns (checked each morning), the island's trees and grass change with it
 function seasonCheck(force){const s=season();if(s===seasonNow&&!force)return;const first=seasonNow===null;seasonNow=s;if(!S.wild||first&&!force)return;
@@ -1347,7 +1357,7 @@ function carveRivers(isl,g){const R=mulberry(isl.seed^0x71e5),B=BIOMES[isl.biome
   if(fp.length){const m=new T.Mesh(merge(fp),FALL_MATS[mk]);m.frustumCulled=false;g.add(m);}
   if(pb.length)g.add(M(pb.filter(Boolean)));}
 // a unit tile (y 0..1) with any of its four corners rounded off; bit0=-x-z, bit1=+x-z, bit2=+x+z, bit3=-x+z
-const RTILE={},TILE_R=0.42;
+const RTILE={},TILE_R=0.1; // only just rounded: the coast and cliffs step in crisp tile blocks
 function rtileGeo(mask){if(RTILE[mask])return RTILE[mask];const C=[[-1,1],[1,1],[1,-1],[-1,-1]],pts=[];
   [3,2,1,0].forEach((b,j)=>{const [sx,sy]=C[b];if(mask>>b&1){const cx=sx*(0.5-TILE_R),cy=sy*(0.5-TILE_R),a0=Math.PI+j*Math.PI/2;for(let t=0;t<=5;t++){const a=a0+t/5*Math.PI/2;pts.push(new T.Vector2(cx+Math.cos(a)*TILE_R,cy+Math.sin(a)*TILE_R));}}
     else pts.push(new T.Vector2(sx*0.5,sy*0.5));});
@@ -1438,6 +1448,10 @@ function buildIsland(isl){
       if(!groups.has(mask))groups.set(mask,[]);groups.get(mask).push([x,z]);}
     const bk=makeBake();for(const [mask,l] of groups)for(const [x,z] of l)bk.add(rtileGeo(mask),x,y,z,1,0.002,1,0xffffff,null,()=>true);const m=bk.mesh(mat,false);if(m){m.receiveShadow=false;g.add(m);isl.flats.push(m);}};
   flat(a1,s1Mat,0.012,1);flat(a2,s2Mat,0.006,2);
+  // dark, wave-worn rocks poking out of the shallows here and there
+  {const rp=[];for(const [x,z] of [...a1,...a2]){const h=hash(x*1.37+isl.id,z*2.11);if(h>0.03)continue;const s=0.35+hash(z,x)*0.4,ox=(hash(x,z*3)-0.5)*0.5,oz=(hash(z*5,x)-0.5)*0.5;
+      rp.push(PG(SPH,0x6e7a88,0x3e4854,x+ox,0.02,z+oz,0,h*200,0,s,s*0.55,s*0.85),PG(SPH_LO,0x7a8694,0x46505c,x+ox+s*0.35,0,z+oz+s*0.2,0,0,0,s*0.5,s*0.3,s*0.45));}
+    if(rp.length){const m=M(rp);m.castShadow=false;g.add(m);}}
   const blocked=new Set();
   if(isl.home){
     const DX=DOCK.x;isl.dockZ=DOCK.z;const dz=DOCK.z;
@@ -1808,11 +1822,11 @@ function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S
   const fAmt=(S.home&&S.home.wild)||0.5;
   for(const [x,z] of isl.grass){const k=K(x,z);if(keep.has(k)||farmQ(x,z)<1.3||S.debris.some(d=>d.x===x&&d.z===z))continue;
     const f=vnoise(x*0.9+sd,z*0.9-sd,sd)*0.7+vnoise(x*2.3,z*2.3,sd+3)*0.3,r=R();let kd=null;
-    const forest=f>0.72-fAmt*0.3,thicket=f>0.6-fAmt*0.3;
+    const forest=f>0.8-fAmt*0.25,thicket=f>0.66-fAmt*0.25; // groves and copses with open meadow between
     if(cliffEdge(x,z)&&r<0.16)kd=r<0.05?'boulder':'rock';
     // tidy, readable woods: trees with a few bushes at their feet, bushy edges, and open meadows with only the odd weed or stone
-    else if(forest&&!wet(x,z))kd=r<0.44?'tree':r<0.52?'bush':null;
-    else if(thicket)kd=r<0.16?'tree':r<0.34?'bush':r<0.38?'weed':null;
+    else if(forest&&!wet(x,z))kd=r<0.34?'tree':r<0.42?'bush':null;
+    else if(thicket)kd=r<0.1?'tree':r<0.22?'bush':r<0.25?'weed':null;
     else kd=r<0.022?'weed':r<0.03?'twig':r<0.04?'rock':r<0.055?'bush':null;
     if(!kd)continue;const d=newDebris(x,z,kd);d.v=Math.floor(R()*(kd==='tree'?4:3));d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}}
 
@@ -2265,8 +2279,8 @@ function enterHouse(kind,b,n){if(inside)return;$('fade').classList.add('on');SFX
 function leaveHouse(){if(!inside)return;$('fade').classList.add('on');SFX.ui();clearAction();
   setTimeout(()=>{roomScene.remove(inside.room.g);for(const c of inside.room.g.children)if(c.isMesh)c.geometry.dispose();inside=null;ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');},420);}
 function roomPoint(cx,cy){ndc.set(cx/window.innerWidth*2-1,-(cy/window.innerHeight)*2+1);ray.setFromCamera(ndc,roomCam);let y=0,pt=null;
-  for(let i=0;i<5;i++){_plane.constant=-y;if(!ray.ray.intersectPlane(_plane,_hit))return null;pt=_hit.clone();const dx=pt.x-roomCam.position.x,dz=pt.z-roomCam.position.z;y=-(dx*dx+dz*dz)*CURVE;}return pt;}
-function roomTap(cx,cy){const I=inside;if(I.who&&I.n){_pv.set(I.who.position.x,0.5-((I.who.position.x-roomCam.position.x)**2+(I.who.position.z-roomCam.position.z)**2)*CURVE,I.who.position.z).project(roomCam);
+  for(let i=0;i<5;i++){_plane.constant=-y;if(!ray.ray.intersectPlane(_plane,_hit))return null;pt=_hit.clone();y=-curveDropFor(roomCam,pt.x,pt.z);}return pt;}
+function roomTap(cx,cy){const I=inside;if(I.who&&I.n){_pv.set(I.who.position.x,0.5-curveDropFor(roomCam,I.who.position.x,I.who.position.z),I.who.position.z).project(roomCam);
     const sx=(_pv.x+1)/2*window.innerWidth,sy=(1-_pv.y)/2*window.innerHeight;if(Math.hypot(sx-cx,sy-cy)<55){I.tx=I.who.position.x;I.tz=I.who.position.z+0.7;setTimeout(()=>showTalk(I.n,npcLine(I.n)),0);return;}}
   const pt=roomPoint(cx,cy);if(!pt)return;const R=I.room;
   const pr=R.props.find(q=>Math.abs(pt.x-q.x)<q.w/2+0.1&&Math.abs(pt.z-q.z)<q.d/2+0.1);
@@ -2870,9 +2884,9 @@ const KF=[
  {h:0,   sun:0x9ab0ff,si:.42,sky:0x5a6cb4,gnd:0x2c3466,hi:.78,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
  {h:4.8, sun:0x9aa8f0,si:.4,sky:0x6070b4,gnd:0x303868,hi:.76,water:0x243a78,s1:0x3e5ea4,s2:0x30488c,n:1,gl:0xc8d4ff,hz:0x1c2656,zen:0x0c1434,glow:0x7a6aa8,ga:.25},
  {h:6,   sun:0xff9a6a,si:.55,sky:0xffb896,gnd:0x5a4a6e,hi:.55,water:0x3a6cb4,s1:0x8ab8d4,s2:0x5c94c4,n:.25,gl:0xffe0c8,hz:0xf4b090,zen:0x5a78c8,glow:0xffa060,ga:1},
- {h:8,   sun:0xffe6c4,si:.95,sky:0xd8e6ff,gnd:0x76866a,hi:.62,water:0x2b6fd0,s1:0x8ee0ec,s2:0x44b2e4,n:0,gl:0xffffff,hz:0xb4d8ff,zen:0x5aa0ea,glow:0xfff0c0,ga:.3},
- {h:12.5,sun:0xffffff,si:1.05,sky:0xeaf2ff,gnd:0x80927a,hi:.68,water:0x2a72d6,s1:0x92e4ee,s2:0x42b6e8,n:0,gl:0xffffff,hz:0xbfe2ff,zen:0x3c8ce8,glow:0xfffbe8,ga:.15},
- {h:16.5,sun:0xffe0b0,si:.95,sky:0xffe6c8,gnd:0x7a7a6a,hi:.64,water:0x2e6ccc,s1:0x92dce6,s2:0x4aace0,n:0,gl:0xffffff,hz:0xd4dcf4,zen:0x5896e0,glow:0xffe0a0,ga:.35},
+ {h:8,   sun:0xffe6c4,si:.95,sky:0xd8e6ff,gnd:0x76866a,hi:.62,water:0x2b6fd0,s1:0x8ee0ec,s2:0x44b2e4,n:0,gl:0xffffff,hz:0xa6d2fa,zen:0x3f8ae6,glow:0xfff0c0,ga:.3},
+ {h:12.5,sun:0xffffff,si:1.05,sky:0xeaf2ff,gnd:0x80927a,hi:.68,water:0x2a72d6,s1:0x92e4ee,s2:0x42b6e8,n:0,gl:0xffffff,hz:0xaad6fc,zen:0x2f7fe4,glow:0xfffbe8,ga:.15},
+ {h:16.5,sun:0xffe0b0,si:.95,sky:0xffe6c8,gnd:0x7a7a6a,hi:.64,water:0x2e6ccc,s1:0x92dce6,s2:0x4aace0,n:0,gl:0xffffff,hz:0xbcd6f4,zen:0x3a84de,glow:0xffe0a0,ga:.35},
  {h:18.3,sun:0xff8a54,si:.72,sky:0xff9c7a,gnd:0x5e4868,hi:.58,water:0x4c5aa8,s1:0x9a92cc,s2:0x6e70ba,n:.3,gl:0xffd0a0,hz:0xf89a78,zen:0x4a5aae,glow:0xffb050,ga:1},
  {h:19.4,sun:0xb07ad0,si:.4,sky:0x8a6ab0,gnd:0x3a3060,hi:.68,water:0x2e3a80,s1:0x505ea6,s2:0x3c4a92,n:.8,gl:0xe0c8ff,hz:0x4a3a78,zen:0x221f5a,glow:0xff7a6a,ga:.6},
  {h:21,  sun:0x9ab0ff,si:.42,sky:0x5a6cb4,gnd:0x2c3466,hi:.78,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
@@ -4445,7 +4459,7 @@ function fadeThen(fn,keep){const f=$('fade');f.classList.add('on');setTimeout(()
 function arrivalFrame(now){if(!arriving)return;const dt=Math.min(0.1,(now-arriving.last)/1000);arriving.last=now;arriving.t+=dt;tt+=dt;
   cam.yaw+=dt*0.06;cam.tx=-9;cam.tz=1;cam.dist=60;cam.pitch=0.6;applyCam();cullIslands();
   scene.fog.near=camD()+18;scene.fog.far=camD()+150;grassU.uTime.value=tt;riverU.uTime.value=tt;water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
-  updateSkyDome();renderer.setRenderTarget(rt);renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;
+  updateSky(dt,tt);updateSkyDome();renderer.setRenderTarget(rt);renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;
   renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);requestAnimationFrame(arrivalFrame);}
 /* =========================================================
    New game setup
@@ -4493,20 +4507,22 @@ function updatePrints(dt){let n=0;for(const p of prints){p.age+=dt;const s=p.age
   fpIM.count=n;fpIM.instanceMatrix.needsUpdate=true;}
 
 // --- sky: drifting clouds, the moon, shooting stars, rainbows ---
-const skyCloudMat=new T.MeshBasicMaterial({vertexColors:true,fog:false,transparent:true,opacity:0.95,depthWrite:false});
+// sky things are placed by angle (skyPos) and drawn unbent by the curved world
+const noCurve=m=>{m.defines=Object.assign(m.defines||{},{NO_CURVE:''});return m;};
+const skyCloudMat=noCurve(new T.MeshBasicMaterial({vertexColors:true,fog:false,transparent:true,opacity:0.95,depthWrite:false}));
 const skyClouds=[];
 // big puffy cumulus banked along the horizon (the long-lens camera sees a narrow slice of sky, so there are plenty)
-for(let i=0;i<44;i++){const R=mulberry(i*97+11),p=[];const n=5+Math.floor(R()*5);
-  for(let j=0;j<n;j++){const x=(j-n/2)*0.75+(R()-0.5)*0.4,s=0.9+R()*1.1-Math.abs(j-n/2)*0.12;p.push(P(SPH_LO,0xffffff,x,s*0.35,(R()-0.5)*0.6,0,R()*3,0,s*1.4,s*1.1,s*1.1),P(SPH_LO,0xdde6f4,x,0,(R()-0.5)*0.6,0,R()*3,0,s*1.35,s*0.45,s));}
+for(let i=0;i<9;i++){const R=mulberry(i*97+11),p=[];const n=5+Math.floor(R()*5);
+  for(let j=0;j<n;j++){const x=(j-n/2)*0.75+(R()-0.5)*0.4,s=0.9+R()*1.1-Math.abs(j-n/2)*0.12;p.push(P(SPH_LO,0xffffff,x,s*0.35,(R()-0.5)*0.6,0,R()*3,0,s*1.4,s*1.1,s*1.1),P(SPH_LO,0xf8ebe0/* warm, sunlit undersides */,x,0.1,(R()-0.5)*0.6,0,R()*3,0,s*1.35,s*0.45,s));}
   const m=new T.Mesh(merge(p),skyCloudMat);m.frustumCulled=false;m.renderOrder=-1;scene.add(m);
-  skyClouds.push({m,a:i/44*6.283+R()*0.2,d:130+R()*40,f:0.04+R()*0.5,s:3.5+R()*3});}
+  skyClouds.push({m,a:(i/9-0.5)*0.9+R()*0.03,d:140+R()*40,f:0.14+((i*4)%9)/9*0.72,s:1.6+R()*2.2});}
 const moon=new T.Group();
-{const disc=new T.Mesh(new T.CircleGeometry(5,24),new T.MeshBasicMaterial({color:0xfff4d6,fog:false,transparent:true}));moon.add(disc);
-  for(const [x,y,r] of [[-1.6,1,1.1],[1.4,-0.8,1.4],[0.4,2.2,0.7],[-0.6,-2,0.8]]){const c=new T.Mesh(new T.CircleGeometry(r,14),new T.MeshBasicMaterial({color:0xece0bc,fog:false,transparent:true}));c.position.set(x,y,0.05);moon.add(c);}
-  const halo=new T.Mesh(new T.CircleGeometry(9,24),new T.MeshBasicMaterial({color:0xfff4d6,fog:false,transparent:true,opacity:0.12,depthWrite:false}));halo.position.z=-0.1;moon.add(halo);
+{const disc=new T.Mesh(new T.CircleGeometry(5,24),noCurve(new T.MeshBasicMaterial({color:0xfff4d6,fog:false,transparent:true})));moon.add(disc);
+  for(const [x,y,r] of [[-1.6,1,1.1],[1.4,-0.8,1.4],[0.4,2.2,0.7],[-0.6,-2,0.8]]){const c=new T.Mesh(new T.CircleGeometry(r,14),noCurve(new T.MeshBasicMaterial({color:0xece0bc,fog:false,transparent:true})));c.position.set(x,y,0.05);moon.add(c);}
+  const halo=new T.Mesh(new T.CircleGeometry(9,24),noCurve(new T.MeshBasicMaterial({color:0xfff4d6,fog:false,transparent:true,opacity:0.12,depthWrite:false})));halo.position.z=-0.1;moon.add(halo);
   moon.traverse(o=>{o.frustumCulled=false;});scene.add(moon);}
 const shootGeo=new T.BufferGeometry();shootGeo.setAttribute('position',new T.BufferAttribute(new Float32Array(6),3));
-const shootLine=new T.Line(shootGeo,new T.LineBasicMaterial({color:0xfffbe8,transparent:true,fog:false}));shootLine.frustumCulled=false;shootLine.visible=false;scene.add(shootLine);
+const shootLine=new T.Line(shootGeo,noCurve(new T.LineBasicMaterial({color:0xfffbe8,transparent:true,fog:false})));shootLine.frustumCulled=false;shootLine.visible=false;scene.add(shootLine);
 let shoot=null;
 function spawnShootingStar(){const side=Math.random()<0.5?1:-1;
   shoot={th:cam.yaw+Math.PI+(Math.random()-0.5)*0.5-side*0.25,f:0.75+Math.random()*0.25,vth:side*0.45,vf:-0.55,t:0,life:1.2,wished:false};
@@ -4514,17 +4530,19 @@ function spawnShootingStar(){const side=Math.random()<0.5?1:-1;
 function makeWish(){if(!shoot||shoot.wished)return;shoot.wished=true;S.wishes=(S.wishes||0)+1;SFX.rare();
   for(let i=0;i<12;i++)sparkle(vil.x,1.2,vil.z,0xfff6c0);toast('You wished upon a shooting star… something might wash ashore tomorrow.','rare',ICON.star);}
 const RB_COLS=[0xe8504a,0xf09040,0xf6d04a,0x6ac860,0x4a9ae8,0x8a6ad0];const rainbow=new T.Group();
-RB_COLS.forEach((c,i)=>{const m=new T.Mesh(new T.TorusGeometry(58-i*2.2,1.1,4,64,Math.PI),new T.MeshBasicMaterial({color:c,fog:false,transparent:true,opacity:0,depthWrite:false}));m.frustumCulled=false;rainbow.add(m);});
+RB_COLS.forEach((c,i)=>{const m=new T.Mesh(new T.TorusGeometry(58-i*2.2,1.1,4,64,Math.PI),noCurve(new T.MeshBasicMaterial({color:c,fog:false,transparent:true,opacity:0,depthWrite:false})));m.frustumCulled=false;rainbow.add(m);});
 rainbow.visible=false;scene.add(rainbow);let rainbowT=0;
 function stopRain(){S.rain=false;S.rainUntil=0;if(S.hour>7&&S.hour<18){rainbowT=50;toast('The rain has stopped… look, a rainbow!','rare',ICON.star);}}
 function duskEvent(){S.meteor=!S.rain&&Math.random()<0.22;if(S.meteor)toast('Tonight there will be a meteor shower! Tap the sky when a star falls to make a wish.','rare',ICON.star);}
 const STAR_T=[],STAR_F=[];for(let i=0;i<STARN;i++){STAR_T.push(Math.random()*6.283);STAR_F.push(Math.random()*1.3);}
-function skyPos(theta,f,d,out,curved=true){const cp=camera.position,hc=cp.y,aT=cam.pitch-camera.fov/2*Math.PI/180,aH=Math.atan(2*Math.sqrt(Math.max(0.05,hc)*CURVE)),a=lerp(aH,aT,f);
-  return out.set(cp.x+Math.sin(theta)*d,hc-d*Math.tan(a)+(curved?CURVE*d*d:0),cp.z+Math.cos(theta)*d);}
-function skySpan(d){const hc=camera.position.y,aT=cam.pitch-camera.fov/2*Math.PI/180,aH=Math.atan(2*Math.sqrt(Math.max(0.05,hc)*CURVE));return d*(Math.tan(aH)-Math.tan(aT));}
+function skyPos(theta,f,d,out,curved=false){const cp=camera.position,hc=cp.y,aT=cam.pitch-camera.fov/2*Math.PI/180,aH=horizonA(),a=lerp(aH,aT,f);
+  const x=cp.x+Math.sin(theta)*d,z=cp.z+Math.cos(theta)*d;return out.set(x,hc-d*Math.tan(a)+(curved?curveDropFor(camera,x,z):0),z);}
+function skySpan(d){const aT=cam.pitch-camera.fov/2*Math.PI/180,aH=horizonA();return d*(Math.tan(aH)-Math.tan(aT));}
 function updateSky(dt,tt){
   const cp=camera.position,sky=skyHz,night=nightF,fwd=cam.yaw+Math.PI;
-  for(const c of skyClouds){c.a+=dt*0.004*(0.5+wind);skyPos(c.a,c.f,c.d,c.m.position);c.m.scale.setScalar(c.s*c.d/140);c.m.lookAt(cp.x,c.m.position.y,cp.z);}
+  // clouds live in a band across whatever way you face (the long lens sees only a slice of sky), drifting slowly across it
+  const band=2.6*Math.atan(Math.tan(camera.fov*Math.PI/360)*camera.aspect);
+  for(const c of skyClouds){c.a+=dt*0.006*(0.5+wind);if(c.a>0.45)c.a-=0.9;skyPos(fwd+c.a/0.9*band,c.f,c.d,c.m.position);c.m.scale.setScalar(c.s*c.d/140*clamp(band/0.8,0.42,1));c.m.lookAt(cp.x,c.m.position.y,cp.z);}
   skyCloudMat.color.setRGB(1,1,1).lerp(sky,0.25+rainMix*0.35).lerp(skyGlow,skyGA*0.45).multiplyScalar(1-night*0.6);skyCloudMat.opacity=0.95;
   moon.visible=night>0.05;
   if(moon.visible){skyPos(fwd+0.28,0.55,150,moon.position);moon.scale.setScalar(0.8);moon.lookAt(cp);moon.traverse(o=>{if(o.material)o.material.opacity=(o.material.color.getHex()===0xfff4d6&&o.geometry.parameters.radius===9?0.12:1)*night*(1-rainMix);});}
@@ -4705,7 +4723,7 @@ function frame(now){
   const k=paint?0:Math.min(1,dt*3);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();cullIslands();updateNearGrass(dt); // hold the view still while drag-farming so tiles stay under the finger
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
-  scene.fog.near=camD()+22-fogBoost*14;scene.fog.far=camD()+150-fogBoost*80;
+  scene.fog.near=camD()+45-fogBoost*30;scene.fog.far=camD()+300-fogBoost*200;/* a light haze: neighbouring islands stay green on the horizon */
   flushCrops();for(const {g} of cropMeshes.values())if(g.children.length)g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);

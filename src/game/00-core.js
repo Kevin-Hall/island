@@ -7,21 +7,24 @@ const $=id=>document.getElementById(id);
    (shadow depth passes stay flat so shadows line up with lighting)
    ========================================================= */
 // the camera is a long lens, far back (LENS× the distance of a 36° lens, for the same framing), so the island reads almost
-// flat, like a diorama, with near and far trees the same size; the curve is eased to match so the horizon still shows
-const LENS=1.8,CURVE=0.0042/Math.pow(LENS,1.5);
+// flat, like a diorama, with near and far trees the same size. The world is flat for CURVE_R0 around the middle of the
+// view and bends away beyond it (a little planet), so the island stays whole while the sea rolls over to a horizon
+const LENS=1.8,CURVE=0.02,CURVE_R0=14;
 T.ShaderChunk.project_vertex=`
 vec4 mvPosition = vec4( transformed, 1.0 );
 #ifdef USE_INSTANCING
 	mvPosition = instanceMatrix * mvPosition;
 #endif
-#if defined( DEPTH_PACKING ) || defined( DISTANCE )
+#if defined( DEPTH_PACKING ) || defined( DISTANCE ) || defined( NO_CURVE )
 	mvPosition = modelViewMatrix * mvPosition;
 #else
 	vec4 cw_ = modelMatrix * mvPosition;
 	vec3 vt_ = viewMatrix[3].xyz;
 	vec3 cp_ = -vec3( dot( viewMatrix[0].xyz, vt_ ), dot( viewMatrix[1].xyz, vt_ ), dot( viewMatrix[2].xyz, vt_ ) );
-	vec2 cd_ = cw_.xz - cp_.xz;
-	cw_.y -= dot( cd_, cd_ ) * ${CURVE.toFixed(5)};
+	vec3 bk_ = vec3( viewMatrix[0].z, viewMatrix[1].z, viewMatrix[2].z );
+	vec2 tg_ = cp_.xz - bk_.xz * ( cp_.y / max( 0.05, bk_.y ) );
+	float r_ = max( 0.0, length( cw_.xz - tg_ ) - ${CURVE_R0.toFixed(2)} );
+	cw_.y -= r_ * r_ * ${CURVE.toFixed(5)};
 	mvPosition = viewMatrix * cw_;
 #endif
 gl_Position = projectionMatrix * mvPosition;

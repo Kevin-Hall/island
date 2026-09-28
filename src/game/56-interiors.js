@@ -62,8 +62,8 @@ function enterHouse(kind,b,n){if(inside)return;$('fade').classList.add('on');SFX
 function leaveHouse(){if(!inside)return;$('fade').classList.add('on');SFX.ui();clearAction();
   setTimeout(()=>{roomScene.remove(inside.room.g);for(const c of inside.room.g.children)if(c.isMesh)c.geometry.dispose();inside=null;ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');},420);}
 function roomPoint(cx,cy){ndc.set(cx/window.innerWidth*2-1,-(cy/window.innerHeight)*2+1);ray.setFromCamera(ndc,roomCam);let y=0,pt=null;
-  for(let i=0;i<5;i++){_plane.constant=-y;if(!ray.ray.intersectPlane(_plane,_hit))return null;pt=_hit.clone();const dx=pt.x-roomCam.position.x,dz=pt.z-roomCam.position.z;y=-(dx*dx+dz*dz)*CURVE;}return pt;}
-function roomTap(cx,cy){const I=inside;if(I.who&&I.n){_pv.set(I.who.position.x,0.5-((I.who.position.x-roomCam.position.x)**2+(I.who.position.z-roomCam.position.z)**2)*CURVE,I.who.position.z).project(roomCam);
+  for(let i=0;i<5;i++){_plane.constant=-y;if(!ray.ray.intersectPlane(_plane,_hit))return null;pt=_hit.clone();y=-curveDropFor(roomCam,pt.x,pt.z);}return pt;}
+function roomTap(cx,cy){const I=inside;if(I.who&&I.n){_pv.set(I.who.position.x,0.5-curveDropFor(roomCam,I.who.position.x,I.who.position.z),I.who.position.z).project(roomCam);
     const sx=(_pv.x+1)/2*window.innerWidth,sy=(1-_pv.y)/2*window.innerHeight;if(Math.hypot(sx-cx,sy-cy)<55){I.tx=I.who.position.x;I.tz=I.who.position.z+0.7;setTimeout(()=>showTalk(I.n,npcLine(I.n)),0);return;}}
   const pt=roomPoint(cx,cy);if(!pt)return;const R=I.room;
   const pr=R.props.find(q=>Math.abs(pt.x-q.x)<q.w/2+0.1&&Math.abs(pt.z-q.z)<q.d/2+0.1);

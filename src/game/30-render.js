@@ -28,7 +28,7 @@ const postMat=new T.ShaderMaterial({
       float n1=lin(vUv+vec2(px.x,0.)),n2=lin(vUv-vec2(px.x,0.)),n3=lin(vUv+vec2(0.,px.y)),n4=lin(vUv-vec2(0.,px.y));
       float dn=max(max(n1>fz?d:n1,n2>fz?d:n2),max(n3>fz?d:n3,n4>fz?d:n4));
       float e=step(max(.35,d*.018),dn-d)*step(d,cf*.6);
-      c=mix(c,c*vec3(.36,.32,.46),e*.9);
+      c=mix(c,c*vec3(.36,.32,.46),e*.9*(1.-smoothstep(140.,260.,d))); // outlines fade out on the far islands
       float b=bayer(gl_FragCoord.xy)-.5;
       c=floor(c*levels+b+.5)/levels;
       gl_FragColor=vec4(c,1.);
@@ -61,8 +61,8 @@ function updateSkyDome(){const u=skyMat.uniforms;u.zen.value.copy(skyZen);u.hz.v
 const PERF={px:0}; // reserved for future auto-quality; automatic pixel scaling is off (it compounded after the app was backgrounded)
 function resize(){
   const cw=window.innerWidth,ch=window.innerHeight;
-  const base=clamp(Math.round(Math.min(cw,ch)/190),2,6);
-  PX=clamp(base+S.pxAdj+PERF.px,1,9);
+  const base=clamp(Math.round(Math.min(cw,ch)/130)/2,1.5,5); // fine pixels (a phone draws about 260 across), in half steps
+  PX=clamp(base+S.pxAdj*0.5+PERF.px,1,9);
   W=Math.max(1,Math.ceil(cw/PX));H=Math.max(1,Math.ceil(ch/PX));
   renderer.setSize(W,H,false);
   if(rt){rt.depthTexture.dispose();rt.dispose();}
@@ -75,13 +75,20 @@ function resize(){
 const cam={yaw:Math.PI*0.27,pitch:0.5,dist:30,tx:0,tz:0.3};
 function fitZoom(){const a=window.innerWidth/window.innerHeight;cam.dist=clamp(25/Math.max(0.55,a),22,46);}
 function applyCam(){
-  const hd=camD()*Math.cos(cam.pitch);
-  camera.position.set(cam.tx+Math.sin(cam.yaw)*hd,Math.sin(cam.pitch)*camD(),cam.tz+Math.cos(cam.yaw)*hd);
-  camera.lookAt(cam.tx,0.4-hd*hd*CURVE,cam.tz);
+  // the view leads a little ahead of you, so you stand in the lower half of the screen with the island opening out beyond
+  const hd=camD()*Math.cos(cam.pitch),lead=cam.dist*0.1,tx=cam.tx-Math.sin(cam.yaw)*lead,tz=cam.tz-Math.cos(cam.yaw)*lead;
+  camera.position.set(tx+Math.sin(cam.yaw)*hd,Math.sin(cam.pitch)*camD(),tz+Math.cos(cam.yaw)*hd);
+  camera.lookAt(tx,0.4,tz);
   camera.updateMatrixWorld();
 }
 const _pv=new T.Vector3();
-function curveY(x,z){const dx=x-camera.position.x,dz=z-camera.position.z;return-(dx*dx+dz*dz)*CURVE;}
+// how far the curved world has dropped at (x,z) as a given camera sees it (mirrors project_vertex in 00-core)
+function curveDropFor(cm,x,z){const e=cm.matrixWorld.elements,t=e[13]/Math.max(0.05,e[9]),r=Math.max(0,Math.hypot(x-(e[12]-e[8]*t),z-(e[14]-e[10]*t))-CURVE_R0);return r*r*CURVE;}
+function curveY(x,z){return-curveDropFor(camera,x,z);}
+// the angle below level at which the sea meets the sky (the flattest line of sight that still grazes the curved world)
+let _hzKey='',_hzA=0.3;
+function horizonA(){const h=Math.max(0.05,camera.position.y),H0=h/Math.tan(Math.max(0.05,cam.pitch)),key=h.toFixed(2)+'|'+H0.toFixed(2);if(key===_hzKey)return _hzA;_hzKey=key;
+  let m=1e9;for(let s=0;s<400;s+=0.5){const q=(h+CURVE*s*s)/(H0+CURVE_R0+s);if(q<m)m=q;}return _hzA=Math.atan(m);}
 function toScreen(x,y,z){_pv.set(x,y+curveY(x,z),z).project(camera);return[(_pv.x+1)/2*window.innerWidth,(1-_pv.y)/2*window.innerHeight,_pv.z];}
 
 /* =========================================================

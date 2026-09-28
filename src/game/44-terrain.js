@@ -1,5 +1,5 @@
 // a unit tile (y 0..1) with any of its four corners rounded off; bit0=-x-z, bit1=+x-z, bit2=+x+z, bit3=-x+z
-const RTILE={},TILE_R=0.42;
+const RTILE={},TILE_R=0.1; // only just rounded: the coast and cliffs step in crisp tile blocks
 function rtileGeo(mask){if(RTILE[mask])return RTILE[mask];const C=[[-1,1],[1,1],[1,-1],[-1,-1]],pts=[];
   [3,2,1,0].forEach((b,j)=>{const [sx,sy]=C[b];if(mask>>b&1){const cx=sx*(0.5-TILE_R),cy=sy*(0.5-TILE_R),a0=Math.PI+j*Math.PI/2;for(let t=0;t<=5;t++){const a=a0+t/5*Math.PI/2;pts.push(new T.Vector2(cx+Math.cos(a)*TILE_R,cy+Math.sin(a)*TILE_R));}}
     else pts.push(new T.Vector2(sx*0.5,sy*0.5));});
@@ -90,6 +90,10 @@ function buildIsland(isl){
       if(!groups.has(mask))groups.set(mask,[]);groups.get(mask).push([x,z]);}
     const bk=makeBake();for(const [mask,l] of groups)for(const [x,z] of l)bk.add(rtileGeo(mask),x,y,z,1,0.002,1,0xffffff,null,()=>true);const m=bk.mesh(mat,false);if(m){m.receiveShadow=false;g.add(m);isl.flats.push(m);}};
   flat(a1,s1Mat,0.012,1);flat(a2,s2Mat,0.006,2);
+  // dark, wave-worn rocks poking out of the shallows here and there
+  {const rp=[];for(const [x,z] of [...a1,...a2]){const h=hash(x*1.37+isl.id,z*2.11);if(h>0.03)continue;const s=0.35+hash(z,x)*0.4,ox=(hash(x,z*3)-0.5)*0.5,oz=(hash(z*5,x)-0.5)*0.5;
+      rp.push(PG(SPH,0x6e7a88,0x3e4854,x+ox,0.02,z+oz,0,h*200,0,s,s*0.55,s*0.85),PG(SPH_LO,0x7a8694,0x46505c,x+ox+s*0.35,0,z+oz+s*0.2,0,0,0,s*0.5,s*0.3,s*0.45));}
+    if(rp.length){const m=M(rp);m.castShadow=false;g.add(m);}}
   const blocked=new Set();
   if(isl.home){
     const DX=DOCK.x;isl.dockZ=DOCK.z;const dz=DOCK.z;

@@ -45,11 +45,11 @@ function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S
   const fAmt=(S.home&&S.home.wild)||0.5;
   for(const [x,z] of isl.grass){const k=K(x,z);if(keep.has(k)||farmQ(x,z)<1.3||S.debris.some(d=>d.x===x&&d.z===z))continue;
     const f=vnoise(x*0.9+sd,z*0.9-sd,sd)*0.7+vnoise(x*2.3,z*2.3,sd+3)*0.3,r=R();let kd=null;
-    const forest=f>0.72-fAmt*0.3,thicket=f>0.6-fAmt*0.3;
+    const forest=f>0.8-fAmt*0.25,thicket=f>0.66-fAmt*0.25; // groves and copses with open meadow between
     if(cliffEdge(x,z)&&r<0.16)kd=r<0.05?'boulder':'rock';
     // tidy, readable woods: trees with a few bushes at their feet, bushy edges, and open meadows with only the odd weed or stone
-    else if(forest&&!wet(x,z))kd=r<0.44?'tree':r<0.52?'bush':null;
-    else if(thicket)kd=r<0.16?'tree':r<0.34?'bush':r<0.38?'weed':null;
+    else if(forest&&!wet(x,z))kd=r<0.34?'tree':r<0.42?'bush':null;
+    else if(thicket)kd=r<0.1?'tree':r<0.22?'bush':r<0.25?'weed':null;
     else kd=r<0.022?'weed':r<0.03?'twig':r<0.04?'rock':r<0.055?'bush':null;
     if(!kd)continue;const d=newDebris(x,z,kd);d.v=Math.floor(R()*(kd==='tree'?4:3));d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}}
 

@@ -28,20 +28,22 @@ function updatePrints(dt){let n=0;for(const p of prints){p.age+=dt;const s=p.age
   fpIM.count=n;fpIM.instanceMatrix.needsUpdate=true;}
 
 // --- sky: drifting clouds, the moon, shooting stars, rainbows ---
-const skyCloudMat=new T.MeshBasicMaterial({vertexColors:true,fog:false,transparent:true,opacity:0.95,depthWrite:false});
+// sky things are placed by angle (skyPos) and drawn unbent by the curved world
+const noCurve=m=>{m.defines=Object.assign(m.defines||{},{NO_CURVE:''});return m;};
+const skyCloudMat=noCurve(new T.MeshBasicMaterial({vertexColors:true,fog:false,transparent:true,opacity:0.95,depthWrite:false}));
 const skyClouds=[];
 // big puffy cumulus banked along the horizon (the long-lens camera sees a narrow slice of sky, so there are plenty)
-for(let i=0;i<44;i++){const R=mulberry(i*97+11),p=[];const n=5+Math.floor(R()*5);
-  for(let j=0;j<n;j++){const x=(j-n/2)*0.75+(R()-0.5)*0.4,s=0.9+R()*1.1-Math.abs(j-n/2)*0.12;p.push(P(SPH_LO,0xffffff,x,s*0.35,(R()-0.5)*0.6,0,R()*3,0,s*1.4,s*1.1,s*1.1),P(SPH_LO,0xdde6f4,x,0,(R()-0.5)*0.6,0,R()*3,0,s*1.35,s*0.45,s));}
+for(let i=0;i<9;i++){const R=mulberry(i*97+11),p=[];const n=5+Math.floor(R()*5);
+  for(let j=0;j<n;j++){const x=(j-n/2)*0.75+(R()-0.5)*0.4,s=0.9+R()*1.1-Math.abs(j-n/2)*0.12;p.push(P(SPH_LO,0xffffff,x,s*0.35,(R()-0.5)*0.6,0,R()*3,0,s*1.4,s*1.1,s*1.1),P(SPH_LO,0xf8ebe0/* warm, sunlit undersides */,x,0.1,(R()-0.5)*0.6,0,R()*3,0,s*1.35,s*0.45,s));}
   const m=new T.Mesh(merge(p),skyCloudMat);m.frustumCulled=false;m.renderOrder=-1;scene.add(m);
-  skyClouds.push({m,a:i/44*6.283+R()*0.2,d:130+R()*40,f:0.04+R()*0.5,s:3.5+R()*3});}
+  skyClouds.push({m,a:(i/9-0.5)*0.9+R()*0.03,d:140+R()*40,f:0.14+((i*4)%9)/9*0.72,s:1.6+R()*2.2});}
 const moon=new T.Group();
-{const disc=new T.Mesh(new T.CircleGeometry(5,24),new T.MeshBasicMaterial({color:0xfff4d6,fog:false,transparent:true}));moon.add(disc);
-  for(const [x,y,r] of [[-1.6,1,1.1],[1.4,-0.8,1.4],[0.4,2.2,0.7],[-0.6,-2,0.8]]){const c=new T.Mesh(new T.CircleGeometry(r,14),new T.MeshBasicMaterial({color:0xece0bc,fog:false,transparent:true}));c.position.set(x,y,0.05);moon.add(c);}
-  const halo=new T.Mesh(new T.CircleGeometry(9,24),new T.MeshBasicMaterial({color:0xfff4d6,fog:false,transparent:true,opacity:0.12,depthWrite:false}));halo.position.z=-0.1;moon.add(halo);
+{const disc=new T.Mesh(new T.CircleGeometry(5,24),noCurve(new T.MeshBasicMaterial({color:0xfff4d6,fog:false,transparent:true})));moon.add(disc);
+  for(const [x,y,r] of [[-1.6,1,1.1],[1.4,-0.8,1.4],[0.4,2.2,0.7],[-0.6,-2,0.8]]){const c=new T.Mesh(new T.CircleGeometry(r,14),noCurve(new T.MeshBasicMaterial({color:0xece0bc,fog:false,transparent:true})));c.position.set(x,y,0.05);moon.add(c);}
+  const halo=new T.Mesh(new T.CircleGeometry(9,24),noCurve(new T.MeshBasicMaterial({color:0xfff4d6,fog:false,transparent:true,opacity:0.12,depthWrite:false})));halo.position.z=-0.1;moon.add(halo);
   moon.traverse(o=>{o.frustumCulled=false;});scene.add(moon);}
 const shootGeo=new T.BufferGeometry();shootGeo.setAttribute('position',new T.BufferAttribute(new Float32Array(6),3));
-const shootLine=new T.Line(shootGeo,new T.LineBasicMaterial({color:0xfffbe8,transparent:true,fog:false}));shootLine.frustumCulled=false;shootLine.visible=false;scene.add(shootLine);
+const shootLine=new T.Line(shootGeo,noCurve(new T.LineBasicMaterial({color:0xfffbe8,transparent:true,fog:false})));shootLine.frustumCulled=false;shootLine.visible=false;scene.add(shootLine);
 let shoot=null;
 function spawnShootingStar(){const side=Math.random()<0.5?1:-1;
   shoot={th:cam.yaw+Math.PI+(Math.random()-0.5)*0.5-side*0.25,f:0.75+Math.random()*0.25,vth:side*0.45,vf:-0.55,t:0,life:1.2,wished:false};
@@ -49,17 +51,19 @@ function spawnShootingStar(){const side=Math.random()<0.5?1:-1;
 function makeWish(){if(!shoot||shoot.wished)return;shoot.wished=true;S.wishes=(S.wishes||0)+1;SFX.rare();
   for(let i=0;i<12;i++)sparkle(vil.x,1.2,vil.z,0xfff6c0);toast('You wished upon a shooting star… something might wash ashore tomorrow.','rare',ICON.star);}
 const RB_COLS=[0xe8504a,0xf09040,0xf6d04a,0x6ac860,0x4a9ae8,0x8a6ad0];const rainbow=new T.Group();
-RB_COLS.forEach((c,i)=>{const m=new T.Mesh(new T.TorusGeometry(58-i*2.2,1.1,4,64,Math.PI),new T.MeshBasicMaterial({color:c,fog:false,transparent:true,opacity:0,depthWrite:false}));m.frustumCulled=false;rainbow.add(m);});
+RB_COLS.forEach((c,i)=>{const m=new T.Mesh(new T.TorusGeometry(58-i*2.2,1.1,4,64,Math.PI),noCurve(new T.MeshBasicMaterial({color:c,fog:false,transparent:true,opacity:0,depthWrite:false})));m.frustumCulled=false;rainbow.add(m);});
 rainbow.visible=false;scene.add(rainbow);let rainbowT=0;
 function stopRain(){S.rain=false;S.rainUntil=0;if(S.hour>7&&S.hour<18){rainbowT=50;toast('The rain has stopped… look, a rainbow!','rare',ICON.star);}}
 function duskEvent(){S.meteor=!S.rain&&Math.random()<0.22;if(S.meteor)toast('Tonight there will be a meteor shower! Tap the sky when a star falls to make a wish.','rare',ICON.star);}
 const STAR_T=[],STAR_F=[];for(let i=0;i<STARN;i++){STAR_T.push(Math.random()*6.283);STAR_F.push(Math.random()*1.3);}
-function skyPos(theta,f,d,out,curved=true){const cp=camera.position,hc=cp.y,aT=cam.pitch-camera.fov/2*Math.PI/180,aH=Math.atan(2*Math.sqrt(Math.max(0.05,hc)*CURVE)),a=lerp(aH,aT,f);
-  return out.set(cp.x+Math.sin(theta)*d,hc-d*Math.tan(a)+(curved?CURVE*d*d:0),cp.z+Math.cos(theta)*d);}
-function skySpan(d){const hc=camera.position.y,aT=cam.pitch-camera.fov/2*Math.PI/180,aH=Math.atan(2*Math.sqrt(Math.max(0.05,hc)*CURVE));return d*(Math.tan(aH)-Math.tan(aT));}
+function skyPos(theta,f,d,out,curved=false){const cp=camera.position,hc=cp.y,aT=cam.pitch-camera.fov/2*Math.PI/180,aH=horizonA(),a=lerp(aH,aT,f);
+  const x=cp.x+Math.sin(theta)*d,z=cp.z+Math.cos(theta)*d;return out.set(x,hc-d*Math.tan(a)+(curved?curveDropFor(camera,x,z):0),z);}
+function skySpan(d){const aT=cam.pitch-camera.fov/2*Math.PI/180,aH=horizonA();return d*(Math.tan(aH)-Math.tan(aT));}
 function updateSky(dt,tt){
   const cp=camera.position,sky=skyHz,night=nightF,fwd=cam.yaw+Math.PI;
-  for(const c of skyClouds){c.a+=dt*0.004*(0.5+wind);skyPos(c.a,c.f,c.d,c.m.position);c.m.scale.setScalar(c.s*c.d/140);c.m.lookAt(cp.x,c.m.position.y,cp.z);}
+  // clouds live in a band across whatever way you face (the long lens sees only a slice of sky), drifting slowly across it
+  const band=2.6*Math.atan(Math.tan(camera.fov*Math.PI/360)*camera.aspect);
+  for(const c of skyClouds){c.a+=dt*0.006*(0.5+wind);if(c.a>0.45)c.a-=0.9;skyPos(fwd+c.a/0.9*band,c.f,c.d,c.m.position);c.m.scale.setScalar(c.s*c.d/140*clamp(band/0.8,0.42,1));c.m.lookAt(cp.x,c.m.position.y,cp.z);}
   skyCloudMat.color.setRGB(1,1,1).lerp(sky,0.25+rainMix*0.35).lerp(skyGlow,skyGA*0.45).multiplyScalar(1-night*0.6);skyCloudMat.opacity=0.95;
   moon.visible=night>0.05;
   if(moon.visible){skyPos(fwd+0.28,0.55,150,moon.position);moon.scale.setScalar(0.8);moon.lookAt(cp);moon.traverse(o=>{if(o.material)o.material.opacity=(o.material.color.getHex()===0xfff4d6&&o.geometry.parameters.radius===9?0.12:1)*night*(1-rainMix);});}
