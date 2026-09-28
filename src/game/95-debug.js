@@ -36,6 +36,7 @@ if(/[?&]debug\b/.test(location.search)){
     next:()=>{const u=nextUnlock();return u&&u.name;},xp:n=>{addXP(n);return level();},plots:()=>TOWN.bld.map(b=>b.t+(b.t==='vh'?b.n:'')+(b.locked?':plot':'')),
     // every crop at one stage, rendered at the same scale on a patch of soil (data URLs), for eyeballing the models
     dock:()=>[DOCK.x,DOCK.z],
+    farIsles:()=>farIsles.map(f=>({a:f.a,pos:f.m.position.toArray().map(v=>+v.toFixed(1)),vis:f.m.visible})),faceFar:i=>{cam.yaw=farIsles[i].a+Math.PI;return cam.yaw;},
     camInfo:()=>({dist:cam.dist,pitch:cam.pitch,fov:camera.fov,pos:camera.position.toArray(),W,H,PX,hy:skyMat.uniforms.hy.value}),
     critters:()=>{const o={};for(const c of critters)o[c.k]=(o[c.k]||0)+1;return o;},spawnCritter:k=>spawnCritter(k),
     treeGallery:(size=200)=>{const out=[],so=S.seasonOv;const add=(name,parts,sm)=>{const w=new T.Group();w.add(M(parts));const box=new T.Mesh(sm?new T.BoxGeometry(1.3,1.3,1.3):new T.BoxGeometry(2.4,3.4,2.4));box.position.y=sm?0.5:1.5;box.visible=false;w.add(box);w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,2,0.06,2)]));out.push([name,snapThumb(w,size)]);};

@@ -1,3 +1,7 @@
+// the weather in the clock card: a sun with rays, a crescent moon, or a rain cloud
+let wxKind='';const WX_ICO={sun:'<svg viewBox="0 0 32 32">'+[0,1,2,3,4,5,6,7].map(i=>{const a=i*Math.PI/4;return `<rect x="15" y="1" width="2.4" height="6" rx="1.2" fill="#f6b42a" transform="rotate(${i*45} 16 16)"/>`;}).join('')+'<circle cx="16" cy="16" r="7.5" fill="#f9c940" stroke="#f0a020" stroke-width="1.5"/><circle cx="13.5" cy="13.5" r="2.2" fill="#fde9a0"/></svg>',
+  moon:'<svg viewBox="0 0 32 32"><path d="M21 4a12 12 0 1 0 7 20A10 10 0 0 1 21 4z" fill="#f4e6a8" stroke="#d8c270" stroke-width="1.5"/></svg>',
+  rain:'<svg viewBox="0 0 32 32"><ellipse cx="13" cy="13" rx="8" ry="6" fill="#cfd8e4"/><ellipse cx="20" cy="12" rx="7" ry="6.5" fill="#dde4ee"/><rect x="6" y="13" width="21" height="6" rx="3" fill="#cfd8e4"/><path d="M11 22l-2 4M17 22l-2 4M23 22l-2 4" stroke="#6aa8e8" stroke-width="2" stroke-linecap="round"/></svg>'};
 /* =========================================================
    UI helpers
    ========================================================= */
@@ -19,7 +23,8 @@ function locName(){if(inside)return inside.title;if(S.sea){const [isl,d]=nearest
 function updateHUD(){
   const lv=level();$('lvlTxt').textContent='Lv '+lv;
   const a=LV[lv-1]||0,b=LV[lv];$('xpFill').style.width=(b?clamp((S.xp-a)/(b-a),0,1)*100:100)+'%';
-  {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${S.rain?' · rain':''}${lowTide?' · low tide':''}`;$('locTxt').textContent=locName();
+  {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;
+    const wk=S.rain?'rain':nightF>0.5?'moon':'sun';if(wxKind!==wk){wxKind=wk;$('wxIco').innerHTML=WX_ICO[wk];}}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${S.rain?' · rain':''}${lowTide?' · low tide':''}`;$('locTxt').textContent=locName();
   refreshMuseumShow();$('bTask').classList.toggle('ready',ordersReady());$('bMenu').classList.toggle('ready',ordersReady());
   {const g=nextGoal(),el=$('nextUp');el.hidden=!g;if(g){const h=`<small>${g.tag}</small>${g.name}`;if(el.innerHTML!==h)el.innerHTML=h;}}
   const [g,t]=dexCount();$('dexTxt').textContent=`Dex ${Math.floor(g/t*100)}%`;$('locTxt').hidden=!$('locTxt').textContent;
