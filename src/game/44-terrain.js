@@ -89,7 +89,7 @@ function buildIsland(isl){
   const flat=(list,mat,y,lvl)=>{const groups=new Map();for(const [x,z] of list){let mask=0;CORNERS.forEach(([dx,dz],b)=>{if([shc(x+dx,z),shc(x,z+dz),shc(x+dx,z+dz)].every(v=>v>lvl))mask|=1<<b;});
       if(!groups.has(mask))groups.set(mask,[]);groups.get(mask).push([x,z]);}
     const bk=makeBake();for(const [mask,l] of groups)for(const [x,z] of l)bk.add(rtileGeo(mask),x,y,z,1,0.002,1,0xffffff,null,()=>true);const m=bk.mesh(mat,false);if(m){m.receiveShadow=false;g.add(m);isl.flats.push(m);}};
-  flat(a1,s1Mat,0.012,1);flat(a2,s2Mat,0.006,2);
+  // (the shallows are painted by the water itself now, from the distance to shore: see buildDepthTex)
   // dark, wave-worn rocks poking out of the shallows here and there
   const rockFoamMat=buildIsland.rfm||(buildIsland.rfm=new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.45,depthWrite:false}));
   {const rp=[],fp=[];const seaRock=(x,z,h,big)=>{const s=(big?0.5:0.32)+hash(z,x)*0.4,ox=(hash(x,z*3)-0.5)*0.5,oz=(hash(z*5,x)-0.5)*0.5,X=x+ox,Z=z+oz;

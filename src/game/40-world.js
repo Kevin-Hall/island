@@ -91,5 +91,5 @@ function genIslands(){farmMaxG=null;
     islands.push({id:islands.length,cx,cz,r,biome,name,grand:true,riverN:biome==='volcano'?1:1+(G()<0.5?1:0),rw:2,sx:0.8+G()*0.35,p1:G()*6.28,p2:G()*6.28,p3:G()*6.28,seed:Math.floor(G()*1e9)});
   }
 }
-function rebuildLandList(){landList=[];riverList=[];for(const [k,t] of landMap){if(t==='river'){const [x,z]=k.split(',').map(Number);riverList.push([x,z,riverSurf.get(k)]);continue;}if(!isLandT(t))continue;const [x,z]=k.split(',').map(Number);landList.push([x,z,t,islMap.get(k),topY(x,z)]);}}
+function rebuildLandList(){depthDirty=true;landList=[];riverList=[];for(const [k,t] of landMap){if(t==='river'){const [x,z]=k.split(',').map(Number);riverList.push([x,z,riverSurf.get(k)]);continue;}if(!isLandT(t))continue;const [x,z]=k.split(',').map(Number);landList.push([x,z,t,islMap.get(k),topY(x,z)]);}}
 

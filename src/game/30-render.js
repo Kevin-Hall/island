@@ -185,24 +185,36 @@ sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-28,righ
 sun.shadow.bias=-0.0015;sun.shadow.normalBias=0.02;scene.add(sun,sun.target);
 
 const waterMat=new T.MeshBasicMaterial({color:0x3565cc});
+const s1Mat=new T.MeshBasicMaterial({color:0x7ea6e8}),s2Mat=new T.MeshBasicMaterial({color:0x5584da});
 // the open sea isn't flat colour: soft darker and lighter patches, and bright ripple streaks that drift with the swell
 // (the pixel pass turns them into little painted wave marks)
-const waterU={uT:{value:0},uYaw:{value:0}};
-waterMat.onBeforeCompile=sh=>{sh.uniforms.uT=waterU.uT;sh.uniforms.uYaw=waterU.uYaw;
+// how far each patch of sea is from the nearest shore, one texel per tile (built from landMap by buildDepthTex): the
+// water shader uses it to fade from pale aqua at the sand, through turquoise, to deep blue, with a ragged pixel edge
+const DEPTH_N=400,DEPTH_X0=-200;let depthDirty=true;
+const depthTex=new T.DataTexture(new Uint8Array([255,255,255,255]),1,1,T.RGBAFormat);depthTex.needsUpdate=true;
+const waterU={uT:{value:0},uYaw:{value:0},uDepth:{value:depthTex},uDB:{value:new T.Vector3(DEPTH_X0,DEPTH_X0,1)},uS1:{value:s1Mat.color},uS2:{value:s2Mat.color}};
+function buildDepthTex(){depthDirty=false;const N=DEPTH_N,d=new Float32Array(N*N).fill(99);
+  for(const [k,t] of landMap){if(t!=='grass'&&t!=='sand'&&t!=='river'&&t!=='bridge')continue;const [x,z]=k.split(',').map(Number),i=x-DEPTH_X0,j=z-DEPTH_X0;if(i>=0&&j>=0&&i<N&&j<N)d[j*N+i]=0;}
+  // two-pass chamfer distance (rounder than steps along the grid)
+  const D=1.414;for(let j=0;j<N;j++)for(let i=0;i<N;i++){let v=d[j*N+i];if(i)v=Math.min(v,d[j*N+i-1]+1);if(j){v=Math.min(v,d[(j-1)*N+i]+1);if(i)v=Math.min(v,d[(j-1)*N+i-1]+D);if(i<N-1)v=Math.min(v,d[(j-1)*N+i+1]+D);}d[j*N+i]=v;}
+  for(let j=N-1;j>=0;j--)for(let i=N-1;i>=0;i--){let v=d[j*N+i];if(i<N-1)v=Math.min(v,d[j*N+i+1]+1);if(j<N-1){v=Math.min(v,d[(j+1)*N+i]+1);if(i<N-1)v=Math.min(v,d[(j+1)*N+i+1]+D);if(i)v=Math.min(v,d[(j+1)*N+i-1]+D);}d[j*N+i]=v;}
+  const px=new Uint8Array(N*N*4);for(let i=0;i<N*N;i++){const v=Math.min(255,Math.round(d[i]*40));px[i*4]=px[i*4+1]=px[i*4+2]=v;px[i*4+3]=255;}
+  const t=new T.DataTexture(px,N,N,T.RGBAFormat);t.magFilter=t.minFilter=T.LinearFilter;t.needsUpdate=true;
+  if(waterU.uDepth.value!==depthTex)waterU.uDepth.value.dispose();waterU.uDepth.value=t;waterU.uDB.value.set(DEPTH_X0,DEPTH_X0,N);}
+waterMat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,waterU);
   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
-  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;uniform float uYaw;')
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;uniform sampler2D uDepth;uniform vec3 uDB;uniform vec3 uS1;uniform vec3 uS2;')
     .replace('#include <color_fragment>',`#include <color_fragment>
       {vec2 q=vWp.xz;float n=fract(sin(dot(floor(q*.45),vec2(12.9898,78.233)))*43758.5453)*.5+fract(sin(dot(floor(q*1.3),vec2(39.3,11.7)))*43758.5453)*.5;
-       diffuseColor.rgb*=.93+.1*n;
-       // soft swells: broad lighter and darker bands rolling slowly
-       float sw=sin(q.x*.35+q.y*.22+uT*.4)*sin(q.y*.3-q.x*.12-uT*.3);diffuseColor.rgb*=.93+.12*sw;
-       // glints: a short dash in some cells, lying along the screen, blinking on and off
-       float cy=cos(uYaw),sy=sin(uYaw);vec2 r=vec2(q.x*cy-q.y*sy,q.x*sy+q.y*cy)*vec2(.55,1.4);vec2 ce=floor(r),f=fract(r);
-       float h=fract(sin(dot(ce,vec2(27.1,61.7)))*43758.5453),tw=step(.55,sin(uT*1.3+h*40.));
-       float dsh=step(abs(f.y-.5),.09)*step(abs(f.x-.5),.2+.1*h)*step(h,.3)*tw;
-       diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.92,.97,1.),dsh*.85);}`);};
+       diffuseColor.rgb*=.95+.08*n;
+       // soft swells: broad lighter and darker bands rolling slowly (world-fixed, so they don't swim as you turn)
+       float sw=sin(q.x*.35+q.y*.22+uT*.4)*sin(q.y*.3-q.x*.12-uT*.3);diffuseColor.rgb*=.94+.1*sw;
+       // shallows: pale aqua at the sand, turquoise, then the deep blue, with a ragged pixel edge between them
+       float dd=texture2D(uDepth,(q-uDB.xy+.5)/uDB.z).r*6.375-.5;
+       dd+=(fract(sin(dot(floor(q*2.5),vec2(12.9898,78.233)))*43758.5453)-.5)*.45+sin(q.x*.9+uT*.6)*sin(q.y*.8-uT*.5)*.18;
+       vec3 sh=mix(uS1*1.06,uS2,smoothstep(.5,2.,dd));
+       diffuseColor.rgb=mix(sh,diffuseColor.rgb,smoothstep(1.8,4.4,dd));}`);};
 const water=new T.Mesh(new T.PlaneGeometry(520,520,52,52).rotateX(-Math.PI/2),waterMat);water.frustumCulled=false;scene.add(water);
-const s1Mat=new T.MeshBasicMaterial({color:0x7ea6e8}),s2Mat=new T.MeshBasicMaterial({color:0x5584da});
 const TILE_PLANE=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2);
 
 const STARN=900,starGeo=new T.BufferGeometry(),sp=new Float32Array(STARN*3),ss=new Float32Array(STARN);
