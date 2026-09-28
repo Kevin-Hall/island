@@ -99,7 +99,8 @@ function driftLeaves(dt){leafT-=dt;if(leafT>0)return;leafT=0.35+Math.random()*0.
   const col=s==='autumn'?pickR([0xe8803a,0xf4a444,0xc8402a]):s==='spring'&&t.v%4===3?pickR([0xf8c8d8,0xffe4ee]):pickR([0x6ab84a,0x8ad05a,0x4a9a3a]);
   emit(t.x+(Math.random()-0.5)*0.9,y,t.z+(Math.random()-0.5)*0.9,{vx:0.15,vy:-0.28,vz:0.05,life:5,max:5,size:0.055,color:col,g:0,sw:0.9,ph:Math.random()*6.28,spin:1});}
 let forageT=5;
-function updateForage(dt){if(!S.wild||S.sea)return;driftLeaves(dt);forageT-=dt;if(forageT<=0){forageT=9+Math.random()*9;forageSpawn(false,1);}
+let forageOff=false; // (tests switch it off so nothing appears under their taps)
+function updateForage(dt){if(!S.wild||S.sea||forageOff)return;driftLeaves(dt);forageT-=dt;if(forageT<=0){forageT=9+Math.random()*9;forageSpawn(false,1);}
   // bubbles fizz and dig spots glint now and then, so you notice them
   for(const f of S.finds){if(f.k!=='bubbles'&&f.k!=='dig')continue;if(Math.abs(f.x-vil.x)>18||Math.abs(f.z-vil.z)>18)continue;
     if(f.k==='bubbles'&&Math.random()<dt*1.5)emit(f.x+(Math.random()-0.5)*0.2,topY(f.x,f.z)+0.05,f.z+(Math.random()-0.5)*0.2,{vx:0,vy:0.5,vz:0,life:0.4,max:0.4,size:0.04,color:0xffffff,g:0});

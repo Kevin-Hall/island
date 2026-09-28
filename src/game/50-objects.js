@@ -69,13 +69,12 @@ function houseGroup(lv){
   const g=new T.Group(),p=[],gl=[];
   if(lv===0){const sx=1.5/1.732,sy=1.0/1.5;
     p.push(P(PRISM,0xf2e8d2,0,0.5*sy,0,0,0,0,sx,sy,1.5),P(PRISM,0xd05a4a,0,0.5*sy*1.02,0,0,0,0,sx*1.03,sy*1.03,0.34),P(PRISM,0x3a2a30,0,0.5*sy*0.5,0.02,0,0,0,sx*0.42,sy*0.5,1.52));
-    for(let i=0;i<6;i++){const a=i/6*6.28;p.push(P(BOX,0x8a8e98,0.62+Math.cos(a)*0.2,0.05,0.8+Math.sin(a)*0.2,0,a,0,0.1,0.08,0.1));}
-    p.push(P(BOX,0x6a4228,0.62,0.07,0.8,0,0.5,0,0.3,0.06,0.07),P(BOX,0x6a4228,0.62,0.07,0.8,0,-0.5,0,0.3,0.06,0.07));
+    // the bonfire in front of your tent, with a bench on either side and a crate of supplies
+    // (to the front-left, clear of the door: its tile is kept solid in layoutTown)
+    {const fx=-1.5,fz=1.5;const q=campfireParts(1.1);p.push(...shift(q.p,fx,0,fz,0));addFire(g,fx,0,fz,1.1);benchParts(p,fx,fz+0.72,0);benchParts(p,fx-0.72,fz,Math.PI/2);
+      p.push(P(BOX,0xb07a44,1.25,0.18,-0.55,0,0.3,0,0.36,0.34,0.34),P(BOX,0x7a5230,1.25,0.18,-0.55,0,0.3,0,0.38,0.05,0.36),P(BOX,0x7a5230,1.25,0.35,-0.55,0,0.3,0,0.38,0.03,0.36));}
     for(let i=0;i<4;i++)p.push(P(BOX,i%3?0xf4f0ea:0xd8453a,-0.72+(i%2)*0.3,0.02,0.62+Math.floor(i/2)*0.3,0,0,0,0.3,0.03,0.3));
-    // a fire pit with two log seats pulled up to it
-    for(const sd of [-1,1])p.push(P(CYL6,0x8a5a34,0.62,0.1,0.8+sd*0.46,0,0,1.57,0.13,0.62,0.13),P(CYL6,0xd8b078,0.62+0.31,0.1,0.8+sd*0.46,0,0,1.57,0.11,0.02,0.11),P(CYL6,0xd8b078,0.62-0.31,0.1,0.8+sd*0.46,0,0,1.57,0.11,0.02,0.11));
-    gl.push(P(CONE4,0xffa040,0.62,0.2,0.8,0,0.5,0,0.16,0.26,0.16),P(CONE4,0xffe070,0.62,0.18,0.8,0,0,0,0.08,0.16,0.08));
-    g.add(pool(0.03,0.9).translateX(0.62).translateZ(0.8));
+    g.add(pool(0.03,1.3).translateX(-1.5).translateZ(1.5));
   }else if(lv===1){
     p.push(P(BOX,0x9c6b40,0,0.5,0,0,0,0,1.5,1.0,1.3));for(let i=0;i<4;i++)p.push(P(BOX,0x7c5230,0,0.12+i*0.25,0,0,0,0,1.53,0.04,1.33));
     roof(p,0x5b3b3b,0x9c6b40,1.6,0.8,1.3,1.0);p.push(P(BOX,0x4a3024,-0.2,0.32,0.66,0,0,0,0.32,0.62,0.04),P(BOX,0x8a8a92,0.45,1.6,-0.2,0,0,0,0.2,0.5,0.2));

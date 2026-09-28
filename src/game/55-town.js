@@ -51,6 +51,7 @@ function layoutTown(isl){
     for(const s of S.builds||[]){const b={t:s.t,x:s.x,z:s.z,n:s.n,roof:s.roof,door:[s.x,s.z+2],locked:S.day<=s.day};TOWN.bld.push(b);// under construction until the next morning
       for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++)TOWN.fixed.set(K(s.x+dx,s.z+dz),b.locked?'plot':b.t);}
     if(S.homeAt){HOUSE_AT.x=S.homeAt.x;HOUSE_AT.z=S.homeAt.z;home={t:'home',x:HOUSE_AT.x,z:HOUSE_AT.z,door:[HOUSE_AT.x,HOUSE_AT.z+2]};TOWN.bld.push(home);
+      if(!S.house)TOWN.fixed.set(K(HOUSE_AT.x-1,HOUSE_AT.z+2),'decor'); // the tent's bonfire
       const binC=[[home.x+2,home.z+1],[home.x-1,home.z+1],[home.x+2,home.z],[home.x-1,home.z]].find(([x,z])=>isLand(x,z)&&!taken(K(x,z))&&!S.debris.some(d=>d.x===x&&d.z===z));if(binC){BIN_AT.x=binC[0];BIN_AT.z=binC[1];}else{BIN_AT.x=home.x+2;BIN_AT.z=home.z+1;}}
     else{HOUSE_AT.x=HOUSE_AT.z=9999;BIN_AT.x=BIN_AT.z=9999;}
     for(const e of ['tent','fire'])if(S.home&&S.home[e]){const [x,z]=S.home[e];for(let dx=0;dx<(e==='tent'?2:1);dx++)for(let dz=0;dz<(e==='tent'?2:1);dz++)TOWN.fixed.set(K(x+dx,z+dz),'decor');}
@@ -125,7 +126,7 @@ function layoutTown(isl){
   // palms along the town beach (shake or chop them like the other trees), clear of the dock and your boat
   if(!(S.home&&S.home.preset))for(const [x,z] of palmSpots(isl,R,8,(x,z)=>!taken(K(x,z))&&Math.hypot(x-DOCK.x,z-DOCK.z)>3.5&&!(S.boat&&Math.hypot(x-S.boat.x,z-S.boat.z)<2.5))){const k=K(x,z);
     tp.push(...shift(treeParts(PALMS[Math.floor(hash(x,z)*PALMS.length)],mulberry(hi(x,z,13)),0x9a9ea8),x,y0(x,z),z,hash(z,x)*6.28));TOWN.fixed.set(k,'decor');TOWN.res.set(k,'tree');}
-  if(S.home&&S.home.fire){const [x,z]=S.home.fire,y=y0(x,z),q=campfireParts();p.push(...shift(q.p,x,y,z,0));gl.push(...shift(q.gl,x,y,z,0));TOWN.lamps.push([x,y,z]);}
+  if(S.home&&S.home.fire){const [x,z]=S.home.fire,y=y0(x,z),q=campfireParts(1.2);p.push(...shift(q.p,x,y,z,0));addFire(isl.group,x,y,z,1.2);TOWN.lamps.push([x,y,z]);}
   if(S.home&&S.home.tent){const [x,z]=S.home.tent,t=houseGroup(0);t.position.set(x+0.5,y0(x,z),z+0.5);t.rotation.y=-0.4;isl.group.add(t);}
   isl.group.add(M(p));addVeg(isl,isl.group,tp);if(gl.length){const m=M(gl,glowMat);m.castShadow=false;isl.group.add(m);}
   // flowers, clover and pebbles: instanced over the open grass (hidden again wherever you till or build)
@@ -197,10 +198,23 @@ function cottage(p,gl,roofCol){const wall=0xf3e6cc,base=0xb8ae9a;
   doorAt(p,gl,0x8a5a3a,-0.3,0,0.66);win(p,gl,0.38,0.58,0.66);
   p.push(P(BOX,0x8a5a3a,0.38,0.38,0.72,0,0,0,0.42,0.08,0.1));for(let i=0;i<4;i++)p.push(P(SPH_XS,[0xf2a6c8,0xf6d04a,0xffffff,0xe86a5a][i],0.26+i*0.08,0.45,0.73,0,0,0,0.08,0.07,0.08));}
 // a campfire in a ring of stones, crossed logs and a flame
-function campfireParts(){const p=[],gl=[];for(let i=0;i<9;i++){const a=i/9*6.283;p.push(PG(SPH_LO,0xa8a8b0,0x6a6a74,Math.cos(a)*0.32,0.06,Math.sin(a)*0.32,0,a,0,0.16,0.12,0.14));}
-  p.push(P(CYL6,0x6a4228,0,0.07,0,0,0.6,1.5,0.07,0.46,0.07),P(CYL6,0x5a3822,0,0.08,0,0,-0.6,1.5,0.07,0.46,0.07),P(SPH_LO,0x3a2a22,0,0.03,0,0,0,0,0.36,0.04,0.36));
-  gl.push(P(CONE5,0xff8a30,0,0.2,0,0,0,0,0.26,0.36,0.26),P(CONE5,0xffd060,0.02,0.2,0.02,0,0.5,0,0.14,0.26,0.14),P(CONE5,0xff6a28,-0.07,0.16,-0.04,0,1,0.2,0.1,0.2,0.1));
-  return{p,gl};}
+function campfireParts(s=1){const p=[],gl=[];
+  for(let i=0;i<10;i++){const a=i/10*6.283;p.push(PG(SPH_LO,i%2?0x8e8a94:0x7a7682,0x4a4652,Math.cos(a)*0.34*s,0.07*s,Math.sin(a)*0.34*s,0,a,0,0.2*s,0.15*s,0.17*s));}
+  p.push(P(SPH_LO,0x2e2420,0,0.03*s,0,0,0,0,0.5*s,0.05*s,0.5*s));
+  for(let i=0;i<4;i++){const a=i*0.785+0.3;p.push(P(CYL6,i%2?0x7a4a2a:0x5e3820,Math.cos(a)*0.06*s,0.12*s,Math.sin(a)*0.06*s,Math.sin(a)*0.9,0,-Math.cos(a)*0.9,0.07*s,0.5*s,0.07*s));}
+  p.push(P(SPH_XS,0xff7a28,0,0.08*s,0,0,0,0,0.24*s,0.06*s,0.24*s)); // glowing embers under the logs
+  return{p,gl:flameParts(s)};}
+// the flame alone (flickered by updateFires), centred on the pit
+function flameParts(s=1){return[PG(SCONE,0xffd060,0xff6a24,0,0.34*s,0,0,0,0,0.42*s,0.62*s,0.42*s),PG(SCONE,0xfff2a0,0xffa030,0.02*s,0.3*s,0.02*s,0,0.6,0,0.24*s,0.46*s,0.24*s),
+  PG(SCONE,0xffb040,0xff5a20,-0.1*s,0.24*s,-0.04*s,0,1,0.25,0.18*s,0.34*s,0.18*s),PG(SCONE,0xffb040,0xff5a20,0.1*s,0.24*s,0.05*s,0,2,-0.25,0.16*s,0.3*s,0.16*s)];}
+// a wooden bench (plank seat on two little legs)
+function benchParts(p,x,z,r){const q=[P(BOX,0x9a6438,0,0.2,0,0,0,0,0.9,0.07,0.3),P(BOX,0x7a4a2a,-0.34,0.09,0,0,0,0,0.08,0.18,0.24),P(BOX,0x7a4a2a,0.34,0.09,0,0,0,0,0.08,0.18,0.24)];p.push(...shift(q,x,0,z,r));}
+// every lit fire flickers, glows and sends up embers
+const fires=new Set();
+function addFire(parent,x,y,z,s=1){const f=M(flameParts(s),glowMat);f.castShadow=false;f.position.set(x,y,z);parent.add(f);fires.add(f);return f;}
+function updateFires(dt,tt){for(const f of fires){if(!f.parent){fires.delete(f);continue;}let o=f,vis=true,root=f;while(o){if(!o.visible){vis=false;break;}root=o;o=o.parent;}if(!vis||root!==scene)continue;/* (previews and thumbnails aren't in the world) */
+  const ph=f.id*1.7;f.scale.set(1+Math.sin(tt*11+ph)*0.07,1+Math.sin(tt*8.3+ph)*0.14+Math.sin(tt*17+ph)*0.05,1+Math.cos(tt*10+ph)*0.07);f.rotation.y+=dt*0.8;
+  if(Math.random()<dt*7){f.getWorldPosition(_v);if(Math.abs(_v.x-cam.tx)<24&&Math.abs(_v.z-cam.tz)<24)emit(_v.x+(Math.random()-0.5)*0.2,_v.y+0.45,_v.z+(Math.random()-0.5)*0.2,{vx:(Math.random()-0.5)*0.3,vy:0.9+Math.random()*0.6,vz:(Math.random()-0.5)*0.3,life:1.2,max:1.2,size:0.035,color:Math.random()<0.5?0xffb040:0xffe080,g:0,sw:0.6,ph:Math.random()*6});}}}
 /* ---- villager homes in coastal styles, one per personality (footprint ±1, door at the front centre, +z) ---- */
 function planks(p,c,x,y,z,w,h,d,axis='x'){const n=Math.max(2,Math.round((axis==='x'?w:d)/0.14));for(let i=0;i<n;i++){const t=(i+0.5)/n-0.5,sh=i%2?0.94:1.04;
   p.push(axis==='x'?P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x+t*w,y,z,0,0,0,w/n*0.96,h,d):P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x,y,z+t*d,0,0,0,w,h,d/n*0.96));}}

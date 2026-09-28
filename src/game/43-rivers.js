@@ -7,9 +7,11 @@ function flowMat(col,hi,emi,fall){const m=toon({color:col,emissive:emi||0,emissi
       float st=fract(vRW.y*2.4+uTime*2.6+sin(vRW.x*7.+vRW.z*7.)*0.7);diffuseColor.rgb=mix(diffuseColor.rgb,vec3(${hi}),step(0.62,st)*0.85);`:
       `vec4 diffuseColor = vec4( diffuse, opacity );
       float w=sin(vRW.x*2.6+uTime*1.4)+sin(vRW.z*3.1-uTime*1.8)+sin((vRW.x-vRW.z)*1.7+uTime*0.9);
-      diffuseColor.rgb=mix(diffuseColor.rgb,vec3(${hi}),smoothstep(1.7,2.5,w)*0.8);diffuseColor.rgb*=0.93+0.07*sin(vRW.x*1.3+vRW.z*0.7+uTime*0.6);`);};
+      diffuseColor.rgb=mix(diffuseColor.rgb,vec3(${hi}),smoothstep(1.7,2.5,w)*0.8);diffuseColor.rgb*=0.93+0.07*sin(vRW.x*1.3+vRW.z*0.7+uTime*0.6);
+      // little sparkles riding the current
+      {vec2 c=floor(vRW.xz*3.+vec2(uTime*.9,uTime*.6));float h=fract(sin(dot(c,vec2(12.9898,78.233)))*43758.5453);diffuseColor.rgb+=vec3(.9,.95,1.)*step(.965,h)*step(.5,sin(uTime*3.+h*30.))*.6;}`);};
   return m;}
-const RIVER_MATS={water:flowMat(0x4f9ae0,'0.86,0.95,1.0'),swamp:flowMat(0x4a8070,'0.7,0.86,0.78'),snow:flowMat(0x72b4e8,'0.92,0.98,1.0'),lava:flowMat(0xe0582a,'1.0,0.86,0.3',0xb03a10)};
+const RIVER_MATS={water:flowMat(0x4aaee6,'0.9,0.98,1.0'),swamp:flowMat(0x4a8070,'0.7,0.86,0.78'),snow:flowMat(0x72b4e8,'0.92,0.98,1.0'),lava:flowMat(0xe0582a,'1.0,0.86,0.3',0xb03a10)};
 const FALL_MATS={water:flowMat(0x7ab8f0,'0.95,0.99,1.0',0,1),swamp:flowMat(0x6a9a88,'0.85,0.95,0.9',0,1),snow:flowMat(0x9accf4,'1.0,1.0,1.0',0,1),lava:flowMat(0xf0782a,'1.0,0.92,0.4',0xc04a10,1)};
 const FALL_PLANE=new T.PlaneGeometry(1,1);
 // carve rivers from an inland pond down to the sea; they drop a tier at a time as waterfalls and get wooden bridges
@@ -62,6 +64,14 @@ function carveRivers(isl,g){const R=mulberry(isl.seed^0x71e5),B=BIOMES[isl.biome
   list.forEach((q,i)=>{const bt=q.surf-0.14,h=bt+0.6;_m.compose(_v.set(q.x,-0.6+h/2,q.z),_q.identity(),_s.set(1,h,1));bed.setMatrixAt(i,_m);bed.setColorAt(i,_c.set(lava?0x3a2a2a:B.cliff||0x9a7050).multiplyScalar(0.72));
     _m.makeTranslation(q.x,q.surf,q.z);wat.setMatrixAt(i,_m);});
   for(const m of [bed,wat]){m.frustumCulled=false;m.receiveShadow=true;g.add(m);}
+  // banks: a soft line of foam where the water meets the land, rounded pebbles along the edge, and tufts of reeds
+  if(!lava){const fo=[],pb=[],Rb=mulberry(isl.seed^0xba2c);
+    for(const q of list)for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const k2=K(q.x+dx,q.z+dz),t2=landMap.get(k2);if(riverSurf.has(k2)||t2==='bridge'||!isLandT(t2))continue;
+      const ex=q.x+dx*0.42,ez=q.z+dz*0.42;fo.push(P(BOX,0xffffff,ex,q.surf+0.012,ez,0,0,0,dz?0.96:0.12,0.01,dx?0.96:0.12));
+      if(Rb()<0.45){const s=0.1+Rb()*0.1,ox=dz?(Rb()-0.5)*0.8:0,oz=dx?(Rb()-0.5)*0.8:0;pb.push(PG(SPH_LO,0xb4b0a8,0x76726c,q.x+dx*0.5+ox,q.surf+0.03,q.z+dz*0.5+oz,0,Rb()*3,0,s*1.4,s*0.7,s));}
+      if(Rb()<0.18&&t2==='grass'){const bx=q.x+dx*0.62+(dz?(Rb()-0.5)*0.6:0),bz=q.z+dz*0.62+(dx?(Rb()-0.5)*0.6:0),by=topY(q.x+dx,q.z+dz);for(let i=0;i<4;i++){const h=0.28+Rb()*0.25;pb.push(P(CYL5,i%2?0x5a8a3a:0x6a9a44,bx+(Rb()-0.5)*0.16,by+h/2,bz+(Rb()-0.5)*0.16,(Rb()-0.5)*0.3,0,(Rb()-0.5)*0.3,0.025,h,0.025));}}}
+    if(fo.length){const m=M(fo,new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.55,depthWrite:false}));m.castShadow=false;m.receiveShadow=false;g.add(m);}
+    if(pb.length){const m=M(pb);m.castShadow=false;g.add(m);}}
   const fp=[];isl.falls=[];
   for(const q of list)for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const k2=K(q.x+dx,q.z+dz);if(!riverSurf.has(k2))continue;const s2=riverSurf.get(k2);
     if(s2<q.surf-0.05){const h=q.surf-s2+0.02;fp.push(P(FALL_PLANE,0xffffff,q.x+dx*0.5,s2+h/2,q.z+dz*0.5,0,Math.atan2(dx,dz),0,1,h,1));isl.falls.push([q.x+dx*0.62,s2,q.z+dz*0.62]);}}

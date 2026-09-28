@@ -14,10 +14,12 @@ function canopy(p,R,cols,cx,cy,cz,rad){const [L,Mc,Dk]=cols,sh=lerpHex(Dk,0x1426
   const a1=a0+0.8;p.push(PG(SPH,L,Mc,cx+Math.cos(a1)*rad*0.55,cy+rad*0.42,cz+Math.sin(a1)*rad*0.55,0,0,0,rad*1.3,rad*1.1,rad*1.3));}
 // a round, leafy bush: a soft mound with a few lobes, lit on top (s scales it; returns the top height)
 function bushClump(p,R,cols,s=1){const [L,Mc,Dk]=cols,sh=lerpHex(Dk,0x14261e,0.3),a0=R()*6.283;
-  p.push(PG(SPH,Mc,sh,0,0.3*s,0,0,a0,0,0.92*s,0.66*s,0.92*s));
-  for(let i=0;i<3;i++){const a=a0+i*2.094+(R()-0.5)*0.4,sz=(0.52+R()*0.08)*s;p.push(PG(SPH,lerpHex(L,Mc,0.45),Dk,Math.cos(a)*0.28*s,0.24*s,Math.sin(a)*0.28*s,0,a,0,sz,sz*0.8,sz));}
-  p.push(PG(SPH,lerpHex(L,Mc,0.3),lerpHex(L,Mc,0.7),0.04*s,0.5*s,-0.02*s,0,0,0,0.6*s,0.44*s,0.6*s));
-  return 0.62*s;}
+  p.push(PG(SPH,Mc,sh,0,0.28*s,0,0,a0,0,0.86*s,0.6*s,0.86*s));
+  // a skirt of small clumps round the base, a ring of mid clumps, and a few bright ones on top: a bumpy, leafy silhouette
+  for(let i=0;i<7;i++){const a=a0+i*0.898+(R()-0.5)*0.3,sz=(0.3+R()*0.06)*s;p.push(PG(SPH_LO,lerpHex(L,Mc,0.6),sh,Math.cos(a)*0.4*s,0.15*s,Math.sin(a)*0.4*s,0,a,0,sz,sz*0.78,sz));}
+  for(let i=0;i<5;i++){const a=a0+0.4+i*1.257+(R()-0.5)*0.3,sz=(0.34+R()*0.06)*s;p.push(PG(SPH_LO,lerpHex(L,Mc,0.35),Dk,Math.cos(a)*0.26*s,0.36*s,Math.sin(a)*0.26*s,0,a,0,sz,sz*0.82,sz));}
+  for(let i=0;i<3;i++){const a=a0+1+i*2.094,sz=(0.3+R()*0.05)*s;p.push(PG(SPH_LO,L,lerpHex(L,Mc,0.55),Math.cos(a)*0.1*s,0.52*s,Math.sin(a)*0.1*s,0,a,0,sz,sz*0.8,sz));}
+  return 0.66*s;}
 // little flowers dotted over a crown or a bush (a disc of petals round a centre), all soft round shapes
 function dots(p,R,n,cx,cy,cz,rx,ry,cols,cc,sz=0.07){for(let i=0;i<n;i++){const a=R()*6.283,t=0.15+R()*0.75,x=cx+Math.cos(a)*rx*Math.sin(t*1.4),z=cz+Math.sin(a)*rx*Math.sin(t*1.4),y=cy+ry*Math.cos(t*1.4);
   p.push(P(SPH_LO,cols[i%cols.length],x,y,z,0,0,0,sz*2,sz*0.9,sz*2));if(cc!==undefined)p.push(P(SPH_XS,cc,x,y+sz*0.35,z,0,0,0,sz*0.8,sz*0.5,sz*0.8));}}
