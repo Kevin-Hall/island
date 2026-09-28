@@ -6,9 +6,9 @@
    A candidate: seed (world and cliffs), style (HOME_STYLES), coastline wobble and carved coves, cliff layout, wildness.
    ========================================================= */
 function islandCandidate(){const r=Math.random,style='meadow'; // every home island shares one temperate style; the seasons change it, the land makes it unique
-  const coves=[];for(let i=0,n=1+(r()<0.5);i<n;i++){let a;do a=r()*6.283;while(Math.abs(Math.atan2(Math.sin(a-Math.PI),Math.cos(a-Math.PI)))<0.6);coves.push([a,0.16+r()*0.2,0.18+r()*0.22]);}
-  return{seed:Math.floor(r()*1e9),style,shape:[0.02+r()*0.12,r()*0.1,r()*0.06,r()*6.283,r()*6.283,r()*6.283,2.8+r()*2.2],coves,cliff:[0.12+r()*0.32,r()<0.6?1:0],wild:0.3+r()*0.55};}
-const homeOf=c=>({style:c.style,shape:c.shape,coves:c.coves,cliff:c.cliff,wild:c.wild});
+  const coves=[];for(let i=0,n=2+Math.floor(r()*3);i<n;i++){let a;do a=r()*6.283;while(Math.abs(Math.atan2(Math.sin(a-Math.PI),Math.cos(a-Math.PI)))<0.6);coves.push([a,0.16+r()*0.2,0.18+r()*0.22]);}
+  return{seed:Math.floor(r()*1e9),style,scale:1.3+r()*0.25,shape:[0.02+r()*0.12,r()*0.1,r()*0.06,r()*6.283,r()*6.283,r()*6.283,2.8+r()*2.2],coves,cliff:[0.12+r()*0.32,r()<0.6?1:0],wild:0.3+r()*0.55};}
+const homeOf=c=>({style:c.style,shape:c.shape,coves:c.coves,cliff:c.cliff,wild:c.wild,scale:c.scale});
 
 // tear down every island (only before the game has booted: nothing else lives in the world yet)
 function clearWorld(){for(const isl of islands){if(isl.group){scene.remove(isl.group);isl.group.traverse(o=>{if(o.isInstancedMesh)o.dispose();

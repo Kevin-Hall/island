@@ -36,6 +36,10 @@ function heartSpot(isl){const R=mulberry((S.worldSeed|0)^0x4ea7);let best=null,b
     if(!ok)continue;const sc=-Math.abs(d-15)+R()*4+(lvlMap.get(K(x,z))||0)*2;if(sc>bs){bs=sc;best=[x,z];}}
   return best||[0,1];}
 
+// the wild island's zones, shared by the woods (genWild), the ground colour (44-terrain) and the flower fields (55-town):
+// how wooded a spot is, and how much of a flower meadow
+function wildForest(x,z){const sd=(S.worldSeed|0)%1000;return vnoise(x*0.9+sd,z*0.9-sd,sd)*0.7+vnoise(x*2.3,z*2.3,sd+3)*0.3;}
+function wildMeadow(x,z){return vnoise(x*0.3+7,z*0.3-3,(S.worldSeed|0)%991);}
 // cover the home island in wild growth (called once when you make landfall, or when previewing an island from the sea)
 function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S.worldSeed|0)%1000;
   const keep=new Set();const clear=(x,z,r)=>{for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)if(dx*dx+dz*dz<=r*r+1)keep.add(K(x+dx,z+dz));};
@@ -44,14 +48,17 @@ function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S
   const wet=(x,z)=>{for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++)if(riverSurf.has(K(x+a,z+b)))return true;return false;};
   const fAmt=(S.home&&S.home.wild)||0.5;
   for(const [x,z] of isl.grass){const k=K(x,z);if(keep.has(k)||farmQ(x,z)<1.3||S.debris.some(d=>d.x===x&&d.z===z))continue;
-    const f=vnoise(x*0.9+sd,z*0.9-sd,sd)*0.7+vnoise(x*2.3,z*2.3,sd+3)*0.3,r=R();let kd=null;
+    const f=wildForest(x,z),r=R();let kd=null;
     const forest=f>0.8-fAmt*0.25,thicket=f>0.66-fAmt*0.25; // groves and copses with open meadow between
     if(cliffEdge(x,z)&&r<0.16)kd=r<0.05?'boulder':'rock';
     // tidy, readable woods: trees with a few bushes at their feet, bushy edges, and open meadows with only the odd weed or stone
     else if(forest&&!wet(x,z))kd=r<0.34?'tree':r<0.42?'bush':null;
     else if(thicket)kd=r<0.1?'tree':r<0.22?'bush':r<0.25?'weed':null;
     else kd=r<0.022?'weed':r<0.03?'twig':r<0.04?'rock':r<0.055?'bush':null;
-    if(!kd)continue;const d=newDebris(x,z,kd);d.v=Math.floor(R()*(kd==='tree'?4:3));d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}}
+    if(!kd)continue;const d=newDebris(x,z,kd);d.v=Math.floor(R()*(kd==='tree'?4:3));d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}
+  // two or three grand old trees standing alone in the meadows: landmarks you can see from across the island
+  {let n=0;for(const [x,z] of shuffle(isl.grass.slice(),R)){if(n>=3)break;if(keep.has(K(x,z))||farmQ(x,z)<1.3||townQ(x,z)>0.7||wet(x,z))continue;
+    if(S.debris.some(d=>Math.abs(d.x-x)<=2&&Math.abs(d.z-z)<=2))continue;const d=newDebris(x,z,'tree');d.v=[0,2,3][n%3];d.r=R()*6.28;d.sc=1.75+R()*0.3;d.grand=1;S.debris.push(d);n++;}}}
 
 /* ---- paths wear in where you walk: every step onto a grass tile counts, and a well-trodden tile turns to path ---- */
 const PATH_WEAR=10;

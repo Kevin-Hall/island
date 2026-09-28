@@ -48,6 +48,11 @@ function shapeBeach(isl){const d=new Map(),H=[0.03,0.17,TOP.sand,TOP.sand];let q
   for(const [x,z] of q)for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const k=K(x+dx,z+dz);if(landMap.get(k)==='sand'&&!d.has(k))d.set(k,2);}
   const dOf=(x,z)=>{const k=K(x,z),t=landMap.get(k);return isSeaT(t)?0:t==='sand'?d.get(k)||3:3;};
   for(const [x,z] of isl.sand)SAND_CH.set(K(x,z),CORNERS.map(([sx,sz])=>H[Math.min(dOf(x,z),dOf(x+sx,z),dOf(x,z+sz),dOf(x+sx,z+sz))]));}
+// a wild home island's ground follows its zones: a darker, mossy floor under the woods, and brighter, sunnier grass in the
+// flower meadows (both blend in softly at the edges)
+function zoneGround(isl,x,z,col){if(!isl.home||!S.wild||S.home&&S.home.preset)return col;const fa=(S.home&&S.home.wild)||0.5,th=0.8-fa*0.25;
+  const f=clamp((wildForest(x,z)-(th-0.14))/0.18,0,1),m=clamp((wildMeadow(x,z)-0.55)/0.1,0,1)*(1-f);
+  _gc1.setHex(col);if(f>0)_gc1.lerp(_gc2.setHex(col).multiply(_a.setRGB(0.68,0.8,0.66)),f);if(m>0)_gc1.lerp(_gc2.setHex(col).multiply(_a.setRGB(1.1,1.08,0.9)),m*0.7);return _gc1.getHex();}
 function buildIsland(isl){
   if(isl.group){scene.remove(isl.group);isl.group.traverse(o=>{if(o.isInstancedMesh)o.dispose();else if(o.geometry&&!Object.values(RTILE).includes(o.geometry)&&o.geometry!==TILE_PLANE&&o.geometry!==BOX&&o.geometry!==POOL_GEO&&o.geometry!==BLADES)o.geometry.dispose();});}
   if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);riverSurf.delete(k);bridgeY.delete(k);}
@@ -79,7 +84,7 @@ function buildIsland(isl){
   for(const [mask,{g:gl,s:sl}] of byMask){const geo=rtileGeo(mask);
     for(const {x,z} of gl){const ty=topY(x,z),hid=(dx,dz)=>landMap.get(K(x+dx,z+dz))==='grass'&&topY(x+dx,z+dz)>=ty-1e-3;
       cliffB.add(geo,x,-0.6,z,1,ty-0.14+0.6,1,_c.set(B.cliff).multiplyScalar(0.92+hash(z,x)*0.12).getHex(),null,hid,false);
-      topB.add(geo,x,ty-0.14,z,1,0.14,1,groundCol(B.grass,x,z,isl.seed),null,hid);}
+      topB.add(geo,x,ty-0.14,z,1,0.14,1,zoneGround(isl,x,z,groundCol(B.grass,x,z,isl.seed)),null,hid);}
     for(const {x,z} of sl)sandB.add(geo,x,-0.6,z,1,TOP.sand+0.6,1,sandCol(x,z),SAND_CH.get(K(x,z)),(dx,dz)=>{const t=landMap.get(K(x+dx,z+dz));return t==='sand'||t==='grass';});}
   for(const [x,z,ty,col,mat] of under)(mat===sandMat?underS:underG).add(BOX,x,(ty-0.6)/2,z,0.5,ty+0.6,0.5,col);
   for(const [B0,mat,cast] of [[cliffB,cliffMat,true],[topB,grassTopMat,true],[sandB,sandMat,false],[underG,grassTopMat,false],[underS,sandMat,false]]){const m=B0.mesh(mat);if(m){m.castShadow=cast;g.add(m);}}

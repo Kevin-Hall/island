@@ -36,6 +36,12 @@ if(/[?&]debug\b/.test(location.search)){
     next:()=>{const u=nextUnlock();return u&&u.name;},xp:n=>{addXP(n);return level();},plots:()=>TOWN.bld.map(b=>b.t+(b.t==='vh'?b.n:'')+(b.locked?':plot':'')),
     // every crop at one stage, rendered at the same scale on a patch of soil (data URLs), for eyeballing the models
     dock:()=>[DOCK.x,DOCK.z],
+    findList:()=>{const o={};for(const f of S.finds)o[f.k]=(o[f.k]||0)+1;return o;},
+    goNearFind:k=>{const f=S.finds.filter(q=>q.k===k).sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];if(!f)return null;
+      const sp=[[2,0],[-2,0],[0,2],[0,-2],[2,2],[-2,2]].map(([a,b])=>[f.x+a,f.z+b]).find(([a,b])=>walkable(a,b))||[f.x,f.z+1];vil.x=vil.tx=sp[0];vil.z=vil.tz=sp[1];vil.path=null;cam.tx=vil.x;cam.tz=vil.z;return[f.x,f.z];},
+    goNearTree:()=>{const d=S.debris.filter(q=>q.k==='tree').sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];const sp=[[2,0],[-2,0],[0,2],[0,-2]].map(([a,b])=>[d.x+a,d.z+b]).find(([a,b])=>walkable(a,b));
+      vil.x=vil.tx=sp[0];vil.z=vil.tz=sp[1];vil.path=null;cam.tx=vil.x;cam.tz=vil.z;return[d.x,d.z];},
+    screenOf:(x,z,h=0.1)=>{const s=toScreen(x,topY(x,z)+h,z);return[s[0],s[1]];},invCount:()=>Object.values(S.inv).reduce((a,b)=>a+b,0),shookN:()=>Object.keys(S.shook||{}).length,
     ripeNear:(t='pumpkin')=>{const x=Math.round(vil.x)+1,z=Math.round(vil.z),k=K(x,z);S.debris=S.debris.filter(d=>!(d.x===x&&d.z===z));syncDebris();S.tiles[k]={w:1,crop:{t,p:1,v:'normal',m:0}};syncCrop(k);return[x,z];},
     harvestAt:(x,z)=>{harvest(K(x,z),x,z);},
     // a butterfly a couple of tiles from you; bugAt gives its screen position and how many bugs you've caught

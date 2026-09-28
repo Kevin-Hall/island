@@ -78,6 +78,9 @@ function spawnCritter(k){const a=Math.random()*6.283,d=(k==='deer'?8:4)+Math.ran
     if(k==='deer'&&!S.sawDeer){S.sawDeer=1;setTimeout(()=>toast('A deer has stepped out of the trees! Creep closer slowly… or not at all.','rare',ICON.star),600);}
     return true;}
   return false;}
+// a critter bursting out of a tree or bush where you shook it (runs or flies off at once)
+function critterAt(k,x,z,flee){const g=critModel(k,Math.floor(Math.random()*3)),c={k,v:0,g,x,z,y:critY(x,z)+(k==='bird'?1.2:0),state:'idle',t:0.5,wait:1,tx:x,tz:z,ph:Math.random()*6.28,out:0,hx:x,hz:z,sc:1.1};
+  g.position.set(x,c.y,z);scene.add(g);critters.push(c);if(flee)critFlee(c);return c;}
 function dropCritter(i){const c=critters[i];scene.remove(c.g);c.g.traverse(o=>{if(o.geometry)o.geometry.dispose();});critters.splice(i,1);}
 
 // pick somewhere nearby of the same kind of ground to wander to

@@ -23,6 +23,7 @@ function findGroup(k,seed){const p=[],g=new T.Group();
     case'starfrag':for(let i=0;i<5;i++){const a=i/5*6.28;p.push(P(OCT,0xffe070,Math.sin(a)*0.1,0.08,Math.cos(a)*0.1,0,a,Math.PI/2,0.1,0.18,0.1));}p.push(P(ICO,0xfff4b0,0,0.08,0,0,0,0,0.14,0.14,0.14));break;
     case'crate':p.push(P(BOX,0xa27a50,0,0.1,0,0,0,0,0.5,0.4,0.5),P(BOX,0x6a4a30,0,0.1,0,0,0,0,0.52,0.06,0.52),P(BOX,0x6a4a30,0,0.1,0,0,0,0,0.06,0.42,0.52));break;
     case'weed':p.push(...debrisParts('weed',mulberry(seed),seed%3));break;
+    default:forageParts(k,p);
   }
   g.add(M(p,k==='starfrag'?lumMat:vcMat));return g;}
 function findAt(x,z){return S.finds.find(f=>f.x===x&&f.z===z)||null;}
@@ -103,8 +104,8 @@ function syncLife(){syncDebris();
     for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)weedSlow.add(K(w.x+dx,w.z+dz));}
 }
 const freeTile=(x,z)=>!TOWN.path.has(K(x,z))&&!debrisAt(x,z)&&!objAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z)&&!S.tiles[K(x,z)];
-function spawnFind(quiet,isl){if(!isl)return;const here=S.finds.filter(f=>islMap.get(K(f.x,f.z))===isl.id);if(here.length>=5)return;
-  if(S.finds.length>=16)S.finds.shift();
+function spawnFind(quiet,isl){if(!isl)return;const here=S.finds.filter(f=>islMap.get(K(f.x,f.z))===isl.id&&!forageOf(f));if(here.length>=5)return;
+  if(S.finds.length>=70)S.finds.shift();
   const c=isl.sand.filter(([x,z])=>freeTile(x,z)&&!(isl.blocked&&isl.blocked.has(K(x,z))));if(!c.length)return;const [x,z]=pickR(c);
   const k=pickW(FINDS,k=>FINDS[k].w>0&&(FINDS[k].bio.includes('any')||FINDS[k].bio.includes(isl.biome)));S.finds.push({k,x,z});
   if(!quiet){syncLife();for(let i=0;i<5;i++)sparkle(x,0.4,z,0xe8f4ff);}}

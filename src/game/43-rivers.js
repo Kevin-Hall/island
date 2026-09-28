@@ -16,7 +16,7 @@ const FALL_PLANE=new T.PlaneGeometry(1,1);
 function carveRivers(isl,g){const R=mulberry(isl.seed^0x71e5),B=BIOMES[isl.biome],lava=isl.biome==='volcano',wide=isl.rw||1,mk=lava?'lava':isl.biome==='swamp'?'swamp':isl.biome==='snow'?'snow':'water';
   const typeAt=(x,z)=>islMap.get(K(x,z))===isl.id?landMap.get(K(x,z)):null;
   const lvl=(x,z)=>{const t=typeAt(x,z);return t==='grass'?(lvlMap.get(K(x,z))||0):t==='sand'?-1:-9;};
-  const tiles=new Map(),mains=[];const a0=isl.home?Math.PI/2:R()*6.283,off=lava?4.6:isl.home?0:isl.r*0.08;
+  const tiles=new Map(),mains=[];isl.ponds=[];const a0=isl.home?Math.PI/2:R()*6.283,off=lava?4.6:isl.home?0:isl.r*0.08;
   if(isl.home){isl.cx=Math.round((R()-0.5)*TOWN_W*0.8);isl.cz=-Math.round(TOWN_D*0.74);}
   const addT=(x,z,L,fx,fz)=>{const k=K(x,z);if(lvl(x,z)<-1)return false;const o=tiles.get(k);if(o){o.L=Math.min(o.L,L);return true;}tiles.set(k,{x,z,L,fx,fz});return true;};
   for(let r=0;r<(isl.riverN||0);r++){const ang=r===0?a0:a0+Math.PI+(R()-0.5)*1.2;let a=ang,x=isl.cx+Math.cos(ang)*off,z=isl.cz+Math.sin(ang)*off,px=Math.round(x),pz=Math.round(z);
@@ -31,6 +31,14 @@ function carveRivers(isl,g){const R=mulberry(isl.seed^0x71e5),B=BIOMES[isl.biome
       addT(x0,z0,Li,fx,fz);if(wide>1)addT(side[0],side[1],Li,fx,fz);main.push({x:x0,z:z0,fx,fz,L:Li});}
     mains.push(main);}
   if(isl.home){isl.cx=0;isl.cz=0;}
+  // a wild home island also gets two or three ponds: round, reedy freshwater pools out in the meadows and woods
+  if(isl.home&&S.wild&&!(S.home&&S.home.preset)){const hs=homeScale(),np=2+Math.floor(R()*2);
+    for(let p=0;p<np;p++)for(let it=0;it<80;it++){const x=Math.round((R()-0.5)*2*TOWN_W*hs*0.62),z=Math.round((R()-0.5)*2*TOWN_D*hs*0.62);
+      if(townQ(x,z)>0.62||lvl(x,z)<0||(z>TOWN_D*hs*0.25&&Math.abs(x)<9))continue;let near=false;for(const t of tiles.values())if(Math.abs(t.x-x)<6&&Math.abs(t.z-z)<6){near=true;break;}if(near)continue;
+      const L=lvl(x,z),r=1.5+R()*1.4,ph=R()*6;
+      for(let dx=-4;dx<=4;dx++)for(let dz=-4;dz<=4;dz++){const a=Math.atan2(dz,dx),rr=r*(1+0.22*Math.sin(a*3+ph)+0.12*Math.sin(a*5-ph));if(Math.hypot(dx,dz*1.15)>rr)continue;
+        if(lvl(x+dx,z+dz)>=L&&townQ(x+dx,z+dz)<0.8)addT(x+dx,z+dz,L,1,0);}
+      (isl.ponds||(isl.ponds=[])).push([x,z,r]);break;}}
   if(!tiles.size)return;
   const list=[...tiles.values()];
   for(const q of list){const k=K(q.x,q.z);q.surf=q.L<0?0.07:TOP.grass+q.L*LVH-0.2;landMap.set(k,'river');riverSurf.set(k,q.surf);lvlMap.set(k,Math.max(0,q.L));}
@@ -58,4 +66,12 @@ function carveRivers(isl,g){const R=mulberry(isl.seed^0x71e5),B=BIOMES[isl.biome
   for(const q of list)for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const k2=K(q.x+dx,q.z+dz);if(!riverSurf.has(k2))continue;const s2=riverSurf.get(k2);
     if(s2<q.surf-0.05){const h=q.surf-s2+0.02;fp.push(P(FALL_PLANE,0xffffff,q.x+dx*0.5,s2+h/2,q.z+dz*0.5,0,Math.atan2(dx,dz),0,1,h,1));isl.falls.push([q.x+dx*0.62,s2,q.z+dz*0.62]);}}
   if(fp.length){const m=new T.Mesh(merge(fp),FALL_MATS[mk]);m.frustumCulled=false;g.add(m);}
+  // ponds: lily pads (some flowering) floating on the water, and reeds and cattails round the edges
+  if(isl.ponds&&isl.ponds.length){const lp=[],Rl=mulberry(isl.seed^0x11e5);
+    for(const [px,pz,r] of isl.ponds){const sy=riverSurf.get(K(px,pz));if(sy===undefined)continue;
+      for(let i=0;i<Math.round(r*4);i++){const a=Rl()*6.283,d=Rl()*r*0.8,x=px+Math.cos(a)*d,z=pz+Math.sin(a)*d;if(!riverSurf.has(K(Math.round(x),Math.round(z))))continue;const s=0.22+Rl()*0.16;
+        lp.push(P(CYL8,Rl()<0.5?0x4f9a3a:0x5aa844,x,sy+0.015,z,0,Rl()*6,0,s,0.012,s));if(Rl()<0.35)bloom(lp,[0xf6b4cc,0xffffff,0xf8d0e0][i%3],0xf6d04a,x+0.03,sy+0.04,z,0.07,6,0.5);}
+      for(let i=0;i<Math.round(r*6);i++){const a=Rl()*6.283,d=r+0.2+Rl()*0.9,x=px+Math.cos(a)*d,z=pz+Math.sin(a)*d,k=K(Math.round(x),Math.round(z));if(landMap.get(k)!=='grass')continue;
+        const y=topY(Math.round(x),Math.round(z)),h=0.35+Rl()*0.35;lp.push(P(CYL5,0x5a8a3a,x,y+h/2,z,(Rl()-0.5)*0.2,0,(Rl()-0.5)*0.2,0.03,h,0.03));if(Rl()<0.5)lp.push(P(CYL6,0x7a4a2a,x,y+h-0.04,z,0,0,0,0.07,0.16,0.07));}}
+    if(lp.length){const m=M(lp);m.castShadow=false;g.add(m);}}
   if(pb.length)g.add(M(pb.filter(Boolean)));}

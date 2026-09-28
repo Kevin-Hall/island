@@ -132,7 +132,7 @@ function layoutTown(isl){
   {const lists=FLORA_GEOS.map(()=>[]),clov=[],peb=[];
     const wild=S.scratch?new Set(S.debris.filter(d=>d.k!=='weed').map(d=>K(d.x,d.z))):null;
     for(const [x,z] of isl.grass){const k=K(x,z);if(!G(x,z)||taken(k)||farmQ(x,z)<1.3||(wild&&wild.has(k)))continue;const h=hash(x*4.1-2,z*3.3+7);
-      if(wild&&season()==='winter')continue;/* no wildflowers under the snow */const fd=Math.pow(homeScale(),-1.5)/* a big preset island spreads its flowers thinner */;if(h<0.34*fd)lists[floraIndex(x,z)].push([x,z]);else if(h<0.43*fd&&h>=0.34*fd)clov.push([x,z]);}
+      if(wild&&season()==='winter')continue;/* no wildflowers under the snow */const fd=Math.pow(homeScale(),-1.5)/* a big preset island spreads its flowers thinner */*(wild?(wildMeadow(x,z)>0.6?2.6:0.55):1)/* wild flowers grow in fields */;if(h<0.34*fd)lists[floraIndex(x,z)].push([x,z]);else if(h<0.43*fd&&h>=0.34*fd)clov.push([x,z]);}
     for(const [k,v] of TOWN.path){if(v!==1)continue;const [x,z]=k.split(',').map(Number);for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(G(x+dx,z+dz)&&!TOWN.path.has(K(x+dx,z+dz))&&hash(x*7+dx,z*5+dz)<0.35)peb.push([x+dx*0.46,z+dz*0.46,x,z]);}
     const mk=(geo,list,mat,track)=>{if(!list.length)return null;const im=new T.InstancedMesh(geo,mat,list.length);list.forEach(([x,z,tx,tz],i)=>{const tile=tx===undefined?[x,z]:[tx,tz];
         _e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x+(tx===undefined?(hash(z,x)-0.5)*0.4:0),y0(...tile),z+(tx===undefined?(hash(x+1,z)-0.5)*0.4:0)),_q,_s.set(0.9,0.9+hash(z*2,x)*0.2,0.9));im.setMatrixAt(i,_m);
