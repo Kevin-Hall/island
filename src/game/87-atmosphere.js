@@ -42,16 +42,6 @@ for(let i=0;i<44;i++){const R=mulberry(i*97+11),p=[];const n=5+Math.floor(R()*5)
   for(let j=0;j<n;j++){const x=(j-n/2)*0.75+(R()-0.5)*0.4,s=0.9+R()*1.1-Math.abs(j-n/2)*0.12;p.push(P(SPH_LO,0xffffff,x,s*0.35,(R()-0.5)*0.6,0,R()*3,0,s*1.4,s*1.1,s*1.1),P(SPH_LO,0xf8e8dc,x,0,(R()-0.5)*0.6,0,R()*3,0,s*1.35,s*0.45,s));}
   const m=new T.Mesh(merge(p),skyCloudMat);m.frustumCulled=false;m.renderOrder=-1;scene.add(m);
   skyClouds.push({m,a:i/44*6.283+R()*0.2,d:130+R()*40,f:0.04+R()*0.5,s:3.5+R()*3});}
-const farIsles=[],farIsleMat=noCurve(toon({vertexColors:true,fog:false}));
-{const L=[0xc49a70,0xb0885e,0x9c7652,0xd2aa7e];
-  for(let i=0;i<10;i++){const R=mulberry(i*131+7),p=[],w=6+R()*8,h=4+R()*4,n=3+Math.floor(R()*3);
-    for(let j=0;j<n;j++){const x=(j-(n-1)/2)*w*0.42+(R()-0.5)*2,hh=h*(0.6+R()*0.5),ww=w*(0.35+R()*0.25),dd=ww*(0.7+R()*0.4);
-      for(let k=0;k<4;k++)p.push(P(BOX,L[(k+j)%4],x,hh*(k+0.5)/4,0,0,R()*0.3,0,ww*(1-k*0.06),hh/4+0.02,dd*(1-k*0.06)));
-      p.push(PG(SPH_LO,0x6ab04a,0x3a7a34,x,hh+0.15,0,0,0,0,ww*1.05,0.9,dd*1.05));
-      for(let t=0;t<3;t++){const tx=x+(R()-0.5)*ww*0.8,tz=(R()-0.5)*dd*0.6;if(R()<0.5)p.push(PG(CONE8,0x3e8a44,0x1e5230,tx,hh+0.9,tz,0,0,0,0.9,1.9,0.9));else p.push(P(TRUNK,0x6a4a30,tx,hh+0.5,tz,0,0,0,0.16,0.9,0.16),PG(SPH_LO,0x78bc50,0x3e7a30,tx,hh+1.3,tz,0,0,0,1.3,1.1,1.3));}}
-    if(i===2){const x=w*0.2,hh=h*1.05;p.push(P(CYL8,0xf4f0ea,x,hh+1.6,0,0,0,0,0.8,3,0.8),P(CYL8,0xd8453a,x,hh+1.3,0,0,0,0,0.84,0.5,0.84),P(CYL8,0x3a3a44,x,hh+3.25,0,0,0,0,0.95,0.3,0.95),P(CONE8,0xd8453a,x,hh+3.75,0,0,0,0,1.0,0.8,1.0));}
-    p.push(P(SPH_LO,0xf0e2b8,0,0.05,0,0,0,0,w*1.4,0.3,w*0.9)); // a sandy skirt at the waterline
-    const m=new T.Mesh(merge(p),farIsleMat);m.frustumCulled=false;scene.add(m);m.scale.setScalar(0.95);farIsles.push({m,a:i/10*6.283+R()*0.5,d:180+R()*30});}}
 const moon=new T.Group();
 {const disc=new T.Mesh(new T.CircleGeometry(5,24),noCurve(new T.MeshBasicMaterial({color:0xfff4d6,fog:false,transparent:true})));moon.add(disc);
   for(const [x,y,r] of [[-1.6,1,1.1],[1.4,-0.8,1.4],[0.4,2.2,0.7],[-0.6,-2,0.8]]){const c=new T.Mesh(new T.CircleGeometry(r,14),noCurve(new T.MeshBasicMaterial({color:0xece0bc,fog:false,transparent:true})));c.position.set(x,y,0.05);moon.add(c);}
@@ -77,7 +67,6 @@ function skySpan(d){const aT=cam.pitch-camera.fov/2*Math.PI/180,aH=horizonA();re
 function updateSky(dt,tt){
   const cp=camera.position,sky=skyHz,night=nightF,fwd=cam.yaw+Math.PI;
   for(const c of skyClouds){c.a+=dt*0.004*(0.5+wind);skyPos(c.a,c.f,c.d,c.m.position,true);c.m.scale.setScalar(c.s*c.d/140);c.m.lookAt(cp.x,c.m.position.y,cp.z);}
-  for(const f of farIsles){skyPos(f.a,-0.004,f.d,f.m.position,false);f.m.lookAt(cp.x,f.m.position.y,cp.z);}
   skyCloudMat.color.setRGB(1,1,1).lerp(sky,0.25+rainMix*0.35).lerp(skyGlow,skyGA*0.45).multiplyScalar(1-night*0.6);skyCloudMat.opacity=0.95;
   moon.visible=night>0.05;
   if(moon.visible){skyPos(fwd+0.28,0.55,150,moon.position);moon.scale.setScalar(0.8);moon.lookAt(cp);moon.traverse(o=>{if(o.material)o.material.opacity=(o.material.color.getHex()===0xfff4d6&&o.geometry.parameters.radius===9?0.12:1)*night*(1-rainMix);});}

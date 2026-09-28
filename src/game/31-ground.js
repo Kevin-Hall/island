@@ -59,7 +59,8 @@ function pathGrassMat(){const m=worldMat(GRASS_TEX,0.36),base=m.onBeforeCompile;
     if(an_.y>0.6){vec2 q_=vWP.xz;vec2 wob_=vec2(sin(q_.y*1.3+sin(q_.x*0.7)*1.6),sin(q_.x*1.1+cos(q_.y*0.6)*1.6))*0.13;
       // big soft patches of lighter and darker grass, their edges roughened by the tuft pattern (painterly pixel-art ground)
       {float tf_=texture2D(map,q_*0.36).r,mac_=texture2D(uNoise,q_*0.013).r*0.65+texture2D(uNoise,q_*0.034+vec2(3.1,1.7)).r*0.35+(tf_-0.9)*0.55;
-        if(mac_<0.41)diffuseColor.rgb*=vec3(0.76,0.84,0.8);else if(mac_>0.59)diffuseColor.rgb=diffuseColor.rgb*vec3(1.08,1.09,0.95)+vec3(0.05,0.055,0.0);}
+        if(mac_<0.41)diffuseColor.rgb*=vec3(0.86,0.9,0.86);else if(mac_>0.6)diffuseColor.rgb=diffuseColor.rgb*vec3(1.04,1.05,0.96)+vec3(0.02,0.025,0.0);
+        float tk_=texture2D(uNoise,q_*1.9).r;if(tk_>0.8)diffuseColor.rgb*=vec3(0.84,0.9,0.84);else if(tk_<0.14)diffuseColor.rgb*=vec3(1.05,1.06,1.0);/* fine tufts of darker and lighter blades */}
       vec4 pm_=texture2D(uPM,(q_+wob_-uPMo.xy)*uPMo.zw);
       if(pm_.r>0.004){float m_=pm_.r+(texture2D(uNoise,q_*0.6).r-0.5)*0.24-(0.93-texture2D(map,q_*0.36).r)*0.9;/* tufts spill over the path edge */float e_=step(0.46,m_);
         vec3 pc_=mix(vec3(0.80,0.643,0.416),vec3(0.847,0.714,0.502),clamp(pm_.g/max(pm_.r,0.01),0.,1.))*texture2D(uPTex,q_*0.42).rgb;

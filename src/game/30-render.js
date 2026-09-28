@@ -192,7 +192,7 @@ const s1Mat=new T.MeshBasicMaterial({color:0x7ea6e8}),s2Mat=new T.MeshBasicMater
 // water shader uses it to fade from pale aqua at the sand, through turquoise, to deep blue, with a ragged pixel edge
 const DEPTH_N=400,DEPTH_X0=-200;let depthDirty=true;
 const depthTex=new T.DataTexture(new Uint8Array([255,255,255,255]),1,1,T.RGBAFormat);depthTex.needsUpdate=true;
-const waterU={uT:{value:0},uYaw:{value:0},uDepth:{value:depthTex},uDB:{value:new T.Vector3(DEPTH_X0,DEPTH_X0,1)},uS1:{value:s1Mat.color},uS2:{value:s2Mat.color}};
+const waterU={uCam:{value:new T.Vector3()},uSky:{value:skyHz},uZen:{value:skyZen},uSunD:{value:new T.Vector3(0,1,0)},uGl:{value:1},uT:{value:0},uYaw:{value:0},uDepth:{value:depthTex},uDB:{value:new T.Vector3(DEPTH_X0,DEPTH_X0,1)},uS1:{value:s1Mat.color},uS2:{value:s2Mat.color}};
 function buildDepthTex(){depthDirty=false;const N=DEPTH_N,d=new Float32Array(N*N).fill(99);
   for(const [k,t] of landMap){if(t!=='grass'&&t!=='sand'&&t!=='river'&&t!=='bridge')continue;const [x,z]=k.split(',').map(Number),i=x-DEPTH_X0,j=z-DEPTH_X0;if(i>=0&&j>=0&&i<N&&j<N)d[j*N+i]=0;}
   // two-pass chamfer distance (rounder than steps along the grid)
@@ -203,7 +203,7 @@ function buildDepthTex(){depthDirty=false;const N=DEPTH_N,d=new Float32Array(N*N
   if(waterU.uDepth.value!==depthTex)waterU.uDepth.value.dispose();waterU.uDepth.value=t;waterU.uDB.value.set(DEPTH_X0,DEPTH_X0,N);}
 waterMat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,waterU);
   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
-  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;uniform sampler2D uDepth;uniform vec3 uDB;uniform vec3 uS1;uniform vec3 uS2;')
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;uniform vec3 uCam;uniform vec3 uSky;uniform vec3 uZen;uniform vec3 uSunD;uniform float uGl;uniform sampler2D uDepth;uniform vec3 uDB;uniform vec3 uS1;uniform vec3 uS2;')
     .replace('#include <color_fragment>',`#include <color_fragment>
       {vec2 q=vWp.xz;float n=fract(sin(dot(floor(q*.45),vec2(12.9898,78.233)))*43758.5453)*.5+fract(sin(dot(floor(q*1.3),vec2(39.3,11.7)))*43758.5453)*.5;
        diffuseColor.rgb*=.95+.08*n;
@@ -213,7 +213,15 @@ waterMat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,waterU);
        float dd=texture2D(uDepth,(q-uDB.xy+.5)/uDB.z).r*6.375-.5;
        dd+=(fract(sin(dot(floor(q*2.5),vec2(12.9898,78.233)))*43758.5453)-.5)*.45+sin(q.x*.9+uT*.6)*sin(q.y*.8-uT*.5)*.18;
        vec3 sh=mix(uS1*1.06,uS2,smoothstep(.5,2.,dd));
-       diffuseColor.rgb=mix(sh,diffuseColor.rgb,smoothstep(1.8,4.4,dd));}`);};
+       diffuseColor.rgb=mix(sh,diffuseColor.rgb,smoothstep(1.8,4.4,dd));
+       // reflections: the sky in the water, stronger at a glancing angle (towards the horizon), and the sun glittering
+       // on the ripples. Ripple normals are world-fixed, so the glitter sparkles in place rather than swimming
+       vec3 vd=normalize(vWp-uCam);/* (a basic material isn't given cameraPosition) */vec2 rq=floor(q*3.);float rh=fract(sin(dot(rq,vec2(12.9898,78.233)))*43758.5453);
+       vec3 nn=normalize(vec3(sin(q.x*1.7+uT*1.1+rh*6.)*.09+sin(q.y*2.3-uT*.8)*.06,1.,cos(q.y*1.9+uT*.9+rh*5.)*.09+sin(q.x*2.9+uT)*.05));
+       vec3 rf=reflect(vd,nn);float fr=pow(1.-clamp(-vd.y,0.,1.),4.);
+       vec3 skyR=mix(uSky,uZen,clamp(rf.y*1.6,0.,1.));diffuseColor.rgb=mix(diffuseColor.rgb,skyR,fr*.4*smoothstep(1.5,3.5,dd));
+       float sp=pow(max(dot(rf,uSunD),0.),600.)*uGl;float gl=step(.8,rh)*step(.2,pow(max(dot(rf,uSunD),0.),160.)*uGl);
+       diffuseColor.rgb+=vec3(1.,.96,.86)*(sp*.25+gl*.65)*smoothstep(1.,2.5,dd);}`);};
 const water=new T.Mesh(new T.PlaneGeometry(520,520,52,52).rotateX(-Math.PI/2),waterMat);water.frustumCulled=false;scene.add(water);
 const TILE_PLANE=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2);
 
