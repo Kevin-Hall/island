@@ -27,7 +27,7 @@ if(/[?&]debug\b/.test(location.search)){
     grid:(x0,z0,x1,z1)=>{const out=[];for(let z=z0;z<=z1;z++){let l='';for(let x=x0;x<=x1;x++){const k=K(x,z),t=landMap.get(k);l+=S.tiles[k]?'T':objAt(x,z)?'O':fixedAt(x,z)?'F':debrisAt(x,z)?'D':TOWN.path.has(k)?'P':t==='grass'?'g':t==='sand'?'s':t==='bridge'?'b':t==='river'?'r':t?t[0]:'.';}out.push(String(z).padStart(3)+' '+l);}return out.join('\n');},
     showcase:()=>loadShowcase(),
     // wild-island settling: the heart's spot, revive it, place a blueprint at a spot, finish tonight's building
-    heartAt:()=>TOWN.plaza.slice(),revive:()=>reviveHeart(),bp:(k,x,z)=>{startBlueprint(k);if(x!==undefined)bpMove(x,z);return placing&&bpOk(placing.x,placing.z)?[placing.x,placing.z]:null;},bpPlace:()=>{if(placing&&placing.bp)bpPlace();},goal:()=>{const g=nextGoal();return g&&g.name;},dawn:()=>{dawn(true);return S.day;},shoo:()=>{for(const n of npcs){n.x=n.b.door[0]+0.5;n.z=n.b.door[1]+0.3;n.path=null;n.state='idle';n.wait=30;n.act=null;}return npcs.length;},
+    heartAt:()=>TOWN.plaza.slice(),revive:()=>{if(S.heartAt)return [S.heartAt.x,S.heartAt.z];startBlueprint('seed');if(!placing||placing.bp!=='seed')return null;const at=[placing.x,placing.z];bpPlace();return S.heartAt?at:null;},bp:(k,x,z)=>{startBlueprint(k);if(x!==undefined)bpMove(x,z);return placing&&bpOk(placing.x,placing.z)?[placing.x,placing.z]:null;},bpPlace:()=>{if(placing&&placing.bp)bpPlace();},goal:()=>{const g=nextGoal();return g&&g.name;},dawn:()=>{dawn(true);return S.day;},shoo:()=>{for(const n of npcs){n.x=n.b.door[0]+0.5;n.z=n.b.door[1]+0.3;n.path=null;n.state='idle';n.wait=30;n.act=null;}return npcs.length;},
     // place every earned kit wherever there's room (clearing a patch if it has to), finished at once
     buildAll:()=>{grantKits();for(const k of Object.keys(S.kits||{})){if(!S.kits[k])continue;let at=null;for(const [x,z] of islands[0].grass){if(farmQ(x,z)<1.3)continue;S.debris=S.debris.filter(d=>!(d.x>=x&&d.x<=x+1&&d.z>=z&&d.z<=z+2));if(bpOk(x,z)){at=[x,z];break;}}
       if(!at)continue;const t=k.startsWith('vh')?'vh':k;S.builds.push({t,n:t==='vh'?+k.slice(2):undefined,x:at[0],z:at[1],day:S.day-1});delete S.kits[k];rebuildHome();}syncDebris();morningMoveIn(true);return TOWN.bld.filter(b=>!b.locked).length;},paths:()=>TOWN.path.size,wild:()=>{const c={};for(const d of S.debris)c[d.k]=(c[d.k]||0)+1;return c;},
@@ -35,6 +35,11 @@ if(/[?&]debug\b/.test(location.search)){
     setLevel:n=>{S.xp=LV[n-1]||0;grantKits();rebuildHome();initNPCs();updateHUD();return level();},moveIn:()=>{morningMoveIn();return npcs.length;},
     next:()=>{const u=nextUnlock();return u&&u.name;},xp:n=>{addXP(n);return level();},plots:()=>TOWN.bld.map(b=>b.t+(b.t==='vh'?b.n:'')+(b.locked?':plot':'')),
     // every crop at one stage, rendered at the same scale on a patch of soil (data URLs), for eyeballing the models
+    treeGallery:(size=200)=>{const out=[],so=S.seasonOv;const add=(name,parts)=>{const w=new T.Group();w.add(M(parts));const box=new T.Mesh(new T.BoxGeometry(2.4,3.4,2.4));box.position.y=1.5;box.visible=false;w.add(box);w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,2,0.06,2)]));out.push([name,snapThumb(w,size)]);};
+      for(const k of ['oak','pine','maple','cherry','bush','snowpine'])add(k,treeParts(k,mulberry(7),0x9a9ea8));
+      for(const se of ['spring','summer','autumn','winter']){S.seasonOv=se;for(const v of [0,2,3])add(se+' '+v,wildTreeParts(v));}
+      for(const lv of [1,2,4,7,11]){const q=seedTreeParts(lv);add('heart '+lv,[...q.tp,...q.p,...q.gl]);}
+      add('bush debris',debrisParts('bush',mulberry(3)));S.seasonOv=so;return out;},
     cropGallery:(stage=3,size=160)=>CROP_IDS.map((id,i)=>{const c=cropParts(id,stage,i*97+5),g=new T.Group();if(c.leaf.length)g.add(M(c.leaf));if(c.fruit.length)g.add(M(c.fruit));g.scale.setScalar(0.95);
       const w=new T.Group();w.add(g);w.add(M([P(BOX,0x5e3c2a,0,-0.03,0,0,0,0,1,0.06,1)]));const box=new T.Mesh(new T.BoxGeometry(1.1,1.5,1.1));box.position.y=0.7;box.visible=false;w.add(box);return [id,snapThumb(w,size)];}),
     ripen:()=>{for(const k in S.tiles){const t=S.tiles[k];if(t.crop)t.crop.p=1;}syncAllCrops();},

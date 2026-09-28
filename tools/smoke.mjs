@@ -26,8 +26,9 @@ check(st.npcs.length===0&&st.buildings.length===0&&(wild.tree||0)>40,`lands on a
 check(await ev(()=>DS.goal())==='Pitch your tent','the first goal is to pitch your tent');
 await pg.getByText('Place here').click();await wait(600);await pg.fill('#pkName','Testhaven');await pg.click('#huOk');await wait(600);
 st=await ev(()=>DS.state());check(st.town==='Testhaven'&&st.buildings.includes('home'),'pitched the tent and named the island');
-check(await ev(()=>DS.goal())==="Find the island's heart",'next: find the island\'s heart');
-await ev(()=>DS.revive());await wait(1500);await ev(()=>document.querySelectorAll('#heartUp').forEach(e=>e.remove()));
+check(await ev(()=>DS.goal())==='Plant your driftseed','next: plant your driftseed');
+check(!!(await ev(()=>DS.revive())),'planted the driftseed');await wait(1500);
+check(await ev(()=>DS.goal()!=='Plant your driftseed'&&DS.heartAt().length===2),'the Island Heart is growing where you planted it');await ev(()=>document.querySelectorAll('#heartUp').forEach(e=>e.remove()));
 await ev(()=>DS.setLevel(3));check(/^Place/.test(await ev(()=>DS.goal())),'a level-up hands you a building kit to place');
 await ev(()=>DS.setLevel(11));await ev(()=>DS.buildAll());
 st=await ev(()=>DS.state());check(st.buildings.length>=8,`built up, "${st.town}" has ${st.buildings.length} buildings`);check(st.npcs.length>=5,`${st.npcs.length} villagers`);

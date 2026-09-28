@@ -568,7 +568,7 @@ if(S.mode==='edit')S.mode='farm';
 // games started with the short-lived island picker (plots in a ready-made town) carry on as a classic, fully built town
 if(S.scratch&&!S.wild)delete S.scratch;
 
-// (on a wild island the Island Heart has to be found and revived before it can grow: until then you stay at level 1)
+// (on a wild island the Island Heart grows from the driftseed you plant: until it's planted you stay at level 1)
 function level(){if(S.scratch&&!(S.heart&&S.heart.revived))return 1;let l=1;while(l<LV.length&&S.xp>=LV[l])l++;return l;}
 function isNight(h=S.hour){return h>=19.5||h<5.5;}
 
@@ -1099,24 +1099,38 @@ const LEAF_CARD=new T.SphereGeometry(0.5,6,3),LEAF_CARD_LO=new T.SphereGeometry(
 function card(p,x,y,z,d,len,wid,cTip,cBase){const tilt=Math.acos(clamp(d[1],-1,1)),ry=Math.atan2(d[0],d[2]);
   p.push(PG(LEAF_CARD,cTip,cBase,x+d[0]*len/2,y+d[1]*len/2,z+d[2]*len/2,tilt,ry,0,wid,len,wid*0.3));}
 // a round canopy shingled with leaf cards that droop outward; tips lighten toward the top, like Animal Crossing's trees
-function canopy(p,R,cols,cx,cy,cz,rad,nn){const Rr=rad*1.55;p.push(P(ICO2,cols[2],cx,cy,cz,0,R()*3,0,Rr*1.3,Rr*1.1,Rr*1.3));
-  const N=nn||Math.round(30+Rr*26),ga=Math.PI*(3-Math.sqrt(5));
-  for(let i=0;i<N;i++){const yy=1-(i+0.5)/N*1.8;if(yy<-0.7)continue;const r=Math.sqrt(Math.max(0,1-yy*yy)),a=i*ga+R()*0.2,dx=Math.cos(a)*r,dz=Math.sin(a)*r;
-    // each leaf hangs outward-and-down from a point on the canopy's surface
-    const hx=dx*0.6,hy=-1+yy*0.25,hz=dz*0.6,hl=Math.hypot(hx,hy,hz),d=[-hx/hl,-hy/hl,-hz/hl],h=(yy+1)/2;
-    const len=Rr*(0.52+R()*0.1),sx=cx+dx*Rr*0.78,sy=cy+yy*Rr*0.66+0.1*Rr,sz=cz+dz*Rr*0.78;card(p,sx+d[0]*len*0.25,sy+d[1]*len*0.25,sz+d[2]*len*0.25,[hx/hl,hy/hl,hz/hl],len,Rr*0.5,lerpHex(cols[1],cols[0],0.35+h*0.65),lerpHex(cols[2],cols[1],h*0.5));}}
+// a tree crown in the style of pixel-art foliage: a dark core (the shadowed inside of the crown), rings of rounded leaf
+// clumps each lit on top and dark underneath, a bright crown, light leaf highlights on top and a jagged fringe of leaves
+// under the rim. cols = [light, mid, dark]; nn scales the leaf detail (bushes pass fewer)
+function canopy(p,R,cols,cx,cy,cz,rad,nn){const Rr=rad*1.55,[L,Mc,Dk]=cols,hl=lerpHex(L,0xfff6c0,0.22),sh=lerpHex(Dk,0x0a1a16,0.4),q=(nn||44)/44;
+  p.push(PG(ICO2,Mc,sh,cx,cy-Rr*0.08,cz,0,R()*3,0,Rr*1.6,Rr*1.25,Rr*1.6));
+  const ring=(n,rr,y,s,top,bot,geo=ICO2)=>{const a0=R()*6.28;for(let i=0;i<n;i++){const a=a0+i/n*6.283+(R()-0.5)*0.45,sz=Rr*s*(0.85+R()*0.3);
+    p.push(PG(geo,top,bot,cx+Math.cos(a)*Rr*rr,cy+Rr*y+(R()-0.5)*Rr*0.14,cz+Math.sin(a)*Rr*rr,0,R()*3,0,sz,sz*0.84,sz));}};
+  const r0=p.length;ring(6,0.7,-0.2,0.86,lerpHex(L,Mc,0.45),Dk,ICO);for(let i=r0+1;i<p.length;i+=2)p[i].lo='drop';ring(4,0.38,0.24,0.84,lerpHex(L,Mc,0.15),lerpHex(Mc,Dk,0.3));
+  p.push(PG(ICO2,L,Mc,cx+(R()-0.5)*Rr*0.2,cy+Rr*0.55,cz+(R()-0.5)*Rr*0.2,0,R()*3,0,Rr*0.86,Rr*0.66,Rr*0.86));
+  // light leaf highlights catching the sun on top
+  for(let i=0,n=Math.round(9*q);i<n;i++){const a=R()*6.28,r=Rr*(0.2+R()*0.5),y=cy+Rr*(0.62-r/Rr*0.55);
+    p.push(Object.assign(P(LEAF0,hl,cx+Math.cos(a)*r,y,cz+Math.sin(a)*r,0,a,0,Rr*0.3,Rr*0.1,Rr*0.22),{lo:'drop'}));}
+  // the ragged underside: leaves hanging out and down from the rim
+  for(let i=0,n=Math.round(12*q);i<n;i++){const a=i/n*6.283+R()*0.3,r=Rr*(0.95+R()*0.12);
+    card(p,cx+Math.cos(a)*r*0.9,cy-Rr*0.32+(R()-0.5)*Rr*0.1,cz+Math.sin(a)*r*0.9,[Math.cos(a)*0.7,-0.7,Math.sin(a)*0.7],Rr*0.36,Rr*0.26,Mc,Dk);}}
 // a dense, lumpy bush: one tall leafy mound with three lower lobes around it, lit on top (s scales it, q thins the leaves; returns the top height)
-function bushClump(p,R,cols,s=1,q=1){const a0=R()*6.283;canopy(p,R,cols,0,0.34*s,0,0.16*s,Math.round(30*q));
-  for(let i=0;i<3;i++){const a=a0+i*2.094+(R()-0.5)*0.5,r=(0.19+R()*0.05)*s;canopy(p,R,cols,Math.cos(a)*r,(0.2+R()*0.05)*s,Math.sin(a)*r,(0.1+R()*0.025)*s,Math.round(18*q));}
+function bushClump(p,R,cols,s=1,q=1){const [L,Mc,Dk]=cols,sh=lerpHex(Dk,0x0a1a16,0.4);
+  // a rounded mound: dark core, four side clumps and a sunlit top, then a crown of leaf tufts and a ragged skirt
+  p.push(PG(ICO2,Mc,sh,0,0.26*s,0,0,R()*3,0,0.8*s,0.56*s,0.8*s));
+  const a0=R()*6.283;for(let i=0;i<4;i++){const a=a0+i*1.571+(R()-0.5)*0.4,sz=(0.4+R()*0.08)*s;p.push(PG(ICO,lerpHex(L,Mc,0.4),Dk,Math.cos(a)*0.22*s,(0.22+R()*0.05)*s,Math.sin(a)*0.22*s,0,R()*3,0,sz,sz*0.82,sz));}
+  p.push(PG(ICO2,L,Mc,0,0.42*s,0,0,R()*3,0,0.52*s,0.4*s,0.52*s));
+  for(let i=0,n=Math.round(7*q);i<n;i++){const a=i/n*6.283+R()*0.4;card(p,Math.cos(a)*0.1*s,0.55*s,Math.sin(a)*0.1*s,[Math.cos(a)*0.55,0.83,Math.sin(a)*0.55],0.2*s,0.14*s,lerpHex(L,0xfff6c0,0.2),Mc);}
+  for(let i=0,n=Math.round(8*q);i<n;i++){const a=i/n*6.283+R()*0.3;card(p,Math.cos(a)*0.36*s,0.14*s,Math.sin(a)*0.36*s,[Math.cos(a)*0.75,-0.65,Math.sin(a)*0.75],0.2*s,0.15*s,Mc,Dk);}
   return 0.55*s;}
 function trunkP(p,R,col,h,w=0.13,dk){p.push(P(TRUNK,col,0,(h+0.45)/2,0,0,R()*3,0,w*2,h+0.45,w*2),P(CYL8,col,0,h+0.3,0,0,0,0,w*1.5,0.3,w*1.5));
   for(let i=0;i<4;i++){const a=i/4*6.283+R();p.push(P(CYL6,dk||col,Math.cos(a)*w*1.1,0.05,Math.sin(a)*w*1.1,Math.sin(a)*0.9,0,-Math.cos(a)*0.9,0.07,0.24,0.07));}
-  for(let i=0;i<3;i++){const a=i/3*6.283+R(),y=h*(0.62+R()*0.25);p.push(P(CYL6,col,Math.cos(a)*0.16,y+0.1,Math.sin(a)*0.16,Math.sin(a)*0.8,0,-Math.cos(a)*0.8,0.06,0.42,0.06));}
-  for(let i=0;i<3;i++)p.push(P(BOX,dk||col,Math.cos(i*2.1)*w*0.95,0.2+i*0.18,Math.sin(i*2.1)*w*0.95,0,i*2.1,0,0.03,0.12,0.03));}
+  for(let i=0;i<3;i++){const a=i/3*6.283+R(),y=h*(0.62+R()*0.25);p.push(Object.assign(P(CYL6,col,Math.cos(a)*0.16,y+0.1,Math.sin(a)*0.16,Math.sin(a)*0.8,0,-Math.cos(a)*0.8,0.06,0.42,0.06),{lo:'drop'}));}
+  for(let i=0;i<3;i++)p.push(Object.assign(P(BOX,dk||col,Math.cos(i*2.1)*w*0.95,0.2+i*0.18,Math.sin(i*2.1)*w*0.95,0,i*2.1,0,0.03,0.12,0.03),{lo:'drop'}));}
 const PALMS=['palm','palmtall','palmfan','palmtwin'];
 // the far-away version of a batch of tree parts: a third of the leaf cards and palm leaflets (a bit bigger, so the silhouette holds)
 function lowParts(parts){let n=0,m=0;const out=[];for(const p of parts){
-  if(p.lo==='drop')continue;if(p.lo==='wide'){out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.8}));continue;}/* palm fronds: keep every main blade, wider, drop the side blades */
+  if(p.lo==='drop')continue;if(p.geo===ICO2&&p.c2!==undefined){out.push(Object.assign({},p,{geo:ICO}));continue;}if(p.lo==='wide'){out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.8}));continue;}/* palm fronds: keep every main blade, wider, drop the side blades */
   if(p.geo===LEAF_CARD){if(n++%3)continue;out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.4,sy:p.sy*1.15,sz:p.sz*1.4}));}
   else if(p.geo===LEAF0&&p.sx<0.16){if(m++%3)continue;out.push(Object.assign({},p,{sx:p.sx*1.7}));}
   else if(p.geo===BOX&&p.sx<0.06&&p.sz>0.1){if(m++%2)continue;out.push(Object.assign({},p,{sz:p.sz*2}));}/* palm frond stems: every other, doubled */
@@ -1143,20 +1157,22 @@ function palmParts(p,R,{n,lean,fronds,seg=4,flen=0.34,wid=0.34,cols,nuts,pitch=0
 function treeParts(kind,R,colRock){
   const p=[];
   switch(kind){
-    case'oak':trunkP(p,R,0x7a5230,0.9,0.13,0x5e3e24);canopy(p,R,[0x7cc050,0x5f9e3a,0x467e2c],0,1.3,0,0.55);
+    case'oak':trunkP(p,R,0x7a5230,0.9,0.13,0x5e3e24);canopy(p,R,[0x6cb04a,0x4c8e3a,0x2f6a2c],0,1.3,0,0.55);
       if(R()<0.4)for(let i=0;i<5;i++){const a=R()*6.28;p.push(P(ICO2,0xe8453a,Math.cos(a)*0.62,1.05+R()*0.4,Math.sin(a)*0.62,0,0,0,0.1,0.1,0.1));}break;
     case'cherry':trunkP(p,R,0x6a4436,0.9,0.12,0x4e3228);canopy(p,R,[0xffd8e6,0xf4a8c4,0xd07a9a],0,1.3,0,0.55);
       for(let i=0;i<6;i++)lf(p,[0xf8c8d8,0xffe4ee][i%2],(R()-0.5)*1.5,0.02,(R()-0.5)*1.5,R()*6.28,0,0.1,0.08,0.02);break;
     case'maple':case'mapleR':{const c=kind==='maple'?[0xf4a444,0xe8803a,0xc85e24]:[0xec6a4a,0xc8402a,0x982a22];
       trunkP(p,R,0x6a4428,0.9,0.12,0x4e3020);canopy(p,R,c,0,1.3,0,0.55);
       for(let i=0;i<5;i++)lf(p,c[i%3],(R()-0.5)*1.4,0.02,(R()-0.5)*1.4,R()*6.28,0,0.13,0.1,0.02);break;}
-    case'pine':case'snowpine':{const sn=kind==='snowpine',tip=sn?0xeef6fb:0x86cc6c,mid=sn?0x7aa898:0x4a9448,base=sn?0x2f5a4c:0x1f5230;
-      p.push(P(TRUNK,0x8a5a36,0,0.55,0,0,0,0,0.3,1.1,0.3));for(let i=0;i<4;i++){const a=i*1.7+R();p.push(P(ICO2,0xc8905a,Math.cos(a)*0.12,0.3+i*0.14,Math.sin(a)*0.12,0,a,0,0.06,0.08,0.04));}
-      // tiers of drooping leaf cards around a dark core, tips lightest — like the pines in Pocket Camp / New Leaf
-      for(let i=0;i<6;i++){const t=i/5,y=0.8+i*0.36,rad=1.1-t*0.74;p.push(P(CONE12,base,0,y+0.14,0,0,R(),0,rad*1.45,0.62,rad*1.45));
-        const n=Math.round(15-t*8);for(let k=0;k<n;k++){const a=k/n*6.283+i*0.41+R()*0.12,tl=2.0+R()*0.18,d=[Math.sin(a)*Math.sin(tl),Math.cos(tl),Math.cos(a)*Math.sin(tl)];
-          card(p,Math.sin(a)*rad*0.2,y+0.42,Math.cos(a)*rad*0.2,d,rad*0.95+0.18,0.34-t*0.1,k%2?tip:lerpHex(tip,mid,0.35),base);}}
-      for(let k=0;k<5;k++){const a=k/5*6.283,d=[Math.sin(a)*0.5,0.86,Math.cos(a)*0.5];card(p,0,2.72,0,d,0.34,0.14,tip,mid);}break;}
+    case'pine':case'snowpine':{const sn=kind==='snowpine',tip=0x8ad470,mid=0x3e9448,base=0x1a4a2c;
+      p.push(PG(TRUNK,0x7a4e30,0x5a3622,0,0.45,0,0,0,0,0.3,0.9,0.3));for(let i=0;i<4;i++){const a=i*1.7+R();p.push(P(CYL6,0x6a4428,Math.cos(a)*0.14,0.06,Math.sin(a)*0.14,Math.sin(a)*1.1,0,-Math.cos(a)*1.1,0.07,0.26,0.07));}
+      // stacked tiers, each dark at its skirt and lighter towards the top, with a scalloped edge and sunlit needle tufts
+      for(let i=0;i<5;i++){const t=i/4,y=0.62+i*0.42,rad=1.08-t*0.72,h=0.78-t*0.16,top=lerpHex(mid,tip,0.25+t*0.5),bot=lerpHex(base,mid,t*0.35);
+        p.push(PG(CONE12,top,bot,0,y+h/2,0,0,R(),0,rad*2,h,rad*2));
+        const n=Math.round(12-t*5);for(let k=0;k<n;k++){const a=k/n*6.283+i*0.5+R()*0.15;card(p,Math.cos(a)*rad*0.78,y+0.06,Math.sin(a)*rad*0.78,[Math.cos(a)*0.62,-0.78,Math.sin(a)*0.62],rad*0.42,0.24-t*0.06,bot,lerpHex(base,0x0a1a16,0.3));}
+        for(let k=0;k<Math.round(5-t*2);k++){const a=R()*6.28,r=rad*(0.3+R()*0.3);card(p,Math.cos(a)*r,y+h*(0.55-r/rad*0.45),Math.sin(a)*r,[Math.cos(a)*0.6,0.8,Math.sin(a)*0.6],0.2,0.12,lerpHex(tip,0xfff6c0,0.3),tip);}
+        if(sn)p.push(PG(CONE12,0xffffff,0xd8e8f0,0,y+h*0.72,0,0,R(),0,rad*1.5,h*0.5,rad*1.5));}
+      p.push(PG(CONE8,sn?0xffffff:lerpHex(tip,0xfff6c0,0.3),tip,0,2.72,0,0,0,0,0.3,0.42,0.3));break;}
     case'palm':palmParts(p,R,{n:9,lean:(R()-0.5)*0.6,fronds:8,cols:[0x2f7a34,0x8ad05a],nuts:3});break;
     case'palmtall':palmParts(p,R,{n:13,lean:(R()<0.5?-1:1)*(0.55+R()*0.3),fronds:9,flen:0.37,cols:[0x3a8a3a,0x9ade6a],nuts:2});break;
     case'palmfan':palmParts(p,R,{n:4,lean:0,fronds:11,seg:2,flen:0.44,wid:0.5,pitch:0.95,droop:0.35,spread:0.7,cols:[0x2a6e38,0x72c05a],nuts:0,trunk:[0x8a6a3e,0x7a5a34]});break;
@@ -1738,13 +1754,13 @@ function binGroup(){const g=new T.Group();g.add(M([P(BOX,0x8a5a36,0,0.22,0,0,0,0
    ground under the cliffs and open meadows, laid out by noise from the world seed and the island's style. Nothing is
    built; everything wild is ordinary farm debris (74-life), so it's cleared with the same tools, and trees are a
    debris kind of their own: chop one down with the axe and its stump stays to be dug out.
-   Also here: where the Island Heart grows (an ancient tree in an inland clearing) and the trail to it.
+   Also here: where the Island Heart stood in saves from before you planted your own driftseed, and desire paths.
    ========================================================= */
 // the wild trees change with the real seasons. Four kinds (instanced debris variants): 0 and 2 round broadleaf trees,
 // 1 an evergreen pine, 3 a flowering/fruiting tree. Spring: fresh green with blossom (3 is a cherry in bloom); summer: deep
 // green (3 carries red fruit); autumn: amber, scarlet and gold; winter: bare branches dusted with snow, and snowy pines.
-const TREE_COLS={spring:[[0xa6e27e,0x72c050,0x42883a],null,[0x98d870,0x62b048,0x3a7a34],[0xffd8e6,0xf4a8c4,0xd07a9a]],
-  summer:[[0x7cc050,0x5f9e3a,0x467e2c],null,[0x6ab84a,0x4a9a3a,0x2e6a2a],[0x88c860,0x5aa040,0x3a7a30]],
+const TREE_COLS={spring:[[0x8ed06a,0x5aa846,0x356e32],null,[0x82c460,0x4f9a40,0x2e662e],[0xffd8e6,0xf4a8c4,0xd07a9a]],
+  summer:[[0x6aae48,0x4a8a38,0x2e6428],null,[0x5aa044,0x3e8034,0x24562a],[0x78b650,0x4e9038,0x2f6a2c]],
   autumn:[[0xf4a444,0xe8803a,0xc85e24],null,[0xec6a4a,0xc8402a,0x982a22],[0xf6d060,0xe0b040,0xb08a28]]};
 function bareTree(p,R,snow){trunkP(p,R,0x6a5444,0.9,0.13,0x4e3e32);
   for(let i=0;i<7;i++){const a=i/7*6.283+R()*0.4,tl=0.55+R()*0.4,L=0.55+R()*0.3,y=0.95+R()*0.5,x=Math.cos(a)*Math.sin(tl)*L*0.5,z=Math.sin(a)*Math.sin(tl)*L*0.5;
@@ -1762,7 +1778,7 @@ function wildTreeParts(v){const s=season(),R=mulberry(hi(v,31,S.worldSeed|0)),p=
   return p;}
 const wildTreeKinds=()=>['wild',season()];
 
-// the heart's clearing: inland grass well away from the landing beach, with room around it
+// (old saves only) the heart's clearing: inland grass well away from the landing beach, with room around it
 function heartSpot(isl){const R=mulberry((S.worldSeed|0)^0x4ea7);let best=null,bs=-1e9;
   for(let it=0;it<400;it++){const [x,z]=isl.grass[Math.floor(R()*isl.grass.length)];if(farmQ(x,z)<1.6)continue;const d=Math.hypot(x-DOCK.x,z-DOCK.z);if(d<9)continue;
     let ok=true;for(let dx=-2;dx<=2&&ok;dx++)for(let dz=-2;dz<=2&&ok;dz++){const k=K(x+dx,z+dz);if(landMap.get(k)!=='grass'||(lvlMap.get(k)||0)!==(lvlMap.get(K(x,z))||0))ok=false;}
@@ -1770,11 +1786,9 @@ function heartSpot(isl){const R=mulberry((S.worldSeed|0)^0x4ea7);let best=null,b
   return best||[0,1];}
 
 // cover the home island in wild growth (called once when you make landfall, or when previewing an island from the sea)
-function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S.worldSeed|0)%1000,H=TOWN.plaza;
+function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S.worldSeed|0)%1000;
   const keep=new Set();const clear=(x,z,r)=>{for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)if(dx*dx+dz*dz<=r*r+1)keep.add(K(x+dx,z+dz));};
-  clear(DOCK.x,DOCK.z-2,4);clear(H[0],H[1],4);
-  // a deer trail from the beach to the heart: always passable, and the first path your feet wear in
-  const tr=landPath(DOCK.x,DOCK.z-2,H[0],H[1],{four:true,max:9000,cost:(x,z)=>1+vnoise(x*1.7,z*1.7,sd+5)*3})||[];for(const [x,z] of tr){keep.add(K(x,z));S.paths[K(x,z)]=Math.max(S.paths[K(x,z)]||0,PATH_WEAR-4);}
+  clear(DOCK.x,DOCK.z-2,4); // the beach you land on is open ground
   const cliffEdge=(x,z)=>[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>(lvlMap.get(K(x+a,z+b))||0)>(lvlMap.get(K(x,z))||0));
   const wet=(x,z)=>{for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++)if(riverSurf.has(K(x+a,z+b)))return true;return false;};
   const fAmt=(S.home&&S.home.wild)||0.5;
@@ -1826,23 +1840,52 @@ const nextUnlock=()=>S.scratch?HEART_UNLOCKS.find(u=>u.lv>level())||null:null;
 // what to do next, shown under your level (and tapping it does it where it can)
 function nextGoal(){if(!S.scratch)return null;const h=S.heart||{};
   if(!S.homeAt)return{tag:'First',name:'Pitch your tent',act:'tent'};
-  if(!h.found)return{tag:'Explore',name:"Find the island's heart",act:'hint'};
-  if(!h.revived)return{tag:'The heart',name:'Water the old tree',act:'heart'};
+  if(!S.heartAt)return{tag:'Your driftseed',name:'Plant your driftseed',act:'seed'};
   const k=Object.keys(S.kits||{}).find(q=>S.kits[q]);if(k){const u=HEART_UNLOCKS.find(q=>q.k===k);return{tag:'Build',name:'Place: '+u.name.replace(/^A |^The /,'').toLowerCase(),act:'kit:'+k};}
   const u=nextUnlock();return u?{tag:'Heart Lv '+u.lv,name:u.name,act:'info'}:null;}
 function goalTap(){const g=nextGoal();if(!g)return;SFX.ui();
   if(g.act==='tent')startBlueprint('tent');
-  else if(g.act==='hint'){const [hx,hz]=TOWN.plaza,dir=['east','south-east','south','south-west','west','north-west','north','north-east'][Math.round(((Math.atan2(hz-vil.z,hx-vil.x)+6.283)%6.283)/0.785)%8];
-    toast(`Somewhere inland to the <b>${dir}</b>, an old trail winds towards something very old. Follow it.`,'',ICON.sprout);}
-  else if(g.act==='heart')toast('The ancient tree is withered and grey. Bring your <b>watering can</b> and give it a drink.','',ICON.can);
+  else if(g.act==='seed')startBlueprint('seed');
   else if(g.act.startsWith('kit:'))startBlueprint(g.act.slice(4));
   else{const u=nextUnlock();toast(`At Island Heart level ${u.lv}: <b>${u.name.toLowerCase()}</b>. ${u.desc} Farming, fishing, catching bugs, decorating and restoring other islands all help it grow.`,'',ICON.star);}}
 const heartIcon=k=>ICON[k]||ICON.star;
 
-// the tree itself: an ancient, gnarled tree with spreading roots and five great boughs. Withered and grey until
-// you revive it (lv 0); then each level brings back more of its crown, blossom from level 4 and glowing golden fruit
-// from level 8. Returns {tp (far-LOD tree parts), p (plain), gl (glow)}
-function heartTreeParts(lv){const R=mulberry(77),tp=[],p=[],gl=[],dead=lv<=0,bark=dead?0x8a847a:0x6a4a34,bark2=dead?0x6e685e:0x523826;
+// the tree itself. Returns {tp (far-LOD tree parts), p (plain), gl (glow)}. On a classic island it's an ancient,
+// gnarled tree whose crown fills out with each level (blossom from 4, golden fruit from 8).
+// On a wild island it's the driftseed you planted: a glowing seed and its first leaves (lv 1), a sapling (lv 2), then a
+// young tree whose trunk thickens and crown widens with every level, blossom from level 4 and golden fruit from level 8.
+function heartTreeParts(lv){if(S.scratch)return seedTreeParts(lv);return ancientTreeParts(lv);}
+const HEART_LEAF=[0x8ce4ac,0x3eaa7e,0x1c6450],HEART_BARK=[0x8a6a54,0x5c4232];
+function seedTreeParts(lv){const R=mulberry(91),tp=[],p=[],gl=[],[bk,bk2]=HEART_BARK;
+  // a ring of pale stones round the spot you chose, and a low mound of dark soil
+  const rr=lv<=2?0.42:0.9;for(let i=0;i<(lv<=2?7:10);i++){const a=i/(lv<=2?7:10)*6.283+0.2;p.push(P(ICO,i%2?0xc8c2b4:0xb4ae9e,Math.cos(a)*rr,0.05,Math.sin(a)*rr,0,a,0,0.16+R()*0.05,0.1,0.13));}
+  p.push(P(ICO2,0x4e3a2c,0,0.02,0,0,0,0,lv<=2?0.5:0.7,0.08,lv<=2?0.5:0.7));
+  if(lv<=1){// the seed, split open and glowing, with its first pair of leaves on a curling stem
+    gl.push(P(ICO2,0xa8ffd8,0,0.13,0,0,0,0,0.2,0.18,0.2));p.push(P(ICO2,0x7a5a3a,-0.11,0.1,0.04,0,0,0.6,0.14,0.1,0.18),P(ICO2,0x7a5a3a,0.11,0.1,-0.03,0,0,-0.6,0.14,0.1,0.18));
+    p.push(P(CYL6,0x5aa860,0,0.4,0,0.12,0,0,0.045,0.55,0.045));lf(p,HEART_LEAF[0],0,0.64,0.03,0.6,0.35,0.4,0.25,0.05);lf(p,HEART_LEAF[1],0,0.61,0,0.6+Math.PI,0.3,0.36,0.23,0.05);lf(p,HEART_LEAF[0],0,0.68,0,2.1,0.9,0.2,0.13,0.04);
+    for(let i=0;i<6;i++){const a=i*1.05;gl.push(P(ICO,0xe0fff0,Math.cos(a)*0.3,0.25+i*0.08,Math.sin(a)*0.3,0,0,0,0.035,0.035,0.035));}return{tp,p,gl};}
+  if(lv===2){// a sapling: a slim trunk, a few side shoots and a small bright crown; the seed's glow at its foot
+    p.push(PG(CYL6,bk,bk2,0,0.45,0,0,0,0,0.07,0.9,0.07));for(let i=0;i<3;i++){const a=i*2.1+0.4;p.push(P(CYL6,bk,Math.cos(a)*0.08,0.55+i*0.1,Math.sin(a)*0.08,Math.sin(a)*0.9,0,-Math.cos(a)*0.9,0.025,0.22,0.025));}
+    canopy(tp,R,HEART_LEAF,0,1.05,0,0.3,18);gl.push(P(ICO2,0xa8ffd8,0,0.1,0.08,0,0,0,0.08,0.07,0.08));return{tp,p,gl};}
+  // a young tree that grows into a great one: g runs 0→1 over levels 3..11
+  const g=Math.min(1,(lv-3)/8),h=1.1+g*1.2,w=0.12+g*0.14;
+  tp.push(PG(TRUNK,bk,bk2,0,(h+0.3)/2,0,0,0.4,0,w*2,h+0.3,w*2));
+  for(let i=0;i<5;i++){const a=i/5*6.283+0.3;tp.push(PG(CONE6,bk,bk2,Math.cos(a)*w*1.3,0.1,Math.sin(a)*w*1.3,Math.sin(a)*1.2,0,-Math.cos(a)*1.2,w*0.8,0.35+g*0.3,w*0.8));}
+  // the heart in its trunk: a softly glowing knot
+  gl.push(P(ICO2,0x9affc8,0,h*0.45,w*0.95,0,0,0,w*0.7,w*0.9,w*0.3));p.push(P(CYL12,bk2,0,h*0.45,w*0.92,1.57,0,0,w*0.95,0.03,w*1.15));
+  // boughs, one more every level or two, each with its own clump of leaves; a crown on top
+  const nb=Math.min(5,1+Math.floor((lv-2)/2)),tips=[];
+  for(let i=0;i<5;i++){const a=i/5*6.283+0.5,tl=0.8+(i%2)*0.15,L=0.6+g*0.6,y0=h*(0.7+(i%3)*0.08);const x=Math.cos(a)*Math.sin(tl)*L,y=y0+Math.cos(tl)*L,z=Math.sin(a)*Math.sin(tl)*L;tips.push([x,y,z]);
+    if(i<nb)tp.push(PG(CYL6,bk,bk2,x/2,y0+Math.cos(tl)*L/2,z/2,Math.sin(a)*tl,0,-Math.cos(a)*tl,w*0.55,L,w*0.55));}
+  tips.forEach(([x,y,z],i)=>{if(i<nb)canopy(tp,R,HEART_LEAF,x,y+0.1,z,0.28+0.22*g,Math.round(16+16*g));});
+  const top=h+0.35+g*0.3;canopy(tp,R,HEART_LEAF,0,top,0,0.42+0.3*g,Math.round(24+20*g));
+  const crown=[...tips.slice(0,nb),[0,top,0]];
+  if(lv>=4){const n=Math.min(30,(lv-3)*5);for(let i=0;i<n;i++){const [x,y,z]=crown[i%crown.length],a=R()*6.28,r=0.3+R()*0.3;bloom(p,[0xf8c8d8,0xffffff,0xf2a6c8][i%3],0xf6d04a,x+Math.cos(a)*r,y+0.1+R()*0.4,z+Math.sin(a)*r,0.08);}
+    for(let i=0;i<Math.min(14,lv*2);i++){const a=i*2.39996,r=1.1+R()*0.6;bloom(p,[0xf8c8d8,0xfff4a0,0xffffff][i%3],0xf6d04a,Math.cos(a)*r,0.06,Math.sin(a)*r,0.07);}}
+  if(lv>=8)for(let i=0;i<Math.min(12,(lv-7)*3);i++){const [x,y,z]=crown[i%crown.length];gl.push(P(ICO2,0xffe27a,x+(R()-0.5)*0.6,y-0.25-R()*0.25,z+(R()-0.5)*0.6,0,0,0,0.12,0.15,0.12));}
+  return{tp,p,gl};}
+// the ancient heart tree in the square of a classic (pre-wild) island
+function ancientTreeParts(lv){const R=mulberry(77),tp=[],p=[],gl=[],dead=lv<=0,bark=dead?0x8a847a:0x6a4a34,bark2=dead?0x6e685e:0x523826;
   for(let i=0;i<9;i++){const a=i/9*6.283;p.push(P(ICO,i%2?0xb8b4ac:0xa8a49c,Math.cos(a)*1.25,0.06,Math.sin(a)*1.25,0,a,0,0.3,0.16,0.24));}
   tp.push(PG(CYL8,bark,bark2,0,0.85,0,0,0,0.04,0.62,1.7,0.62),PG(CYL8,bark,bark2,0.05,1.95,0.02,0.06,0,-0.08,0.44,0.7,0.44));
   for(let i=0;i<7;i++){const a=i/7*6.283+0.3;tp.push(PG(CONE6,bark,bark2,Math.cos(a)*0.42,0.14,Math.sin(a)*0.42,Math.sin(a)*1.2,0,-Math.cos(a)*1.2,0.2,0.75,0.2));}
@@ -1942,8 +1985,10 @@ function layoutTown(isl){
   for(let r=0;r<12;r++){let ok=false;for(const x of [1+r,1-r]){let zz=null;for(let z=0;z<24;z++)if(isLandT(landMap.get(K(x,z)))&&landMap.get(K(x,z))!=='bridge')zz=z;
       if(zz!==null&&landMap.get(K(x,zz))==='sand'&&![...Array(7)].some((_,i)=>riverSurf.has(K(x-3+i,zz))||riverSurf.has(K(x-3+i,zz-2)))){DOCK.x=x;DOCK.z=zz;ok=true;break;}}if(ok)break;}
   let pc=null,plotSet=new Set(),home=null;
-  if(S.scratch){// a wild island: only what you've built stands; the Island Heart grows in its own inland clearing
-    pc=heartSpot(isl);TOWN.plaza=pc;TOWN.fixed.set(K(pc[0],pc[1]),'tree');TOWN.board=null;
+  if(S.scratch){// a wild island: only what you've built stands; the Island Heart grows where you planted your driftseed
+    if(S.heart&&S.heart.revived&&!S.heartAt){const h=heartSpot(isl);S.heartAt={x:h[0],z:h[1]};} // saves from the old heart hunt keep their tree
+    pc=S.heartAt?[S.heartAt.x,S.heartAt.z]:S.homeAt?[S.homeAt.x+2,S.homeAt.z+3]:[DOCK.x,DOCK.z-3];TOWN.plaza=pc;TOWN.board=null;
+    if(S.heartAt)TOWN.fixed.set(K(pc[0],pc[1]),'tree');
     for(const s of S.builds||[]){const b={t:s.t,x:s.x,z:s.z,n:s.n,door:[s.x,s.z+2],locked:S.day<=s.day};TOWN.bld.push(b);// under construction until the next morning
       for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++)TOWN.fixed.set(K(s.x+dx,s.z+dz),b.locked?'plot':b.t);}
     if(S.homeAt){HOUSE_AT.x=S.homeAt.x;HOUSE_AT.z=S.homeAt.z;home={t:'home',x:HOUSE_AT.x,z:HOUSE_AT.z,door:[HOUSE_AT.x,HOUSE_AT.z+2]};TOWN.bld.push(home);
@@ -1981,7 +2026,7 @@ function layoutTown(isl){
   // static town meshes
   const p=[],gl=[],tp=[]/* trees, meshed with a far LOD (addVeg) */,y0=(x,z)=>topY(x,z);
   // the Island Heart (it grows with your level) + benches + bulletin board
-  {const H=heartTreeParts(S.scratch?(S.heart&&S.heart.revived?level():0):10);tp.push(...shift(H.tp,pc[0],y0(...pc),pc[1],0.4));p.push(...shift(H.p,pc[0],y0(...pc),pc[1],0.4));gl.push(...shift(H.gl,pc[0],y0(...pc),pc[1],0.4));}
+  if(!S.scratch||S.heartAt){const H=heartTreeParts(S.scratch?level():10);tp.push(...shift(H.tp,pc[0],y0(...pc),pc[1],0.4));p.push(...shift(H.p,pc[0],y0(...pc),pc[1],0.4));gl.push(...shift(H.gl,pc[0],y0(...pc),pc[1],0.4));}
   if(!S.scratch)for(let i=0;i<10;i++){const a=i/10*6.283;bloom(p,[0xf2a6c8,0xffffff,0xf6d04a][i%3],0xf6d04a,pc[0]+Math.cos(a)*0.85,y0(...pc)+0.05,pc[1]+Math.sin(a)*0.85,0.07);}
   TOWN.cafeSeats=[];{const c=TOWN.bld.find(q=>q.t==='cafe'&&!q.locked);if(c)TOWN.cafeSeats.push([c.x,c.z+1],[c.x+1,c.z+1]);}
   TOWN.benches=[];if(!S.scratch)for(const [bx,bz,r] of [[pc[0]-2,pc[1]+2,0],[pc[0]+2,pc[1]+2,0]]){TOWN.benches.push([bx,bz]);const q=[];for(const [x,z] of [[-0.38,-0.1],[0.38,-0.1],[-0.38,0.12],[0.38,0.12]])q.push(P(BOX,0x5a3a2a,x,0.12,z,0,0,0,0.06,0.24,0.06));
@@ -2236,7 +2281,6 @@ function townTap(f,x,z){const b=TOWN.bld.find(q=>x>=q.x&&x<=q.x+1&&z>=q.z&&z<=q.
   if(f==='vh'){const n=npcs.find(q=>q.b===b);if(!n)return true;goTo(b.door[0]+0.5,b.door[1]+0.2,()=>enterHouse('vh',b,n));return true;}
   if(f==='board'){walkTo(x,z+1);boardNews();return true;}
   if(f==='plot'){walkTo(b.door[0]+0.5,b.door[1]);plotTap(b);return true;}
-  if(f==='tree'&&S.scratch&&!(S.heart&&S.heart.revived)){if(S.tool==='can'){actAt(x,z,reviveHeart);return true;}walkTo(x,z+1);heartWatch();toast('The ancient tree is withered and grey, its roots cracked and dry. It needs water: bring your <b>watering can</b>.','',ICON.can);return true;}
   if(f==='tree'){walkTo(x,z+1);const nx=nextUnlock();toast(S.scratch?`<b>${TOWN.name}'s Island Heart</b>, level ${level()}. It grows as you farm, fish, catch bugs, decorate and restore other islands.${nx?` Next at level ${nx.lv}: <b>${nx.name.toLowerCase()}</b>.`:' It is fully grown!'}`:`The ${TOWN.name} town tree. Villagers say it's older than the island itself.`,'',ICON.sprout);return true;}
   if(f==='decor'){if(TOWN.res.has(K(x,z))){gatherRes(x,z);return true;}goTo(x,z);return true;}
   return false;}
@@ -3208,27 +3252,34 @@ function endPlace(){if(ghost){scene.remove(ghost);ghost=null;}placing=null;curso
    Blueprints: your tent, and each kit the Island Heart gives you (store, museum, café, town hall, a neighbour's plot).
    Each takes a 2×2 patch of clear, level grass, with room at the door. You tap to move the outline, then place it;
    buildings go up overnight (S.builds, finished by morningMoveIn). Pitching your tent is also when you name the island.
-   Also here: finding the Island Heart (walk close to it) and reviving it (water it).
+   Your driftseed is placed the same way (one tile, with open ground round it): it becomes the Island Heart.
    ========================================================= */
-const BP_NAME=k=>k==='tent'?'your tent':((HEART_UNLOCKS.find(u=>u.k===k)||{}).name||k).toLowerCase();
+const BP_NAME=k=>k==='tent'?'your tent':k==='seed'?'your driftseed':((HEART_UNLOCKS.find(u=>u.k===k)||{}).name||k).toLowerCase();
 function bpFree(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&onHome(x,z)&&farmQ(x,z)>1.15&&!debrisAt(x,z)&&!objAt(x,z)&&!fixedAt(x,z)&&!S.tiles[k]&&!findAt(x,z)&&!weedAt(x,z);}
-function bpOk(x,z){const l=lvlMap.get(K(x,z))||0;for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++){if(!bpFree(x+dx,z+dz)||(lvlMap.get(K(x+dx,z+dz))||0)!==l)return false;}
+function bpOk(x,z){if(placing&&placing.bp==='seed')return seedOk(x,z);const l=lvlMap.get(K(x,z))||0;for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++){if(!bpFree(x+dx,z+dz)||(lvlMap.get(K(x+dx,z+dz))||0)!==l)return false;}
   for(let dx=0;dx<2;dx++){const k=K(x+dx,z+2);if(!walkable(x+dx,z+2)||debrisAt(x+dx,z+2)||fixedAt(x+dx,z+2))return false;}return true;}
+// the driftseed needs a tile with open, level grass all round it (the tree will spread), clear of your tent
+function seedOk(x,z){const l=lvlMap.get(K(x,z))||0;for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){const a=x+dx,b=z+dz;
+    if(!bpFree(a,b)||(lvlMap.get(K(a,b))||0)!==l||(a>=HOUSE_AT.x-1&&a<=HOUSE_AT.x+2&&b>=HOUSE_AT.z-1&&b<=HOUSE_AT.z+2))return false;}return true;}
 function bpGhost(k){if(k==='tent'){const g=houseGroup(0);return g;}
+  if(k==='seed'){const q=seedTreeParts(1),g=new T.Group();g.add(M([...q.p,...q.gl]));return g;}
   const t=k.startsWith('vh')?'vh':k,b={t,n:t==='vh'?+k.slice(2):0,x:0,z:0},g=new T.Group();
   const q=t==='vh'?{p:plotParts(b,true),gl:[]}:townBuilding(b,mulberry(3));g.add(M(q.p));if(q.gl.length)g.add(M(q.gl));
   const w=new T.Group();g.position.set(0.5,0,0.5);w.add(g);return w;}
 function startBlueprint(k){if(S.sea||inside){toast('Head back to your island first.');return;}closeSheet();clearAction();if(placing)endPlace();
   // start from the nearest good spot to where you're standing
-  const px=Math.round(vil.x),pz=Math.round(vil.z);let best=null,bd=1e9;
-  for(let r=0;r<16&&!best;r++)for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;const x=px+dx,z=pz+dz-2;if(bpOk(x,z)){const d=dx*dx+dz*dz;if(d<bd){bd=d;best=[x,z];}}}
-  if(!best){toast(`There's no clear, level patch nearby for ${BP_NAME(k)}. Clear some ground (axe and shovel) or walk somewhere more open.`);return;}
+  const px=Math.round(vil.x),pz=Math.round(vil.z),sd=k==='seed',ok=sd?seedOk:bpOk;let best=null,bd=1e9;
+  for(let r=0;r<16&&!best;r++)for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;const x=px+dx,z=pz+dz-(sd?1:2);if(ok(x,z)){const d=dx*dx+dz*dz;if(d<bd){bd=d;best=[x,z];}}}
+  if(!best){toast(sd?"There's no open, level grass nearby for your driftseed. Clear some ground (axe and shovel) or walk somewhere more open."
+    :`There's no clear, level patch nearby for ${BP_NAME(k)}. Clear some ground (axe and shovel) or walk somewhere more open.`);return;}
   placing={bp:k,kind:k,rot:0,x:best[0],z:best[1]};ghost=bpGhost(k);ghost.traverse(o=>{if(o.isMesh){o.material=ghostMat;o.castShadow=false;}});scene.add(ghost);bpMove(best[0],best[1]);}
-function bpMove(x,z){placing.x=x;placing.z=z;const y=Math.min(topY(x,z),topY(x+1,z+1))||0.5;ghost.position.set(placing.bp==='tent'?x+0.5:x,y,placing.bp==='tent'?z+0.5:z);
-  const ok=bpOk(x,z);ghostMat.color.set(ok?0xffffff:0xff6a5a);cursorAt(x,z+2,ok?0xfff6e2:0xff6a5a);cursorT=1e9;
-  setAction(`<b>Place ${BP_NAME(placing.bp)}</b><br><small>${ok?'Tap the ground to move it. The door faces you.':'Needs a clear, level 2×2 patch of grass with room at the door.'}</small>`,
-    [{label:'Place here',cls:'go',disabled:!ok,fn:bpPlace},{label:'Later',fn:endPlace}]);}
+function bpMove(x,z){placing.x=x;placing.z=z;const sd=placing.bp==='seed',c=placing.bp==='tent',y=sd?topY(x,z):Math.min(topY(x,z),topY(x+1,z+1))||0.5;ghost.position.set(c?x+0.5:x,y,c?z+0.5:z);
+  const ok=bpOk(x,z);ghostMat.color.set(ok?0xffffff:0xff6a5a);cursorAt(x,sd?z:z+2,ok?0xfff6e2:0xff6a5a);cursorT=1e9;
+  setAction(sd?`<b>Plant your driftseed</b><br><small>${ok?'Tap the ground to choose the spot. It will grow into your Island Heart, right here.':'Needs open, level grass with a clear tile all round it.'}</small>`
+      :`<b>Place ${BP_NAME(placing.bp)}</b><br><small>${ok?'Tap the ground to move it. The door faces you.':'Needs a clear, level 2×2 patch of grass with room at the door.'}</small>`,
+    [{label:sd?'Plant here':'Place here',cls:'go',disabled:!ok,fn:bpPlace},{label:'Later',fn:endPlace}]);}
 function bpPlace(){const {bp:k,x,z}=placing;if(!bpOk(x,z))return;endPlace();SFX.place();
+  if(k==='seed'){plantSeed(x,z);return;}
   if(k==='tent'){S.homeAt={x,z};rebuildHome();syncObjs();burst(x+0.5,topY(x,z)+0.6,z+0.5,0xf6eedb,24,2,0.1);nameIsland();return;}
   const t=k.startsWith('vh')?'vh':k;S.builds=S.builds||[];S.builds.push({t,n:t==='vh'?+k.slice(2):undefined,x,z,day:S.day});delete S.kits[k];
   rebuildHome();burst(x+1,topY(x,z)+0.6,z+1,0xf6eedb,20,2,0.1);updateHUD();
@@ -3239,18 +3290,16 @@ function nameIsland(){const el=document.createElement('div');el.id='heartUp';con
   el.innerHTML=`<div class="hu"><h2>Home, for now</h2><p class="husub">Your tent is up. Every island deserves a name. What will you call this one?</p>
     <label class="pkname"><span>Island name</span><input id="pkName" maxlength="16" value="${sug}" autocomplete="off"></label><button class="pbtn go" id="huOk">That's the one</button></div>`;
   document.body.appendChild(el);const done=()=>{S.islandName=(el.querySelector('#pkName').value||'').trim().slice(0,16)||sug;TOWN.name=S.islandName;el.remove();updateHUD();save();
-    setTimeout(()=>toast(`Welcome to <b>${S.islandName}</b>. Somewhere inland, an old trail leads to the heart of the island.`,'',ICON.sprout),500);};
+    setTimeout(()=>toast(`Welcome to <b>${S.islandName}</b>. You still have the glowing <b>driftseed</b> that washed up with you: find it a spot to grow.`,'',ICON.sprout),500);
+    setTimeout(()=>{if(!S.heartAt&&!placing&&!S.sea&&!inside)startBlueprint('seed');},3500);};
   el.querySelector('#huOk').onclick=done;el.querySelector('#pkName').onkeydown=e=>{if(e.key==='Enter')done();};}
 
-// walking near the heart finds it; watering it brings it back to life
-function heartWatch(){if(!S.scratch)return;S.heart=S.heart||{};const [hx,hz]=TOWN.plaza;
-  if(!S.heart.found&&Math.hypot(vil.x-hx,vil.z-hz)<5){S.heart.found=1;SFX.discover&&SFX.discover();
-    toast("An enormous old tree, grey and withered, stands alone in the clearing. This is the island's heart. It's thirsty.",'rare',ICON.sprout);updateHUD();}}
-function reviveHeart(){const [hx,hz]=TOWN.plaza,y=topY(hx,hz);S.heart=S.heart||{};S.heart.found=1;S.heart.revived=S.day;SFX.splash&&SFX.splash();
-  for(let i=0;i<50;i++)sparkle(hx+(Math.random()-0.5)*3,y+0.3+Math.random()*3,hz+(Math.random()-0.5)*3,[0xc8fff0,0xfff0c0,0xa8ec84][i%3]);
-  const f=$('fade');f.classList.add('on');setTimeout(()=>{rebuildHome();f.classList.remove('on');updateHUD();
-    toast('Colour runs up the old trunk and new leaves unfurl. The Island Heart is alive again, and it will grow as your island thrives.','rare',ICON.sprout);
-    if(level()>1)setTimeout(()=>heartLevelUp(1,level()),2200);},650);}
+// planting your driftseed: it takes root on the spot and becomes the Island Heart, growing with your level from now on
+function plantSeed(x,z){const y=topY(x,z);S.heartAt={x,z};S.heart=Object.assign(S.heart||{},{planted:S.day,revived:S.day});SFX.splash&&SFX.splash();
+  for(let i=0;i<40;i++)sparkle(x+(Math.random()-0.5)*1.6,y+0.2+Math.random()*1.4,z+(Math.random()-0.5)*1.6,[0xc8fff0,0xfff0c0,0xa8ec84][i%3]);
+  rebuildHome();syncObjs();updateHUD();save();
+  toast('You press the driftseed into the soil. It glows, and a first pair of leaves unfurls. This is your <b>Island Heart</b>: it will grow as your island thrives.','rare',ICON.sprout);
+  if(level()>1)setTimeout(()=>heartLevelUp(1,level()),2200);}
 /* =========================================================
    Beach finds & weeds (saved)
    ========================================================= */
@@ -3303,7 +3352,7 @@ function debrisGeo(k,v,lo){const id=k+v+(k==='tree'?wildTreeKinds().join()+(S.wo
 // debris is drawn instanced: one batch per model variant (a handful of draw calls for the whole field); debMesh maps a tile to its slot
 // wild trees come in two builds: full detail near the camera, a lighter one further off (treeLOD re-sorts them as you move)
 const treeGroups=[];let lodAt=null,lodT=0;
-function treeLOD(gr){let a=0,b=0;for(const e of gr.es){const near=Math.hypot(e.x-cam.tx,e.z-cam.tz)<26;e.im=near?gr.hi:gr.lo;e.i=near?a++:b++;setDebrisMatrix(e,0);}gr.hi.count=a;gr.lo.count=b;}
+function treeLOD(gr){let a=0,b=0;for(const e of gr.es){const near=Math.hypot(e.x-cam.tx,e.z-cam.tz)<14;e.im=near?gr.hi:gr.lo;e.i=near?a++:b++;setDebrisMatrix(e,0);}gr.hi.count=a;gr.lo.count=b;}
 function syncDebris(){while(debrisRoot.children.length){const c=debrisRoot.children[0];debrisRoot.remove(c);c.dispose();}debMesh.clear();treeGroups.length=0;lodAt=null;
   const groups=new Map();for(const d of S.debris){const id=d.k+d.v;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(d);}
   for(const [,list] of groups){if(list[0].k==='tree'){const mk=lo=>{const im=new T.InstancedMesh(debrisGeo('tree',list[0].v,lo),vcMat,list.length);im.castShadow=!lo;im.receiveShadow=true;im.frustumCulled=false;for(let i=0;i<list.length;i++)im.setColorAt(i,_c.setHex(0xffffff));debrisRoot.add(im);return im;};
@@ -4208,7 +4257,7 @@ function clearWorld(){for(const isl of islands){if(isl.group){scene.remove(isl.g
     if(isl.pgroup)scene.remove(isl.pgroup);}
   for(const m of [landMap,islMap,lvlMap,riverSurf,bridgeY,SAND_CH])m.clear();islands=[];}
 // build a candidate's whole world, wild growth and all, and describe what's on it
-function buildCandidate(c){S.worldSeed=c.seed;S.home=homeOf(c);S.scratch=1;S.wild=1;S.debris=[];S.paths={};S.homeAt=null;S.builds=[];S.heart={};S.islandName=null;
+function buildCandidate(c){S.worldSeed=c.seed;S.home=homeOf(c);S.scratch=1;S.wild=1;S.debris=[];S.paths={};S.homeAt=null;S.heartAt=null;S.builds=[];S.heart={};S.islandName=null;
   const st=applyHomeStyle();clearWorld();genIslands();for(const isl of islands)buildIsland(isl);rebuildSeaGrid();genWild();buildIsland(islands[0]);syncDebris();
   const h=islands[0],trees=S.debris.filter(d=>d.k==='tree').length,g=h.grass.length,high=[...lvlMap.values()].filter(v=>v>0).length;
   const riv=(h.rtiles||[]).length>0,falls=(h.falls||[]).length,near=islands.filter(i=>!i.home&&Math.hypot(i.cx,i.cz)<70).length;
@@ -4408,7 +4457,7 @@ function loadShowcase(){
   for(const [cat,,pre,tab] of DEX_CATS)for(const k in tab)S.alm[pre+k]=1;
   for(const id of CROP_IDS){for(const v of VARIANTS)S.alm[id+'|'+v.id]=1;S.almR[id]=1;}
   // the showcase is a classic, fully built town (a wild island's own layout is left behind)
-  delete S.scratch;delete S.wild;delete S.home;delete S.homeAt;S.builds=[];S.debris=[];S.paths={};applyHomeStyle();
+  delete S.scratch;delete S.wild;delete S.home;delete S.homeAt;delete S.heartAt;S.builds=[];S.debris=[];S.paths={};applyHomeStyle();
   buildIsland(islands[0]); // the field grows with S.land
   layShowcaseFarm();
   const g=showcaseGate;vil.x=vil.tx=g[0]-1.5;vil.z=vil.tz=g[1]+0.5;
@@ -4490,7 +4539,7 @@ function frame(now){
       if(playerLimbs)swingLimbs(playerLimbs,tt*11,d>0.04?0.7:0);
       villager.position.set(vil.x,vil.y+(d>0.04?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.4*Math.PI)*0.3*(vil.hop>0),vil.z);}
   }
-  wearPaths();heartWatch();
+  wearPaths();
   updateBoat(dt,tt);
   if(S.sea){vil.hop=Math.max(0,vil.hop-dt);villager.position.set(vil.x,0.14+Math.sin(tt*1.5)*0.04+Math.sin(vil.hop/0.35*Math.PI)*0.3*(vil.hop>0),vil.z);if(!fishing)villager.rotation.y=S.boat.r;}
   const k=paint?0:Math.min(1,dt*3);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();cullIslands();updateNearGrass(dt); // hold the view still while drag-farming so tiles stay under the finger
@@ -4591,7 +4640,7 @@ if(/[?&]debug\b/.test(location.search)){
     grid:(x0,z0,x1,z1)=>{const out=[];for(let z=z0;z<=z1;z++){let l='';for(let x=x0;x<=x1;x++){const k=K(x,z),t=landMap.get(k);l+=S.tiles[k]?'T':objAt(x,z)?'O':fixedAt(x,z)?'F':debrisAt(x,z)?'D':TOWN.path.has(k)?'P':t==='grass'?'g':t==='sand'?'s':t==='bridge'?'b':t==='river'?'r':t?t[0]:'.';}out.push(String(z).padStart(3)+' '+l);}return out.join('\n');},
     showcase:()=>loadShowcase(),
     // wild-island settling: the heart's spot, revive it, place a blueprint at a spot, finish tonight's building
-    heartAt:()=>TOWN.plaza.slice(),revive:()=>reviveHeart(),bp:(k,x,z)=>{startBlueprint(k);if(x!==undefined)bpMove(x,z);return placing&&bpOk(placing.x,placing.z)?[placing.x,placing.z]:null;},bpPlace:()=>{if(placing&&placing.bp)bpPlace();},goal:()=>{const g=nextGoal();return g&&g.name;},dawn:()=>{dawn(true);return S.day;},shoo:()=>{for(const n of npcs){n.x=n.b.door[0]+0.5;n.z=n.b.door[1]+0.3;n.path=null;n.state='idle';n.wait=30;n.act=null;}return npcs.length;},
+    heartAt:()=>TOWN.plaza.slice(),revive:()=>{if(S.heartAt)return [S.heartAt.x,S.heartAt.z];startBlueprint('seed');if(!placing||placing.bp!=='seed')return null;const at=[placing.x,placing.z];bpPlace();return S.heartAt?at:null;},bp:(k,x,z)=>{startBlueprint(k);if(x!==undefined)bpMove(x,z);return placing&&bpOk(placing.x,placing.z)?[placing.x,placing.z]:null;},bpPlace:()=>{if(placing&&placing.bp)bpPlace();},goal:()=>{const g=nextGoal();return g&&g.name;},dawn:()=>{dawn(true);return S.day;},shoo:()=>{for(const n of npcs){n.x=n.b.door[0]+0.5;n.z=n.b.door[1]+0.3;n.path=null;n.state='idle';n.wait=30;n.act=null;}return npcs.length;},
     // place every earned kit wherever there's room (clearing a patch if it has to), finished at once
     buildAll:()=>{grantKits();for(const k of Object.keys(S.kits||{})){if(!S.kits[k])continue;let at=null;for(const [x,z] of islands[0].grass){if(farmQ(x,z)<1.3)continue;S.debris=S.debris.filter(d=>!(d.x>=x&&d.x<=x+1&&d.z>=z&&d.z<=z+2));if(bpOk(x,z)){at=[x,z];break;}}
       if(!at)continue;const t=k.startsWith('vh')?'vh':k;S.builds.push({t,n:t==='vh'?+k.slice(2):undefined,x:at[0],z:at[1],day:S.day-1});delete S.kits[k];rebuildHome();}syncDebris();morningMoveIn(true);return TOWN.bld.filter(b=>!b.locked).length;},paths:()=>TOWN.path.size,wild:()=>{const c={};for(const d of S.debris)c[d.k]=(c[d.k]||0)+1;return c;},
@@ -4599,6 +4648,11 @@ if(/[?&]debug\b/.test(location.search)){
     setLevel:n=>{S.xp=LV[n-1]||0;grantKits();rebuildHome();initNPCs();updateHUD();return level();},moveIn:()=>{morningMoveIn();return npcs.length;},
     next:()=>{const u=nextUnlock();return u&&u.name;},xp:n=>{addXP(n);return level();},plots:()=>TOWN.bld.map(b=>b.t+(b.t==='vh'?b.n:'')+(b.locked?':plot':'')),
     // every crop at one stage, rendered at the same scale on a patch of soil (data URLs), for eyeballing the models
+    treeGallery:(size=200)=>{const out=[],so=S.seasonOv;const add=(name,parts)=>{const w=new T.Group();w.add(M(parts));const box=new T.Mesh(new T.BoxGeometry(2.4,3.4,2.4));box.position.y=1.5;box.visible=false;w.add(box);w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,2,0.06,2)]));out.push([name,snapThumb(w,size)]);};
+      for(const k of ['oak','pine','maple','cherry','bush','snowpine'])add(k,treeParts(k,mulberry(7),0x9a9ea8));
+      for(const se of ['spring','summer','autumn','winter']){S.seasonOv=se;for(const v of [0,2,3])add(se+' '+v,wildTreeParts(v));}
+      for(const lv of [1,2,4,7,11]){const q=seedTreeParts(lv);add('heart '+lv,[...q.tp,...q.p,...q.gl]);}
+      add('bush debris',debrisParts('bush',mulberry(3)));S.seasonOv=so;return out;},
     cropGallery:(stage=3,size=160)=>CROP_IDS.map((id,i)=>{const c=cropParts(id,stage,i*97+5),g=new T.Group();if(c.leaf.length)g.add(M(c.leaf));if(c.fruit.length)g.add(M(c.fruit));g.scale.setScalar(0.95);
       const w=new T.Group();w.add(g);w.add(M([P(BOX,0x5e3c2a,0,-0.03,0,0,0,0,1,0.06,1)]));const box=new T.Mesh(new T.BoxGeometry(1.1,1.5,1.1));box.position.y=0.7;box.visible=false;w.add(box);return [id,snapThumb(w,size)];}),
     ripen:()=>{for(const k in S.tiles){const t=S.tiles[k];if(t.crop)t.crop.p=1;}syncAllCrops();},

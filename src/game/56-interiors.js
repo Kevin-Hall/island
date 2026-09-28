@@ -93,7 +93,6 @@ function townTap(f,x,z){const b=TOWN.bld.find(q=>x>=q.x&&x<=q.x+1&&z>=q.z&&z<=q.
   if(f==='vh'){const n=npcs.find(q=>q.b===b);if(!n)return true;goTo(b.door[0]+0.5,b.door[1]+0.2,()=>enterHouse('vh',b,n));return true;}
   if(f==='board'){walkTo(x,z+1);boardNews();return true;}
   if(f==='plot'){walkTo(b.door[0]+0.5,b.door[1]);plotTap(b);return true;}
-  if(f==='tree'&&S.scratch&&!(S.heart&&S.heart.revived)){if(S.tool==='can'){actAt(x,z,reviveHeart);return true;}walkTo(x,z+1);heartWatch();toast('The ancient tree is withered and grey, its roots cracked and dry. It needs water: bring your <b>watering can</b>.','',ICON.can);return true;}
   if(f==='tree'){walkTo(x,z+1);const nx=nextUnlock();toast(S.scratch?`<b>${TOWN.name}'s Island Heart</b>, level ${level()}. It grows as you farm, fish, catch bugs, decorate and restore other islands.${nx?` Next at level ${nx.lv}: <b>${nx.name.toLowerCase()}</b>.`:' It is fully grown!'}`:`The ${TOWN.name} town tree. Villagers say it's older than the island itself.`,'',ICON.sprout);return true;}
   if(f==='decor'){if(TOWN.res.has(K(x,z))){gatherRes(x,z);return true;}goTo(x,z);return true;}
   return false;}

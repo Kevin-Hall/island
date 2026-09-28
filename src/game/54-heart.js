@@ -31,23 +31,52 @@ const nextUnlock=()=>S.scratch?HEART_UNLOCKS.find(u=>u.lv>level())||null:null;
 // what to do next, shown under your level (and tapping it does it where it can)
 function nextGoal(){if(!S.scratch)return null;const h=S.heart||{};
   if(!S.homeAt)return{tag:'First',name:'Pitch your tent',act:'tent'};
-  if(!h.found)return{tag:'Explore',name:"Find the island's heart",act:'hint'};
-  if(!h.revived)return{tag:'The heart',name:'Water the old tree',act:'heart'};
+  if(!S.heartAt)return{tag:'Your driftseed',name:'Plant your driftseed',act:'seed'};
   const k=Object.keys(S.kits||{}).find(q=>S.kits[q]);if(k){const u=HEART_UNLOCKS.find(q=>q.k===k);return{tag:'Build',name:'Place: '+u.name.replace(/^A |^The /,'').toLowerCase(),act:'kit:'+k};}
   const u=nextUnlock();return u?{tag:'Heart Lv '+u.lv,name:u.name,act:'info'}:null;}
 function goalTap(){const g=nextGoal();if(!g)return;SFX.ui();
   if(g.act==='tent')startBlueprint('tent');
-  else if(g.act==='hint'){const [hx,hz]=TOWN.plaza,dir=['east','south-east','south','south-west','west','north-west','north','north-east'][Math.round(((Math.atan2(hz-vil.z,hx-vil.x)+6.283)%6.283)/0.785)%8];
-    toast(`Somewhere inland to the <b>${dir}</b>, an old trail winds towards something very old. Follow it.`,'',ICON.sprout);}
-  else if(g.act==='heart')toast('The ancient tree is withered and grey. Bring your <b>watering can</b> and give it a drink.','',ICON.can);
+  else if(g.act==='seed')startBlueprint('seed');
   else if(g.act.startsWith('kit:'))startBlueprint(g.act.slice(4));
   else{const u=nextUnlock();toast(`At Island Heart level ${u.lv}: <b>${u.name.toLowerCase()}</b>. ${u.desc} Farming, fishing, catching bugs, decorating and restoring other islands all help it grow.`,'',ICON.star);}}
 const heartIcon=k=>ICON[k]||ICON.star;
 
-// the tree itself: an ancient, gnarled tree with spreading roots and five great boughs. Withered and grey until
-// you revive it (lv 0); then each level brings back more of its crown, blossom from level 4 and glowing golden fruit
-// from level 8. Returns {tp (far-LOD tree parts), p (plain), gl (glow)}
-function heartTreeParts(lv){const R=mulberry(77),tp=[],p=[],gl=[],dead=lv<=0,bark=dead?0x8a847a:0x6a4a34,bark2=dead?0x6e685e:0x523826;
+// the tree itself. Returns {tp (far-LOD tree parts), p (plain), gl (glow)}. On a classic island it's an ancient,
+// gnarled tree whose crown fills out with each level (blossom from 4, golden fruit from 8).
+// On a wild island it's the driftseed you planted: a glowing seed and its first leaves (lv 1), a sapling (lv 2), then a
+// young tree whose trunk thickens and crown widens with every level, blossom from level 4 and golden fruit from level 8.
+function heartTreeParts(lv){if(S.scratch)return seedTreeParts(lv);return ancientTreeParts(lv);}
+const HEART_LEAF=[0x8ce4ac,0x3eaa7e,0x1c6450],HEART_BARK=[0x8a6a54,0x5c4232];
+function seedTreeParts(lv){const R=mulberry(91),tp=[],p=[],gl=[],[bk,bk2]=HEART_BARK;
+  // a ring of pale stones round the spot you chose, and a low mound of dark soil
+  const rr=lv<=2?0.42:0.9;for(let i=0;i<(lv<=2?7:10);i++){const a=i/(lv<=2?7:10)*6.283+0.2;p.push(P(ICO,i%2?0xc8c2b4:0xb4ae9e,Math.cos(a)*rr,0.05,Math.sin(a)*rr,0,a,0,0.16+R()*0.05,0.1,0.13));}
+  p.push(P(ICO2,0x4e3a2c,0,0.02,0,0,0,0,lv<=2?0.5:0.7,0.08,lv<=2?0.5:0.7));
+  if(lv<=1){// the seed, split open and glowing, with its first pair of leaves on a curling stem
+    gl.push(P(ICO2,0xa8ffd8,0,0.13,0,0,0,0,0.2,0.18,0.2));p.push(P(ICO2,0x7a5a3a,-0.11,0.1,0.04,0,0,0.6,0.14,0.1,0.18),P(ICO2,0x7a5a3a,0.11,0.1,-0.03,0,0,-0.6,0.14,0.1,0.18));
+    p.push(P(CYL6,0x5aa860,0,0.4,0,0.12,0,0,0.045,0.55,0.045));lf(p,HEART_LEAF[0],0,0.64,0.03,0.6,0.35,0.4,0.25,0.05);lf(p,HEART_LEAF[1],0,0.61,0,0.6+Math.PI,0.3,0.36,0.23,0.05);lf(p,HEART_LEAF[0],0,0.68,0,2.1,0.9,0.2,0.13,0.04);
+    for(let i=0;i<6;i++){const a=i*1.05;gl.push(P(ICO,0xe0fff0,Math.cos(a)*0.3,0.25+i*0.08,Math.sin(a)*0.3,0,0,0,0.035,0.035,0.035));}return{tp,p,gl};}
+  if(lv===2){// a sapling: a slim trunk, a few side shoots and a small bright crown; the seed's glow at its foot
+    p.push(PG(CYL6,bk,bk2,0,0.45,0,0,0,0,0.07,0.9,0.07));for(let i=0;i<3;i++){const a=i*2.1+0.4;p.push(P(CYL6,bk,Math.cos(a)*0.08,0.55+i*0.1,Math.sin(a)*0.08,Math.sin(a)*0.9,0,-Math.cos(a)*0.9,0.025,0.22,0.025));}
+    canopy(tp,R,HEART_LEAF,0,1.05,0,0.3,18);gl.push(P(ICO2,0xa8ffd8,0,0.1,0.08,0,0,0,0.08,0.07,0.08));return{tp,p,gl};}
+  // a young tree that grows into a great one: g runs 0→1 over levels 3..11
+  const g=Math.min(1,(lv-3)/8),h=1.1+g*1.2,w=0.12+g*0.14;
+  tp.push(PG(TRUNK,bk,bk2,0,(h+0.3)/2,0,0,0.4,0,w*2,h+0.3,w*2));
+  for(let i=0;i<5;i++){const a=i/5*6.283+0.3;tp.push(PG(CONE6,bk,bk2,Math.cos(a)*w*1.3,0.1,Math.sin(a)*w*1.3,Math.sin(a)*1.2,0,-Math.cos(a)*1.2,w*0.8,0.35+g*0.3,w*0.8));}
+  // the heart in its trunk: a softly glowing knot
+  gl.push(P(ICO2,0x9affc8,0,h*0.45,w*0.95,0,0,0,w*0.7,w*0.9,w*0.3));p.push(P(CYL12,bk2,0,h*0.45,w*0.92,1.57,0,0,w*0.95,0.03,w*1.15));
+  // boughs, one more every level or two, each with its own clump of leaves; a crown on top
+  const nb=Math.min(5,1+Math.floor((lv-2)/2)),tips=[];
+  for(let i=0;i<5;i++){const a=i/5*6.283+0.5,tl=0.8+(i%2)*0.15,L=0.6+g*0.6,y0=h*(0.7+(i%3)*0.08);const x=Math.cos(a)*Math.sin(tl)*L,y=y0+Math.cos(tl)*L,z=Math.sin(a)*Math.sin(tl)*L;tips.push([x,y,z]);
+    if(i<nb)tp.push(PG(CYL6,bk,bk2,x/2,y0+Math.cos(tl)*L/2,z/2,Math.sin(a)*tl,0,-Math.cos(a)*tl,w*0.55,L,w*0.55));}
+  tips.forEach(([x,y,z],i)=>{if(i<nb)canopy(tp,R,HEART_LEAF,x,y+0.1,z,0.28+0.22*g,Math.round(16+16*g));});
+  const top=h+0.35+g*0.3;canopy(tp,R,HEART_LEAF,0,top,0,0.42+0.3*g,Math.round(24+20*g));
+  const crown=[...tips.slice(0,nb),[0,top,0]];
+  if(lv>=4){const n=Math.min(30,(lv-3)*5);for(let i=0;i<n;i++){const [x,y,z]=crown[i%crown.length],a=R()*6.28,r=0.3+R()*0.3;bloom(p,[0xf8c8d8,0xffffff,0xf2a6c8][i%3],0xf6d04a,x+Math.cos(a)*r,y+0.1+R()*0.4,z+Math.sin(a)*r,0.08);}
+    for(let i=0;i<Math.min(14,lv*2);i++){const a=i*2.39996,r=1.1+R()*0.6;bloom(p,[0xf8c8d8,0xfff4a0,0xffffff][i%3],0xf6d04a,Math.cos(a)*r,0.06,Math.sin(a)*r,0.07);}}
+  if(lv>=8)for(let i=0;i<Math.min(12,(lv-7)*3);i++){const [x,y,z]=crown[i%crown.length];gl.push(P(ICO2,0xffe27a,x+(R()-0.5)*0.6,y-0.25-R()*0.25,z+(R()-0.5)*0.6,0,0,0,0.12,0.15,0.12));}
+  return{tp,p,gl};}
+// the ancient heart tree in the square of a classic (pre-wild) island
+function ancientTreeParts(lv){const R=mulberry(77),tp=[],p=[],gl=[],dead=lv<=0,bark=dead?0x8a847a:0x6a4a34,bark2=dead?0x6e685e:0x523826;
   for(let i=0;i<9;i++){const a=i/9*6.283;p.push(P(ICO,i%2?0xb8b4ac:0xa8a49c,Math.cos(a)*1.25,0.06,Math.sin(a)*1.25,0,a,0,0.3,0.16,0.24));}
   tp.push(PG(CYL8,bark,bark2,0,0.85,0,0,0,0.04,0.62,1.7,0.62),PG(CYL8,bark,bark2,0.05,1.95,0.02,0.06,0,-0.08,0.44,0.7,0.44));
   for(let i=0;i<7;i++){const a=i/7*6.283+0.3;tp.push(PG(CONE6,bark,bark2,Math.cos(a)*0.42,0.14,Math.sin(a)*0.42,Math.sin(a)*1.2,0,-Math.cos(a)*1.2,0.2,0.75,0.2));}

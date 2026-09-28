@@ -16,7 +16,7 @@ if(S.mode==='edit')S.mode='farm';
 // games started with the short-lived island picker (plots in a ready-made town) carry on as a classic, fully built town
 if(S.scratch&&!S.wild)delete S.scratch;
 
-// (on a wild island the Island Heart has to be found and revived before it can grow: until then you stay at level 1)
+// (on a wild island the Island Heart grows from the driftseed you plant: until it's planted you stay at level 1)
 function level(){if(S.scratch&&!(S.heart&&S.heart.revived))return 1;let l=1;while(l<LV.length&&S.xp>=LV[l])l++;return l;}
 function isNight(h=S.hour){return h>=19.5||h<5.5;}
 

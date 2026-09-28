@@ -44,8 +44,10 @@ function layoutTown(isl){
   for(let r=0;r<12;r++){let ok=false;for(const x of [1+r,1-r]){let zz=null;for(let z=0;z<24;z++)if(isLandT(landMap.get(K(x,z)))&&landMap.get(K(x,z))!=='bridge')zz=z;
       if(zz!==null&&landMap.get(K(x,zz))==='sand'&&![...Array(7)].some((_,i)=>riverSurf.has(K(x-3+i,zz))||riverSurf.has(K(x-3+i,zz-2)))){DOCK.x=x;DOCK.z=zz;ok=true;break;}}if(ok)break;}
   let pc=null,plotSet=new Set(),home=null;
-  if(S.scratch){// a wild island: only what you've built stands; the Island Heart grows in its own inland clearing
-    pc=heartSpot(isl);TOWN.plaza=pc;TOWN.fixed.set(K(pc[0],pc[1]),'tree');TOWN.board=null;
+  if(S.scratch){// a wild island: only what you've built stands; the Island Heart grows where you planted your driftseed
+    if(S.heart&&S.heart.revived&&!S.heartAt){const h=heartSpot(isl);S.heartAt={x:h[0],z:h[1]};} // saves from the old heart hunt keep their tree
+    pc=S.heartAt?[S.heartAt.x,S.heartAt.z]:S.homeAt?[S.homeAt.x+2,S.homeAt.z+3]:[DOCK.x,DOCK.z-3];TOWN.plaza=pc;TOWN.board=null;
+    if(S.heartAt)TOWN.fixed.set(K(pc[0],pc[1]),'tree');
     for(const s of S.builds||[]){const b={t:s.t,x:s.x,z:s.z,n:s.n,door:[s.x,s.z+2],locked:S.day<=s.day};TOWN.bld.push(b);// under construction until the next morning
       for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++)TOWN.fixed.set(K(s.x+dx,s.z+dz),b.locked?'plot':b.t);}
     if(S.homeAt){HOUSE_AT.x=S.homeAt.x;HOUSE_AT.z=S.homeAt.z;home={t:'home',x:HOUSE_AT.x,z:HOUSE_AT.z,door:[HOUSE_AT.x,HOUSE_AT.z+2]};TOWN.bld.push(home);
@@ -83,7 +85,7 @@ function layoutTown(isl){
   // static town meshes
   const p=[],gl=[],tp=[]/* trees, meshed with a far LOD (addVeg) */,y0=(x,z)=>topY(x,z);
   // the Island Heart (it grows with your level) + benches + bulletin board
-  {const H=heartTreeParts(S.scratch?(S.heart&&S.heart.revived?level():0):10);tp.push(...shift(H.tp,pc[0],y0(...pc),pc[1],0.4));p.push(...shift(H.p,pc[0],y0(...pc),pc[1],0.4));gl.push(...shift(H.gl,pc[0],y0(...pc),pc[1],0.4));}
+  if(!S.scratch||S.heartAt){const H=heartTreeParts(S.scratch?level():10);tp.push(...shift(H.tp,pc[0],y0(...pc),pc[1],0.4));p.push(...shift(H.p,pc[0],y0(...pc),pc[1],0.4));gl.push(...shift(H.gl,pc[0],y0(...pc),pc[1],0.4));}
   if(!S.scratch)for(let i=0;i<10;i++){const a=i/10*6.283;bloom(p,[0xf2a6c8,0xffffff,0xf6d04a][i%3],0xf6d04a,pc[0]+Math.cos(a)*0.85,y0(...pc)+0.05,pc[1]+Math.sin(a)*0.85,0.07);}
   TOWN.cafeSeats=[];{const c=TOWN.bld.find(q=>q.t==='cafe'&&!q.locked);if(c)TOWN.cafeSeats.push([c.x,c.z+1],[c.x+1,c.z+1]);}
   TOWN.benches=[];if(!S.scratch)for(const [bx,bz,r] of [[pc[0]-2,pc[1]+2,0],[pc[0]+2,pc[1]+2,0]]){TOWN.benches.push([bx,bz]);const q=[];for(const [x,z] of [[-0.38,-0.1],[0.38,-0.1],[-0.38,0.12],[0.38,0.12]])q.push(P(BOX,0x5a3a2a,x,0.12,z,0,0,0,0.06,0.24,0.06));

@@ -16,7 +16,7 @@ function clearWorld(){for(const isl of islands){if(isl.group){scene.remove(isl.g
     if(isl.pgroup)scene.remove(isl.pgroup);}
   for(const m of [landMap,islMap,lvlMap,riverSurf,bridgeY,SAND_CH])m.clear();islands=[];}
 // build a candidate's whole world, wild growth and all, and describe what's on it
-function buildCandidate(c){S.worldSeed=c.seed;S.home=homeOf(c);S.scratch=1;S.wild=1;S.debris=[];S.paths={};S.homeAt=null;S.builds=[];S.heart={};S.islandName=null;
+function buildCandidate(c){S.worldSeed=c.seed;S.home=homeOf(c);S.scratch=1;S.wild=1;S.debris=[];S.paths={};S.homeAt=null;S.heartAt=null;S.builds=[];S.heart={};S.islandName=null;
   const st=applyHomeStyle();clearWorld();genIslands();for(const isl of islands)buildIsland(isl);rebuildSeaGrid();genWild();buildIsland(islands[0]);syncDebris();
   const h=islands[0],trees=S.debris.filter(d=>d.k==='tree').length,g=h.grass.length,high=[...lvlMap.values()].filter(v=>v>0).length;
   const riv=(h.rtiles||[]).length>0,falls=(h.falls||[]).length,near=islands.filter(i=>!i.home&&Math.hypot(i.cx,i.cz)<70).length;

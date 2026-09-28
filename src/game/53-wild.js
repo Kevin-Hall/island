@@ -3,13 +3,13 @@
    ground under the cliffs and open meadows, laid out by noise from the world seed and the island's style. Nothing is
    built; everything wild is ordinary farm debris (74-life), so it's cleared with the same tools, and trees are a
    debris kind of their own: chop one down with the axe and its stump stays to be dug out.
-   Also here: where the Island Heart grows (an ancient tree in an inland clearing) and the trail to it.
+   Also here: where the Island Heart stood in saves from before you planted your own driftseed, and desire paths.
    ========================================================= */
 // the wild trees change with the real seasons. Four kinds (instanced debris variants): 0 and 2 round broadleaf trees,
 // 1 an evergreen pine, 3 a flowering/fruiting tree. Spring: fresh green with blossom (3 is a cherry in bloom); summer: deep
 // green (3 carries red fruit); autumn: amber, scarlet and gold; winter: bare branches dusted with snow, and snowy pines.
-const TREE_COLS={spring:[[0xa6e27e,0x72c050,0x42883a],null,[0x98d870,0x62b048,0x3a7a34],[0xffd8e6,0xf4a8c4,0xd07a9a]],
-  summer:[[0x7cc050,0x5f9e3a,0x467e2c],null,[0x6ab84a,0x4a9a3a,0x2e6a2a],[0x88c860,0x5aa040,0x3a7a30]],
+const TREE_COLS={spring:[[0x8ed06a,0x5aa846,0x356e32],null,[0x82c460,0x4f9a40,0x2e662e],[0xffd8e6,0xf4a8c4,0xd07a9a]],
+  summer:[[0x6aae48,0x4a8a38,0x2e6428],null,[0x5aa044,0x3e8034,0x24562a],[0x78b650,0x4e9038,0x2f6a2c]],
   autumn:[[0xf4a444,0xe8803a,0xc85e24],null,[0xec6a4a,0xc8402a,0x982a22],[0xf6d060,0xe0b040,0xb08a28]]};
 function bareTree(p,R,snow){trunkP(p,R,0x6a5444,0.9,0.13,0x4e3e32);
   for(let i=0;i<7;i++){const a=i/7*6.283+R()*0.4,tl=0.55+R()*0.4,L=0.55+R()*0.3,y=0.95+R()*0.5,x=Math.cos(a)*Math.sin(tl)*L*0.5,z=Math.sin(a)*Math.sin(tl)*L*0.5;
@@ -27,7 +27,7 @@ function wildTreeParts(v){const s=season(),R=mulberry(hi(v,31,S.worldSeed|0)),p=
   return p;}
 const wildTreeKinds=()=>['wild',season()];
 
-// the heart's clearing: inland grass well away from the landing beach, with room around it
+// (old saves only) the heart's clearing: inland grass well away from the landing beach, with room around it
 function heartSpot(isl){const R=mulberry((S.worldSeed|0)^0x4ea7);let best=null,bs=-1e9;
   for(let it=0;it<400;it++){const [x,z]=isl.grass[Math.floor(R()*isl.grass.length)];if(farmQ(x,z)<1.6)continue;const d=Math.hypot(x-DOCK.x,z-DOCK.z);if(d<9)continue;
     let ok=true;for(let dx=-2;dx<=2&&ok;dx++)for(let dz=-2;dz<=2&&ok;dz++){const k=K(x+dx,z+dz);if(landMap.get(k)!=='grass'||(lvlMap.get(k)||0)!==(lvlMap.get(K(x,z))||0))ok=false;}
@@ -35,11 +35,9 @@ function heartSpot(isl){const R=mulberry((S.worldSeed|0)^0x4ea7);let best=null,b
   return best||[0,1];}
 
 // cover the home island in wild growth (called once when you make landfall, or when previewing an island from the sea)
-function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S.worldSeed|0)%1000,H=TOWN.plaza;
+function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S.worldSeed|0)%1000;
   const keep=new Set();const clear=(x,z,r)=>{for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)if(dx*dx+dz*dz<=r*r+1)keep.add(K(x+dx,z+dz));};
-  clear(DOCK.x,DOCK.z-2,4);clear(H[0],H[1],4);
-  // a deer trail from the beach to the heart: always passable, and the first path your feet wear in
-  const tr=landPath(DOCK.x,DOCK.z-2,H[0],H[1],{four:true,max:9000,cost:(x,z)=>1+vnoise(x*1.7,z*1.7,sd+5)*3})||[];for(const [x,z] of tr){keep.add(K(x,z));S.paths[K(x,z)]=Math.max(S.paths[K(x,z)]||0,PATH_WEAR-4);}
+  clear(DOCK.x,DOCK.z-2,4); // the beach you land on is open ground
   const cliffEdge=(x,z)=>[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>(lvlMap.get(K(x+a,z+b))||0)>(lvlMap.get(K(x,z))||0));
   const wet=(x,z)=>{for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++)if(riverSurf.has(K(x+a,z+b)))return true;return false;};
   const fAmt=(S.home&&S.home.wild)||0.5;

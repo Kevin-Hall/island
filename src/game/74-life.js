@@ -50,7 +50,7 @@ function debrisGeo(k,v,lo){const id=k+v+(k==='tree'?wildTreeKinds().join()+(S.wo
 // debris is drawn instanced: one batch per model variant (a handful of draw calls for the whole field); debMesh maps a tile to its slot
 // wild trees come in two builds: full detail near the camera, a lighter one further off (treeLOD re-sorts them as you move)
 const treeGroups=[];let lodAt=null,lodT=0;
-function treeLOD(gr){let a=0,b=0;for(const e of gr.es){const near=Math.hypot(e.x-cam.tx,e.z-cam.tz)<26;e.im=near?gr.hi:gr.lo;e.i=near?a++:b++;setDebrisMatrix(e,0);}gr.hi.count=a;gr.lo.count=b;}
+function treeLOD(gr){let a=0,b=0;for(const e of gr.es){const near=Math.hypot(e.x-cam.tx,e.z-cam.tz)<14;e.im=near?gr.hi:gr.lo;e.i=near?a++:b++;setDebrisMatrix(e,0);}gr.hi.count=a;gr.lo.count=b;}
 function syncDebris(){while(debrisRoot.children.length){const c=debrisRoot.children[0];debrisRoot.remove(c);c.dispose();}debMesh.clear();treeGroups.length=0;lodAt=null;
   const groups=new Map();for(const d of S.debris){const id=d.k+d.v;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(d);}
   for(const [,list] of groups){if(list[0].k==='tree'){const mk=lo=>{const im=new T.InstancedMesh(debrisGeo('tree',list[0].v,lo),vcMat,list.length);im.castShadow=!lo;im.receiveShadow=true;im.frustumCulled=false;for(let i=0;i<list.length;i++)im.setColorAt(i,_c.setHex(0xffffff));debrisRoot.add(im);return im;};
