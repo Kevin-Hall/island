@@ -32,7 +32,8 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 40–44 world | Island generation (`genIslands`); your island's coastline (`townQ`, shaped by `S.home`) and style (`HOME_STYLES`, `applyHomeStyle`); the farm field's shape (`farmQ`), which grows with island expansions as far as neighbouring islands allow (`farmGrowMax`); trees and bushes (`treeParts`, `canopy`, `bushClump`, gradient leaf `card`s); grass blades (`updateNearGrass`: a pooled clump mesh around the camera; whole-island blades off by default, see `GRASS_DENS`); rivers and waterfalls (`carveRivers`); terrain meshes with rounded corners (`buildIsland`, `rtileGeo`); island culling |
 | 45-crops | Soil (tilled tiles join into beds) and crop models (`cropParts`). All plain crop meshes are baked into one batched mesh that sways in its shader (`bakeCrop`, `flushCrops`) |
 | 50-objects | Decor, house and bin models (`objGroup`, `houseGroup`, `roof`) |
-| 54-heart | The Island Heart: `HEART_UNLOCKS` (what each level builds), `unlocked(k)`, `movedIn(n)`, `nextUnlock`; the growing heart tree (`heartTreeParts`), building plots (`plotParts`), the level-up card (`heartLevelUp`), `rebuildHome`, and the morning move-in (`morningMoveIn`). Only for games started with the island picker (`S.scratch`) |
+| 53-wild | The wild island: `genWild` (forests, thickets, rocky ground and meadows as clearable debris, incl. the `tree` kind), `wildTreeParts`, the heart's clearing (`heartSpot`) and the trail to it, and paths that wear in where you walk (`wearPaths`, `S.paths`) |
+| 54-heart | The Island Heart: `HEART_UNLOCKS` (what each level brings), `unlocked`, `built`, `grantKits` (building kits), `nextGoal`/`goalTap` (the goal under your level), the ancient tree that revives and regrows (`heartTreeParts`), construction plots (`plotParts`), the level-up card, `rebuildHome`, and the morning when placed buildings finish and neighbours move in (`morningMoveIn`). Only for wild islands (`S.scratch`) |
 | 55-town | Town layout (`layoutTown`): plaza, paths, civic buildings (hall, shop with sign, museum, harbour café), villager homes in their owner's style (`homeStyle`: boathouse on stilts, thatched round cottage, brick workshop, hill burrow, lookout, keeper's cottage), the lighthouse and its night beam, lamps, trees, flowers, benches and café seats |
 | 56-interiors | Enterable rooms: separate `roomScene`, furniture (`furn`), room tapping |
 | 59-museum | The walk-in museum (`buildMuseum`): fish tanks, butterfly garden, bug terrariums and a centrepiece, all filled from `S.alm`; Grandpa Tully the sea-turtle curator; the outdoor showcase (`refreshMuseumShow`) |
@@ -45,11 +46,12 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 70–80 | UI helpers and items; farming actions (`tillAt`, `waterAt`, `tendAt`, `useFixed`) and drag-farming; finds, weeds, wild plants, bugs and crows; fishing; sailing and fast travel; orders |
 | 79-voyage | The long-term loop: driftseeds wash ashore (`spawnDriftseed`); each wild island has a withered heart tree (`pickHeart`, `buildHeart`); planting 3 driftseeds restores the island (`S.restore`, `islandBiome` fades the grass until then), and a resident moves in with a daily trade (`residentTalk`, `tradeOf`). Tides (`updateTides`, `tideY`, `lowTide`) move the sea and uncover tide-pool finds |
 | 82-sheets | The bottom bar's menu (`showApps`) and bottom sheets: Pockets (inventory and crafting), shop, seeds, orders, Islandex, chart, settings |
+| 73-settle | Settling: blueprints you place (`startBlueprint`, `bpOk`, `bpPlace`) for your tent and each kit, naming the island, and finding (`heartWatch`) and reviving (`reviveHeart`) the Island Heart |
 | 84-input | Tap, drag, pinch and picking (`pick`, `onTap`) |
-| 85-islandpick | New game: three procedural islands (`islandCandidate`: seed, style, coastline wobble, coves, cliffs), map previews drawn with the world's own tile rules (`islandPreview`), naming, then `bootGame` |
+| 85-arrival | New game: drifting past islands (`islandCandidate`, `buildCandidate` builds the whole world and describes it), the flyover render loop (`arrivalFrame`), then landfall (`bootGame(true)`) |
 | 86–87 | New-game setup; atmosphere (foam, footprints, sky events, motes, music) |
 | 88-showcase | Dev **Showcase farm** (`loadShowcase`, `layShowcaseFarm`): backs up the save to `SAVE_KEY+'-real'`, maxes progress, lays out a planned late-game farm and reloads; `restoreRealSave` undoes it |
-| 90-main | Main loop (`frame`) and boot (`bootGame`; a brand-new game shows the island picker first) |
+| 90-main | Main loop (`frame`) and boot (`bootGame`; a brand-new game arrives by sea first) |
 | 95-debug | `window.DS` (only with `?debug`) |
 
 ## Core concepts

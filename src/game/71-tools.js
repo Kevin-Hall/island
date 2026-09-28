@@ -13,7 +13,7 @@ const TOOLS=[
   {k:'rod',   name:'Fishing Rod',  tip:'Tap the water to cast'}];
 const TOOL_OF={};for(const t of TOOLS)TOOL_OF[t.k]=t;
 // which tool clears each kind of farm debris (weeds come up with any tool)
-const DEBRIS_TOOL={weed:null,twig:'axe',bush:'axe',stump:'axe',rock:'shovel',boulder:'shovel'};
+const DEBRIS_TOOL={weed:null,twig:'axe',bush:'axe',stump:'axe',rock:'shovel',boulder:'shovel',tree:'axe'};
 const toolIcon=k=>k==='seeds'?seedIcon(S.seed):ICON[k];
 
 /* ---- tool bar ---- */

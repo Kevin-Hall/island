@@ -13,7 +13,7 @@ if(/[?&]debug\b/.test(location.search)){
     islands:()=>islands.map(i=>({id:i.id,biome:i.biome,name:i.name,x:i.cx,z:i.cz,r:Math.round(islR(i)),grand:!!i.grand,river:(i.rtiles||[]).length})),
     screen:(x,z)=>toScreen(x,topY(x,z),z),
     npcScreen:i=>{const n=npcs[i];return toScreen(n.x,n.y+0.5,n.z);},
-    freeRow:(len=5)=>{for(const [x,z] of tileKeys()){let ok=true;for(let i=0;i<len&&ok;i++){const k=K(x+i,z);ok=canTill(x+i,z)&&farmQ(x+i,z)>1.3&&(lvlMap.get(k)||0)===(lvlMap.get(K(x,z))||0);}if(ok)return[x,z];}return null;},
+    freeRow:(len=5)=>{for(const [x,z] of tileKeys()){let ok=true;for(let i=0;i<len&&ok;i++){const k=K(x+i,z);ok=canTill(x+i,z)&&farmQ(x+i,z)>1.3&&(lvlMap.get(k)||0)===(lvlMap.get(K(x,z))||0)&&!TOWN.bld.some(b=>Math.abs(b.x+0.5-(x+i))<4&&Math.abs(b.z+1-z)<4)&&!(S.boat&&Math.hypot(S.boat.x-(x+i),S.boat.z-z)<7);}if(ok)return[x,z];}return null;},
     give:(items)=>{Object.assign(S.inv,items||{'m:wood':14,'m:stone':11,'m:fiber':9,'g:shell':4,'f:sardine':2,'tomato|normal':3,'tomato|golden':1});updateHUD();},
     craft:i=>craft(i),sheet:(k,tab)=>openSheet(k,tab),closeSheet:()=>closeSheet(),
     enterHome:()=>enterHouse('home'),enterNpc:i=>{const n=npcs[i];enterHouse('vh',n.b,n);},leave:()=>leaveHouse(),
@@ -26,8 +26,13 @@ if(/[?&]debug\b/.test(location.search)){
     // a text map of tiles: g grass, s sand, b bridge, r river, . sea; P town path, T tilled, O object, F fixed, D debris
     grid:(x0,z0,x1,z1)=>{const out=[];for(let z=z0;z<=z1;z++){let l='';for(let x=x0;x<=x1;x++){const k=K(x,z),t=landMap.get(k);l+=S.tiles[k]?'T':objAt(x,z)?'O':fixedAt(x,z)?'F':debrisAt(x,z)?'D':TOWN.path.has(k)?'P':t==='grass'?'g':t==='sand'?'s':t==='bridge'?'b':t==='river'?'r':t?t[0]:'.';}out.push(String(z).padStart(3)+' '+l);}return out.join('\n');},
     showcase:()=>loadShowcase(),
+    // wild-island settling: the heart's spot, revive it, place a blueprint at a spot, finish tonight's building
+    heartAt:()=>TOWN.plaza.slice(),revive:()=>reviveHeart(),bp:(k,x,z)=>{startBlueprint(k);if(x!==undefined)bpMove(x,z);return placing&&bpOk(placing.x,placing.z)?[placing.x,placing.z]:null;},bpPlace:()=>{if(placing&&placing.bp)bpPlace();},goal:()=>{const g=nextGoal();return g&&g.name;},dawn:()=>{dawn(true);return S.day;},
+    // place every earned kit wherever there's room (clearing a patch if it has to), finished at once
+    buildAll:()=>{grantKits();for(const k of Object.keys(S.kits||{})){if(!S.kits[k])continue;let at=null;for(const [x,z] of islands[0].grass){if(farmQ(x,z)<1.3)continue;S.debris=S.debris.filter(d=>!(d.x>=x&&d.x<=x+1&&d.z>=z&&d.z<=z+2));if(bpOk(x,z)){at=[x,z];break;}}
+      if(!at)continue;const t=k.startsWith('vh')?'vh':k;S.builds.push({t,n:t==='vh'?+k.slice(2):undefined,x:at[0],z:at[1],day:S.day-1});delete S.kits[k];rebuildHome();}syncDebris();morningMoveIn(true);return TOWN.bld.filter(b=>!b.locked).length;},paths:()=>TOWN.path.size,wild:()=>{const c={};for(const d of S.debris)c[d.k]=(c[d.k]||0)+1;return c;},
     // Island Heart: jump to a level (as if earned, without the card), and run a morning's move-in
-    setLevel:n=>{S.xp=LV[n-1]||0;rebuildHome();initNPCs();updateHUD();return level();},moveIn:()=>{morningMoveIn();return npcs.length;},
+    setLevel:n=>{S.xp=LV[n-1]||0;grantKits();rebuildHome();initNPCs();updateHUD();return level();},moveIn:()=>{morningMoveIn();return npcs.length;},
     next:()=>{const u=nextUnlock();return u&&u.name;},xp:n=>{addXP(n);return level();},plots:()=>TOWN.bld.map(b=>b.t+(b.t==='vh'?b.n:'')+(b.locked?':plot':'')),
     // every crop at one stage, rendered at the same scale on a patch of soil (data URLs), for eyeballing the models
     cropGallery:(stage=3,size=160)=>CROP_IDS.map((id,i)=>{const c=cropParts(id,stage,i*97+5),g=new T.Group();if(c.leaf.length)g.add(M(c.leaf));if(c.fruit.length)g.add(M(c.fruit));g.scale.setScalar(0.95);

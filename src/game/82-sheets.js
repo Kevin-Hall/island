@@ -65,12 +65,12 @@ function renderSheet(){
         for(const k of ks){const v=varOf(k);h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img class="v-${v}" src="${iconOf(k)}" alt="">${v!=='normal'?`<span class="dot" style="background:${{giant:'#6ab84a',moonlit:'#9ab8ff',golden:'#f5c542',crystal:'#7ad8f0',rainbow:'#f39ab0'}[v]}"></span>`:''}<span class="n">${S.inv[k]}</span></button>`;}
         const pad=Math.max(0,20-ks.length);for(let i=0;i<pad;i++)h+=`<div class="cell empty"></div>`;h+='</div>';}}}
   else if(sheet.kind==='shop'){$('sheetTitle').textContent='Shop';tabs([['decor','Decor'],['island','Island']]);
-    if(!unlocked('shop'))h+=`<p class="note">The general store opens when your Island Heart reaches <b>level 3</b>. Until then, sell at your shipping bin and buy seeds from the Seeds tool.</p>`;
+    if(!built('shop'))h+=`<p class="note">${S.scratch?'You don\'t have a store yet. It comes as a kit when your Island Heart reaches <b>level 3</b>, and you choose where to build it.':'The general store opens when your Island Heart reaches <b>level 3</b>.'} Until then, sell at your shipping bin and buy seeds from the Seeds tool.</p>`;
     else if(sheet.tab==='decor'){h+=`<p class="note">Buy something, then tap where it should go on your home island.</p><div class="sellall"><button class="pbtn" data-edit="1">Move or store existing decor</button></div><div class="grid">`;
       for(const k in BUILD){const B=BUILD[k],lock=B.lvl>lv,n=S.store[k]||0;if(B.craft)continue;
         h+=`<button class="card ${lock?'lock':''}" data-buy="${k}" ${lock?'disabled':''}><img class="px" src="${THUMB[k]||''}" alt=""><span class="grow"><span class="nm">${B.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+B.lvl:(n?`${n} in storage — tap to place`:B.desc)}</span></span><span class="price">${n?'':sh(B.cost)}</span></button>`;}
       h+='</div>';}
-    else{const L=S.scratch&&unlocked('hall')?LAND_UP[S.land]:null,HU=HOUSE_UP[S.house];
+    else{const L=S.scratch&&built('hall')?LAND_UP[S.land]:null,HU=HOUSE_UP[S.house];
       h+=`<p class="note">Grow your island from a tent on a sandbar to a hilltop villa.</p><div class="grid">`;
       h+=L?`<div class="card wide"><img class="px" src="${THUMB.land}" alt=""><span class="grow"><span class="nm">Expand the farm field</span><br><span class="sub">Stage ${S.land+1} → ${S.land+2}. The field grows wider and taller (new ground comes up wild).${L.lvl>lv?' Needs Lv '+L.lvl+'.':''}</span></span><button class="pbtn go" data-land="1" ${L.lvl>lv||S.shells<L.cost?'disabled':''}>${fmt(L.cost)}</button></div>`
         :`<div class="card wide"><img class="px" src="${THUMB.land}" alt=""><span class="grow"><span class="nm">${TOWN.name}</span><br><span class="sub">Your town. Clear the farm field to the west for more room.</span></span></div>`;
@@ -199,6 +199,7 @@ function showApps(on){$('apps').hidden=!on;$('bMenu').classList.toggle('on',on);
 $('bMenu').onclick=()=>{SFX.ui();showApps($('apps').hidden);};
 $('apps').addEventListener('click',()=>showApps(false));
 $('bBag').onclick=()=>openSheet('bag');
+$('nextUp').onclick=goalTap;
 $('bShop').onclick=()=>openSheet('shop',sheet&&sheet.kind==='shop'?sheet.tab:'decor');
 $('bTask').onclick=()=>openSheet('orders');
 $('bChart').onclick=()=>openSheet('chart');

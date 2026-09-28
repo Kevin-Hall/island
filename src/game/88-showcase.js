@@ -21,6 +21,8 @@ function loadShowcase(){
   S.moved={};for(let n=0;n<6;n++)S.moved[n]=1;
   for(const [cat,,pre,tab] of DEX_CATS)for(const k in tab)S.alm[pre+k]=1;
   for(const id of CROP_IDS){for(const v of VARIANTS)S.alm[id+'|'+v.id]=1;S.almR[id]=1;}
+  // the showcase is a classic, fully built town (a wild island's own layout is left behind)
+  delete S.scratch;delete S.home;delete S.homeAt;S.builds=[];S.debris=[];S.paths={};applyHomeStyle();
   buildIsland(islands[0]); // the field grows with S.land
   layShowcaseFarm();
   const g=showcaseGate;vil.x=vil.tx=g[0]-1.5;vil.z=vil.tz=g[1]+0.5;

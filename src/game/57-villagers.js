@@ -131,7 +131,7 @@ function planVillagers(){if(villagerPlan&&villagerPlanSeed===S.worldSeed)return 
   villagerPlanSeed=S.worldSeed;return villagerPlan;}
 function initNPCs(){for(const n of npcs)scene.remove(n.g);npcs.length=0;const plan=planVillagers();
   for(const b of TOWN.bld.filter(b=>b.t==='vh'&&!b.locked)){const v=plan[b.n%plan.length],{sp,pers,name,cp}=v;
-    const g=npcModel(sp,v.col,v.shirt,v.acc,v.outfit);g.scale.setScalar(0.92);scene.add(g);const i=S.scratch?b.n:npcs.length; // a villager's memory is keyed by their houseif(!S.npc[i])S.npc[i]={f:0,talk:0,wish:null,gift5:0,gift10:0};
+    const g=npcModel(sp,v.col,v.shirt,v.acc,v.outfit);g.scale.setScalar(0.92);scene.add(g);const i=S.scratch?b.n:npcs.length;/* on a wild island a villager's memory is keyed by their house */if(!S.npc[i])S.npc[i]={f:0,talk:0,wish:null,gift5:0,gift10:0};
     const n={i,name,sp,pers,cp,b,g,limbs:limbsOf(g),x:b.door[0]+0.5,z:b.door[1]+0.3,y:topY(b.door[0],b.door[1]),path:null,state:'idle',wait:v.wait,t:0,face:0};g.position.set(n.x,n.y,n.z);npcs.push(n);npcProps(n);}shoreSpots=null;}
 const npcBlock=(x,z)=>!!S.tiles[K(x,z)]||(!!objAt(x,z)&&objAt(x,z).k!=='stonepath')||(x>=HOUSE_AT.x&&x<=HOUSE_AT.x+1&&z>=HOUSE_AT.z&&z<=HOUSE_AT.z+1)||(TOWN.fixed.has(K(x,z))&&TOWN.fixed.get(K(x,z))!=='board');
 function npcGo(n,tx,tz){const p=landPath(Math.round(n.x),Math.round(n.z),tx,tz,{block:npcBlock,cost:(x,z)=>TOWN.path.has(K(x,z))?0.45:1,max:3000});if(!p||p.length<2)return false;n.path=p.slice(1);n.state='walk';return true;}

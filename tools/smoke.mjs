@@ -16,16 +16,21 @@ const ev=(f,a)=>pg.evaluate(f,a),wait=ms=>pg.waitForTimeout(ms);
 const waitFor=async(f,ms=12000)=>{const t=Date.now();while(Date.now()-t<ms){const v=await ev(f);if(v)return v;await wait(300);}return null;};
 const enter=async f=>{await ev(f);await waitFor(()=>DS.state().inside);return ev(()=>DS.state());},leave=async()=>{await ev(()=>DS.leave());await waitFor(()=>!DS.state().inside);};
 await pg.goto(pathToFileURL(join(root,'index.html')).href+'?debug');await wait(2500);
-// a new game starts on the island-choice screen: three previews, reroll, pick one, name it
-check(await ev(()=>document.querySelectorAll('#pick .pkc canvas').length)===3,'new game offers three islands to choose from');
-await pg.click('#pkMore');await wait(300);await pg.click('.pkc[data-i="1"]');await wait(300);await pg.fill('#pkName','Testhaven');await pg.click('#pkGo');await wait(3500);
+// a new game starts adrift: an island seen from the sea; keep drifting to another, then make landfall on it
+check(await ev(()=>!!document.querySelector('#arrive .arr h2')),'a new game starts adrift, looking at an island from the sea');
+await pg.click('#arMore');await wait(2500);check(await ev(()=>!!document.querySelector('#arrive .arr h2')),'kept drifting to another island');
+await pg.click('#arLand');await wait(3500);
 check(await ev(()=>!!window.DS),'boots and exposes the debug API');
-let st=await ev(()=>DS.state());check(st.town==='Testhaven','the island has the name you gave it');
-check(st.npcs.length===0&&(await ev(()=>DS.plots())).filter(p=>p.endsWith(':plot')).length>=8,`starts from scratch: no villagers yet, ${(await ev(()=>DS.plots())).filter(p=>p.endsWith(':plot')).length} building plots`);
-check(await ev(()=>DS.next())==='Farm bridge','the first goal is the farm bridge');
-await ev(()=>DS.setLevel(3));check(await ev(()=>DS.moveIn())===1,'a neighbour moves in the morning after their plot opens');
-await ev(()=>DS.setLevel(11));for(let i=0;i<6;i++)await ev(()=>DS.moveIn());
-st=await ev(()=>DS.state());check(st.buildings.length>=8,`fully grown, "${st.town}" has ${st.buildings.length} buildings`);check(st.npcs.length>=5,`${st.npcs.length} villagers`);
+let st=await ev(()=>DS.state());const wild=await ev(()=>DS.wild());
+check(st.npcs.length===0&&st.buildings.length===0&&(wild.tree||0)>40,`lands on a wild island: no buildings or villagers, ${wild.tree} trees, ${wild.bush} bushes, ${wild.rock||0} rocks`);
+check(await ev(()=>DS.goal())==='Pitch your tent','the first goal is to pitch your tent');
+await pg.getByText('Place here').click();await wait(600);await pg.fill('#pkName','Testhaven');await pg.click('#huOk');await wait(600);
+st=await ev(()=>DS.state());check(st.town==='Testhaven'&&st.buildings.includes('home'),'pitched the tent and named the island');
+check(await ev(()=>DS.goal())==="Find the island's heart",'next: find the island\'s heart');
+await ev(()=>DS.revive());await wait(1500);await ev(()=>document.querySelectorAll('#heartUp').forEach(e=>e.remove()));
+await ev(()=>DS.setLevel(3));check(/^Place/.test(await ev(()=>DS.goal())),'a level-up hands you a building kit to place');
+await ev(()=>DS.setLevel(11));await ev(()=>DS.buildAll());
+st=await ev(()=>DS.state());check(st.buildings.length>=8,`built up, "${st.town}" has ${st.buildings.length} buildings`);check(st.npcs.length>=5,`${st.npcs.length} villagers`);
 await ev(()=>DS.hour(10));
 check((await ev(()=>DS.state())).perfPx===0,'no automatic pixel scaling');
 // drag-farming across a free row
@@ -38,11 +43,11 @@ if(row){await ev(r=>DS.tp(r[0]+2,r[1]+1.5),row);check(await ev(()=>DS.tool('shov
     await pg.mouse.up();await wait(500);after=(await ev(()=>DS.state())).tiles;}check(after-before>=3,`drag-tilled ${after-before} tiles`);
   // tools: tap soil with the watering can (the villager walks over, then waters)
   await ev(()=>DS.tool('can'));let wx=row[0]+4;for(let i=4;i>=0;i--)if(await ev(([x,z])=>DS.tile(x,z),[row[0]+i,row[1]])){wx=row[0]+i;break;}
-  let wet=false;for(let tries=0;tries<2&&!wet;tries++){await pg.keyboard.press('Escape');const p0=await ev(([x,z])=>DS.screen(x,z),[wx,row[1]]);await pg.mouse.click(p0[0],p0[1]);
+  let wet=false;for(let tries=0;tries<2&&!wet;tries++){await pg.keyboard.press('Escape');await ev(()=>document.querySelectorAll('.toast').forEach(e=>e.remove()));await wait(1500);const p0=await ev(([x,z])=>DS.screen(x,z),[wx,row[1]]);await pg.mouse.click(p0[0],p0[1]);
     for(let i=0;i<16&&!wet;i++){await wait(500);wet=!!(await ev(([x,z])=>DS.tile(x,z),[wx,row[1]]))?.w;}}
   check(wet,'watering can watered the tapped soil');await pg.keyboard.press('Escape');
   // hands: a tap on open ground just walks there
-  await ev(()=>DS.tool('hand'));const v0=await ev(()=>DS.vil());const p1=await ev(([x,z])=>DS.screen(x,z),[row[0],row[1]]);await pg.mouse.click(p1[0],p1[1]);let v1=v0;for(let i=0;i<30&&Math.hypot(v1.x-row[0],v1.z-row[1])>1;i++){await wait(500);v1=await ev(()=>DS.vil());}
+  await ev(()=>document.querySelectorAll('.toast').forEach(e=>e.remove()));await ev(()=>DS.tool('hand'));await wait(1500);/* let the camera settle before reading screen positions */const v0=await ev(()=>DS.vil());const p1=await ev(([x,z])=>DS.screen(x,z),[row[0],row[1]]);await pg.mouse.click(p1[0],p1[1]);let v1=v0;for(let i=0;i<30&&Math.hypot(v1.x-row[0],v1.z-row[1])>1;i++){await wait(500);v1=await ev(()=>DS.vil());}
   check(Math.hypot(v1.x-row[0],v1.z-row[1])<=1,`tap to walk moved the villager ${Math.hypot(v1.x-v0.x,v1.z-v0.z).toFixed(1)} tiles to the tapped tile`);}
 await pg.screenshot({path:join(shots,'1-town.png')});
 // inventory + crafting

@@ -43,41 +43,52 @@ function layoutTown(isl){
   // dock: the south beach column nearest x=1 with no river nearby
   for(let r=0;r<12;r++){let ok=false;for(const x of [1+r,1-r]){let zz=null;for(let z=0;z<24;z++)if(isLandT(landMap.get(K(x,z)))&&landMap.get(K(x,z))!=='bridge')zz=z;
       if(zz!==null&&landMap.get(K(x,zz))==='sand'&&![...Array(7)].some((_,i)=>riverSurf.has(K(x-3+i,zz))||riverSurf.has(K(x-3+i,zz-2)))){DOCK.x=x;DOCK.z=zz;ok=true;break;}}if(ok)break;}
-  // plaza: a flat 5x5 square near the middle
-  let pc=null;for(let r=0;r<10&&!pc;r++)for(let dx=-r;dx<=r&&!pc;dx++)for(let dz=-r;dz<=r;dz++){if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;const x=dx,z=1+dz;if(fits(x-2,z-2,5,5,0)){pc=[x,z];break;}}
-  pc=pc||[0,1];TOWN.plaza=pc;for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++){const k=K(pc[0]+dx,pc[1]+dz);TOWN.path.set(k,2);}
-  TOWN.fixed.set(K(pc[0],pc[1]),'tree');TOWN.board=[pc[0]+2,pc[1]-2];TOWN.fixed.set(K(...TOWN.board),'board');
-  // buildings: civic ones close to the plaza, homes spread around
-  const want=[{t:'hall',d:[4,7]},{t:'shop',d:[4,8]},{t:'museum',d:[4,9]},{t:'cafe',d:[4,10]},{t:'home',d:[5,9]}];for(let i=0;i<6;i++)want.push({t:'vh',d:[6,24],n:i});
-  for(const w of want){let best=null,bs=-1e9;
-    for(let it=0;it<900;it++){const x=Math.floor((R()-0.5)*2*(TOWN_W-3)),z=Math.floor((R()-0.5)*2*(TOWN_D-3))-1;if(!fits(x,z,2,3,1))continue;
-      const d=Math.hypot(x+0.5-pc[0],z+1-pc[1]);if(d<w.d[0]||d>w.d[1])continue;let near=99;for(const b of TOWN.bld)near=Math.min(near,Math.hypot(b.x-x,b.z-z));
-      const sc=(w.t==='vh'?Math.min(near,9)*0.6:-Math.abs(d-w.d[0]-1))+R()*1.5;if(sc>bs){bs=sc;best=[x,z];}}
-    if(!best)continue;const [x,z]=best,b={t:w.t,x,z,n:w.n,door:[x,z+2]};
-    // not built yet (Island Heart): the footprint is kept as a surveyed plot
-    b.locked=w.t==='home'?false:w.t==='vh'?!movedIn(w.n):!unlocked(w.t);TOWN.bld.push(b);
-    for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++)TOWN.fixed.set(K(x+dx,z+dz),w.t==='home'?'house':b.locked?'plot':w.t);}
-  const home=TOWN.bld.find(b=>b.t==='home')||{x:pc[0]-6,z:pc[1]-1,door:[pc[0]-6,pc[1]+1]};
-  HOUSE_AT.x=home.x;HOUSE_AT.z=home.z;TOWN.fixed.delete(K(home.x,home.z));TOWN.fixed.delete(K(home.x+1,home.z));TOWN.fixed.delete(K(home.x,home.z+1));TOWN.fixed.delete(K(home.x+1,home.z+1));
-  const binC=[[home.x+2,home.z+1],[home.x-1,home.z+1],[home.x+2,home.z]].find(([x,z])=>G(x,z)&&!taken(K(x,z)));if(binC){BIN_AT.x=binC[0];BIN_AT.z=binC[1];}
-  // dirt paths: doors → plaza, plaza → dock and the farm bridge (4-way, reusing earlier paths where possible)
-  const lay=(sx,sz,tx,tz)=>{const p=landPath(sx,sz,tx,tz,{four:true,max:9000,block:(x,z)=>TOWN.fixed.has(K(x,z))||(x===BIN_AT.x&&z===BIN_AT.z)||(x>=HOUSE_AT.x&&x<=HOUSE_AT.x+1&&z>=HOUSE_AT.z&&z<=HOUSE_AT.z+1),
-      cost:(x,z,px,pz)=>(TOWN.path.has(K(x,z))?0.35:1)+(L(x,z)!==L(px,pz)?3:0)});if(!p)return;for(const [x,z] of p){const t=landMap.get(K(x,z));if(t==='grass'&&!TOWN.path.has(K(x,z)))TOWN.path.set(K(x,z),1);}};
-  for(const b of TOWN.bld)lay(b.door[0],b.door[1],pc[0],pc[1]+2);
-  lay(pc[0],pc[1]+2,DOCK.x,DOCK.z);
-  {let wx=null;for(let x=-TOWN_W;x<0;x++)if(G(x,FARM.z)){wx=x;break;}if(wx!==null)lay(pc[0]-2,pc[1],wx,FARM.z);}
-  // the player's garden plot beside their house
-  for(const [ox,oz] of [[-4,0],[3,0],[-4,2],[3,2],[0,4]]){const x0=home.x+ox,z0=home.z+oz;if(fits(x0,z0,3,2,0)){for(let dx=0;dx<3;dx++)for(let dz=0;dz<2;dz++)TOWN.plot.push([x0+dx,z0+dz]);break;}}
-  const plotSet=new Set(TOWN.plot.map(([x,z])=>K(x,z)));
+  let pc=null,plotSet=new Set(),home=null;
+  if(S.scratch){// a wild island: only what you've built stands; the Island Heart grows in its own inland clearing
+    pc=heartSpot(isl);TOWN.plaza=pc;TOWN.fixed.set(K(pc[0],pc[1]),'tree');TOWN.board=null;
+    for(const s of S.builds||[]){const b={t:s.t,x:s.x,z:s.z,n:s.n,door:[s.x,s.z+2],locked:S.day<=s.day};TOWN.bld.push(b);// under construction until the next morning
+      for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++)TOWN.fixed.set(K(s.x+dx,s.z+dz),b.locked?'plot':b.t);}
+    if(S.homeAt){HOUSE_AT.x=S.homeAt.x;HOUSE_AT.z=S.homeAt.z;home={t:'home',x:HOUSE_AT.x,z:HOUSE_AT.z,door:[HOUSE_AT.x,HOUSE_AT.z+2]};TOWN.bld.push(home);
+      const binC=[[home.x+2,home.z+1],[home.x-1,home.z+1],[home.x+2,home.z],[home.x-1,home.z]].find(([x,z])=>isLand(x,z)&&!taken(K(x,z))&&!S.debris.some(d=>d.x===x&&d.z===z));if(binC){BIN_AT.x=binC[0];BIN_AT.z=binC[1];}else{BIN_AT.x=home.x+2;BIN_AT.z=home.z+1;}}
+    else{HOUSE_AT.x=HOUSE_AT.z=9999;BIN_AT.x=BIN_AT.z=9999;}
+    for(const k in S.paths||{})if(S.paths[k]>=PATH_WEAR&&landMap.get(k)==='grass'&&!TOWN.fixed.has(k))TOWN.path.set(k,1);
+  }else{
+    // plaza: a flat 5x5 square near the middle
+    for(let r=0;r<10&&!pc;r++)for(let dx=-r;dx<=r&&!pc;dx++)for(let dz=-r;dz<=r;dz++){if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;const x=dx,z=1+dz;if(fits(x-2,z-2,5,5,0)){pc=[x,z];break;}}
+    pc=pc||[0,1];TOWN.plaza=pc;for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++){const k=K(pc[0]+dx,pc[1]+dz);TOWN.path.set(k,2);}
+    TOWN.fixed.set(K(pc[0],pc[1]),'tree');TOWN.board=[pc[0]+2,pc[1]-2];TOWN.fixed.set(K(...TOWN.board),'board');
+    // buildings: civic ones close to the plaza, homes spread around
+    const want=[{t:'hall',d:[4,7]},{t:'shop',d:[4,8]},{t:'museum',d:[4,9]},{t:'cafe',d:[4,10]},{t:'home',d:[5,9]}];for(let i=0;i<6;i++)want.push({t:'vh',d:[6,24],n:i});
+    for(const w of want){let best=null,bs=-1e9;
+      for(let it=0;it<900;it++){const x=Math.floor((R()-0.5)*2*(TOWN_W-3)),z=Math.floor((R()-0.5)*2*(TOWN_D-3))-1;if(!fits(x,z,2,3,1))continue;
+        const d=Math.hypot(x+0.5-pc[0],z+1-pc[1]);if(d<w.d[0]||d>w.d[1])continue;let near=99;for(const b of TOWN.bld)near=Math.min(near,Math.hypot(b.x-x,b.z-z));
+        const sc=(w.t==='vh'?Math.min(near,9)*0.6:-Math.abs(d-w.d[0]-1))+R()*1.5;if(sc>bs){bs=sc;best=[x,z];}}
+      if(!best)continue;const [x,z]=best,b={t:w.t,x,z,n:w.n,door:[x,z+2]};
+      // not built yet (Island Heart): the footprint is kept as a surveyed plot
+      b.locked=w.t==='home'?false:w.t==='vh'?!movedIn(w.n):!unlocked(w.t);TOWN.bld.push(b);
+      for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++)TOWN.fixed.set(K(x+dx,z+dz),w.t==='home'?'house':b.locked?'plot':w.t);}
+    home=TOWN.bld.find(b=>b.t==='home')||{x:pc[0]-6,z:pc[1]-1,door:[pc[0]-6,pc[1]+1]};
+    HOUSE_AT.x=home.x;HOUSE_AT.z=home.z;TOWN.fixed.delete(K(home.x,home.z));TOWN.fixed.delete(K(home.x+1,home.z));TOWN.fixed.delete(K(home.x,home.z+1));TOWN.fixed.delete(K(home.x+1,home.z+1));
+    const binC=[[home.x+2,home.z+1],[home.x-1,home.z+1],[home.x+2,home.z]].find(([x,z])=>G(x,z)&&!taken(K(x,z)));if(binC){BIN_AT.x=binC[0];BIN_AT.z=binC[1];}
+    // dirt paths: doors → plaza, plaza → dock and the farm bridge (4-way, reusing earlier paths where possible)
+    const lay=(sx,sz,tx,tz)=>{const p=landPath(sx,sz,tx,tz,{four:true,max:9000,block:(x,z)=>TOWN.fixed.has(K(x,z))||(x===BIN_AT.x&&z===BIN_AT.z)||(x>=HOUSE_AT.x&&x<=HOUSE_AT.x+1&&z>=HOUSE_AT.z&&z<=HOUSE_AT.z+1),
+        cost:(x,z,px,pz)=>(TOWN.path.has(K(x,z))?0.35:1)+(L(x,z)!==L(px,pz)?3:0)});if(!p)return;for(const [x,z] of p){const t=landMap.get(K(x,z));if(t==='grass'&&!TOWN.path.has(K(x,z)))TOWN.path.set(K(x,z),1);}};
+    for(const b of TOWN.bld)lay(b.door[0],b.door[1],pc[0],pc[1]+2);
+    lay(pc[0],pc[1]+2,DOCK.x,DOCK.z);
+    {let wx=null;for(let x=-TOWN_W;x<0;x++)if(G(x,FARM.z)){wx=x;break;}if(wx!==null)lay(pc[0]-2,pc[1],wx,FARM.z);}
+    // the player's garden plot beside their house
+    for(const [ox,oz] of [[-4,0],[3,0],[-4,2],[3,2],[0,4]]){const x0=home.x+ox,z0=home.z+oz;if(fits(x0,z0,3,2,0)){for(let dx=0;dx<3;dx++)for(let dz=0;dz<2;dz++)TOWN.plot.push([x0+dx,z0+dz]);break;}}
+  plotSet=new Set(TOWN.plot.map(([x,z])=>K(x,z)));
+  }
   // static town meshes
   const p=[],gl=[],tp=[]/* trees, meshed with a far LOD (addVeg) */,y0=(x,z)=>topY(x,z);
   // the Island Heart (it grows with your level) + benches + bulletin board
-  {const H=heartTreeParts(S.scratch?level():10);tp.push(...shift(H.tp,pc[0],y0(...pc),pc[1],0.4));p.push(...shift(H.p,pc[0],y0(...pc),pc[1],0.4));gl.push(...shift(H.gl,pc[0],y0(...pc),pc[1],0.4));}
-  for(let i=0;i<10;i++){const a=i/10*6.283;bloom(p,[0xf2a6c8,0xffffff,0xf6d04a][i%3],0xf6d04a,pc[0]+Math.cos(a)*0.85,y0(...pc)+0.05,pc[1]+Math.sin(a)*0.85,0.07);}
+  {const H=heartTreeParts(S.scratch?(S.heart&&S.heart.revived?level():0):10);tp.push(...shift(H.tp,pc[0],y0(...pc),pc[1],0.4));p.push(...shift(H.p,pc[0],y0(...pc),pc[1],0.4));gl.push(...shift(H.gl,pc[0],y0(...pc),pc[1],0.4));}
+  if(!S.scratch)for(let i=0;i<10;i++){const a=i/10*6.283;bloom(p,[0xf2a6c8,0xffffff,0xf6d04a][i%3],0xf6d04a,pc[0]+Math.cos(a)*0.85,y0(...pc)+0.05,pc[1]+Math.sin(a)*0.85,0.07);}
   TOWN.cafeSeats=[];{const c=TOWN.bld.find(q=>q.t==='cafe'&&!q.locked);if(c)TOWN.cafeSeats.push([c.x,c.z+1],[c.x+1,c.z+1]);}
-  TOWN.benches=[];for(const [bx,bz,r] of [[pc[0]-2,pc[1]+2,0],[pc[0]+2,pc[1]+2,0]]){TOWN.benches.push([bx,bz]);const q=[];for(const [x,z] of [[-0.38,-0.1],[0.38,-0.1],[-0.38,0.12],[0.38,0.12]])q.push(P(BOX,0x5a3a2a,x,0.12,z,0,0,0,0.06,0.24,0.06));
+  TOWN.benches=[];if(!S.scratch)for(const [bx,bz,r] of [[pc[0]-2,pc[1]+2,0],[pc[0]+2,pc[1]+2,0]]){TOWN.benches.push([bx,bz]);const q=[];for(const [x,z] of [[-0.38,-0.1],[0.38,-0.1],[-0.38,0.12],[0.38,0.12]])q.push(P(BOX,0x5a3a2a,x,0.12,z,0,0,0,0.06,0.24,0.06));
     q.push(P(BOX,0xb07a44,0,0.26,0,0,0,0,0.9,0.06,0.34),P(BOX,0xb07a44,0,0.52,-0.16,0,0,0,0.9,0.18,0.05));p.push(...shift(q,bx,y0(bx,bz),bz,r));TOWN.fixed.set(K(bx,bz),'decor');}
-  {const [bx,bz]=TOWN.board,q=[P(CYL8,0x6a4428,-0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(CYL8,0x6a4428,0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(BOX,0x9a6a3a,0,0.62,0,0,0,0,0.9,0.52,0.06),P(BOX,0x7a5230,0,0.92,0,0,0,0,1.0,0.07,0.12),
+  if(TOWN.board){const [bx,bz]=TOWN.board,q=[P(CYL8,0x6a4428,-0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(CYL8,0x6a4428,0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(BOX,0x9a6a3a,0,0.62,0,0,0,0,0.9,0.52,0.06),P(BOX,0x7a5230,0,0.92,0,0,0,0,1.0,0.07,0.12),
     P(BOX,0xf6ecd0,-0.2,0.66,0.035,0,0,0.08,0.22,0.26,0.01),P(BOX,0xf2c8d8,0.14,0.6,0.035,0,0,-0.1,0.2,0.2,0.01),P(BOX,0xd8ecf4,0.22,0.74,0.035,0,0,0.05,0.14,0.12,0.01)];p.push(...shift(q,bx,y0(bx,bz),bz,0));}
   // buildings
   for(const b of TOWN.bld){if(b.t==='home')continue;const bx=b.x+0.5,bz=b.z+0.5,by=Math.min(y0(b.x,b.z),y0(b.x+1,b.z+1));
@@ -85,20 +96,20 @@ function layoutTown(isl){
     const q=townBuilding(b,R);p.push(...shift(q.p,bx,by,bz,0));gl.push(...shift(q.gl,bx,by,bz,0));
     if(q.lit)TOWN.lamps.push([bx,by,bz+1.3]);}
   // lamps along the paths, trees and flowers on the open grass
-  let pn=0;for(const [k,v] of TOWN.path){if(v!==1)continue;if(++pn%7)continue;const [x,z]=k.split(',').map(Number);
+  let pn=0;if(!S.scratch)for(const [k,v] of TOWN.path){if(v!==1)continue;if(++pn%7)continue;const [x,z]=k.split(',').map(Number);
     const side=[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dz])=>[x+dx,z+dz]).find(([a,c])=>G(a,c)&&!taken(K(a,c))&&!plotSet.has(K(a,c)));if(!side)continue;
     const [lx,lz]=side,ly=y0(lx,lz);p.push(P(CYL8,0x3e3444,lx,ly+0.55,lz,0,0,0,0.07,1.1,0.07),P(BOX,0x3e3444,lx,ly+1.22,lz,0,0,0,0.26,0.05,0.26),P(CONE4,0x3e3444,lx,ly+1.32,lz,0,0.785,0,0.3,0.14,0.3));
     gl.push(P(BOX,0xfff0b8,lx,ly+1.1,lz,0,0,0,0.18,0.2,0.18));TOWN.lamps.push([lx,ly,lz]);TOWN.fixed.set(K(lx,lz),'decor');}
   const kinds=applyHomeStyle().trees;
-  for(const [x,z] of isl.grass){const k=K(x,z);if(!G(x,z)||taken(k)||plotSet.has(k)||farmQ(x,z)<1.4)continue;
+  if(!S.scratch)for(const [x,z] of isl.grass){const k=K(x,z);if(!G(x,z)||taken(k)||plotSet.has(k)||farmQ(x,z)<1.4)continue;
     if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>TOWN.path.has(K(x+dx,z+dz))||TOWN.fixed.has(K(x+dx,z+dz))&&TOWN.fixed.get(K(x+dx,z+dz))!=='decor'))continue;
     const h=hash(x*1.7+3,z*2.3-1);if(h>0.11)continue;const kd=h<0.1?kinds[Math.floor(hash(z,x)*4)]:kinds[4+Math.floor(hash(x,z)*4)];
     tp.push(...shift(treeParts(kd,mulberry(hi(x,z,5)),0x9a9ea8),x+(hash(z,x+1)-0.5)*0.2,y0(x,z),z+(hash(x+2,z)-0.5)*0.2,hash(x,z)*6.28));TOWN.fixed.set(k,'decor');if(['oak','pine','maple','mapleR','cherry','palm','palmtall','palmfan'].includes(kd))TOWN.res.set(k,'tree');}
   // town rocks to chip stone from, and a flower planter in the plaza's free corner
-  {let n=0;for(const [x,z] of shuffle(isl.grass.slice(),R)){if(n>=7)break;const k=K(x,z);if(!G(x,z)||taken(k)||plotSet.has(k)||farmQ(x,z)<1.4)continue;
+  if(!S.scratch){let n=0;for(const [x,z] of shuffle(isl.grass.slice(),R)){if(n>=7)break;const k=K(x,z);if(!G(x,z)||taken(k)||plotSet.has(k)||farmQ(x,z)<1.4)continue;
     if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>TOWN.path.has(K(x+dx,z+dz))))continue;rockP(p,mulberry(hi(x,z,9)),0x9a9ea8,0.75);const rp=p.splice(p.length-7,7);p.push(...shift(rp,x,y0(x,z),z,hash(x,z)*6));
     TOWN.fixed.set(k,'decor');TOWN.res.set(k,'rock');n++;}}
-  {const [px,pz]=[pc[0]-2,pc[1]-2];const q=[P(BOX,0xb0a898,0,0.15,0,0,0,0,0.8,0.3,0.8),P(BOX,0x5a3a2a,0,0.31,0,0,0,0,0.7,0.02,0.7)];wildflowers(q,mulberry(3),[0xf2a6c8,0xf6d04a,0xffffff,0xe86a5a],8,0.3);
+  if(!S.scratch){const [px,pz]=[pc[0]-2,pc[1]-2];const q=[P(BOX,0xb0a898,0,0.15,0,0,0,0,0.8,0.3,0.8),P(BOX,0x5a3a2a,0,0.31,0,0,0,0,0.7,0.02,0.7)];wildflowers(q,mulberry(3),[0xf2a6c8,0xf6d04a,0xffffff,0xe86a5a],8,0.3);
     p.push(...shift(q.slice(0,2),px,y0(px,pz),pz,0),...shift(q.slice(2),px,y0(px,pz)+0.31,pz,0));TOWN.fixed.set(K(px,pz),'decor');}
   // the lighthouse: on the town's coast, as far from the plaza as it can be while staying in town; its beam turns at night
   {let best=null,bd=-1;for(const [x,z] of isl.grass){const k=K(x,z);if(taken(k)||plotSet.has(k)||S.tiles[k])continue;const d=Math.hypot(x-pc[0],z-pc[1]);if(d<9||d>22||d<=bd)continue;
@@ -114,7 +125,8 @@ function layoutTown(isl){
   isl.group.add(M(p));addVeg(isl,isl.group,tp);if(gl.length){const m=M(gl,glowMat);m.castShadow=false;isl.group.add(m);}
   // flowers, clover and pebbles: instanced over the open grass (hidden again wherever you till or build)
   {const lists=FLORA_GEOS.map(()=>[]),clov=[],peb=[];
-    for(const [x,z] of isl.grass){const k=K(x,z);if(!G(x,z)||taken(k)||farmQ(x,z)<1.3)continue;const h=hash(x*4.1-2,z*3.3+7);
+    const wild=S.scratch?new Set(S.debris.filter(d=>d.k!=='weed').map(d=>K(d.x,d.z))):null;
+    for(const [x,z] of isl.grass){const k=K(x,z);if(!G(x,z)||taken(k)||farmQ(x,z)<1.3||(wild&&wild.has(k)))continue;const h=hash(x*4.1-2,z*3.3+7);
       if(h<0.34)lists[floraIndex(x,z)].push([x,z]);else if(h<0.43)clov.push([x,z]);}
     for(const [k,v] of TOWN.path){if(v!==1)continue;const [x,z]=k.split(',').map(Number);for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(G(x+dx,z+dz)&&!TOWN.path.has(K(x+dx,z+dz))&&hash(x*7+dx,z*5+dz)<0.35)peb.push([x+dx*0.46,z+dz*0.46,x,z]);}
     const mk=(geo,list,mat,track)=>{if(!list.length)return null;const im=new T.InstancedMesh(geo,mat,list.length);list.forEach(([x,z,tx,tz],i)=>{const tile=tx===undefined?[x,z]:[tx,tz];

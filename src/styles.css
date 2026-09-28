@@ -215,19 +215,7 @@ input[type=range]{width:100%;accent-color:var(--teal);height:28px}
 #boot p{margin:0;font-size:16px;font-weight:600;opacity:.95}
 @media (prefers-reduced-motion:reduce){.toast,.sheet,.float,.actionbar,.btn.ready::after{animation:none}}
 
-/* ---- new game: choose your island ---- */
-#pick{position:fixed;inset:0;z-index:30;overflow-y:auto;background:linear-gradient(#8fc6f4,#5c9be0);padding:max(18px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom))}
-#pick .pk{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:12px;align-items:stretch}
-#pick h1{margin:6px 0 0;font-size:32px;font-weight:700;color:#fff;text-align:center;text-shadow:0 3px 0 #3c78c0}
-#pick .sub{margin:0;color:#fff;font-weight:600;text-align:center;line-height:1.35}
-#pick .sub b{color:#fff3c4}
-.pkcards{display:flex;flex-direction:column;gap:12px}
-.pkc{display:flex;flex-direction:column;gap:8px;background:var(--paper);border-radius:22px;padding:10px;box-shadow:0 4px 0 var(--line),var(--shadow);text-align:left;color:var(--ink)}
-.pkc:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line)}
-.pkc canvas,.pkbig{width:100%;height:auto;border-radius:14px;image-rendering:pixelated;display:block}
-.pkbig{box-shadow:0 4px 0 rgba(0,0,0,.12)}
-.pkt{display:flex;flex-direction:column;gap:2px;padding:0 4px 2px}
-.pkt b{font-size:18px}.pkt small{font-size:13.5px;font-weight:600;color:var(--ink2);line-height:1.3}.pkt .pktr{color:var(--ink)}
+/* ---- naming your island ---- */
 .pkname{display:flex;flex-direction:column;gap:6px;background:var(--paper);border-radius:18px;padding:12px 14px;font-weight:600;color:var(--ink2)}
 .pkname input{font:inherit;font-size:22px;font-weight:700;color:var(--ink);border:2px solid var(--line);border-radius:12px;padding:8px 12px;background:#fff;width:100%;box-sizing:border-box}
 .pkrow{display:flex;gap:10px}.pkrow .pbtn{flex:1}
@@ -242,3 +230,10 @@ input[type=range]{width:100%;accent-color:var(--teal);height:28px}
 #heartUp .hurow{display:flex;gap:10px;align-items:center;background:var(--cream);border-radius:16px;padding:8px 10px}
 #heartUp .hurow img{width:34px;height:34px;flex:none}
 #heartUp .hurow span{display:flex;flex-direction:column;gap:1px}#heartUp .hurow small{color:var(--ink2);font-weight:600;font-size:13px;line-height:1.25}
+/* ---- new game: arriving by sea ---- */
+#arrive{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:0 16px max(18px,env(safe-area-inset-bottom));pointer-events:none}
+#arrive .arr{pointer-events:auto;max-width:520px;margin:0 auto;background:rgba(255,252,242,.94);border-radius:24px;padding:14px 16px 16px;box-shadow:0 5px 0 var(--line),var(--shadow);display:flex;flex-direction:column;gap:6px;animation:tin .45s cubic-bezier(.3,1.6,.5,1) both}
+#arrive small{font-size:12px;font-weight:700;color:var(--teal-d);text-transform:uppercase;letter-spacing:.06em}
+#arrive h2{margin:0;font-size:24px;line-height:1.1}
+#arrive p{margin:0 0 6px;color:var(--ink2);font-weight:600;line-height:1.35}
+body.arriving>:not(#arrive):not(#fade):not(#c){visibility:hidden}

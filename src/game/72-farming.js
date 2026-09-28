@@ -108,7 +108,7 @@ function startPlace(kind,fromStore,rot=0){
   ghost=objGroup(kind,S.nextId,rot);ghost.traverse(o=>{if(o.isMesh){if(o.userData.noThumb)o.visible=false;else{o.material=ghostMat;o.castShadow=false;}}});
   scene.add(ghost);moveGhost(spot[0],spot[1]);
 }
-function moveGhost(x,z){if(!placing)return;placing.x=x;placing.z=z;ghost.position.set(x,topY(x,z),z);ghost.rotation.y=placing.rot;
+function moveGhost(x,z){if(!placing)return;if(placing.bp){bpMove(x,z);return;}placing.x=x;placing.z=z;ghost.position.set(x,topY(x,z),z);ghost.rotation.y=placing.rot;
   const ok=canPlace(x,z);ghostMat.color.set(ok?0xffffff:0xff6a5a);cursorAt(x,z,ok?0xfff6e2:0xff6a5a);cursorT=1e9;placeBar();}
 function placeBar(){const B=BUILD[placing.kind],n=S.store[placing.kind]||0,ok=canPlace(placing.x,placing.z);
   const cost=placing.fromStore?`from storage (${n} left)`:`${B.cost} shells`;

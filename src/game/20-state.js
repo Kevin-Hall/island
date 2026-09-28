@@ -13,7 +13,10 @@ let resetting=false;
 function save(){if(resetting)return;S.t=Date.now();S.px=vil.x;S.pz=vil.z;try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
 let S=load(); const isNew=!S; if(!S) S=freshState();
 if(S.mode==='edit')S.mode='farm';
+// games started with the short-lived island picker (plots in a ready-made town) carry on as a classic, fully built town
+if(S.scratch&&!S.wild)delete S.scratch;
 
-function level(){let l=1;while(l<LV.length&&S.xp>=LV[l])l++;return l;}
+// (on a wild island the Island Heart has to be found and revived before it can grow: until then you stay at level 1)
+function level(){if(S.scratch&&!(S.heart&&S.heart.revived))return 1;let l=1;while(l<LV.length&&S.xp>=LV[l])l++;return l;}
 function isNight(h=S.hour){return h>=19.5||h<5.5;}
 
