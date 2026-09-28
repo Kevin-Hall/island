@@ -31,8 +31,16 @@ function plant(k,x,z){
   if(id==='mystery')floatText(x,1.2,z,'? '+CROPS[type].name);
   if(S.tut===0){S.tut=1;setTimeout(()=>toast(`Seeds only grow on days they're watered — switch to the <b>watering can</b> and tap the soil.`,'',ICON.sprout),600);}
 }
+// Stardew-style: a harvested crop leaps out of the soil and is held up over your head for a moment
+const pops=[];
+function popCrop(type,x,z){const q=cropParts(type,3,hi(x,z,3)),g=new T.Group();/* just the crop itself, not its leaves (unless it's all leaf, like lettuce) */if(q.fruit.length)g.add(M(q.fruit));else g.add(M(q.leaf));
+  g.traverse(o=>{if(o.isMesh)o.castShadow=false;});g.scale.setScalar(0.7);scene.add(g);pops.push({g,x0:x,z0:z,y0:topY(x,z),t:0});}
+function updatePops(dt){for(let i=pops.length-1;i>=0;i--){const p=pops[i];p.t+=dt;const g=p.g,hx=vil.x,hz=vil.z,hy=vil.y+1.05;
+  if(p.t<0.45){const u=p.t/0.45;g.position.set(lerp(p.x0,hx,u),lerp(p.y0,hy,u)+Math.sin(u*Math.PI)*0.9,lerp(p.z0,hz,u));g.rotation.y+=dt*8;}
+  else if(p.t<1.2){g.position.set(hx,hy+Math.sin((p.t-0.45)*9)*0.03,hz);g.rotation.y+=dt*1.5;}
+  else{const s=Math.max(0,1-(p.t-1.2)/0.25)*0.7;g.scale.setScalar(s);g.position.set(hx,hy,hz);if(s<=0){scene.remove(g);g.traverse(o=>{if(o.geometry)o.geometry.dispose();});pops.splice(i,1);}}}}
 function harvest(k,x,z){
-  const t=S.tiles[k],c=t.crop,C=CROPS[c.t],V=VAR[c.v||'normal'];const key=c.t+'|'+V.id;
+  const t=S.tiles[k],c=t.crop,C=CROPS[c.t],V=VAR[c.v||'normal'];const key=c.t+'|'+V.id;popCrop(c.t,x,z);
   const first=gain(key);S.harvested++;
   t.crop=null;syncCrop(k);walkTo(x,z);vil.hop=0.3;
   burst(x,0.8,z,C.col,10,1.5,0.08);if(V.id!=='normal')for(let i=0;i<10;i++)sparkle(x,0.8,z,0xfff0a0);

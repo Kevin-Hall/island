@@ -3181,6 +3181,8 @@ function equip(k){if(!TOOL_OF[k])return;if(S.tool===k&&k==='seeds'){openSheet('s
   S.tool=k;SFX.ui();renderTools();showHeld();floatText(vil.x,1.25,vil.z,TOOL_OF[k].name);save();}
 $('tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(b)equip(b.dataset.tool);});
 window.addEventListener('keydown',e=>{if(sheet||inside||e.target.tagName==='INPUT')return;const i=+e.key-1;if(i>=0&&i<TOOLS.length)equip(TOOLS[i].k);});
+// tap-to-do: the thing you tap picks the tool (Animal Crossing / Club Penguin style), so you rarely need the tool bar
+function autoTool(k){if(S.tool===k||!TOOL_OF[k])return;S.tool=k;renderTools();showHeld();}
 let hintAt=0;function toolHint(msg,k){const now=performance.now();if(now-hintAt<2500)return;hintAt=now;toast(msg,'',k?toolIcon(k):undefined);}
 
 /* ---- the tool in the villager's hand (models point along +y from the grip; +z is forward) ---- */
@@ -3215,13 +3217,18 @@ function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
   // town trees and rocks: shake or chop a tree, break a rock with the shovel
   const res=fixedAt(x,z)==='decor'&&TOWN.res.get(k);
   if(res==='tree'){actAt(x,z,tool==='axe'?()=>chopTree(x,z):()=>gatherRes(x,z));return;}
-  if(res){if(tool==='shovel'||tool==='axe')actAt(x,z,()=>gatherRes(x,z));else{walkTo(x,z);toolHint('Break rocks with the <b>shovel</b> to get stone.','shovel');}return;}
+  if(res){if(tool!=='axe')autoTool('shovel');actAt(x,z,()=>gatherRes(x,z));return;}
   if(useFixed(x,z))return;
   const db=debrisAt(x,z);
-  if(db){const need=DEBRIS_TOOL[db.k];if(!need||tool===need)actAt(x,z,()=>hitDebris(db));else{walkTo(x,z);toolHint(`Clear that ${db.k} with the <b>${TOOL_OF[need].name.toLowerCase()}</b>.`,need);}return;}
+  if(db){const need=DEBRIS_TOOL[db.k];if(need)autoTool(need);actAt(x,z,()=>hitDebris(db));return;}
   {const wd=weedAt(x,z);if(wd){actAt(x,z,()=>pullWeed(wd));return;}}
   const t=S.tiles[k];
   if(t&&t.crop&&t.crop.p>=1&&tool!=='shovel'){actAt(x,z,()=>harvest(k,x,z));return;}
+  // soil: a thirsty crop gets watered, a growing one tended, empty soil planted with your chosen seed
+  if(t&&tool!=='shovel'&&tool!=='can'){
+    if(t.crop&&!t.w){autoTool('can');actAt(x,z,()=>waterAt(x,z));return;}
+    if(t.crop){autoTool('hand');actAt(x,z,()=>tendAt(x,z));return;}
+    if(!t.crop){autoTool('seeds');actAt(x,z,()=>plant(k,x,z));return;}}
   switch(tool){
     case'shovel':if(canTill(x,z)){actAt(x,z,()=>tillAt(x,z));return;}if(t&&!t.crop){actAt(x,z,()=>fillAt(x,z));return;}
       if(t)toolHint('Something is growing there.');else if(TOWN.path.has(k))toolHint('Better not dig up the town path!');break;
@@ -3268,8 +3275,16 @@ function plant(k,x,z){
   if(id==='mystery')floatText(x,1.2,z,'? '+CROPS[type].name);
   if(S.tut===0){S.tut=1;setTimeout(()=>toast(`Seeds only grow on days they're watered — switch to the <b>watering can</b> and tap the soil.`,'',ICON.sprout),600);}
 }
+// Stardew-style: a harvested crop leaps out of the soil and is held up over your head for a moment
+const pops=[];
+function popCrop(type,x,z){const q=cropParts(type,3,hi(x,z,3)),g=new T.Group();/* just the crop itself, not its leaves (unless it's all leaf, like lettuce) */if(q.fruit.length)g.add(M(q.fruit));else g.add(M(q.leaf));
+  g.traverse(o=>{if(o.isMesh)o.castShadow=false;});g.scale.setScalar(0.7);scene.add(g);pops.push({g,x0:x,z0:z,y0:topY(x,z),t:0});}
+function updatePops(dt){for(let i=pops.length-1;i>=0;i--){const p=pops[i];p.t+=dt;const g=p.g,hx=vil.x,hz=vil.z,hy=vil.y+1.05;
+  if(p.t<0.45){const u=p.t/0.45;g.position.set(lerp(p.x0,hx,u),lerp(p.y0,hy,u)+Math.sin(u*Math.PI)*0.9,lerp(p.z0,hz,u));g.rotation.y+=dt*8;}
+  else if(p.t<1.2){g.position.set(hx,hy+Math.sin((p.t-0.45)*9)*0.03,hz);g.rotation.y+=dt*1.5;}
+  else{const s=Math.max(0,1-(p.t-1.2)/0.25)*0.7;g.scale.setScalar(s);g.position.set(hx,hy,hz);if(s<=0){scene.remove(g);g.traverse(o=>{if(o.geometry)o.geometry.dispose();});pops.splice(i,1);}}}}
 function harvest(k,x,z){
-  const t=S.tiles[k],c=t.crop,C=CROPS[c.t],V=VAR[c.v||'normal'];const key=c.t+'|'+V.id;
+  const t=S.tiles[k],c=t.crop,C=CROPS[c.t],V=VAR[c.v||'normal'];const key=c.t+'|'+V.id;popCrop(c.t,x,z);
   const first=gain(key);S.harvested++;
   t.crop=null;syncCrop(k);walkTo(x,z);vil.hop=0.3;
   burst(x,0.8,z,C.col,10,1.5,0.08);if(V.id!=='normal')for(let i=0;i<10;i++)sparkle(x,0.8,z,0xfff0a0);
@@ -4448,9 +4463,9 @@ function onTap(cx,cy){
     return;}
   if(tapLife(cx,cy)){clearAction();updateHUD();return;}
   if(hit&&hit.river){clearAction();const ri=islandAt(hit.x,hit.z),here0=curIsl();if(!ri||!here0||ri.id!==here0.id)return;
-    if(S.tool!=='rod'){goTo(hit.x,hit.z);toolHint('Equip the <b>fishing rod</b> to fish here.','rod');return;}
+    autoTool('rod');
     if(ri.lava){toast('That lava is far too hot to fish in!');return;}startFishing(hit.x,hit.z);return;}
-  if(!hit){clearAction();const w=waterPoint(cx,cy);if(w&&!isLand(Math.round(w.x),Math.round(w.z))){if(S.tool==='rod')startFishing(w.x,w.z);else toolHint('Equip the <b>fishing rod</b>, then tap the water to cast.','rod');}return;}
+  if(!hit){clearAction();const w=waterPoint(cx,cy);if(w&&!isLand(Math.round(w.x),Math.round(w.z))){autoTool('rod');startFishing(w.x,w.z);}return;}
   if(!$('actionBar').hidden)clearAction();
   const here=curIsl(),there=islandAt(hit.x,hit.z);
   if(here&&there&&here.id!==there.id){toast(`That's ${S.disc[there.id]?there.name:'another island'} — take your boat to get there.`);return;}
@@ -4461,7 +4476,9 @@ function tapLife(cx,cy){
   {let bn=null,bd=48;for(const n of npcs){if(!n.g.visible)continue;const s=toScreen(n.x,n.y+0.5,n.z);const d=Math.hypot(s[0]-cx,s[1]-cy);if(d<bd){bd=d;bn=n;}}if(bn){talkTo(bn);return true;}}
   if(crow&&crow.state!=='out'){const s=toScreen(crowG.position.x,crowG.position.y+0.15,crowG.position.z);if(Math.hypot(s[0]-cx,s[1]-cy)<50){shooCrow();return true;}}
   let best=null,bd=46;for(const b of bugs){if(b.out)continue;const s=toScreen(b.g.position.x,b.g.position.y,b.g.position.z);const d=Math.hypot(s[0]-cx,s[1]-cy);if(d<bd){bd=d;best=b;}}
-  if(best){if(S.tool==='net'){swingTool();catchBug(best);return true;}toolHint('Equip the <b>net</b> to catch bugs.','net');}return false;}
+  // a bug: grab the net, creep over and swoop (if it's still there when you arrive)
+  if(best){autoTool('net');const b=best,p=b.g.position;if(Math.hypot(p.x-vil.x,p.z-vil.z)<1.4){swingTool();catchBug(b);return true;}
+    const dx=p.x-vil.x,dz=p.z-vil.z,d=Math.hypot(dx,dz)||1;goTo(p.x-dx/d*0.9,p.z-dz/d*0.9,()=>{if(!bugs.includes(b))return;villager.rotation.y=Math.atan2(b.g.position.x-vil.x,b.g.position.z-vil.z);swingTool();catchBug(b);});return true;}return false;}
 const ptrs=new Map();let drag=null,pinch=null,paint=null,holdT=null;
 // long-press and drag repeats the equipped tool's action across tiles
 function paintMode(x,z){if(!onHome(x,z))return null;const tool=S.tool,d=debrisAt(x,z);
@@ -4919,6 +4936,9 @@ function frame(now){
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
   scene.fog.near=camD()+45-fogBoost*30;scene.fog.far=camD()+300-fogBoost*200;/* a light haze: neighbouring islands stay green on the horizon */
   flushCrops();for(const {g} of cropMeshes.values())if(g.children.length)g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;
+  updatePops(dt);
+  // ripe crops twinkle now and then, so you can see what's ready
+  for(const [k,{g,v,s}] of cropMeshes)if(s===3&&(!v||v==='normal')&&Math.random()<dt*0.12)sparkle(g.position.x,topY(Math.round(g.position.x),Math.round(g.position.z))+0.5,g.position.z,0xfffbe0);
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);
   for(const a of anims)a(tt,dt);
@@ -5024,6 +5044,12 @@ if(/[?&]debug\b/.test(location.search)){
     next:()=>{const u=nextUnlock();return u&&u.name;},xp:n=>{addXP(n);return level();},plots:()=>TOWN.bld.map(b=>b.t+(b.t==='vh'?b.n:'')+(b.locked?':plot':'')),
     // every crop at one stage, rendered at the same scale on a patch of soil (data URLs), for eyeballing the models
     dock:()=>[DOCK.x,DOCK.z],
+    ripeNear:(t='pumpkin')=>{const x=Math.round(vil.x)+1,z=Math.round(vil.z),k=K(x,z);S.debris=S.debris.filter(d=>!(d.x===x&&d.z===z));syncDebris();S.tiles[k]={w:1,crop:{t,p:1,v:'normal',m:0}};syncCrop(k);return[x,z];},
+    harvestAt:(x,z)=>{harvest(K(x,z),x,z);},
+    // a butterfly a couple of tiles from you; bugAt gives its screen position and how many bugs you've caught
+    bugNear:()=>{const isl=curIsl(),id=Object.keys(BUGS).find(k=>BUGS[k].kind!=='crawl'&&BUGS[k].time!=='night'&&BUGS[k].bio.includes(isl.biome));const g=bugGroup(BUGS[id]);g.scale.setScalar(BUG_SCALE);scene.add(g);
+      const hx=Math.round(vil.x)+2,hz=Math.round(vil.z)+1;g.position.set(hx,topY(hx,hz)+0.4,hz);bugs.push({id,g,hx,hz,t:0,life:999,ph:0,out:0,isl:isl.id,crawl:false});return id;},
+    bugAt:()=>{const b=bugs[bugs.length-1];const caught=Object.keys(S.alm).filter(k=>k.startsWith('b:')).length;if(!b)return{caught};const s=toScreen(b.g.position.x,b.g.position.y,b.g.position.z);return{x:s[0],y:s[1],n:bugs.length,caught,tool:S.tool};},
     camInfo:()=>({dist:cam.dist,pitch:cam.pitch,fov:camera.fov,pos:camera.position.toArray(),W,H,PX,hy:skyMat.uniforms.hy.value}),
     critters:()=>{const o={};for(const c of critters)o[c.k]=(o[c.k]||0)+1;return o;},spawnCritter:k=>spawnCritter(k),
     treeGallery:(size=200)=>{const out=[],so=S.seasonOv;const add=(name,parts,sm)=>{const w=new T.Group();w.add(M(parts));const box=new T.Mesh(sm?new T.BoxGeometry(1.3,1.3,1.3):new T.BoxGeometry(2.4,3.4,2.4));box.position.y=sm?0.5:1.5;box.visible=false;w.add(box);w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,2,0.06,2)]));out.push([name,snapThumb(w,size)]);};

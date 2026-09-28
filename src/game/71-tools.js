@@ -22,6 +22,8 @@ function equip(k){if(!TOOL_OF[k])return;if(S.tool===k&&k==='seeds'){openSheet('s
   S.tool=k;SFX.ui();renderTools();showHeld();floatText(vil.x,1.25,vil.z,TOOL_OF[k].name);save();}
 $('tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(b)equip(b.dataset.tool);});
 window.addEventListener('keydown',e=>{if(sheet||inside||e.target.tagName==='INPUT')return;const i=+e.key-1;if(i>=0&&i<TOOLS.length)equip(TOOLS[i].k);});
+// tap-to-do: the thing you tap picks the tool (Animal Crossing / Club Penguin style), so you rarely need the tool bar
+function autoTool(k){if(S.tool===k||!TOOL_OF[k])return;S.tool=k;renderTools();showHeld();}
 let hintAt=0;function toolHint(msg,k){const now=performance.now();if(now-hintAt<2500)return;hintAt=now;toast(msg,'',k?toolIcon(k):undefined);}
 
 /* ---- the tool in the villager's hand (models point along +y from the grip; +z is forward) ---- */
@@ -56,13 +58,18 @@ function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
   // town trees and rocks: shake or chop a tree, break a rock with the shovel
   const res=fixedAt(x,z)==='decor'&&TOWN.res.get(k);
   if(res==='tree'){actAt(x,z,tool==='axe'?()=>chopTree(x,z):()=>gatherRes(x,z));return;}
-  if(res){if(tool==='shovel'||tool==='axe')actAt(x,z,()=>gatherRes(x,z));else{walkTo(x,z);toolHint('Break rocks with the <b>shovel</b> to get stone.','shovel');}return;}
+  if(res){if(tool!=='axe')autoTool('shovel');actAt(x,z,()=>gatherRes(x,z));return;}
   if(useFixed(x,z))return;
   const db=debrisAt(x,z);
-  if(db){const need=DEBRIS_TOOL[db.k];if(!need||tool===need)actAt(x,z,()=>hitDebris(db));else{walkTo(x,z);toolHint(`Clear that ${db.k} with the <b>${TOOL_OF[need].name.toLowerCase()}</b>.`,need);}return;}
+  if(db){const need=DEBRIS_TOOL[db.k];if(need)autoTool(need);actAt(x,z,()=>hitDebris(db));return;}
   {const wd=weedAt(x,z);if(wd){actAt(x,z,()=>pullWeed(wd));return;}}
   const t=S.tiles[k];
   if(t&&t.crop&&t.crop.p>=1&&tool!=='shovel'){actAt(x,z,()=>harvest(k,x,z));return;}
+  // soil: a thirsty crop gets watered, a growing one tended, empty soil planted with your chosen seed
+  if(t&&tool!=='shovel'&&tool!=='can'){
+    if(t.crop&&!t.w){autoTool('can');actAt(x,z,()=>waterAt(x,z));return;}
+    if(t.crop){autoTool('hand');actAt(x,z,()=>tendAt(x,z));return;}
+    if(!t.crop){autoTool('seeds');actAt(x,z,()=>plant(k,x,z));return;}}
   switch(tool){
     case'shovel':if(canTill(x,z)){actAt(x,z,()=>tillAt(x,z));return;}if(t&&!t.crop){actAt(x,z,()=>fillAt(x,z));return;}
       if(t)toolHint('Something is growing there.');else if(TOWN.path.has(k))toolHint('Better not dig up the town path!');break;
