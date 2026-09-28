@@ -41,18 +41,19 @@ function layoutTown(isl){
   const fits=(x0,z0,w,h,pad)=>{const l=L(x0,z0);for(let dx=-pad;dx<w+pad;dx++)for(let dz=-pad;dz<h+pad;dz++){const x=x0+dx,z=z0+dz;
     if(!G(x,z)||taken(K(x,z)))return false;if(dx>=0&&dx<w&&dz>=0&&dz<h&&L(x,z)!==l)return false;}return true;};
   // dock: the south beach column nearest x=1 with no river nearby
-  for(let r=0;r<12;r++){let ok=false;for(const x of [1+r,1-r]){let zz=null;for(let z=0;z<24;z++)if(isLandT(landMap.get(K(x,z)))&&landMap.get(K(x,z))!=='bridge')zz=z;
+  const d0=S.home&&S.home.dockX!==undefined?S.home.dockX:1;for(let r=0;r<12;r++){let ok=false;for(const x of [d0+r,d0-r]){let zz=null;for(let z=0;z<24;z++)if(isLandT(landMap.get(K(x,z)))&&landMap.get(K(x,z))!=='bridge')zz=z;
       if(zz!==null&&landMap.get(K(x,zz))==='sand'&&![...Array(7)].some((_,i)=>riverSurf.has(K(x-3+i,zz))||riverSurf.has(K(x-3+i,zz-2)))){DOCK.x=x;DOCK.z=zz;ok=true;break;}}if(ok)break;}
   let pc=null,plotSet=new Set(),home=null;
   if(S.scratch){// a wild island: only what you've built stands; the Island Heart grows where you planted your driftseed
     if(S.heart&&S.heart.revived&&!S.heartAt){const h=heartSpot(isl);S.heartAt={x:h[0],z:h[1]};} // saves from the old heart hunt keep their tree
     pc=S.heartAt?[S.heartAt.x,S.heartAt.z]:S.homeAt?[S.homeAt.x+2,S.homeAt.z+3]:[DOCK.x,DOCK.z-3];TOWN.plaza=pc;TOWN.board=null;
     if(S.heartAt)TOWN.fixed.set(K(pc[0],pc[1]),'tree');
-    for(const s of S.builds||[]){const b={t:s.t,x:s.x,z:s.z,n:s.n,door:[s.x,s.z+2],locked:S.day<=s.day};TOWN.bld.push(b);// under construction until the next morning
+    for(const s of S.builds||[]){const b={t:s.t,x:s.x,z:s.z,n:s.n,roof:s.roof,door:[s.x,s.z+2],locked:S.day<=s.day};TOWN.bld.push(b);// under construction until the next morning
       for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++)TOWN.fixed.set(K(s.x+dx,s.z+dz),b.locked?'plot':b.t);}
     if(S.homeAt){HOUSE_AT.x=S.homeAt.x;HOUSE_AT.z=S.homeAt.z;home={t:'home',x:HOUSE_AT.x,z:HOUSE_AT.z,door:[HOUSE_AT.x,HOUSE_AT.z+2]};TOWN.bld.push(home);
       const binC=[[home.x+2,home.z+1],[home.x-1,home.z+1],[home.x+2,home.z],[home.x-1,home.z]].find(([x,z])=>isLand(x,z)&&!taken(K(x,z))&&!S.debris.some(d=>d.x===x&&d.z===z));if(binC){BIN_AT.x=binC[0];BIN_AT.z=binC[1];}else{BIN_AT.x=home.x+2;BIN_AT.z=home.z+1;}}
     else{HOUSE_AT.x=HOUSE_AT.z=9999;BIN_AT.x=BIN_AT.z=9999;}
+    for(const e of ['tent','fire'])if(S.home&&S.home[e]){const [x,z]=S.home[e];for(let dx=0;dx<(e==='tent'?2:1);dx++)for(let dz=0;dz<(e==='tent'?2:1);dz++)TOWN.fixed.set(K(x+dx,z+dz),'decor');}
     for(const k in S.paths||{})if(S.paths[k]>=PATH_WEAR&&landMap.get(k)==='grass'&&!TOWN.fixed.has(k))TOWN.path.set(k,1);
   }else{
     // plaza: a flat 5x5 square near the middle
@@ -122,8 +123,10 @@ function layoutTown(isl){
       for(let i=0;i<8;i++){const a=i/8*6.283;p.push(P(BOX,0x3a3a44,x+Math.cos(a)*0.42,y+2.52,z+Math.sin(a)*0.42,0,-a,0,0.02,0.18,0.02));}
       gl.push(P(CYL12,0xfff0b8,x,y+2.72,z,0,0,0,0.46,0.44,0.46));}}
   // palms along the town beach (shake or chop them like the other trees), clear of the dock and your boat
-  for(const [x,z] of palmSpots(isl,R,8,(x,z)=>!taken(K(x,z))&&Math.hypot(x-DOCK.x,z-DOCK.z)>3.5&&!(S.boat&&Math.hypot(x-S.boat.x,z-S.boat.z)<2.5))){const k=K(x,z);
+  if(!(S.home&&S.home.preset))for(const [x,z] of palmSpots(isl,R,8,(x,z)=>!taken(K(x,z))&&Math.hypot(x-DOCK.x,z-DOCK.z)>3.5&&!(S.boat&&Math.hypot(x-S.boat.x,z-S.boat.z)<2.5))){const k=K(x,z);
     tp.push(...shift(treeParts(PALMS[Math.floor(hash(x,z)*PALMS.length)],mulberry(hi(x,z,13)),0x9a9ea8),x,y0(x,z),z,hash(z,x)*6.28));TOWN.fixed.set(k,'decor');TOWN.res.set(k,'tree');}
+  if(S.home&&S.home.fire){const [x,z]=S.home.fire,y=y0(x,z),q=campfireParts();p.push(...shift(q.p,x,y,z,0));gl.push(...shift(q.gl,x,y,z,0));TOWN.lamps.push([x,y,z]);}
+  if(S.home&&S.home.tent){const [x,z]=S.home.tent,t=houseGroup(0);t.position.set(x+0.5,y0(x,z),z+0.5);t.rotation.y=-0.4;isl.group.add(t);}
   isl.group.add(M(p));addVeg(isl,isl.group,tp);if(gl.length){const m=M(gl,glowMat);m.castShadow=false;isl.group.add(m);}
   // flowers, clover and pebbles: instanced over the open grass (hidden again wherever you till or build)
   {const lists=FLORA_GEOS.map(()=>[]),clov=[],peb=[];
@@ -181,8 +184,23 @@ function townBuilding(b,R){const p=[],gl=[];let lit=true;
     p.push(P(BOX,0xf1e3c6,0,1.95,0.1,0,0,0,0.6,0.7,0.6),P(CONE4,0x5a6ab0,0,2.5,0.1,0,0.785,0,0.9,0.44,0.9),P(CYL12,0xf6f0e0,0,2.0,0.41,1.57,0,0,0.36,0.03,0.36),P(BOX,0x3a2a2a,0.04,2.03,0.43,0,0,0.6,0.02,0.16,0.01),P(BOX,0x3a2a2a,0,2.0,0.43,0,0,0,0.12,0.02,0.01));
     p.push(P(BOX,0x6a4a3a,0,0.42,0.76,0,0,0,0.5,0.8,0.04),P(CYL8,0x8a8e98,0.95,0.9,0.95,0,0,0,0.04,1.8,0.04),P(BOX,0x5fae44,1.08,1.66,0.95,0,0,0,0.26,0.18,0.02),P(ICO2,0xf6d04a,1.08,1.66,0.965,0,0,0,0.08,0.08,0.01));
     for(const x of [-0.62,0.62])gl.push(P(BOX,0x404a60,x,0.72,0.76,0,0,0,0.3,0.36,0.03));}
+  else if(b.roof!==undefined)cottage(p,gl,b.roof);
   else homeStyle(planVillagers()[b.n%6].pers,b.n,p,gl);
   return{p,gl,lit};}
+// a storybook cottage: cream walls, a coloured roof with a chimney, a wooden door, shuttered windows and a flower box.
+// roof -1 is a flat-roofed sandstone house instead
+function cottage(p,gl,roofCol){const wall=0xf3e6cc,base=0xb8ae9a;
+  if(roofCol<0){p.push(P(BOX,0xe2cda4,0,0.62,0,0,0,0,1.6,1.24,1.5),P(BOX,base,0,0.06,0,0,0,0,1.66,0.12,1.56),P(BOX,0xd2bc92,0,1.28,0,0,0,0,1.72,0.1,1.62),P(BOX,0xc8b088,0,1.36,0,0,0,0,1.5,0.06,1.4));
+    doorAt(p,gl,0x7a5234,-0.3,0,0.76);win(p,gl,0.38,0.66,0.76);win(p,gl,0.81,0.66,0,0.3,0.28,0xfbf8f0,'x');return;}
+  p.push(P(BOX,wall,0,0.5,0,0,0,0,1.5,1.0,1.3),P(BOX,base,0,0.06,0,0,0,0,1.56,0.12,1.36));roof(p,roofCol,wall,1.6,0.78,1.3,1.0);
+  p.push(P(BOX,0xb0a490,0.42,1.55,-0.25,0,0,0,0.2,0.5,0.2),P(BOX,0x8a8070,0.42,1.82,-0.25,0,0,0,0.24,0.05,0.24));
+  doorAt(p,gl,0x8a5a3a,-0.3,0,0.66);win(p,gl,0.38,0.58,0.66);
+  p.push(P(BOX,0x8a5a3a,0.38,0.38,0.72,0,0,0,0.42,0.08,0.1));for(let i=0;i<4;i++)p.push(P(SPH_XS,[0xf2a6c8,0xf6d04a,0xffffff,0xe86a5a][i],0.26+i*0.08,0.45,0.73,0,0,0,0.08,0.07,0.08));}
+// a campfire in a ring of stones, crossed logs and a flame
+function campfireParts(){const p=[],gl=[];for(let i=0;i<9;i++){const a=i/9*6.283;p.push(PG(SPH_LO,0xa8a8b0,0x6a6a74,Math.cos(a)*0.32,0.06,Math.sin(a)*0.32,0,a,0,0.16,0.12,0.14));}
+  p.push(P(CYL6,0x6a4228,0,0.07,0,0,0.6,1.5,0.07,0.46,0.07),P(CYL6,0x5a3822,0,0.08,0,0,-0.6,1.5,0.07,0.46,0.07),P(SPH_LO,0x3a2a22,0,0.03,0,0,0,0,0.36,0.04,0.36));
+  gl.push(P(CONE5,0xff8a30,0,0.2,0,0,0,0,0.26,0.36,0.26),P(CONE5,0xffd060,0.02,0.2,0.02,0,0.5,0,0.14,0.26,0.14),P(CONE5,0xff6a28,-0.07,0.16,-0.04,0,1,0.2,0.1,0.2,0.1));
+  return{p,gl};}
 /* ---- villager homes in coastal styles, one per personality (footprint ±1, door at the front centre, +z) ---- */
 function planks(p,c,x,y,z,w,h,d,axis='x'){const n=Math.max(2,Math.round((axis==='x'?w:d)/0.14));for(let i=0;i<n;i++){const t=(i+0.5)/n-0.5,sh=i%2?0.94:1.04;
   p.push(axis==='x'?P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x+t*w,y,z,0,0,0,w/n*0.96,h,d):P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x,y,z+t*d,0,0,0,w,h,d/n*0.96));}}

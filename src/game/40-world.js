@@ -7,7 +7,7 @@ const FARM={x:-40,z:1};
 const TOWN_W=22,TOWN_D=17;
 // your island's coastline: the classic shape, carved by the bays and coves picked on the island-choice screen (S.home.shape);
 // the wobble only ever pulls the coast inward, so a chosen island never grows into the farm or its neighbours
-function townQ(x,z){const dx=Math.abs(x)/TOWN_W,dz=Math.abs(z-0.5)/TOWN_D,sh=S.home&&S.home.shape,e=sh&&sh[6]||5;let q=Math.pow(dx**e+dz**e,1/e)*(1+(hash(x*0.7,z*1.1)-0.5)*0.035);
+function townQ(x,z){const sc=S.home&&S.home.scale||1,dx=Math.abs(x)/(TOWN_W*sc),dz=Math.abs(z-0.5)/(TOWN_D*sc),sh=S.home&&S.home.shape,e=sh&&sh[6]||5;let q=Math.pow(dx**e+dz**e,1/e)*(1+(hash(x*0.7,z*1.1)-0.5)*0.035);
   if(sh){const a=Math.atan2((z-0.5)/TOWN_D,x/TOWN_W);let w=sh[0]*(0.5+0.5*Math.sin(2*a+sh[3]))+sh[1]*(0.5+0.5*Math.sin(3*a+sh[4]))+sh[2]*(0.5+0.5*Math.sin(5*a+sh[5]));
     for(const [ca,cd,cw] of S.home.coves||[]){const d=Math.atan2(Math.sin(a-ca),Math.cos(a-ca))/cw;w+=cd*Math.exp(-d*d);}q/=1-Math.min(0.45,w);}
   return q;}
@@ -68,7 +68,7 @@ function tileTypeI(isl,x,z){const R=islR(isl),d=islDist(isl,x,z),b=BIOMES[isl.bi
   return t;}
 function genIslands(){farmMaxG=null;
   const R=mulberry(S.worldSeed);
-  islands=[{id:0,cx:0,cz:0,biome:'home',name:'Home',home:true,seed:S.worldSeed|0,riverN:1,rw:2}];
+  islands=[{id:0,cx:0,cz:0,biome:'home',name:'Home',home:true,seed:S.worldSeed|0,riverN:S.home&&S.home.preset?0:1,rw:2}];
   const bl=shuffle(BIOME_IDS.slice(),R);const used=new Set();
   for(let i=0;i<13;i++){
     const biome=i<bl.length?bl[i]:bl[Math.floor(R()*bl.length)],B=BIOMES[biome];

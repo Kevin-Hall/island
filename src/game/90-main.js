@@ -72,6 +72,7 @@ ensureBoat(true);if(S.sea&&isLand(Math.round(S.boat.x),Math.round(S.boat.z))){S.
 if(isNew)setupNew();
 grantKits();const farmNew=!S.farmInit;if(farmNew){genDebris();if(S.scratch)genWild();S.farmInit=1;S.tidy=1;}
 // wild islands from before the tidier woods: thin out most of the loose weeds and twigs
+if(S.acornLay){delete S.acornLay;layAcornfield();}
 if(S.wild&&!S.tidy){S.tidy=1;S.debris=S.debris.filter(d=>!((d.k==='weed'||d.k==='twig')&&Math.random()<0.7));}
 if(isNew||(!S.sea&&!walkable(Math.round(vil.x),Math.round(vil.z)))){if(S.scratch){vil.x=vil.tx=DOCK.x+0.5;vil.z=vil.tz=DOCK.z-1.2;}else{vil.x=vil.tx=TOWN.plaza[0]+0.5;vil.z=vil.tz=TOWN.plaza[1]+2.4;}}
 if(S.sea){vil.x=vil.tx=S.boat.x;vil.z=vil.tz=S.boat.z;}
