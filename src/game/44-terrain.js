@@ -15,12 +15,12 @@ function islandBounds(isl){let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const k of isl.
   isl.bc={x:(x0+x1)/2,z:(z0+z1)/2,r:Math.hypot(x1-x0,z1-z0)/2+2};}
 // hide islands out of view; and only islands near the sun's shadow box (±18 around the camera target) render into the
 // shadow map, since shadows further out are never drawn: this halves the triangles when zoomed out
-function cullIslands(){const view=cam.dist+70;for(const isl of islands){const b=isl.bc;if(!b)continue;const d=Math.hypot(b.x-cam.tx,b.z-cam.tz)-b.r,vis=d<view;
+function cullIslands(){const view=cam.dist+110;for(const isl of islands){const b=isl.bc;if(!b)continue;const d=Math.hypot(b.x-cam.tx,b.z-cam.tz)-b.r,vis=d<view;
     // wild plants are small: only draw them when you're reasonably close (each one is its own mesh)
-    if(isl.group)isl.group.visible=vis;if(isl.pgroup)isl.pgroup.visible=vis&&cam.dist+Math.max(0,d)<46;
+    if(isl.group)isl.group.visible=vis;if(isl.pgroup)isl.pgroup.visible=vis&&cam.dist+Math.max(0,d)<60;
     // level of detail for trees: light meshes when the island is far away or you're zoomed well out (with a little hysteresis)
-    const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>42:far>47;if(isl.veg&&low!==isl.lowOn){isl.lowOn=low;for(const [hi,lo] of [...isl.veg,...(isl.floraLod||[])]){hi.visible=!low;if(lo)lo.visible=low;}}
-    const sh=vis&&d<26;if(isl.group&&isl.shadowOn!==sh){isl.shadowOn=sh;if(!isl.casters){isl.casters=[];isl.group.traverse(o=>{if(o.castShadow)isl.casters.push(o);});}for(const o of isl.casters)o.castShadow=sh;}}}
+    const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>56:far>61;if(isl.veg&&low!==isl.lowOn){isl.lowOn=low;for(const [hi,lo] of [...isl.veg,...(isl.floraLod||[])]){hi.visible=!low;if(lo)lo.visible=low;}}
+    const sh=vis&&d<32;if(isl.group&&isl.shadowOn!==sh){isl.shadowOn=sh;if(!isl.casters){isl.casters=[];isl.group.traverse(o=>{if(o.castShadow)isl.casters.push(o);});}for(const o of isl.casters)o.castShadow=sh;}}}
 // terrain baker: collects tiles (a geometry scaled and placed without rotation, a colour, optional sand corner heights) into one mesh
 const _flatGeo=new Map();const flatGeo=g=>{let n=_flatGeo.get(g);if(!n){n=g.index?g.toNonIndexed():g;_flatGeo.set(g,n);}return n;};
 const bilerp4=(c,lx,lz)=>{const u=clamp(lx+0.5,0,1),v=clamp(lz+0.5,0,1);return lerp(lerp(c[0],c[1],u),lerp(c[3],c[2],u),v);};

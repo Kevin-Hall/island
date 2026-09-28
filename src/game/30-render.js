@@ -7,8 +7,9 @@ renderer.setPixelRatio(1);
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.BasicShadowMap;
 const scene=new T.Scene();const skyHz=new T.Color(0xbfe0ff),skyZen=new T.Color(0x3c8ce8),skyGlow=new T.Color(0xffffff);let skyGA=0;
 scene.fog=new T.Fog(0xbfe0ff,40,150);
-const NEAR=0.5,FAR=420;
-const camera=new T.PerspectiveCamera(36,1,NEAR,FAR);
+const NEAR=1.5,FAR=640;
+const camera=new T.PerspectiveCamera(2*Math.atan(Math.tan(18*Math.PI/180)/LENS)*180/Math.PI,1,NEAR,FAR);
+const camD=()=>cam.dist*LENS; // how far the camera really is from what it looks at (cam.dist is the zoom)
 let W=1,H=1,PX=2,rt=null;
 const post={scene:new T.Scene(),cam:new T.OrthographicCamera(-1,1,1,-1,0,1)};
 const postMat=new T.ShaderMaterial({
@@ -23,8 +24,10 @@ const postMat=new T.ShaderMaterial({
       vec3 c=texture2D(tC,vUv).rgb;
       float d=lin(vUv);
       vec2 px=1./res;
-      float dn=max(max(lin(vUv+vec2(px.x,0.)),lin(vUv-vec2(px.x,0.))),max(lin(vUv+vec2(0.,px.y)),lin(vUv-vec2(0.,px.y))));
-      float e=step(max(.45,d*.035),dn-d)*step(d,cf*.6);
+      float fz=cf*.45;/* neighbours out in the sky don't count: no outline along the horizon */
+      float n1=lin(vUv+vec2(px.x,0.)),n2=lin(vUv-vec2(px.x,0.)),n3=lin(vUv+vec2(0.,px.y)),n4=lin(vUv-vec2(0.,px.y));
+      float dn=max(max(n1>fz?d:n1,n2>fz?d:n2),max(n3>fz?d:n3,n4>fz?d:n4));
+      float e=step(max(.35,d*.018),dn-d)*step(d,cf*.6);
       c=mix(c,c*vec3(.36,.32,.46),e*.9);
       float b=bayer(gl_FragCoord.xy)-.5;
       c=floor(c*levels+b+.5)/levels;
@@ -69,11 +72,11 @@ function resize(){
   postMat.uniforms.tC.value=rt.texture;postMat.uniforms.tD.value=rt.depthTexture;postMat.uniforms.res.value.set(W,H);
   camera.aspect=cw/ch;camera.updateProjectionMatrix();applyCam();
 }
-const cam={yaw:Math.PI*0.27,pitch:0.58,dist:30,tx:0,tz:0.3};
-function fitZoom(){const a=window.innerWidth/window.innerHeight;cam.dist=clamp(20/Math.max(0.55,a),18,40);}
+const cam={yaw:Math.PI*0.27,pitch:0.5,dist:30,tx:0,tz:0.3};
+function fitZoom(){const a=window.innerWidth/window.innerHeight;cam.dist=clamp(25/Math.max(0.55,a),22,46);}
 function applyCam(){
-  const hd=cam.dist*Math.cos(cam.pitch);
-  camera.position.set(cam.tx+Math.sin(cam.yaw)*hd,Math.sin(cam.pitch)*cam.dist,cam.tz+Math.cos(cam.yaw)*hd);
+  const hd=camD()*Math.cos(cam.pitch);
+  camera.position.set(cam.tx+Math.sin(cam.yaw)*hd,Math.sin(cam.pitch)*camD(),cam.tz+Math.cos(cam.yaw)*hd);
   camera.lookAt(cam.tx,0.4-hd*hd*CURVE,cam.tz);
   camera.updateMatrixWorld();
 }
@@ -135,6 +138,14 @@ const grad=(()=>{const d=new Uint8Array([88,88,88,255,160,160,160,255,222,222,22
 const toon=o=>new T.MeshToonMaterial(Object.assign({gradientMap:grad},o));
 const vcMat=toon({vertexColors:true});
 const vcMatFlat=toon({color:0xffffff});
+// foliage: the same toon look, speckled with little light and dark leaf clusters fixed in world space (two sizes of blotch),
+// so after the pixel pass a crown reads as a mass of painted leaves rather than a plain ball
+const leafMat=toon({vertexColors:true});
+leafMat.onBeforeCompile=sh=>{
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vLeafP;')
+    .replace('#include <begin_vertex>','#include <begin_vertex>\n{vec4 lp=vec4(transformed,1.);\n#ifdef USE_INSTANCING\nlp=instanceMatrix*lp;\n#endif\nvLeafP=(modelMatrix*lp).xyz;}');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vLeafP;\nfloat lh(vec3 p){return fract(sin(dot(p,vec3(12.9898,78.233,37.719)))*43758.5453);}')
+    .replace('#include <color_fragment>','#include <color_fragment>\n{float ln=lh(floor(vLeafP*7.))*.55+lh(floor(vLeafP*3.))*.45;diffuseColor.rgb*=.86+.26*ln;}');};
 const glowMat=toon({vertexColors:true,emissive:0xffc460,emissiveIntensity:0});
 const lumMat=toon({vertexColors:true,emissive:0x444444,emissiveIntensity:1});
 const goldMat=toon({color:0xf5c542,emissive:0x6a4200,emissiveIntensity:.7});
@@ -156,7 +167,7 @@ function pool(y=0.03,s=1){const m=new T.Mesh(POOL_GEO,poolMat);m.position.y=y;m.
    ========================================================= */
 const hemi=new T.HemisphereLight(0xffffff,0x445544,.6);scene.add(hemi);
 const sun=new T.DirectionalLight(0xffffff,1);sun.castShadow=true;
-sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-18,right:18,top:18,bottom:-18,near:1,far:90});
+sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-28,right:28,top:28,bottom:-28,near:1,far:110});
 sun.shadow.bias=-0.0015;sun.shadow.normalBias=0.02;scene.add(sun,sun.target);
 
 const waterMat=new T.MeshBasicMaterial({color:0x3565cc});

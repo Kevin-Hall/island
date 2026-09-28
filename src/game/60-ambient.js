@@ -31,7 +31,7 @@ let sail=null;
 const cloudMat=new T.MeshBasicMaterial({colorWrite:false,depthWrite:false});
 const clouds=[];
 for(let i=0;i<6;i++){const R=mulberry(i*31+5),p=[];for(let j=0;j<5;j++)p.push(P(BOX,0xffffff,(R()-0.5)*3,0,(R()-0.5)*1.8,0,0,0,1.5+R()*2,0.6,1.2+R()*1.4));
-  const m=new T.Mesh(merge(p),cloudMat);m.castShadow=true;m.frustumCulled=false;m.userData={ox:-40+i*14,oz:(R()-0.5)*40,sp:0.35+R()*0.3};m.position.y=11;scene.add(m);clouds.push(m);}
+  const m=new T.Mesh(merge(p),cloudMat);m.castShadow=true;m.frustumCulled=false;m.userData={ox:-40+i*14,oz:(R()-0.5)*40,sp:0.35+R()*0.3};m.position.y=11;m.visible=false;/* with the camera high and far back these would sit between it and the island: the sky's own clouds (87-atmosphere) do the job */scene.add(m);clouds.push(m);}
 
 const gulls=[];
 for(let i=0;i<3;i++){const g=new T.Group();g.add(M([P(ICO2,0xf4f4f0,0,0,0,0,0,0,0.14,0.12,0.36),P(ICO2,0xf4f4f0,0,0.04,0.17,0,0,0,0.1,0.1,0.1),P(CONE4,0xf6d04a,0,0.03,0.25,1.57,0,0,0.04,0.08,0.03),P(CONE4,0xdedee6,0,0,-0.22,-1.57,0,0,0.1,0.12,0.03),P(ICO2,0x1a1420,0.04,0.06,0.2,0,0,0,0.02,0.02,0.02),P(ICO2,0x1a1420,-0.04,0.06,0.2,0,0,0,0.02,0.02,0.02)]));

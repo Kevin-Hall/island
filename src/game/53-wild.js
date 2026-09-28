@@ -9,7 +9,7 @@
 // 1 an evergreen pine, 3 a flowering/fruiting tree. Spring: fresh green with blossom (3 is a cherry in bloom); summer: deep
 // green (3 carries red fruit); autumn: amber, scarlet and gold; winter: bare branches dusted with snow, and snowy pines.
 const TREE_COLS={spring:[[0x8ed06a,0x5aa846,0x356e32],null,[0x82c460,0x4f9a40,0x2e662e],[0xffd8e6,0xf4a8c4,0xd07a9a]],
-  summer:[[0x6aae48,0x4a8a38,0x2e6428],null,[0x5aa044,0x3e8034,0x24562a],[0x78b650,0x4e9038,0x2f6a2c]],
+  summer:[[0x7cc452,0x4e9c3c,0x2c682c],null,[0x6ab648,0x3e8a36,0x245a2a],[0x86c858,0x52a03e,0x2e6a2c]],
   autumn:[[0xf4a444,0xe8803a,0xc85e24],null,[0xec6a4a,0xc8402a,0x982a22],[0xf6d060,0xe0b040,0xb08a28]]};
 function bareTree(p,R,snow){trunkP(p,R,0x6a5444,0.9,0.13,0x4e3e32);
   for(let i=0;i<7;i++){const a=i/7*6.283+R()*0.4,tl=0.55+R()*0.4,L=0.55+R()*0.3,y=0.95+R()*0.5,x=Math.cos(a)*Math.sin(tl)*L*0.5,z=Math.sin(a)*Math.sin(tl)*L*0.5;
@@ -18,12 +18,13 @@ function bareTree(p,R,snow){trunkP(p,R,0x6a5444,0.9,0.13,0x4e3e32);
     if(snow)p.push(P(SPH_LO,0xf4f8fa,tx,ty+0.03,tz,0,R()*3,0,0.16,0.07,0.16));}
   if(snow)p.push(P(SPH_LO,0xf4f8fa,0,1.02,0,0,0,0,0.34,0.09,0.34));}
 function wildTreeParts(v){const s=season(),R=mulberry(hi(v,31,S.worldSeed|0)),p=[];v%=4;
-  if(v===1)return treeParts(s==='winter'?'snowpine':'pine',R,0x9a9ea8);
+  if(v===1)return treeParts(s==='winter'?'snowpine':'pine',R,0x9a9ea8).map(q=>Object.assign(q,{x:q.x*0.78,y:q.y*0.78,z:q.z*0.78,sx:q.sx*0.78,sy:q.sy*0.78,sz:q.sz*0.78}));
   if(s==='winter'){bareTree(p,R,true);return p;}
-  const cols=TREE_COLS[s][v];trunkP(p,R,0x7a5230,0.85,0.13,0x5e3e24);canopy(p,R,cols,0,1.3,0,0.55);
-  if(s==='spring'&&v===0)dots(p,R,12,0,1.55,0,0.78,0.52,[0xffffff,0xfbe0ea],0xf6d04a,0.08);
-  if(s==='summer'&&v===3)fruit(p,R,6,0xe0402e,0,1.3,0,0.55);
-  if(s==='autumn'&&v===3)fruit(p,R,5,0xf08a2a,0,1.3,0,0.55);
+  // a small round-crowned tree on a clear trunk, about a tile across (a lollipop, like a storybook island's)
+  const cols=TREE_COLS[s][v],cy=1.08,rd=0.42;trunkP(p,R,0x7a5230,0.62,0.12,0x5e3e24);canopy(p,R,cols,0,cy,0,rd);
+  if(s==='spring'&&v===0)dots(p,R,10,0,cy+0.2,0,0.6,0.4,[0xffffff,0xfbe0ea],0xf6d04a,0.07);
+  if(s==='summer'&&v===3)fruit(p,R,5,0xe0402e,0,cy,0,rd);
+  if(s==='autumn'&&v===3)fruit(p,R,4,0xf08a2a,0,cy,0,rd);
   if(s==='autumn')for(let i=0;i<6;i++)p.push(P(SPH_XS,cols[i%3],(R()-0.5)*1.6,0.02,(R()-0.5)*1.6,0,R()*3,0,0.16,0.02,0.11));
   return p;}
 const wildTreeKinds=()=>['wild',season()];
@@ -47,7 +48,7 @@ function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S
     const forest=f>0.72-fAmt*0.3,thicket=f>0.6-fAmt*0.3;
     if(cliffEdge(x,z)&&r<0.16)kd=r<0.05?'boulder':'rock';
     // tidy, readable woods: trees with a few bushes at their feet, bushy edges, and open meadows with only the odd weed or stone
-    else if(forest&&!wet(x,z))kd=r<0.55?'tree':r<0.64?'bush':null;
+    else if(forest&&!wet(x,z))kd=r<0.44?'tree':r<0.52?'bush':null;
     else if(thicket)kd=r<0.16?'tree':r<0.34?'bush':r<0.38?'weed':null;
     else kd=r<0.022?'weed':r<0.03?'twig':r<0.04?'rock':r<0.055?'bush':null;
     if(!kd)continue;const d=newDebris(x,z,kd);d.v=Math.floor(R()*(kd==='tree'?4:3));d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}}

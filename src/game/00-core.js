@@ -6,7 +6,9 @@ const $=id=>document.getElementById(id);
    Curved world: every vertex drops away with distance from the camera
    (shadow depth passes stay flat so shadows line up with lighting)
    ========================================================= */
-const CURVE=0.0042;
+// the camera is a long lens, far back (LENS× the distance of a 36° lens, for the same framing), so the island reads almost
+// flat, like a diorama, with near and far trees the same size; the curve is eased to match so the horizon still shows
+const LENS=1.8,CURVE=0.0042/Math.pow(LENS,1.5);
 T.ShaderChunk.project_vertex=`
 vec4 mvPosition = vec4( transformed, 1.0 );
 #ifdef USE_INSTANCING

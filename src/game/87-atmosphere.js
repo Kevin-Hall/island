@@ -30,10 +30,11 @@ function updatePrints(dt){let n=0;for(const p of prints){p.age+=dt;const s=p.age
 // --- sky: drifting clouds, the moon, shooting stars, rainbows ---
 const skyCloudMat=new T.MeshBasicMaterial({vertexColors:true,fog:false,transparent:true,opacity:0.95,depthWrite:false});
 const skyClouds=[];
-for(let i=0;i<18;i++){const R=mulberry(i*97+11),p=[];const n=5+Math.floor(R()*4);
-  for(let j=0;j<n;j++){const x=(j-n/2)*0.8+(R()-0.5)*0.4,s=0.9+R()*0.9;p.push(P(ICO,0xffffff,x,s*0.3,(R()-0.5)*0.6,0,R()*3,0,s*1.4,s,s*1.1),P(ICO,0xdfe6f2,x,0,(R()-0.5)*0.6,0,R()*3,0,s*1.3,s*0.5,s));}
+// big puffy cumulus banked along the horizon (the long-lens camera sees a narrow slice of sky, so there are plenty)
+for(let i=0;i<44;i++){const R=mulberry(i*97+11),p=[];const n=5+Math.floor(R()*5);
+  for(let j=0;j<n;j++){const x=(j-n/2)*0.75+(R()-0.5)*0.4,s=0.9+R()*1.1-Math.abs(j-n/2)*0.12;p.push(P(SPH_LO,0xffffff,x,s*0.35,(R()-0.5)*0.6,0,R()*3,0,s*1.4,s*1.1,s*1.1),P(SPH_LO,0xdde6f4,x,0,(R()-0.5)*0.6,0,R()*3,0,s*1.35,s*0.45,s));}
   const m=new T.Mesh(merge(p),skyCloudMat);m.frustumCulled=false;m.renderOrder=-1;scene.add(m);
-  skyClouds.push({m,a:i/18*6.283+R()*0.3,d:120+R()*50,f:0.25+R()*0.7,s:4+R()*3});}
+  skyClouds.push({m,a:i/44*6.283+R()*0.2,d:130+R()*40,f:0.04+R()*0.5,s:3.5+R()*3});}
 const moon=new T.Group();
 {const disc=new T.Mesh(new T.CircleGeometry(5,24),new T.MeshBasicMaterial({color:0xfff4d6,fog:false,transparent:true}));moon.add(disc);
   for(const [x,y,r] of [[-1.6,1,1.1],[1.4,-0.8,1.4],[0.4,2.2,0.7],[-0.6,-2,0.8]]){const c=new T.Mesh(new T.CircleGeometry(r,14),new T.MeshBasicMaterial({color:0xece0bc,fog:false,transparent:true}));c.position.set(x,y,0.05);moon.add(c);}
