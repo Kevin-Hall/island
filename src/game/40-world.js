@@ -13,14 +13,14 @@ function townQ(x,z){const dx=Math.abs(x)/TOWN_W,dz=Math.abs(z-0.5)/TOWN_D,sh=S.h
   return q;}
 /* ---- home island styles, chosen with the island: ground palette, town trees and wild flowers ---- */
 const HOME_STYLES={
-  meadow: {name:'Meadow',  grass:[0x6aa843,0x74b24a,0x629e3e],sand:[0xd2ad74,0xc9a36c],trees:['oak','oak','oak','pine','maple','bush','flowerbed','bush'],blurb:'Round oaks, wildflowers and soft green hills.'},
+  meadow: {name:'Meadow',  grass:[0x6aa843,0x74b24a,0x629e3e],sand:[0xf0dcaa,0xe8d29e],trees:['oak','oak','oak','pine','maple','bush','flowerbed','bush'],blurb:'Round oaks, wildflowers and soft green hills.'},
   tropic: {name:'Tropical',grass:[0x58b85a,0x64c464,0x4cac52],sand:[0xe6c890,0xdcbc84],trees:['palm','palmtall','oak','palmfan','bush','bush','flowerbed','bush'],blurb:'Palms, bright sand and warm turquoise shallows.'},
   autumn: {name:'Autumn',  grass:[0x8ea440,0x9aae46,0x84983c],sand:[0xd2aa74,0xc8a06c],trees:['maple','mapleR','maple','oak','pine','bush','flowerbed','bush'],blurb:'Golden grass and maples in red and amber.'},
   blossom:{name:'Blossom', grass:[0x7ab852,0x86c25a,0x70ae4c],sand:[0xe0bc8c,0xd6b284],trees:['cherry','cherry','oak','cherry','pine','bush','flowerbed','bush'],blurb:'Cherry trees in bloom and petals on the breeze.'}};
 function applyHomeStyle(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow']||HOME_STYLES.meadow;BIOMES.home.grass=S.wild?SEASON_GRASS[season()]:st.grass;BIOMES.home.sand=st.sand;return st;}
 /* ---- real seasons (a wild island follows the calendar: northern-hemisphere months, or S.seasonOv from the dev tools) ---- */
 function season(){if(S.seasonOv)return S.seasonOv;const m=new Date(typeof gameNow==='function'?gameNow():Date.now()).getMonth();return m===11||m<2?'winter':m<5?'spring':m<9?'summer':'autumn';} // leaves turn in October and November, as they do in the woods
-const SEASON_GRASS={spring:[0x82ca50,0x8ed25a,0x78c048],summer:[0x6cba44,0x78c24c,0x62ae3c],autumn:[0x98b048,0xa4b850,0x8ea842],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
+const SEASON_GRASS={spring:[0x82ca50,0x8ed25a,0x78c048],summer:[0x64b040,0x6eb846,0x5aa43a],autumn:[0x98b048,0xa4b850,0x8ea842],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
 let seasonNow=null;
 // when the season turns (checked each morning), the island's trees and grass change with it
 function seasonCheck(force){const s=season();if(s===seasonNow&&!force)return;const first=seasonNow===null;seasonNow=s;if(!S.wild||first&&!force)return;

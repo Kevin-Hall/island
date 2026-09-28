@@ -78,17 +78,15 @@ function applyCam(){
   // the view leads a little ahead of you, so you stand in the lower half of the screen with the island opening out beyond
   const hd=camD()*Math.cos(cam.pitch),lead=cam.dist*0.1,tx=cam.tx-Math.sin(cam.yaw)*lead,tz=cam.tz-Math.cos(cam.yaw)*lead;
   camera.position.set(tx+Math.sin(cam.yaw)*hd,Math.sin(cam.pitch)*camD(),tz+Math.cos(cam.yaw)*hd);
-  camera.lookAt(tx,0.4,tz);
+  camera.lookAt(tx,0.4-hd*hd*CURVE,tz);
   camera.updateMatrixWorld();
 }
 const _pv=new T.Vector3();
 // how far the curved world has dropped at (x,z) as a given camera sees it (mirrors project_vertex in 00-core)
-function curveDropFor(cm,x,z){const e=cm.matrixWorld.elements,t=e[13]/Math.max(0.05,e[9]),r=Math.max(0,Math.hypot(x-(e[12]-e[8]*t),z-(e[14]-e[10]*t))-CURVE_R0);return r*r*CURVE;}
+function curveDropFor(cm,x,z){const dx=x-cm.position.x,dz=z-cm.position.z;return(dx*dx+dz*dz)*CURVE;}
 function curveY(x,z){return-curveDropFor(camera,x,z);}
 // the angle below level at which the sea meets the sky (the flattest line of sight that still grazes the curved world)
-let _hzKey='',_hzA=0.3;
-function horizonA(){const h=Math.max(0.05,camera.position.y),H0=h/Math.tan(Math.max(0.05,cam.pitch)),key=h.toFixed(2)+'|'+H0.toFixed(2);if(key===_hzKey)return _hzA;_hzKey=key;
-  let m=1e9;for(let s=0;s<400;s+=0.5){const q=(h+CURVE*s*s)/(H0+CURVE_R0+s);if(q<m)m=q;}return _hzA=Math.atan(m);}
+function horizonA(){return Math.atan(2*Math.sqrt(Math.max(0.05,camera.position.y)*CURVE));}
 function toScreen(x,y,z){_pv.set(x,y+curveY(x,z),z).project(camera);return[(_pv.x+1)/2*window.innerWidth,(1-_pv.y)/2*window.innerHeight,_pv.z];}
 
 /* =========================================================
@@ -178,6 +176,18 @@ sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-28,righ
 sun.shadow.bias=-0.0015;sun.shadow.normalBias=0.02;scene.add(sun,sun.target);
 
 const waterMat=new T.MeshBasicMaterial({color:0x3565cc});
+// the open sea isn't flat colour: soft darker and lighter patches, and bright ripple streaks that drift with the swell
+// (the pixel pass turns them into little painted wave marks)
+const waterU={uT:{value:0}};
+waterMat.onBeforeCompile=sh=>{sh.uniforms.uT=waterU.uT;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;')
+    .replace('#include <color_fragment>',`#include <color_fragment>
+      {vec2 q=vWp.xz;float n=fract(sin(dot(floor(q*.45),vec2(12.9898,78.233)))*43758.5453)*.5+fract(sin(dot(floor(q*1.3),vec2(39.3,11.7)))*43758.5453)*.5;
+       diffuseColor.rgb*=.93+.1*n;
+       float band=sin(q.y*2.8+sin(q.x*.6+uT*.5)*1.4-uT*.9),pch=sin(q.x*1.9+q.y*.4+uT*.45)*sin(q.y*.8-q.x*.5-uT*.3);
+       float wv=step(.96,band)*step(.3,pch);
+       diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*1.3+.1,wv*.8);}`);};
 const water=new T.Mesh(new T.PlaneGeometry(520,520,52,52).rotateX(-Math.PI/2),waterMat);water.frustumCulled=false;scene.add(water);
 const s1Mat=new T.MeshBasicMaterial({color:0x7ea6e8}),s2Mat=new T.MeshBasicMaterial({color:0x5584da});
 const TILE_PLANE=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2);

@@ -299,9 +299,9 @@ const $=id=>document.getElementById(id);
    (shadow depth passes stay flat so shadows line up with lighting)
    ========================================================= */
 // the camera is a long lens, far back (LENS× the distance of a 36° lens, for the same framing), so the island reads almost
-// flat, like a diorama, with near and far trees the same size. The world is flat for CURVE_R0 around the middle of the
-// view and bends away beyond it (a little planet), so the island stays whole while the sea rolls over to a horizon
-const LENS=1.8,CURVE=0.02,CURVE_R0=14;
+// flat, like a diorama, with near and far trees the same size; the world curves away from the camera (eased to suit the
+// lens) so the sea rolls over to a horizon
+const LENS=1.8,CURVE=0.0042/Math.pow(LENS,1.5);
 T.ShaderChunk.project_vertex=`
 vec4 mvPosition = vec4( transformed, 1.0 );
 #ifdef USE_INSTANCING
@@ -313,10 +313,8 @@ vec4 mvPosition = vec4( transformed, 1.0 );
 	vec4 cw_ = modelMatrix * mvPosition;
 	vec3 vt_ = viewMatrix[3].xyz;
 	vec3 cp_ = -vec3( dot( viewMatrix[0].xyz, vt_ ), dot( viewMatrix[1].xyz, vt_ ), dot( viewMatrix[2].xyz, vt_ ) );
-	vec3 bk_ = vec3( viewMatrix[0].z, viewMatrix[1].z, viewMatrix[2].z );
-	vec2 tg_ = cp_.xz - bk_.xz * ( cp_.y / max( 0.05, bk_.y ) );
-	float r_ = max( 0.0, length( cw_.xz - tg_ ) - ${CURVE_R0.toFixed(2)} );
-	cw_.y -= r_ * r_ * ${CURVE.toFixed(5)};
+	vec2 cd_ = cw_.xz - cp_.xz;
+	cw_.y -= dot( cd_, cd_ ) * ${CURVE.toFixed(6)};
 	mvPosition = viewMatrix * cw_;
 #endif
 gl_Position = projectionMatrix * mvPosition;
@@ -845,17 +843,15 @@ function applyCam(){
   // the view leads a little ahead of you, so you stand in the lower half of the screen with the island opening out beyond
   const hd=camD()*Math.cos(cam.pitch),lead=cam.dist*0.1,tx=cam.tx-Math.sin(cam.yaw)*lead,tz=cam.tz-Math.cos(cam.yaw)*lead;
   camera.position.set(tx+Math.sin(cam.yaw)*hd,Math.sin(cam.pitch)*camD(),tz+Math.cos(cam.yaw)*hd);
-  camera.lookAt(tx,0.4,tz);
+  camera.lookAt(tx,0.4-hd*hd*CURVE,tz);
   camera.updateMatrixWorld();
 }
 const _pv=new T.Vector3();
 // how far the curved world has dropped at (x,z) as a given camera sees it (mirrors project_vertex in 00-core)
-function curveDropFor(cm,x,z){const e=cm.matrixWorld.elements,t=e[13]/Math.max(0.05,e[9]),r=Math.max(0,Math.hypot(x-(e[12]-e[8]*t),z-(e[14]-e[10]*t))-CURVE_R0);return r*r*CURVE;}
+function curveDropFor(cm,x,z){const dx=x-cm.position.x,dz=z-cm.position.z;return(dx*dx+dz*dz)*CURVE;}
 function curveY(x,z){return-curveDropFor(camera,x,z);}
 // the angle below level at which the sea meets the sky (the flattest line of sight that still grazes the curved world)
-let _hzKey='',_hzA=0.3;
-function horizonA(){const h=Math.max(0.05,camera.position.y),H0=h/Math.tan(Math.max(0.05,cam.pitch)),key=h.toFixed(2)+'|'+H0.toFixed(2);if(key===_hzKey)return _hzA;_hzKey=key;
-  let m=1e9;for(let s=0;s<400;s+=0.5){const q=(h+CURVE*s*s)/(H0+CURVE_R0+s);if(q<m)m=q;}return _hzA=Math.atan(m);}
+function horizonA(){return Math.atan(2*Math.sqrt(Math.max(0.05,camera.position.y)*CURVE));}
 function toScreen(x,y,z){_pv.set(x,y+curveY(x,z),z).project(camera);return[(_pv.x+1)/2*window.innerWidth,(1-_pv.y)/2*window.innerHeight,_pv.z];}
 
 /* =========================================================
@@ -945,6 +941,18 @@ sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-28,righ
 sun.shadow.bias=-0.0015;sun.shadow.normalBias=0.02;scene.add(sun,sun.target);
 
 const waterMat=new T.MeshBasicMaterial({color:0x3565cc});
+// the open sea isn't flat colour: soft darker and lighter patches, and bright ripple streaks that drift with the swell
+// (the pixel pass turns them into little painted wave marks)
+const waterU={uT:{value:0}};
+waterMat.onBeforeCompile=sh=>{sh.uniforms.uT=waterU.uT;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;')
+    .replace('#include <color_fragment>',`#include <color_fragment>
+      {vec2 q=vWp.xz;float n=fract(sin(dot(floor(q*.45),vec2(12.9898,78.233)))*43758.5453)*.5+fract(sin(dot(floor(q*1.3),vec2(39.3,11.7)))*43758.5453)*.5;
+       diffuseColor.rgb*=.93+.1*n;
+       float band=sin(q.y*2.8+sin(q.x*.6+uT*.5)*1.4-uT*.9),pch=sin(q.x*1.9+q.y*.4+uT*.45)*sin(q.y*.8-q.x*.5-uT*.3);
+       float wv=step(.96,band)*step(.3,pch);
+       diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*1.3+.1,wv*.8);}`);};
 const water=new T.Mesh(new T.PlaneGeometry(520,520,52,52).rotateX(-Math.PI/2),waterMat);water.frustumCulled=false;scene.add(water);
 const s1Mat=new T.MeshBasicMaterial({color:0x7ea6e8}),s2Mat=new T.MeshBasicMaterial({color:0x5584da});
 const TILE_PLANE=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2);
@@ -1042,14 +1050,14 @@ function townQ(x,z){const dx=Math.abs(x)/TOWN_W,dz=Math.abs(z-0.5)/TOWN_D,sh=S.h
   return q;}
 /* ---- home island styles, chosen with the island: ground palette, town trees and wild flowers ---- */
 const HOME_STYLES={
-  meadow: {name:'Meadow',  grass:[0x6aa843,0x74b24a,0x629e3e],sand:[0xd2ad74,0xc9a36c],trees:['oak','oak','oak','pine','maple','bush','flowerbed','bush'],blurb:'Round oaks, wildflowers and soft green hills.'},
+  meadow: {name:'Meadow',  grass:[0x6aa843,0x74b24a,0x629e3e],sand:[0xf0dcaa,0xe8d29e],trees:['oak','oak','oak','pine','maple','bush','flowerbed','bush'],blurb:'Round oaks, wildflowers and soft green hills.'},
   tropic: {name:'Tropical',grass:[0x58b85a,0x64c464,0x4cac52],sand:[0xe6c890,0xdcbc84],trees:['palm','palmtall','oak','palmfan','bush','bush','flowerbed','bush'],blurb:'Palms, bright sand and warm turquoise shallows.'},
   autumn: {name:'Autumn',  grass:[0x8ea440,0x9aae46,0x84983c],sand:[0xd2aa74,0xc8a06c],trees:['maple','mapleR','maple','oak','pine','bush','flowerbed','bush'],blurb:'Golden grass and maples in red and amber.'},
   blossom:{name:'Blossom', grass:[0x7ab852,0x86c25a,0x70ae4c],sand:[0xe0bc8c,0xd6b284],trees:['cherry','cherry','oak','cherry','pine','bush','flowerbed','bush'],blurb:'Cherry trees in bloom and petals on the breeze.'}};
 function applyHomeStyle(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow']||HOME_STYLES.meadow;BIOMES.home.grass=S.wild?SEASON_GRASS[season()]:st.grass;BIOMES.home.sand=st.sand;return st;}
 /* ---- real seasons (a wild island follows the calendar: northern-hemisphere months, or S.seasonOv from the dev tools) ---- */
 function season(){if(S.seasonOv)return S.seasonOv;const m=new Date(typeof gameNow==='function'?gameNow():Date.now()).getMonth();return m===11||m<2?'winter':m<5?'spring':m<9?'summer':'autumn';} // leaves turn in October and November, as they do in the woods
-const SEASON_GRASS={spring:[0x82ca50,0x8ed25a,0x78c048],summer:[0x6cba44,0x78c24c,0x62ae3c],autumn:[0x98b048,0xa4b850,0x8ea842],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
+const SEASON_GRASS={spring:[0x82ca50,0x8ed25a,0x78c048],summer:[0x64b040,0x6eb846,0x5aa43a],autumn:[0x98b048,0xa4b850,0x8ea842],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
 let seasonNow=null;
 // when the season turns (checked each morning), the island's trees and grass change with it
 function seasonCheck(force){const s=season();if(s===seasonNow&&!force)return;const first=seasonNow===null;seasonNow=s;if(!S.wild||first&&!force)return;
@@ -1786,7 +1794,7 @@ function binGroup(){const g=new T.Group();g.add(M([P(BOX,0x8a5a36,0,0.22,0,0,0,0
 // 1 an evergreen pine, 3 a flowering/fruiting tree. Spring: fresh green with blossom (3 is a cherry in bloom); summer: deep
 // green (3 carries red fruit); autumn: amber, scarlet and gold; winter: bare branches dusted with snow, and snowy pines.
 const TREE_COLS={spring:[[0x8ed06a,0x5aa846,0x356e32],null,[0x82c460,0x4f9a40,0x2e662e],[0xffd8e6,0xf4a8c4,0xd07a9a]],
-  summer:[[0x7cc452,0x4e9c3c,0x2c682c],null,[0x6ab648,0x3e8a36,0x245a2a],[0x86c858,0x52a03e,0x2e6a2c]],
+  summer:[[0x6cb44a,0x468f38,0x27602a],null,[0x5ea842,0x3a8034,0x21552a],[0x78bc50,0x4a9438,0x2a642a]],
   autumn:[[0xf4a444,0xe8803a,0xc85e24],null,[0xec6a4a,0xc8402a,0x982a22],[0xf6d060,0xe0b040,0xb08a28]]};
 function bareTree(p,R,snow){trunkP(p,R,0x6a5444,0.9,0.13,0x4e3e32);
   for(let i=0;i<7;i++){const a=i/7*6.283+R()*0.4,tl=0.55+R()*0.4,L=0.55+R()*0.3,y=0.95+R()*0.5,x=Math.cos(a)*Math.sin(tl)*L*0.5,z=Math.sin(a)*Math.sin(tl)*L*0.5;
@@ -4458,7 +4466,7 @@ function fadeThen(fn,keep){const f=$('fade');f.classList.add('on');setTimeout(()
 // a slow circle around the island from out at sea
 function arrivalFrame(now){if(!arriving)return;const dt=Math.min(0.1,(now-arriving.last)/1000);arriving.last=now;arriving.t+=dt;tt+=dt;
   cam.yaw+=dt*0.06;cam.tx=-9;cam.tz=1;cam.dist=60;cam.pitch=0.6;applyCam();cullIslands();
-  scene.fog.near=camD()+18;scene.fog.far=camD()+150;grassU.uTime.value=tt;riverU.uTime.value=tt;water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
+  scene.fog.near=camD()+18;scene.fog.far=camD()+150;grassU.uTime.value=tt;riverU.uTime.value=tt;waterU.uT.value=tt;water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
   updateSky(dt,tt);updateSkyDome();renderer.setRenderTarget(rt);renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;
   renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);requestAnimationFrame(arrivalFrame);}
 /* =========================================================
@@ -4509,13 +4517,13 @@ function updatePrints(dt){let n=0;for(const p of prints){p.age+=dt;const s=p.age
 // --- sky: drifting clouds, the moon, shooting stars, rainbows ---
 // sky things are placed by angle (skyPos) and drawn unbent by the curved world
 const noCurve=m=>{m.defines=Object.assign(m.defines||{},{NO_CURVE:''});return m;};
-const skyCloudMat=noCurve(new T.MeshBasicMaterial({vertexColors:true,fog:false,transparent:true,opacity:0.95,depthWrite:false}));
+const skyCloudMat=new T.MeshBasicMaterial({vertexColors:true,fog:false,transparent:true,opacity:0.95,depthWrite:false});
 const skyClouds=[];
-// big puffy cumulus banked along the horizon (the long-lens camera sees a narrow slice of sky, so there are plenty)
-for(let i=0;i<9;i++){const R=mulberry(i*97+11),p=[];const n=5+Math.floor(R()*5);
-  for(let j=0;j<n;j++){const x=(j-n/2)*0.75+(R()-0.5)*0.4,s=0.9+R()*1.1-Math.abs(j-n/2)*0.12;p.push(P(SPH_LO,0xffffff,x,s*0.35,(R()-0.5)*0.6,0,R()*3,0,s*1.4,s*1.1,s*1.1),P(SPH_LO,0xf8ebe0/* warm, sunlit undersides */,x,0.1,(R()-0.5)*0.6,0,R()*3,0,s*1.35,s*0.45,s));}
+// big puffy cumulus all round the sky, banked along the horizon: they stay put in the sky, so they sweep past as you turn
+for(let i=0;i<44;i++){const R=mulberry(i*97+11),p=[];const n=5+Math.floor(R()*5);
+  for(let j=0;j<n;j++){const x=(j-n/2)*0.75+(R()-0.5)*0.4,s=0.9+R()*1.1-Math.abs(j-n/2)*0.12;p.push(P(SPH_LO,0xffffff,x,s*0.35,(R()-0.5)*0.6,0,R()*3,0,s*1.4,s*1.1,s*1.1),P(SPH_LO,0xdde6f4,x,0,(R()-0.5)*0.6,0,R()*3,0,s*1.35,s*0.45,s));}
   const m=new T.Mesh(merge(p),skyCloudMat);m.frustumCulled=false;m.renderOrder=-1;scene.add(m);
-  skyClouds.push({m,a:(i/9-0.5)*0.9+R()*0.03,d:140+R()*40,f:0.14+((i*4)%9)/9*0.72,s:1.6+R()*2.2});}
+  skyClouds.push({m,a:i/44*6.283+R()*0.2,d:130+R()*40,f:0.04+R()*0.5,s:3.5+R()*3});}
 const moon=new T.Group();
 {const disc=new T.Mesh(new T.CircleGeometry(5,24),noCurve(new T.MeshBasicMaterial({color:0xfff4d6,fog:false,transparent:true})));moon.add(disc);
   for(const [x,y,r] of [[-1.6,1,1.1],[1.4,-0.8,1.4],[0.4,2.2,0.7],[-0.6,-2,0.8]]){const c=new T.Mesh(new T.CircleGeometry(r,14),noCurve(new T.MeshBasicMaterial({color:0xece0bc,fog:false,transparent:true})));c.position.set(x,y,0.05);moon.add(c);}
@@ -4536,13 +4544,11 @@ function stopRain(){S.rain=false;S.rainUntil=0;if(S.hour>7&&S.hour<18){rainbowT=
 function duskEvent(){S.meteor=!S.rain&&Math.random()<0.22;if(S.meteor)toast('Tonight there will be a meteor shower! Tap the sky when a star falls to make a wish.','rare',ICON.star);}
 const STAR_T=[],STAR_F=[];for(let i=0;i<STARN;i++){STAR_T.push(Math.random()*6.283);STAR_F.push(Math.random()*1.3);}
 function skyPos(theta,f,d,out,curved=false){const cp=camera.position,hc=cp.y,aT=cam.pitch-camera.fov/2*Math.PI/180,aH=horizonA(),a=lerp(aH,aT,f);
-  const x=cp.x+Math.sin(theta)*d,z=cp.z+Math.cos(theta)*d;return out.set(x,hc-d*Math.tan(a)+(curved?curveDropFor(camera,x,z):0),z);}
+  const x=cp.x+Math.sin(theta)*d,z=cp.z+Math.cos(theta)*d;return out.set(x,hc-d*Math.tan(a)+(curved?CURVE*d*d:0),z);}
 function skySpan(d){const aT=cam.pitch-camera.fov/2*Math.PI/180,aH=horizonA();return d*(Math.tan(aH)-Math.tan(aT));}
 function updateSky(dt,tt){
   const cp=camera.position,sky=skyHz,night=nightF,fwd=cam.yaw+Math.PI;
-  // clouds live in a band across whatever way you face (the long lens sees only a slice of sky), drifting slowly across it
-  const band=2.6*Math.atan(Math.tan(camera.fov*Math.PI/360)*camera.aspect);
-  for(const c of skyClouds){c.a+=dt*0.006*(0.5+wind);if(c.a>0.45)c.a-=0.9;skyPos(fwd+c.a/0.9*band,c.f,c.d,c.m.position);c.m.scale.setScalar(c.s*c.d/140*clamp(band/0.8,0.42,1));c.m.lookAt(cp.x,c.m.position.y,cp.z);}
+  for(const c of skyClouds){c.a+=dt*0.004*(0.5+wind);skyPos(c.a,c.f,c.d,c.m.position,true);c.m.scale.setScalar(c.s*c.d/140);c.m.lookAt(cp.x,c.m.position.y,cp.z);}
   skyCloudMat.color.setRGB(1,1,1).lerp(sky,0.25+rainMix*0.35).lerp(skyGlow,skyGA*0.45).multiplyScalar(1-night*0.6);skyCloudMat.opacity=0.95;
   moon.visible=night>0.05;
   if(moon.visible){skyPos(fwd+0.28,0.55,150,moon.position);moon.scale.setScalar(0.8);moon.lookAt(cp);moon.traverse(o=>{if(o.material)o.material.opacity=(o.material.color.getHex()===0xfff4d6&&o.geometry.parameters.radius===9?0.12:1)*night*(1-rainMix);});}
@@ -4702,7 +4708,7 @@ function frame(now){
   const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;
   advance(dt*devSpeed);
   rainMix=clamp(rainMix+(S.rain?dt:-dt)*0.5,0,1);
-  grassU.uTime.value=tt;riverU.uTime.value=tt;
+  grassU.uTime.value=tt;riverU.uTime.value=tt;waterU.uT.value=tt;
   {const ci=S.sea?null:curIsl();if(ci&&ci.falls)for(const [x,y,z] of ci.falls){if(Math.random()<dt*3&&Math.abs(x-cam.tx)<16&&Math.abs(z-cam.tz)<16)emit(x+(Math.random()-0.5)*0.8,y+0.05,z+(Math.random()-0.5)*0.3,{vy:0.5+Math.random()*0.5,life:0.6,max:0.6,size:0.07,color:ci.lava?0xffc070:0xf4fbff,g:2});}}grassU.uWind.value=1+rainMix*1.3;grassU.uPl.value.set(vil.x,S.sea?-99:vil.y,vil.z);
   if(!S.sea){
     const dx=vil.tx-vil.x,dz=vil.tz-vil.z,d=Math.hypot(dx,dz);
