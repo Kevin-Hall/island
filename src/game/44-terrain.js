@@ -91,25 +91,27 @@ function buildIsland(isl){
     const bk=makeBake();for(const [mask,l] of groups)for(const [x,z] of l)bk.add(rtileGeo(mask),x,y,z,1,0.002,1,0xffffff,null,()=>true);const m=bk.mesh(mat,false);if(m){m.receiveShadow=false;g.add(m);isl.flats.push(m);}};
   flat(a1,s1Mat,0.012,1);flat(a2,s2Mat,0.006,2);
   // dark, wave-worn rocks poking out of the shallows here and there
-  {const rp=[];for(const [x,z] of [...a1,...a2]){const h=hash(x*1.37+isl.id,z*2.11);if(h>0.03)continue;const s=0.35+hash(z,x)*0.4,ox=(hash(x,z*3)-0.5)*0.5,oz=(hash(z*5,x)-0.5)*0.5;
-      rp.push(PG(SPH,0x6e7a88,0x3e4854,x+ox,0.02,z+oz,0,h*200,0,s,s*0.55,s*0.85),PG(SPH_LO,0x7a8694,0x46505c,x+ox+s*0.35,0,z+oz+s*0.2,0,0,0,s*0.5,s*0.3,s*0.45));
-      if(h<0.018)rp.push(PG(SPH_LO,0x7cbc50,0x3e7a30,x+ox-s*0.1,s*0.24,z+oz-s*0.05,0,0,0,s*0.5,s*0.22,s*0.46));/* a cap of green on some */}
-    if(rp.length){const m=M(rp);m.castShadow=false;g.add(m);}}
+  {const rp=[],fp=[];const seaRock=(x,z,h,big)=>{const s=(big?0.5:0.32)+hash(z,x)*0.4,ox=(hash(x,z*3)-0.5)*0.5,oz=(hash(z*5,x)-0.5)*0.5,X=x+ox,Z=z+oz;
+      rp.push(PG(SPH,0x6a7488,0x2a3242,X,0.0,Z,0,h*200,0,s,s*0.6,s*0.86),PG(SPH_LO,0x7a8498,0x30384a,X+s*0.4,-0.04,Z+s*0.25,0,0,0,s*0.5,s*0.34,s*0.46));
+      if(h<0.02)rp.push(PG(SPH_LO,0x5aa048,0x2e6630,X-s*0.12,s*0.3,Z-s*0.06,0,0,0,s*0.42,s*0.3,s*0.4),PG(SPH_LO,0x64ac4e,0x2e6630,X+s*0.16,s*0.26,Z+s*0.1,0,0,0,s*0.28,s*0.22,s*0.26));/* a small dark shrub clinging to some */
+      fp.push(P(SPH_LO,0xffffff,X,0.016,Z,0,h*70,0,s*2.5,0.02,s*2.2));/* a ring of foam round each */};
+    const nearDock=(x,z)=>isl.home&&Math.abs(x-DOCK.x)<=2&&z>DOCK.z-2&&z<DOCK.z+8;/* keep the pier and its mooring clear */
+    for(const [x,z] of a1){const h=hash(x*1.37+isl.id,z*2.11);if(h<0.1&&!nearDock(x,z))seaRock(x,z,h,true);}
+    for(const [x,z] of a2){const h=hash(x*1.37+isl.id,z*2.11);if(h<0.06&&!nearDock(x,z))seaRock(x,z,h,false);}
+    if(rp.length){const m=M(rp);m.castShadow=false;g.add(m);const f=M(fp,foamMat);f.castShadow=false;f.receiveShadow=false;f.renderOrder=1;g.add(f);}}
   const blocked=new Set();
-  // mossy boulders along the top of the beach, with a tuft or two of grass and a small stone beside them
-  {const bp=[];for(const [x,z] of isl.sand){const h=hash(x*2.71+isl.id*3,z*1.93);if(h>0.075||Math.abs(x-DOCK.x)<2&&isl.home)continue;
-      if(![[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>{const t=landMap.get(K(x+dx,z+dz));return t==='grass'||t==='s1';}))continue;
-      const y=topY(x,z),s=0.5+hash(z,x)*0.35,R2=mulberry(Math.floor(h*1e6));rockP(bp,R2,0x8a8e98,s);const n=bp.length;
-      for(let i=n-2;i<n;i++)Object.assign(bp[i],{x:bp[i].x+x,y:bp[i].y+y,z:bp[i].z+z});
-      bp.push(PG(SPH_LO,0x86c456,0x4a8a34,x-s*0.1,y+s*0.36,z+s*0.05,0,h*50,0,s*0.58,s*0.2,s*0.5));
-      for(let i=0;i<3;i++){const a=i*2.1+h*9,r=s*0.55;bp.push(P(CONE5,0x6aa843,x+Math.cos(a)*r,y+0.1,z+Math.sin(a)*r,0,a,0,0.09,0.2,0.09));}
-      blocked.add(K(x,z));}
+  // the odd dark stone lying at the water's edge of the beach
+  {const bp=[];for(const [x,z] of isl.sand){const h=hash(x*2.71+isl.id*3,z*1.93);if(h>0.04||Math.abs(x-DOCK.x)<2&&isl.home)continue;
+      if(![[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>landMap.get(K(x+dx,z+dz))==='s1'))continue;
+      const y=topY(x,z),s=0.3+hash(z,x)*0.25;bp.push(PG(SPH,0x6a7488,0x2a3242,x,y-s*0.1,z,0,h*200,0,s,s*0.6,s*0.86),PG(SPH_LO,0x7a8498,0x30384a,x+s*0.4,y-s*0.12,z+s*0.25,0,0,0,s*0.5,s*0.34,s*0.46));
+      if(h<0.015)bp.push(PG(SPH_LO,0x5aa048,0x2e6630,x-s*0.1,y+s*0.3,z,0,0,0,s*0.4,s*0.28,s*0.38));blocked.add(K(x,z));}
     if(bp.length)g.add(M(bp));}
   if(isl.home){
     const DX=DOCK.x;isl.dockZ=DOCK.z;const dz=DOCK.z;
     const p=[];
-    for(let i=0;i<8;i++){const z=dz+0.2+i*0.5;p.push(P(BOX,i%2?0xa27a50:0x94704a,DX,0.26,z,0,0,0,0.95,0.07,0.46));}
-    for(let i=0;i<4;i++){const z=dz+0.6+i;p.push(P(CYL8,0x5a3a2a,DX-0.5,0.12,z,0,0,0,0.12,0.5,0.12),P(CYL8,0x5a3a2a,DX+0.5,0.12,z,0,0,0,0.12,0.5,0.12));}
+    for(let i=0;i<12;i++){const z=dz+0.2+i*0.5,w=i>=10?1.5:0.95;p.push(P(BOX,i%2?0xc48c58:0xb88050,DX,0.26,z,0,0,0,w,0.07,0.44),P(BOX,0x6a4630,DX,0.25,z+0.24,0,0,0,w,0.05,0.04));}
+    for(let i=0;i<6;i++){const z=dz+0.55+i;const w=i>=5?0.78:0.5;for(const sd of [-1,1])p.push(P(CYL8,0x6a4630,DX+sd*w,0.16,z,0,0,0,0.11,0.66,0.11),P(CYL8,0x8a6040,DX+sd*w,0.5,z,0,0,0,0.13,0.05,0.13));}
+    p.push(P(BOX,0x6a4630,DX-0.5,0.55,dz+3.5,0,0,0,0.05,0.04,5.6),P(BOX,0x6a4630,DX+0.5,0.55,dz+3.5,0,0,0,0.05,0.04,5.6));/* rope rails */
     // wooden bridge west to the farm field (two planks wide), wherever water separates them
     // (on a chosen island it isn't built until Island Heart level 2: until then just the old posts stand in the water)
     isl.bridge=[];const built=unlocked('bridge');
