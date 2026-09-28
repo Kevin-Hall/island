@@ -66,7 +66,7 @@ function buildIsland(isl){
   // grass and sand tiles, drawn with rounded outer corners; the notch shows whatever lies just below (sand, lower grass, or the sea)
   const byMask=new Map(),under=[];const put=(mask,e)=>{if(!byMask.has(mask))byMask.set(mask,{g:[],s:[]});byMask.get(mask)[e.kind].push(e);};
   const sandCol=(x,z)=>{const c=_c.setHex(groundCol(B.sand,x,z,isl.seed)).multiplyScalar(0.97+hash(x*5,z*3)*0.04);
-    if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>hclass(x+dx,z+dz)===-9))c.lerp(_a.set(0xb89868),0.28);return c.getHex();};
+    if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>hclass(x+dx,z+dz)===-9))c.lerp(_a.set(0xc8a878),0.38)/* wet sand at the water's edge */;return c.getHex();};
   for(const [x,z] of isl.grass){const L=hclass(x,z);let mask=0;
     CORNERS.forEach(([dx,dz],b)=>{const n=[hclass(x+dx,z),hclass(x,z+dz),hclass(x+dx,z+dz)];if(n.some(v=>v>=L||v===-5))return;mask|=1<<b;
       const hm=Math.max(...n);if(hm>=0)under.push([x+dx*0.25,z+dz*0.25,TOP.grass+hm*LVH,groundCol(B.grass,x+dx,z+dz,isl.seed),grassTopMat]);

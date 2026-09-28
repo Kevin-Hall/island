@@ -13,10 +13,10 @@ const camD=()=>cam.dist*LENS; // how far the camera really is from what it looks
 let W=1,H=1,PX=2,rt=null;
 const post={scene:new T.Scene(),cam:new T.OrthographicCamera(-1,1,1,-1,0,1)};
 const postMat=new T.ShaderMaterial({
-  uniforms:{tC:{value:null},tD:{value:null},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR}},
+  uniforms:{tC:{value:null},tD:{value:null},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1}},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
   fragmentShader:`
-    uniform sampler2D tC;uniform sampler2D tD;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;varying vec2 vUv;
+    uniform sampler2D tC;uniform sampler2D tD;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;varying vec2 vUv;
     float b2(vec2 a){a=floor(a);return fract(a.x*.5+a.y*a.y*.75);}
     float bayer(vec2 a){return b2(.5*a)*.25+b2(a);}
     float lin(vec2 uv){float d=texture2D(tD,uv).r*2.-1.;return 2.*cn*cf/(cf+cn-d*(cf-cn));}
@@ -29,6 +29,14 @@ const postMat=new T.ShaderMaterial({
       float dn=max(max(n1>fz?d:n1,n2>fz?d:n2),max(n3>fz?d:n3,n4>fz?d:n4));
       float e=step(max(.35,d*.018),dn-d)*step(d,cf*.6);
       c=mix(c,c*vec3(.36,.32,.46),e*.9*(1.-smoothstep(140.,260.,d))); // outlines fade out on the far islands
+      // lighting: bright things (sand, foam, sunlit leaves, clouds) bloom softly into their neighbours
+      vec3 gl=vec3(0.);for(int i=0;i<4;i++){vec2 o=vec2(i<2?-2.:2.,mod(float(i),2.)<1.?-2.:2.)*px;gl+=max(texture2D(tC,vUv+o).rgb-.7,0.);}
+      c+=gl*vec3(.34,.31,.24)*gw;
+      // a sunny grade: a touch more colour, warm highlights, cool shadows, and a warm haze out towards the horizon
+      float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.+.04*gw);
+      c*=mix(vec3(1.),mix(vec3(.96,.98,1.05),vec3(1.04,1.,.95),smoothstep(.25,.85,l)),gw);
+      c=mix(c,c*vec3(1.05,1.,.93)+vec3(.05,.035,.0),smoothstep(110.,300.,d)*step(d,cf*.6)*.55*gw);
+      vec2 vg=vUv-.5;c*=1.-dot(vg,vg)*.32;
       float b=bayer(gl_FragCoord.xy)-.5;
       c=floor(c*levels+b+.5)/levels;
       gl_FragColor=vec4(c,1.);
@@ -145,12 +153,13 @@ const vcMat=toon({vertexColors:true});
 const vcMatFlat=toon({color:0xffffff});
 // foliage: the same toon look, speckled with little light and dark leaf clusters fixed in world space (two sizes of blotch),
 // so after the pixel pass a crown reads as a mass of painted leaves rather than a plain ball
-const leafMat=toon({vertexColors:true});
+const leafGrad=(()=>{const d=new Uint8Array([72,72,72,255,140,140,140,255,208,208,208,255,255,255,255,255]);const t=new T.DataTexture(d,4,1,T.RGBAFormat);t.minFilter=t.magFilter=T.NearestFilter;t.needsUpdate=true;return t;})();
+const leafMat=new T.MeshToonMaterial({gradientMap:leafGrad,vertexColors:true});
 leafMat.onBeforeCompile=sh=>{
   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vLeafP;')
     .replace('#include <begin_vertex>','#include <begin_vertex>\n{vec4 lp=vec4(transformed,1.);\n#ifdef USE_INSTANCING\nlp=instanceMatrix*lp;\n#endif\nvLeafP=(modelMatrix*lp).xyz;}');
   sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vLeafP;\nfloat lh(vec3 p){return fract(sin(dot(p,vec3(12.9898,78.233,37.719)))*43758.5453);}')
-    .replace('#include <color_fragment>','#include <color_fragment>\n{float ln=lh(floor(vLeafP*7.))*.55+lh(floor(vLeafP*3.))*.45;diffuseColor.rgb*=.86+.26*ln;}');};
+    .replace('#include <color_fragment>','#include <color_fragment>\n{float ln=lh(floor(vLeafP*7.))*.55+lh(floor(vLeafP*3.))*.45;diffuseColor.rgb*=.8+.36*ln;}');};
 const glowMat=toon({vertexColors:true,emissive:0xffc460,emissiveIntensity:0});
 const lumMat=toon({vertexColors:true,emissive:0x444444,emissiveIntensity:1});
 const goldMat=toon({color:0xf5c542,emissive:0x6a4200,emissiveIntensity:.7});

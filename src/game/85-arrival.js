@@ -31,7 +31,7 @@ function buildCandidate(c){S.worldSeed=c.seed;S.home=homeOf(c);S.scratch=1;S.wil
   return{title,text:bits.slice(0,-1).join(', ')+' and '+bits[bits.length-1]+'.',near};}
 
 let arriving=null;
-function showArrival(){$('boot').style.display='none';for(const c of clouds)c.visible=false;/* clouds would sit between the camera and the island */document.body.classList.add('arriving');villager.visible=false;npcBoat.visible=false;resize();S.hour=7.4;applyTime();
+function showArrival(){$('boot').style.display='none';/* clouds would sit between the camera and the island */document.body.classList.add('arriving');villager.visible=false;npcBoat.visible=false;resize();S.hour=7.4;applyTime();
   const el=document.createElement('div');el.id='arrive';document.body.appendChild(el);
   arriving={el,t:0,last:performance.now(),n:0};
   const show=()=>{const c=islandCandidate();arriving.c=c;arriving.n++;const d=buildCandidate(c);cam.yaw=Math.random()*6.28;

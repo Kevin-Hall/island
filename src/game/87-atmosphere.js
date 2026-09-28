@@ -7,13 +7,13 @@ let devSpeed=1,wind=0.4,windT=0;
 // --- waves lapping at every shoreline ---
 const FOAMN=700;
 const foamMat=new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.7,depthWrite:false});
-const foamIM=new T.InstancedMesh(new T.PlaneGeometry(1.04,0.2).rotateX(-Math.PI/2),foamMat,FOAMN);foamIM.frustumCulled=false;foamIM.count=0;scene.add(foamIM);
+const foamIM=new T.InstancedMesh(new T.PlaneGeometry(1.04,0.26).rotateX(-Math.PI/2),foamMat,FOAMN);foamIM.frustumCulled=false;foamIM.count=0;scene.add(foamIM);
 function updateFoam(tt){let n=0;_s.set(1,1,1);
   for(const isl of islands){if(!isl.edges)continue;const R=islR(isl)/0.62+30;if(Math.hypot(isl.cx-cam.tx,isl.cz-cam.tz)>R)continue;
     for(const e of isl.edges){if(n>=FOAMN)break;const dx=e[0]-cam.tx,dz=e[1]-cam.tz;if(dx*dx+dz*dz>1000)continue;
       const w=0.5+0.5*Math.sin(tt*1.3+e[4]),off=0.08+w*0.24;_e.set(0,Math.atan2(e[2],e[3]),0);_q.setFromEuler(_e);
       _m.compose(_v.set(e[0]+e[2]*off,0.028+tideY,e[1]+e[3]*off),_q,_s.set(1,1,0.35+(1-w)*0.9));foamIM.setMatrixAt(n++,_m);}}
-  foamIM.count=n;foamIM.instanceMatrix.needsUpdate=true;foamMat.opacity=0.55+0.2*(1-nightF);}
+  foamIM.count=n;foamIM.instanceMatrix.needsUpdate=true;foamMat.opacity=0.7+0.25*(1-nightF);}
 
 // --- footprints in the sand, dust and footsteps ---
 const FPN=70;const fpIM=new T.InstancedMesh(new T.PlaneGeometry(0.1,0.15).rotateX(-Math.PI/2),new T.MeshBasicMaterial({color:0xb89a6a,transparent:true,opacity:0.55,depthWrite:false}),FPN);
