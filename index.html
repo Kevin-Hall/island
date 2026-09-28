@@ -252,6 +252,13 @@ input[type=range]{width:100%;accent-color:var(--teal);height:28px}
 #arrive h2{margin:0;font-size:24px;line-height:1.1}
 #arrive p{margin:0 0 6px;color:var(--ink2);font-weight:600;line-height:1.35}
 body.arriving>:not(#arrive):not(#fade):not(#c){visibility:hidden}
+
+/* the first morning's title, fading in over the opening shot */
+#introTitle{position:fixed;left:0;right:0;top:30%;text-align:center;pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity 1.6s ease,transform 1.6s ease;z-index:40;color:#fffaf0;text-shadow:0 2px 0 rgba(60,40,30,.35),0 0 18px rgba(40,30,20,.35)}
+#introTitle.on{opacity:1;transform:none}
+#introTitle div{font-size:14px;letter-spacing:.3em;text-transform:uppercase;font-weight:700;opacity:.9}
+#introTitle b{display:block;font-size:26px;margin:8px 16px 6px;font-weight:800}
+#introTitle small{font-size:15px;font-weight:600;opacity:.92}
 </style>
 </head>
 <body>
@@ -923,9 +930,10 @@ const vcMatFlat=toon({color:0xffffff});
 // so after the pixel pass a crown reads as a mass of painted leaves rather than a plain ball
 const leafGrad=(()=>{const d=new Uint8Array([72,72,72,255,140,140,140,255,208,208,208,255,255,255,255,255]);const t=new T.DataTexture(d,4,1,T.RGBAFormat);t.minFilter=t.magFilter=T.NearestFilter;t.needsUpdate=true;return t;})();
 const leafMat=new T.MeshToonMaterial({gradientMap:leafGrad,vertexColors:true});
-leafMat.onBeforeCompile=sh=>{
-  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vLeafP;')
-    .replace('#include <begin_vertex>','#include <begin_vertex>\n{vec4 lp=vec4(transformed,1.);\n#ifdef USE_INSTANCING\nlp=instanceMatrix*lp;\n#endif\nvLeafP=(modelMatrix*lp).xyz;}');
+const leafU={uT:{value:0},uWind:{value:1}};
+leafMat.onBeforeCompile=sh=>{sh.uniforms.uT=leafU.uT;sh.uniforms.uWind=leafU.uWind;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vLeafP;uniform float uT;uniform float uWind;')
+    .replace('#include <begin_vertex>','#include <begin_vertex>\n{vec4 lp=vec4(transformed,1.);\n#ifdef USE_INSTANCING\nlp=instanceMatrix*lp;\n#endif\nvLeafP=(modelMatrix*lp).xyz;\nfloat hh=max(0.,transformed.y-.45),gu=.6+.4*sin(uT*.35+vLeafP.x*.08+vLeafP.z*.05);\ntransformed.x+=sin(uT*1.6+vLeafP.x*.7+vLeafP.z*.4)*.028*hh*gu*uWind;transformed.z+=cos(uT*1.3+vLeafP.z*.6)*.022*hh*gu*uWind;}');
   sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vLeafP;\nfloat lh(vec3 p){return fract(sin(dot(p,vec3(12.9898,78.233,37.719)))*43758.5453);}')
     .replace('#include <color_fragment>','#include <color_fragment>\n{float ln=lh(floor(vLeafP*7.))*.55+lh(floor(vLeafP*3.))*.45;diffuseColor.rgb*=.8+.36*ln;}');};
 const glowMat=toon({vertexColors:true,emissive:0xffc460,emissiveIntensity:0});
@@ -2934,10 +2942,13 @@ const glintMat=new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:
 const GLINTS=140;const glints=new T.InstancedMesh(new T.PlaneGeometry(0.4,0.08).rotateX(-Math.PI/2),glintMat,GLINTS);glints.frustumCulled=false;scene.add(glints);
 const glintData=[];for(let i=0;i<GLINTS;i++)glintData.push({x:Math.random()*70,z:Math.random()*70,ph:Math.random()*6.28,sp:0.6+Math.random()*1.4});
 
-const FF=40;const ffGeo=new T.BufferGeometry();ffGeo.setAttribute('position',new T.BufferAttribute(new Float32Array(FF*3),3));
-const ffMat=new T.PointsMaterial({color:0xe6ff8a,size:2,sizeAttenuation:false,transparent:true,opacity:0,blending:T.AdditiveBlending,depthWrite:false,fog:false});
+const FF=140;const ffGeo=new T.BufferGeometry();ffGeo.setAttribute('position',new T.BufferAttribute(new Float32Array(FF*3),3));
+const ffMat=new T.PointsMaterial({color:0xe6ff8a,size:3,sizeAttenuation:false,transparent:true,opacity:0,blending:T.AdditiveBlending,depthWrite:false,fog:false});
 const fireflies=new T.Points(ffGeo,ffMat);fireflies.frustumCulled=false;scene.add(fireflies);const ffData=[];let ffIsl=-2;
-function placeFireflies(isl){ffData.length=0;ffIsl=isl?isl.id:-1;if(!isl||!isl.grass.length)return;for(let i=0;i<FF;i++){const [x,z]=pickR(isl.grass);ffData.push({x,z,ph:Math.random()*6.28});}}
+// fireflies: on your island they gather where it's magical, at the edges of the woods and over the ponds
+function placeFireflies(isl){ffData.length=0;ffIsl=isl?isl.id:-1;if(!isl||!isl.grass.length)return;
+  const spots=isl.home?[...S.debris.filter(d=>d.k==='tree'||d.k==='bush').map(d=>[d.x,d.z]),...(isl.ponds||[]).flatMap(([x,z])=>[[x,z],[x+1,z],[x-1,z]])]:[];
+  for(let i=0;i<FF;i++){const [x,z]=spots.length&&Math.random()<0.8?pickR(spots):pickR(isl.grass);ffData.push({x:x+(Math.random()-0.5)*2,z:z+(Math.random()-0.5)*2,ph:Math.random()*6.28});}}
 
 const RAIN=280;const rainGeo=new T.BufferGeometry();rainGeo.setAttribute('position',new T.BufferAttribute(new Float32Array(RAIN*6),3));
 const rain=new T.LineSegments(rainGeo,new T.LineBasicMaterial({color:0xcad8ff,transparent:true,opacity:0.6}));rain.frustumCulled=false;scene.add(rain);
@@ -2951,7 +2962,7 @@ function sparkle(x,y,z,color=0xffffff){emit(x+(Math.random()-0.5)*0.6,y+Math.ran
 function burst(x,y,z,color,n=10,spd=1.6,size=0.08,g=5){for(let i=0;i<n;i++){const a=Math.random()*6.28;emit(x,y,z,{vx:Math.cos(a)*spd*Math.random(),vy:1.2+Math.random()*spd,vz:Math.sin(a)*spd*Math.random(),life:0.7,max:0.7,size,color,g});}}
 function hearts(x,y,z){for(let i=0;i<6;i++)emit(x+(Math.random()-0.5)*0.4,y+Math.random()*0.2,z+(Math.random()-0.5)*0.4,{vy:0.9+Math.random()*0.4,life:0.9,max:0.9,size:0.09,color:i%2?0xf39ab0:0xffc8d8,spin:1});}
 function updateParticles(dt){let n=0;
-  for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.life-=dt;if(p.life<=0){parts.splice(i,1);continue;}p.vy-=p.g*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;}
+  for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.life-=dt;if(p.life<=0){parts.splice(i,1);continue;}p.vy-=p.g*dt;p.x+=p.vx*dt+(p.sw?Math.sin(p.life*2.3+p.ph)*p.sw*dt:0);p.y+=p.vy*dt;p.z+=p.vz*dt+(p.sw?Math.cos(p.life*1.7+p.ph)*p.sw*0.6*dt:0);}
   for(const p of parts){const s=p.size*(p.spin?Math.sin(p.life/p.max*Math.PI):Math.min(1,p.life/p.max*2));
     _e.set(0,p.spin?p.life*4:0,p.spin?0.785:0);_q.setFromEuler(_e);_m.compose(_v.set(p.x,p.y,p.z),_q,_s.set(s,s,s));pIM.setMatrixAt(n,_m);pIM.setColorAt(n,_c.set(p.color));n++;}
   pIM.count=n;pIM.instanceMatrix.needsUpdate=true;if(pIM.instanceColor)pIM.instanceColor.needsUpdate=true;}
@@ -2988,7 +2999,7 @@ function setLook(ch){Object.assign(S.look,ch);if(ch.sp&&!ch.fur)S.look.fur=LOOKS
    Time of day
    ========================================================= */
 const KF=[
- {h:0,   sun:0x9ab0ff,si:.42,sky:0x5a6cb4,gnd:0x2c3466,hi:.78,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
+ {h:0,   sun:0x9ab0ff,si:.58,sky:0x6a7cc4,gnd:0x3a4478,hi:.82,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
  {h:4.8, sun:0x9aa8f0,si:.4,sky:0x6070b4,gnd:0x303868,hi:.76,water:0x243a78,s1:0x3e5ea4,s2:0x30488c,n:1,gl:0xc8d4ff,hz:0x1c2656,zen:0x0c1434,glow:0x7a6aa8,ga:.25},
  {h:6,   sun:0xff9a6a,si:.55,sky:0xffb896,gnd:0x5a4a6e,hi:.55,water:0x3a6cb4,s1:0x8ab8d4,s2:0x5c94c4,n:.25,gl:0xffe0c8,hz:0xf4b090,zen:0x5a78c8,glow:0xffa060,ga:1},
  {h:8,   sun:0xffe6c4,si:1.0,sky:0xd8e6ff,gnd:0x5e6a58,hi:.5,water:0x2b6fd0,s1:0x8ee0ec,s2:0x44b2e4,n:0,gl:0xffffff,hz:0xa6d2fa,zen:0x3f8ae6,glow:0xfff0c0,ga:.3},
@@ -2996,8 +3007,8 @@ const KF=[
  {h:16.5,sun:0xffe0b0,si:1.0,sky:0xffe6c8,gnd:0x625e54,hi:.5,water:0x2e6ccc,s1:0x92dce6,s2:0x4aace0,n:0,gl:0xffffff,hz:0xd8def0,zen:0x3a84de,glow:0xffd8a8,ga:.55},
  {h:18.3,sun:0xff8a54,si:.72,sky:0xff9c7a,gnd:0x5e4868,hi:.58,water:0x4c5aa8,s1:0x9a92cc,s2:0x6e70ba,n:.3,gl:0xffd0a0,hz:0xf89a78,zen:0x4a5aae,glow:0xffb050,ga:1},
  {h:19.4,sun:0xb07ad0,si:.4,sky:0x8a6ab0,gnd:0x3a3060,hi:.68,water:0x2e3a80,s1:0x505ea6,s2:0x3c4a92,n:.8,gl:0xe0c8ff,hz:0x4a3a78,zen:0x221f5a,glow:0xff7a6a,ga:.6},
- {h:21,  sun:0x9ab0ff,si:.42,sky:0x5a6cb4,gnd:0x2c3466,hi:.78,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
- {h:24,  sun:0x9ab0ff,si:.42,sky:0x5a6cb4,gnd:0x2c3466,hi:.78,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
+ {h:21,  sun:0x9ab0ff,si:.58,sky:0x6a7cc4,gnd:0x3a4478,hi:.82,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
+ {h:24,  sun:0x9ab0ff,si:.58,sky:0x6a7cc4,gnd:0x3a4478,hi:.82,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
 ];
 const _a=new T.Color(),_b=new T.Color(),GREY=new T.Color(0x8a90a0);
 let nightF=0,rainMix=S.rain?1:0;
@@ -3307,12 +3318,13 @@ function plant(k,x,z){
 }
 // Stardew-style: a harvested crop leaps out of the soil and is held up over your head for a moment
 const pops=[];
-function popCrop(type,x,z){const q=cropParts(type,3,hi(x,z,3)),g=new T.Group();/* just the crop itself, not its leaves (unless it's all leaf, like lettuce) */if(q.fruit.length)g.add(M(q.fruit));else g.add(M(q.leaf));
-  g.traverse(o=>{if(o.isMesh)o.castShadow=false;});g.scale.setScalar(0.7);scene.add(g);pops.push({g,x0:x,z0:z,y0:topY(x,z),t:0});}
+function popCrop(type,x,z){const q=cropParts(type,3,hi(x,z,3)),g=new T.Group();/* just the crop itself, not its leaves (unless it's all leaf, like lettuce) */if(q.fruit.length)g.add(M(q.fruit));else g.add(M(q.leaf));popHold(g,x,z,0.7);}
+function popHold(g,x,z,sc=1,y0){g.traverse(o=>{if(o.isMesh)o.castShadow=false;});g.scale.setScalar(sc);scene.add(g);pops.push({g,x0:x,z0:z,y0:y0!==undefined?y0:topY(Math.round(x),Math.round(z)),t:0,sc});
+  vil.hop=Math.max(vil.hop,0.4);for(let i=0;i<6;i++)sparkle(x,topY(Math.round(x),Math.round(z))+0.4,z,0xfff6d0);}
 function updatePops(dt){for(let i=pops.length-1;i>=0;i--){const p=pops[i];p.t+=dt;const g=p.g,hx=vil.x,hz=vil.z,hy=vil.y+1.05;
   if(p.t<0.45){const u=p.t/0.45;g.position.set(lerp(p.x0,hx,u),lerp(p.y0,hy,u)+Math.sin(u*Math.PI)*0.9,lerp(p.z0,hz,u));g.rotation.y+=dt*8;}
   else if(p.t<1.2){g.position.set(hx,hy+Math.sin((p.t-0.45)*9)*0.03,hz);g.rotation.y+=dt*1.5;}
-  else{const s=Math.max(0,1-(p.t-1.2)/0.25)*0.7;g.scale.setScalar(s);g.position.set(hx,hy,hz);if(s<=0){scene.remove(g);g.traverse(o=>{if(o.geometry)o.geometry.dispose();});pops.splice(i,1);}}}}
+  else{const s=Math.max(0,1-(p.t-1.2)/0.25)*(p.sc||0.7);g.scale.setScalar(s);g.position.set(hx,hy,hz);if(s<=0){scene.remove(g);g.traverse(o=>{if(o.geometry)o.geometry.dispose();});pops.splice(i,1);}}}}
 function harvest(k,x,z){
   const t=S.tiles[k],c=t.crop,C=CROPS[c.t],V=VAR[c.v||'normal'];const key=c.t+'|'+V.id;popCrop(c.t,x,z);
   const first=gain(key);S.harvested++;
@@ -3485,7 +3497,7 @@ function findGroup(k,seed){const p=[],g=new T.Group();
     case'weed':p.push(...debrisParts('weed',mulberry(seed),seed%3));break;
     default:forageParts(k,p);
   }
-  g.add(M(p,k==='starfrag'?lumMat:vcMat));return g;}
+  g.add(M(p,k==='starfrag'||k==='mushroom'?lumMat:vcMat));/* mushrooms glow softly at night */return g;}
 function findAt(x,z){return S.finds.find(f=>f.x===x&&f.z===z)||null;}
 function weedAt(x,z){return S.weeds.find(f=>f.x===x&&f.z===z)||null;}
 let weedSlow=new Set();
@@ -3574,7 +3586,7 @@ function spawnWeed(quiet){if(S.weeds.length>=7)return;const c=islands[0].grass.f
 function pullWeed(w){S.weeds=S.weeds.filter(q=>q!==w);syncLife();walkTo(w.x,w.z);vil.hop=0.25;SFX.till();burst(w.x,0.6,w.z,0x4f8a34,10,1.3,0.07);addXP(1);
   if(Math.random()<0.3){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+1;floatText(w.x,1.1,w.z,'+1 '+CROPS[id].name+' seed','gold');SFX.pop();}
   else floatText(w.x,1,w.z,'pulled!');}
-function collectFind(f){S.finds=S.finds.filter(q=>q!==f);syncLife();walkTo(f.x,f.z);vil.hop=0.25;
+function collectFind(f){S.finds=S.finds.filter(q=>q!==f);syncLife();walkTo(f.x,f.z);vil.hop=0.25;popHold(findGroup(f.k,f.x*31+f.z),f.x,f.z,1.3);
   if(f.k==='bottle'){const first=!S.alm['g:bottle'];S.alm['g:bottle']=(S.alm['g:bottle']||0)+1;if(first)setTimeout(()=>checkDex('g:bottle'),600);openBottle();return;}
   const I=FINDS[f.k],first=gain('g:'+f.k);if(f.k==='driftseed')driftseedFound(first);burst(f.x,0.5,f.z,0xfff6e2,8,1,0.06);floatText(f.x,0.9,f.z,'+ '+I.name,I.w<5?'gold':'');
   if(I.w<5){SFX.rare();toast(`You found a <b>${I.name}</b>!${first?' <b>New!</b>':''}`,'rare',ICON['g:'+f.k]);}else{SFX.harvest();if(first)toast(`New in your Islandex: <b>${I.name}</b>`,'',ICON['g:'+f.k]);}addXP(2);}
@@ -3676,7 +3688,7 @@ function updateBugs(dt,tt){for(let i=bugs.length-1;i>=0;i--){const b=bugs[i];b.t
     if(b.out){b.out+=dt;y+=b.out*b.out*2;if(b.out>3){scene.remove(b.g);bugs.splice(i,1);continue;}}
     const px=b.g.position.x,pz=b.g.position.z;b.g.position.set(x,y,z);if(Math.hypot(x-px,z-pz)>1e-4)b.g.rotation.y=Math.atan2(x-px,z-pz);
     const f=Math.sin(tt*(b.g.userData.drag?30:16)+b.ph)*(b.g.userData.drag?0.4:0.9);b.g.userData.wl.rotation.z=f;b.g.userData.wr.rotation.z=-f;}}
-function catchBug(b){const B=BUGS[b.id];scene.remove(b.g);bugs.splice(bugs.indexOf(b),1);walkTo(b.g.position.x,b.g.position.z);vil.hop=0.3;
+function catchBug(b){const B=BUGS[b.id];scene.remove(b.g);{const hg=bugGroup(B);popHold(hg,b.g.position.x,b.g.position.z,0.9,b.g.position.y);}bugs.splice(bugs.indexOf(b),1);walkTo(b.g.position.x,b.g.position.z);vil.hop=0.3;
   const first=gain('b:'+b.id);burst(b.g.position.x,b.g.position.y,b.g.position.z,0xfff6e2,10,1.2,0.06,1);floatText(b.g.position.x,b.g.position.y+0.4,b.g.position.z,'+ '+B.name,B.w<5?'gold':'');
   addXP(Math.round(B.price/15)+1);if(B.w<5){SFX.rare();toast(`You caught a <b>${B.name}</b>! (${rarity(B.w)})${first?' <b>New!</b>':''}`,'rare',ICON['b:'+b.id]);}else if(first){SFX.catch();toast(`New in your Islandex: <b>${B.name}</b>`,'',ICON['b:'+b.id]);}else SFX.catch();}
 
@@ -4087,10 +4099,15 @@ function digSpot(f){S.finds=S.finds.filter(q=>q!==f);syncLife();const x=f.x,z=f.
   else k=r<0.26?'fossil':r<0.46?'geode':r<0.58?'oldcoin':r<0.66?'truffle':r<0.82?'clay':'seeds';
   if(k==='seeds'){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+2;floatText(x,y+0.9,z,'+2 '+CROPS[id].name+' seeds','gold');SFX.pop();return;}
   if(k==='clay'){gain('m:stone');floatText(x,y+0.9,z,'+1 Stone');SFX.pop();return;}
-  const I=FINDS[k],first=gain('g:'+k);floatText(x,y+0.9,z,'+ '+I.name,I.price>=200?'gold':'');
+  const I=FINDS[k],first=gain('g:'+k);popHold(findGroup(k,x*7+z),x,z,1.4);floatText(x,y+0.9,z,'+ '+I.name,I.price>=200?'gold':'');
   if(I.price>=200){SFX.rare();toast(`You dug up ${/^[aeiou]/i.test(I.name)?'an':'a'} <b>${I.name}</b>!${first?' <b>New!</b>':''}`,'rare',ICON['g:'+k]);}else{SFX.harvest();if(first)toast(`New in your Islandex: <b>${I.name}</b>`,'',ICON['g:'+k]);}}
+let leafT=0;
+function driftLeaves(dt){leafT-=dt;if(leafT>0)return;leafT=0.35+Math.random()*0.5;const s=season();if(s==='winter')return;
+  const near=S.debris.filter(d=>d.k==='tree'&&Math.abs(d.x-vil.x)<11&&Math.abs(d.z-vil.z)<9);if(!near.length)return;const t=pickR(near),y=topY(t.x,t.z)+1.3*(t.sc||1);
+  const col=s==='autumn'?pickR([0xe8803a,0xf4a444,0xc8402a]):s==='spring'&&t.v%4===3?pickR([0xf8c8d8,0xffe4ee]):pickR([0x6ab84a,0x8ad05a,0x4a9a3a]);
+  emit(t.x+(Math.random()-0.5)*0.9,y,t.z+(Math.random()-0.5)*0.9,{vx:0.15,vy:-0.28,vz:0.05,life:5,max:5,size:0.055,color:col,g:0,sw:0.9,ph:Math.random()*6.28,spin:1});}
 let forageT=5;
-function updateForage(dt){if(!S.wild||S.sea)return;forageT-=dt;if(forageT<=0){forageT=9+Math.random()*9;forageSpawn(false,1);}
+function updateForage(dt){if(!S.wild||S.sea)return;driftLeaves(dt);forageT-=dt;if(forageT<=0){forageT=9+Math.random()*9;forageSpawn(false,1);}
   // bubbles fizz and dig spots glint now and then, so you notice them
   for(const f of S.finds){if(f.k!=='bubbles'&&f.k!=='dig')continue;if(Math.abs(f.x-vil.x)>18||Math.abs(f.z-vil.z)>18)continue;
     if(f.k==='bubbles'&&Math.random()<dt*1.5)emit(f.x+(Math.random()-0.5)*0.2,topY(f.x,f.z)+0.05,f.z+(Math.random()-0.5)*0.2,{vx:0,vy:0.5,vz:0,life:0.4,max:0.4,size:0.04,color:0xffffff,g:0});
@@ -4610,7 +4627,7 @@ function onTap(cx,cy){
 function tapLife(cx,cy){
   {let bn=null,bd=48;for(const n of npcs){if(!n.g.visible)continue;const s=toScreen(n.x,n.y+0.5,n.z);const d=Math.hypot(s[0]-cx,s[1]-cy);if(d<bd){bd=d;bn=n;}}if(bn){talkTo(bn);return true;}}
   if(crow&&crow.state!=='out'){const s=toScreen(crowG.position.x,crowG.position.y+0.15,crowG.position.z);if(Math.hypot(s[0]-cx,s[1]-cy)<50){shooCrow();return true;}}
-  let best=null,bd=46;for(const b of bugs){if(b.out)continue;const s=toScreen(b.g.position.x,b.g.position.y,b.g.position.z);const d=Math.hypot(s[0]-cx,s[1]-cy);if(d<bd){bd=d;best=b;}}
+  let best=null,bd=36;for(const b of bugs){if(b.out)continue;const s=toScreen(b.g.position.x,b.g.position.y,b.g.position.z);const d=Math.hypot(s[0]-cx,s[1]-cy);if(d<bd){bd=d;best=b;}}
   // a bug: grab the net, creep over and swoop (if it's still there when you arrive)
   if(best){autoTool('net');const b=best,p=b.g.position;if(Math.hypot(p.x-vil.x,p.z-vil.z)<1.4){swingTool();catchBug(b);return true;}
     const dx=p.x-vil.x,dz=p.z-vil.z,d=Math.hypot(dx,dz)||1;goTo(p.x-dx/d*0.9,p.z-dz/d*0.9,()=>{if(!bugs.includes(b))return;villager.rotation.y=Math.atan2(b.g.position.x-vil.x,b.g.position.z-vil.z);swingTool();catchBug(b);});return true;}return false;}
@@ -5048,7 +5065,7 @@ function frame(now){
   const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;
   advance(dt*devSpeed);
   rainMix=clamp(rainMix+(S.rain?dt:-dt)*0.5,0,1);
-  grassU.uTime.value=tt;riverU.uTime.value=tt;waterU.uT.value=tt;waterU.uCam.value.copy(camera.position);if(depthDirty)buildDepthTex();
+  grassU.uTime.value=tt;leafU.uT.value=tt;leafU.uWind.value=S.rain?1.8:1;riverU.uTime.value=tt;waterU.uT.value=tt;waterU.uCam.value.copy(camera.position);if(depthDirty)buildDepthTex();
   {const ci=S.sea?null:curIsl();if(ci&&ci.falls)for(const [x,y,z] of ci.falls){if(Math.random()<dt*3&&Math.abs(x-cam.tx)<16&&Math.abs(z-cam.tz)<16)emit(x+(Math.random()-0.5)*0.8,y+0.05,z+(Math.random()-0.5)*0.3,{vy:0.5+Math.random()*0.5,life:0.6,max:0.6,size:0.07,color:ci.lava?0xffc070:0xf4fbff,g:2});}}grassU.uWind.value=1+rainMix*1.3;grassU.uPl.value.set(vil.x,S.sea?-99:vil.y,vil.z);
   if(!S.sea){
     const dx=vil.tx-vil.x,dz=vil.tz-vil.z,d=Math.hypot(dx,dz);
@@ -5061,11 +5078,14 @@ function frame(now){
         if(islMap.get(K(tx,tz))===isl.id&&isLand(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)&&lineClear(vil.x,vil.z,tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}}}
     if(!S.sea){const ty=surfY(vil.x,vil.z)||0.15;if(ty-vil.y>0.3&&vil.hop<=0)vil.hop=0.4;vil.y=lerp(vil.y,ty,Math.min(1,dt*10));vil.hop=Math.max(0,vil.hop-dt);
       if(playerLimbs)swingLimbs(playerLimbs,tt*11,d>0.04?0.7:0);
-      villager.position.set(vil.x,vil.y+(d>0.04?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.4*Math.PI)*0.3*(vil.hop>0),vil.z);}
+      villager.position.set(vil.x,vil.y+(d>0.04?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.4*Math.PI)*0.3*(vil.hop>0),vil.z);
+      {const body=villager.children[0],walk=d>0.04,st=walk?1+Math.sin(tt*28)*0.035:1+Math.sin(tt*2.4)*0.022,land=vil.hop>0&&vil.hop<0.08?0.88:1;
+        if(body){body.scale.set(2-st*land,st*land,2-st*land);body.rotation.x=lerp(body.rotation.x,walk?0.1:0,Math.min(1,dt*8));}}}
   }
   wearPaths();
   updateBoat(dt,tt);
   if(S.sea){vil.hop=Math.max(0,vil.hop-dt);villager.position.set(vil.x,0.14+Math.sin(tt*1.5)*0.04+Math.sin(vil.hop/0.35*Math.PI)*0.3*(vil.hop>0),vil.z);if(!fishing)villager.rotation.y=S.boat.r;}
+  if(introCam){introCam.t+=dt;const u=smooth(0,1,introCam.t/7);cam.dist=lerp(10,introCam.d,u);cam.pitch=lerp(0.22,introCam.p,u);cam.yaw=lerp(introCam.y-0.5,introCam.y,u);if(introCam.t>=7||drag||pinch)introCam=null;}
   const k=paint?0:Math.min(1,dt*3);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();cullIslands();updateNearGrass(dt); // hold the view still while drag-farming so tiles stay under the finger
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
@@ -5109,6 +5129,7 @@ function frame(now){
    ========================================================= */
 $('icoMenu').src=ICON.menu;$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
 // a brand-new game first chooses its island (85-islandpick), then boots; everything else boots straight away
+let introCam=null;
 function bootGame(prebuilt){applyHomeStyle();seasonCheck();
 if(!prebuilt){genIslands();for(const isl of islands)buildIsland(isl);rebuildSeaGrid();}
 if(S.wv!==3){if(!isNew){S.sea=false;S.boat=null;S.picked={};vil.x=vil.tx=0.3;vil.z=vil.tz=2.1;}S.wv=3;}
@@ -5124,14 +5145,17 @@ if(S.sea){vil.x=vil.tx=S.boat.x;vil.z=vil.tz=S.boat.z;}
 syncObjs();rebuildSoil();if(!S.orders.length)makeOrders();syncLife();setRod();initNPCs();
 let away=[];if(!isNew){const el=clamp((Date.now()-S.t)/1000,0,21*86400);if(el>5)away=simulate(el);}
 syncAllCrops();fitZoom();cam.tx=vil.x;cam.tz=vil.z;resize();
+if(isNew&&S.scratch){introCam={t:0,d:cam.dist,p:cam.pitch,y:cam.yaw};cam.dist=10;cam.pitch=0.22;cam.yaw-=0.5;
+  const el=document.createElement('div');el.id='introTitle';el.innerHTML='<div>Day 1</div><b>An island no one has found</b><small>The woods are waiting.</small>';document.body.appendChild(el);
+  setTimeout(()=>el.classList.add('on'),600);setTimeout(()=>el.classList.remove('on'),5200);setTimeout(()=>el.remove(),7000);}
 try{makeThumbs();}catch(e){console.warn(e);}
-applyLook();renderTools();showHeld();if(!S.tipTools){S.tipTools=1;setTimeout(()=>toast('Tap anywhere to walk. Pick a <b>tool</b> from the bar above the dock, then tap to dig, water, plant, chop, catch bugs or fish.','',ICON.shovel),5000);}shownShells=S.shells;$('shellTxt').textContent=fmt(S.shells);applyTime();updateHUD();
+applyLook();renderTools();showHeld();if(!S.tipTools){S.tipTools=1;setTimeout(()=>toast(S.scratch?'Just tap things: a butterfly to catch it, a tree to shake it, a mushroom or shell to pick it up, a glinting dig spot to dig. The tool bar is for digging new soil and dragging along a row.':'Tap anywhere to walk. Pick a <b>tool</b> from the bar above the dock, then tap to dig, water, plant, chop, catch bugs or fish.','',ICON.sprout),S.scratch&&isNew?17000:5000);}shownShells=S.shells;$('shellTxt').textContent=fmt(S.shells);applyTime();updateHUD();
 window.addEventListener('resize',()=>{resize();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{const el=clamp((Date.now()-S.t)/1000,0,21*86400);if(el>5){const out=simulate(el);afterSim(out,'While you were away');}last=performance.now();}});
 window.addEventListener('pagehide',save);
 $('boot').remove();
-if(S.scratch&&isNew){setTimeout(()=>toast('Your raft scrapes onto the sand. No roads, no houses, no one: just the island. Look around, then choose a spot for your tent.','',ICON.sprout),900);
-  setTimeout(()=>{if(!S.homeAt&&!placing)startBlueprint('tent');},4200);}
+if(S.scratch&&isNew){/* after the opening shot */setTimeout(()=>toast('Your raft scrapes onto the sand. No roads, no houses, no one: just the island. Look around, then choose a spot for your tent.','',ICON.sprout),7600);
+  setTimeout(()=>{if(!S.homeAt&&!placing)startBlueprint('tent');},11500);}
 else if(S.scratch&&!S.homeAt)setTimeout(()=>{if(!placing)startBlueprint('tent');},1500);
 else if(!S.scratch){if(farmNew)setTimeout(()=>toast('Across the bridge to the west is your farm field, overgrown with weeds, rocks and stumps. Clear it to make room for crops. Tip: press and hold, then drag, to till, plant, water or harvest a whole row.','',ICON.sprout),isNew?9000:1500);
 if(isNew){setTimeout(()=>toast('Welcome to Driftseed Isle! Tap soil to plant, and tap ripe crops to harvest.','',ICON.sprout),500);
@@ -5179,7 +5203,7 @@ if(/[?&]debug\b/.test(location.search)){
     setLevel:n=>{S.xp=LV[n-1]||0;grantKits();rebuildHome();initNPCs();updateHUD();return level();},moveIn:()=>{morningMoveIn();return npcs.length;},
     next:()=>{const u=nextUnlock();return u&&u.name;},xp:n=>{addXP(n);return level();},plots:()=>TOWN.bld.map(b=>b.t+(b.t==='vh'?b.n:'')+(b.locked?':plot':'')),
     // every crop at one stage, rendered at the same scale on a patch of soil (data URLs), for eyeballing the models
-    dock:()=>[DOCK.x,DOCK.z],
+    dock:()=>[DOCK.x,DOCK.z],noBugs:()=>{for(const b of bugs)scene.remove(b.g);bugs.length=0;for(let i=critters.length-1;i>=0;i--)dropCritter(i);},
     findList:()=>{const o={};for(const f of S.finds)o[f.k]=(o[f.k]||0)+1;return o;},
     goNearFind:k=>{const f=S.finds.filter(q=>q.k===k).sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];if(!f)return null;
       const sp=[[2,0],[-2,0],[0,2],[0,-2],[2,2],[-2,2]].map(([a,b])=>[f.x+a,f.z+b]).find(([a,b])=>walkable(a,b))||[f.x,f.z+1];vil.x=vil.tx=sp[0];vil.z=vil.tz=sp[1];vil.path=null;cam.tx=vil.x;cam.tz=vil.z;return[f.x,f.z];},

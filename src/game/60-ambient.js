@@ -47,10 +47,13 @@ const glintMat=new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:
 const GLINTS=140;const glints=new T.InstancedMesh(new T.PlaneGeometry(0.4,0.08).rotateX(-Math.PI/2),glintMat,GLINTS);glints.frustumCulled=false;scene.add(glints);
 const glintData=[];for(let i=0;i<GLINTS;i++)glintData.push({x:Math.random()*70,z:Math.random()*70,ph:Math.random()*6.28,sp:0.6+Math.random()*1.4});
 
-const FF=40;const ffGeo=new T.BufferGeometry();ffGeo.setAttribute('position',new T.BufferAttribute(new Float32Array(FF*3),3));
-const ffMat=new T.PointsMaterial({color:0xe6ff8a,size:2,sizeAttenuation:false,transparent:true,opacity:0,blending:T.AdditiveBlending,depthWrite:false,fog:false});
+const FF=140;const ffGeo=new T.BufferGeometry();ffGeo.setAttribute('position',new T.BufferAttribute(new Float32Array(FF*3),3));
+const ffMat=new T.PointsMaterial({color:0xe6ff8a,size:3,sizeAttenuation:false,transparent:true,opacity:0,blending:T.AdditiveBlending,depthWrite:false,fog:false});
 const fireflies=new T.Points(ffGeo,ffMat);fireflies.frustumCulled=false;scene.add(fireflies);const ffData=[];let ffIsl=-2;
-function placeFireflies(isl){ffData.length=0;ffIsl=isl?isl.id:-1;if(!isl||!isl.grass.length)return;for(let i=0;i<FF;i++){const [x,z]=pickR(isl.grass);ffData.push({x,z,ph:Math.random()*6.28});}}
+// fireflies: on your island they gather where it's magical, at the edges of the woods and over the ponds
+function placeFireflies(isl){ffData.length=0;ffIsl=isl?isl.id:-1;if(!isl||!isl.grass.length)return;
+  const spots=isl.home?[...S.debris.filter(d=>d.k==='tree'||d.k==='bush').map(d=>[d.x,d.z]),...(isl.ponds||[]).flatMap(([x,z])=>[[x,z],[x+1,z],[x-1,z]])]:[];
+  for(let i=0;i<FF;i++){const [x,z]=spots.length&&Math.random()<0.8?pickR(spots):pickR(isl.grass);ffData.push({x:x+(Math.random()-0.5)*2,z:z+(Math.random()-0.5)*2,ph:Math.random()*6.28});}}
 
 const RAIN=280;const rainGeo=new T.BufferGeometry();rainGeo.setAttribute('position',new T.BufferAttribute(new Float32Array(RAIN*6),3));
 const rain=new T.LineSegments(rainGeo,new T.LineBasicMaterial({color:0xcad8ff,transparent:true,opacity:0.6}));rain.frustumCulled=false;scene.add(rain);
@@ -64,7 +67,7 @@ function sparkle(x,y,z,color=0xffffff){emit(x+(Math.random()-0.5)*0.6,y+Math.ran
 function burst(x,y,z,color,n=10,spd=1.6,size=0.08,g=5){for(let i=0;i<n;i++){const a=Math.random()*6.28;emit(x,y,z,{vx:Math.cos(a)*spd*Math.random(),vy:1.2+Math.random()*spd,vz:Math.sin(a)*spd*Math.random(),life:0.7,max:0.7,size,color,g});}}
 function hearts(x,y,z){for(let i=0;i<6;i++)emit(x+(Math.random()-0.5)*0.4,y+Math.random()*0.2,z+(Math.random()-0.5)*0.4,{vy:0.9+Math.random()*0.4,life:0.9,max:0.9,size:0.09,color:i%2?0xf39ab0:0xffc8d8,spin:1});}
 function updateParticles(dt){let n=0;
-  for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.life-=dt;if(p.life<=0){parts.splice(i,1);continue;}p.vy-=p.g*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;}
+  for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.life-=dt;if(p.life<=0){parts.splice(i,1);continue;}p.vy-=p.g*dt;p.x+=p.vx*dt+(p.sw?Math.sin(p.life*2.3+p.ph)*p.sw*dt:0);p.y+=p.vy*dt;p.z+=p.vz*dt+(p.sw?Math.cos(p.life*1.7+p.ph)*p.sw*0.6*dt:0);}
   for(const p of parts){const s=p.size*(p.spin?Math.sin(p.life/p.max*Math.PI):Math.min(1,p.life/p.max*2));
     _e.set(0,p.spin?p.life*4:0,p.spin?0.785:0);_q.setFromEuler(_e);_m.compose(_v.set(p.x,p.y,p.z),_q,_s.set(s,s,s));pIM.setMatrixAt(n,_m);pIM.setColorAt(n,_c.set(p.color));n++;}
   pIM.count=n;pIM.instanceMatrix.needsUpdate=true;if(pIM.instanceColor)pIM.instanceColor.needsUpdate=true;}

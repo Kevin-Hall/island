@@ -48,7 +48,7 @@ if(row){await ev(r=>DS.tp(r[0]+2,r[1]+1.5),row);check(await ev(()=>DS.tool('shov
     for(let i=0;i<32&&!wet;i++){await wait(500);wet=!!(await ev(([x,z])=>DS.tile(x,z),[wx,row[1]]))?.w;}}
   check(wet,'watering can watered the tapped soil');await pg.keyboard.press('Escape');
   // hands: a tap on open ground just walks there
-  await ev(()=>document.querySelectorAll('.toast').forEach(e=>e.remove()));await ev(()=>DS.tool('hand'));await ev(()=>DS.shoo());await wait(1500);/* let the camera settle before reading screen positions */const v0=await ev(()=>DS.vil());const p1=await ev(([x,z])=>DS.screen(x,z),[row[0],row[1]]);await pg.mouse.click(p1[0],p1[1]);let v1=v0;for(let i=0;i<60&&Math.hypot(v1.x-row[0],v1.z-row[1])>1;i++){await wait(500);v1=await ev(()=>DS.vil());}
+  await ev(()=>document.querySelectorAll('.toast').forEach(e=>e.remove()));await ev(()=>DS.tool('hand'));await ev(()=>DS.shoo());await ev(()=>DS.noBugs());/* a butterfly near the tap would (rightly) be caught instead */await wait(1500);/* let the camera settle before reading screen positions */const v0=await ev(()=>DS.vil());const p1=await ev(([x,z])=>DS.screen(x,z),[row[0],row[1]]);await pg.mouse.click(p1[0],p1[1]);let v1=v0;for(let i=0;i<60&&Math.hypot(v1.x-row[0],v1.z-row[1])>1;i++){await wait(500);v1=await ev(()=>DS.vil());}
   check(Math.hypot(v1.x-row[0],v1.z-row[1])<=1,`tap to walk moved the villager ${Math.hypot(v1.x-v0.x,v1.z-v0.z).toFixed(1)} tiles to the tapped tile`);}
   // tap-to-do: with bare hands, tapping a butterfly grabs the net, walks over and catches it
   {await ev(()=>DS.tool('hand'));const c0=(await ev(()=>DS.bugAt())).caught;await ev(()=>DS.bugNear());await wait(1500);const p=await ev(()=>DS.bugAt());

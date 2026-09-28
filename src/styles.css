@@ -240,3 +240,10 @@ input[type=range]{width:100%;accent-color:var(--teal);height:28px}
 #arrive h2{margin:0;font-size:24px;line-height:1.1}
 #arrive p{margin:0 0 6px;color:var(--ink2);font-weight:600;line-height:1.35}
 body.arriving>:not(#arrive):not(#fade):not(#c){visibility:hidden}
+
+/* the first morning's title, fading in over the opening shot */
+#introTitle{position:fixed;left:0;right:0;top:30%;text-align:center;pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity 1.6s ease,transform 1.6s ease;z-index:40;color:#fffaf0;text-shadow:0 2px 0 rgba(60,40,30,.35),0 0 18px rgba(40,30,20,.35)}
+#introTitle.on{opacity:1;transform:none}
+#introTitle div{font-size:14px;letter-spacing:.3em;text-transform:uppercase;font-weight:700;opacity:.9}
+#introTitle b{display:block;font-size:26px;margin:8px 16px 6px;font-weight:800}
+#introTitle small{font-size:15px;font-weight:600;opacity:.92}
