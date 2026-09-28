@@ -17,7 +17,14 @@ const HOME_STYLES={
   tropic: {name:'Tropical',grass:[0x58b85a,0x64c464,0x4cac52],sand:[0xe6c890,0xdcbc84],trees:['palm','palmtall','oak','palmfan','bush','bush','flowerbed','bush'],blurb:'Palms, bright sand and warm turquoise shallows.'},
   autumn: {name:'Autumn',  grass:[0x8ea440,0x9aae46,0x84983c],sand:[0xd2aa74,0xc8a06c],trees:['maple','mapleR','maple','oak','pine','bush','flowerbed','bush'],blurb:'Golden grass and maples in red and amber.'},
   blossom:{name:'Blossom', grass:[0x7ab852,0x86c25a,0x70ae4c],sand:[0xe0bc8c,0xd6b284],trees:['cherry','cherry','oak','cherry','pine','bush','flowerbed','bush'],blurb:'Cherry trees in bloom and petals on the breeze.'}};
-function applyHomeStyle(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow']||HOME_STYLES.meadow;BIOMES.home.grass=st.grass;BIOMES.home.sand=st.sand;return st;}
+function applyHomeStyle(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow']||HOME_STYLES.meadow;BIOMES.home.grass=S.wild?SEASON_GRASS[season()]:st.grass;BIOMES.home.sand=st.sand;return st;}
+/* ---- real seasons (a wild island follows the calendar: northern-hemisphere months, or S.seasonOv from the dev tools) ---- */
+function season(){if(S.seasonOv)return S.seasonOv;const m=new Date(typeof gameNow==='function'?gameNow():Date.now()).getMonth();return m===11||m<2?'winter':m<5?'spring':m<8?'summer':'autumn';}
+const SEASON_GRASS={spring:[0x74be4c,0x80c858,0x6ab446],summer:[0x62a83e,0x6cb246,0x5a9e3a],autumn:[0x86a042,0x90a846,0x7c983e],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
+let seasonNow=null;
+// when the season turns (checked each morning), the island's trees and grass change with it
+function seasonCheck(force){const s=season();if(s===seasonNow&&!force)return;const first=seasonNow===null;seasonNow=s;if(!S.wild||first&&!force)return;
+  applyHomeStyle();rebuildHome();if(!force)setTimeout(()=>toast({spring:'Spring has come to the island: blossom on the branches.',summer:'Summer: the woods are deep green.',autumn:'Autumn is here. The leaves are turning.',winter:'Winter: snow on the pines and bare branches.'}[s],'rare',ICON.sprout),1500);}
 // each island expansion (S.land) also grows the field, west and north/south, away from the bridge. How far it can grow
 // depends on the world: the widest/tallest pair of factors (each up to 1.9×) whose shallows stay 2+ tiles clear of every
 // other island, picked for the most area
@@ -34,7 +41,8 @@ function farmGrowMax(){if(farmMaxG)return farmMaxG;if(islands.length<2)return{x:
 const farmGrow=()=>{const m=farmGrowMax(),t=Math.min(S.land||0,6)/6;return{x:1+(m.x-1)*t,z:1+(m.z-1)*t};};
 const farmCX=()=>FARM.x-7.6*(farmGrow().x-1);
 const farmWest=()=>Math.floor(farmCX()-7.6*farmGrow().x*1.3)-1; // the westmost column the field (with its shallows) can reach
-function farmQ(x,z){const g=farmGrow(),dx=Math.abs(x-farmCX())/(7.6*g.x),dz=Math.abs(z-FARM.z)/(6.6*g.z);return Math.pow(dx**4+dz**4,0.25)*(1+(hash(x*1.3,z*2.1)-0.5)*0.06);}
+function farmQ(x,z){if(S.wild)return 99; // a wild island is one island: you farm wherever you clear
+  const g=farmGrow(),dx=Math.abs(x-farmCX())/(7.6*g.x),dz=Math.abs(z-FARM.z)/(6.6*g.z);return Math.pow(dx**4+dz**4,0.25)*(1+(hash(x*1.3,z*2.1)-0.5)*0.06);}
 const landMap=new Map(),islMap=new Map();let landList=[];
 let islands=[];
 const isLandT=t=>t==='grass'||t==='sand'||t==='bridge';

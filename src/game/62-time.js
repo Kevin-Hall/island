@@ -40,7 +40,7 @@ function clockStr(h){let hh=Math.floor(h),mm=Math.floor((h-hh)*6)*10;const ap=hh
    ========================================================= */
 let sprayT=0;
 function dawn(quiet){
-  S.day++;for(const k in S.tiles)S.tiles[k].w=0;regrowDebris();morningMoveIn();
+  S.day++;for(const k in S.tiles)S.tiles[k].w=0;regrowDebris();seasonCheck();morningMoveIn();
   S.rain=Math.random()<0.18;S.rainUntil=S.rain&&Math.random()<0.6?11+Math.random()*5:0;S.meteor=false;
   const wishes=Math.min(4,S.wishes||0);S.wishes=0;for(let i=0;i<wishes;i++){const c=islands[0].sand.filter(([x,z])=>freeTile(x,z));if(c.length){const [x,z]=pickR(c);S.finds.push({k:'starfrag',x,z});}}
   if(wishes&&!quiet)setTimeout(()=>toast('Star fragments washed up on your beach overnight!','rare',ICON['g:starfrag']),1200);
@@ -66,7 +66,25 @@ function growCrops(dt,quiet,out){
       if(!quiet){syncCrop(k);if(c.v!=='normal'){const V=VAR[c.v];toast(`A <b>${V.name} ${C.name}</b> is ready to harvest!`,'rare',seedIcon(c.t),c.v);SFX.rare();burst(x,0.9,z,0xfff0a0,14,1.4,0.07,2);}else SFX.pop();}}
     else if(!quiet&&stageOf(c.p)!==s0)syncCrop(k);}
 }
-function advance(dt){const prev=S.hour;S.hour+=dt*24/DAY_LEN;if(S.hour>=24)S.hour-=24;if(prev<6&&S.hour>=6)dawn(false);if(prev<19&&S.hour>=19)duskEvent();
-  if(S.rain&&S.rainUntil&&S.hour>=S.rainUntil&&S.hour<19&&S.hour>6)stopRain();growCrops(dt,false);}
-function simulate(sec){const out=[];let left=sec;while(left>0){const d=Math.min(1,left);left-=d;const prev=S.hour;S.hour+=d*24/DAY_LEN;if(S.hour>=24)S.hour-=24;if(prev<6&&S.hour>=6)dawn(true);growCrops(d,true,out);}return out;}
+/* ---- real time: the island keeps your clock, like Animal Crossing. The hour is your device's local time (plus S.toff,
+   an offset the dev tools use), a new day starts at 6am, and crops grow over real hours: CROPS.grow is in the old
+   units, so a real second counts as 1/GROW_SLOW of one (a turnip takes about 3 hours, dragon fruit about a day). ---- */
+const GROW_SLOW=300,DAY_MS=86400000,DAY_START=6;
+const gameNow=()=>Date.now()+(S.toff||0)*3600000;
+function realHour(ms=gameNow()){const d=new Date(ms);return d.getHours()+d.getMinutes()/60+d.getSeconds()/3600;}
+const tzOff=ms=>new Date(ms).getTimezoneOffset()*60000;
+function dayKeyAt(ms){return Math.floor((ms-tzOff(ms)-DAY_START*3600000)/DAY_MS);}
+function dayStartMs(key){const g=key*DAY_MS+DAY_START*3600000;return g+tzOff(g);}
+// jump the clock (dev tools, DS.hour): forward past 6am rolls the day over as usual
+function setHour(h){S.toff=(S.toff||0)+(h-realHour());S.hour=realHour();}
+function advance(dt){if(devSpeed!==1)S.toff=(S.toff||0)+dt*(devSpeed-1)/3600;
+  const prev=S.hour;S.hour=realHour();const key=dayKeyAt(gameNow());if(S.dayKey===undefined)S.dayKey=key;
+  if(key>S.dayKey){const n=Math.min(key-S.dayKey,30);S.dayKey=key;for(let i=0;i<n;i++)dawn(i<n-1);}
+  if(prev<19&&S.hour>=19&&S.hour<20)duskEvent();
+  if(S.rain&&S.rainUntil&&S.hour>=S.rainUntil&&S.hour<19&&S.hour>6)stopRain();growCrops(dt*Math.max(devSpeed,0)/GROW_SLOW,false);}
+// catch up on real time that passed while the game was closed (or skipped): crops grow, and each 6am brings a new day
+function simulate(sec){const out=[],end=gameNow();let t=end-sec*1000;if(S.dayKey===undefined)S.dayKey=dayKeyAt(t);
+  while(t<end){const next=dayStartMs(dayKeyAt(t)+1),stop=Math.min(next,end);growCrops((stop-t)/1000/GROW_SLOW,true,out);t=stop;
+    if(t>=next&&dayKeyAt(t)>S.dayKey){S.dayKey=dayKeyAt(t);dawn(true);}}
+  S.hour=realHour();return out;}
 

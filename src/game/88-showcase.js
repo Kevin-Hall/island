@@ -16,13 +16,13 @@ function loadShowcase(){
   // late-game progress
   S.land=LAND_UP.length;S.house=HOUSE_UP.length;S.rod=RODS.length-1;S.can=CANS.length-1;
   S.xp=Math.max(S.xp,LV[LV.length-1]);S.shells=Math.max(S.shells,250000);S.earned=Math.max(S.earned,1200000);S.harvested=Math.max(S.harvested||0,4800);S.day=Math.max(S.day,120);
-  S.boat=null;S.tut=2;S.tipTools=1;S.tipSeed=1;S.tipPaint=1;S.boatTip=1;S.farmInit=1;S.farmClear=1;S.hour=9.5;S.rain=false;S.sea=false;
+  S.boat=null;S.tut=2;S.tipTools=1;S.tipSeed=1;S.tipPaint=1;S.boatTip=1;S.farmInit=1;S.farmClear=1;S.rain=false;S.sea=false;
   for(const isl of islands)if(!isl.home){S.disc[isl.id]=1;S.restore[isl.id]=RESTORE_N;}
   S.moved={};for(let n=0;n<6;n++)S.moved[n]=1;
   for(const [cat,,pre,tab] of DEX_CATS)for(const k in tab)S.alm[pre+k]=1;
   for(const id of CROP_IDS){for(const v of VARIANTS)S.alm[id+'|'+v.id]=1;S.almR[id]=1;}
   // the showcase is a classic, fully built town (a wild island's own layout is left behind)
-  delete S.scratch;delete S.home;delete S.homeAt;S.builds=[];S.debris=[];S.paths={};applyHomeStyle();
+  delete S.scratch;delete S.wild;delete S.home;delete S.homeAt;S.builds=[];S.debris=[];S.paths={};applyHomeStyle();
   buildIsland(islands[0]); // the field grows with S.land
   layShowcaseFarm();
   const g=showcaseGate;vil.x=vil.tx=g[0]-1.5;vil.z=vil.tz=g[1]+0.5;

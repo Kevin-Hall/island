@@ -46,11 +46,16 @@ function debrisParts(k,R,v){const p=[];switch(k){
     for(let i=0;i<4;i++){const a=i*1.57+R()*0.4;p.push(P(CYL6,0x6a4428,Math.cos(a)*0.22,0.05,Math.sin(a)*0.22,Math.sin(a)*1.1,0,-Math.cos(a)*1.1,0.08,0.26,0.08));}
     if(R()<0.5)p.push(P(CYL6,0xf2ead8,0.2,0.08,0.18,0,0,0,0.04,0.12,0.04),P(ICO2,0xd8453a,0.2,0.15,0.18,0,0,0,0.12,0.06,0.12));break;}
   return p;}
-function debrisGeo(k,v){const id=k+v+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0):'');if(!debGeo[id])debGeo[id]=merge(debrisParts(k,mulberry(hi(k.length,v,77)),v));return debGeo[id];}
+function debrisGeo(k,v,lo){const id=k+v+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo':''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v);debGeo[id]=merge(lo?lowParts(parts):parts);}return debGeo[id];}
 // debris is drawn instanced: one batch per model variant (a handful of draw calls for the whole field); debMesh maps a tile to its slot
-function syncDebris(){while(debrisRoot.children.length){const c=debrisRoot.children[0];debrisRoot.remove(c);c.dispose();}debMesh.clear();
+// wild trees come in two builds: full detail near the camera, a lighter one further off (treeLOD re-sorts them as you move)
+const treeGroups=[];let lodAt=null,lodT=0;
+function treeLOD(gr){let a=0,b=0;for(const e of gr.es){const near=Math.hypot(e.x-cam.tx,e.z-cam.tz)<26;e.im=near?gr.hi:gr.lo;e.i=near?a++:b++;setDebrisMatrix(e,0);}gr.hi.count=a;gr.lo.count=b;}
+function syncDebris(){while(debrisRoot.children.length){const c=debrisRoot.children[0];debrisRoot.remove(c);c.dispose();}debMesh.clear();treeGroups.length=0;lodAt=null;
   const groups=new Map();for(const d of S.debris){const id=d.k+d.v;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(d);}
-  for(const [,list] of groups){const im=new T.InstancedMesh(debrisGeo(list[0].k,list[0].v),vcMat,list.length);im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;
+  for(const [,list] of groups){if(list[0].k==='tree'){const mk=lo=>{const im=new T.InstancedMesh(debrisGeo('tree',list[0].v,lo),vcMat,list.length);im.castShadow=!lo;im.receiveShadow=true;im.frustumCulled=false;for(let i=0;i<list.length;i++)im.setColorAt(i,_c.setHex(0xffffff));debrisRoot.add(im);return im;};
+      const gr={hi:mk(false),lo:mk(true),es:list.map(d=>{const e={im:null,i:0,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};treeLOD(gr);treeGroups.push(gr);continue;}
+    const im=new T.InstancedMesh(debrisGeo(list[0].k,list[0].v),vcMat,list.length);im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;
     /* white instance colours: vcMat's cached program may expect them (r128 shares one program per material) */
     list.forEach((d,i)=>{im.setColorAt(i,_c.setHex(0xffffff));const e={im,i,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,shake:0};setDebrisMatrix(e,0);debMesh.set(K(d.x,d.z),e);});debrisRoot.add(im);}}
 function setDebrisMatrix(e,tilt){_e.set(0,e.r,tilt,'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(e.x,e.y,e.z),_q,_s.set(e.sc||1,e.sc||1,e.sc||1));e.im.setMatrixAt(e.i,_m);e.im.instanceMatrix.needsUpdate=true;}
@@ -72,7 +77,7 @@ function hitDebris(d){walkTo(d.x,d.z);vil.hop=0.2;d.hp--;const m=debMesh.get(K(d
   if(Math.random()<(d.k==='weed'||d.k==='bush'?0.08:0)){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+1;got.push('+1 '+CROPS[id].name+' seed');}
   floatText(d.x,1.1,d.z,got.join(' · '),'gold');SFX.pop();addXP(d.k==='boulder'||d.k==='stump'?2:1);burst(d.x,y,d.z,stone?0xc4c4d0:wood?0xb08050:0x8aba5a,14,1.8,0.08);
   if(!S.farmClear&&!S.debris.some(q=>farmQ(q.x,q.z)<1.05)){S.farmClear=1;SFX.level();toast('The whole farm field is cleared. Room for a proper harvest!','rare',ICON.sprout);}}
-function updateDebris(dt,tt){for(const e of debMesh.values())if(e.shake>0){e.shake=Math.max(0,e.shake-dt);setDebrisMatrix(e,e.shake>0?Math.sin(tt*60)*e.shake*0.35:0);}}
+function updateDebris(dt,tt){lodT-=dt;if(lodT<=0&&treeGroups.length){lodT=0.5;if(!lodAt||Math.hypot(cam.tx-lodAt[0],cam.tz-lodAt[1])>2){lodAt=[cam.tx,cam.tz];for(const gr of treeGroups)treeLOD(gr);}}for(const e of debMesh.values())if(e.shake>0){e.shake=Math.max(0,e.shake-dt);setDebrisMatrix(e,e.shake>0?Math.sin(tt*60)*e.shake*0.35:0);}}
 function syncLife(){syncDebris();
   while(lifeRoot.children.length){const c=lifeRoot.children[0];lifeRoot.remove(c);c.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
   S.finds=S.finds.filter(f=>isLand(f.x,f.z)&&FINDS[f.k]);S.weeds=S.weeds.filter(w=>isLand(w.x,w.z)&&!S.tiles[K(w.x,w.z)]);

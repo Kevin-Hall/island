@@ -5,9 +5,27 @@
    debris kind of their own: chop one down with the axe and its stump stays to be dug out.
    Also here: where the Island Heart grows (an ancient tree in an inland clearing) and the trail to it.
    ========================================================= */
-// the wild tree models for this island's style (instanced debris variants 0..2); a lighter build than town trees
-function wildTreeKinds(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow'];const t=st.trees.filter(k=>!['bush','flowerbed'].includes(k));return[t[0],t[1]||t[0],t[3]||t[2]||t[0]];}
-function wildTreeParts(v){const k=wildTreeKinds()[v%3],parts=treeParts(k,mulberry(hi(v,31,S.worldSeed|0)),0x9a9ea8);return PALMS.includes(k)?parts:lowParts(parts);}
+// the wild trees change with the real seasons. Four kinds (instanced debris variants): 0 and 2 round broadleaf trees,
+// 1 an evergreen pine, 3 a flowering/fruiting tree. Spring: fresh green with blossom (3 is a cherry in bloom); summer: deep
+// green (3 carries red fruit); autumn: amber, scarlet and gold; winter: bare branches dusted with snow, and snowy pines.
+const TREE_COLS={spring:[[0xa6e27e,0x72c050,0x42883a],null,[0x98d870,0x62b048,0x3a7a34],[0xffd8e6,0xf4a8c4,0xd07a9a]],
+  summer:[[0x7cc050,0x5f9e3a,0x467e2c],null,[0x6ab84a,0x4a9a3a,0x2e6a2a],[0x88c860,0x5aa040,0x3a7a30]],
+  autumn:[[0xf4a444,0xe8803a,0xc85e24],null,[0xec6a4a,0xc8402a,0x982a22],[0xf6d060,0xe0b040,0xb08a28]]};
+function bareTree(p,R,snow){trunkP(p,R,0x6a5444,0.9,0.13,0x4e3e32);
+  for(let i=0;i<7;i++){const a=i/7*6.283+R()*0.4,tl=0.55+R()*0.4,L=0.55+R()*0.3,y=0.95+R()*0.5,x=Math.cos(a)*Math.sin(tl)*L*0.5,z=Math.sin(a)*Math.sin(tl)*L*0.5;
+    p.push(P(CYL6,0x5e4a3c,x,y+Math.cos(tl)*L*0.5,z,Math.sin(a)*tl,0,-Math.cos(a)*tl,0.05,L,0.05));
+    const tx=Math.cos(a)*Math.sin(tl)*L,ty=y+Math.cos(tl)*L,tz=Math.sin(a)*Math.sin(tl)*L;for(let k=0;k<2;k++){const b2=a+(k?0.6:-0.6);p.push(P(CYL6,0x6a5444,tx+Math.cos(b2)*0.12,ty+0.1,tz+Math.sin(b2)*0.12,Math.sin(b2)*0.7,0,-Math.cos(b2)*0.7,0.03,0.3,0.03));}
+    if(snow)p.push(P(ICO,0xf4f8fa,tx,ty+0.03,tz,0,R()*3,0,0.16,0.06,0.16));}
+  if(snow)p.push(P(ICO2,0xf4f8fa,0,1.02,0,0,0,0,0.34,0.08,0.34));}
+function wildTreeParts(v){const s=season(),R=mulberry(hi(v,31,S.worldSeed|0)),p=[];v%=4;
+  if(v===1)return treeParts(s==='winter'?'snowpine':'pine',R,0x9a9ea8);
+  if(s==='winter'){bareTree(p,R,true);return p;}
+  const cols=TREE_COLS[s][v];trunkP(p,R,0x7a5230,0.9,0.13,0x5e3e24);canopy(p,R,cols,0,1.3,0,0.55);
+  if(s==='spring'&&v!==3)for(let i=0;i<7;i++){const a=R()*6.28,r=0.5+R()*0.3;bloom(p,[0xffffff,0xf8d8e4][i%2],0xf6d04a,Math.cos(a)*r,1.2+R()*0.6,Math.sin(a)*r,0.08);}
+  if(s==='summer'&&v===3)for(let i=0;i<6;i++){const a=i*1.1+R(),r=0.62;p.push(P(ICO2,0xe0402e,Math.cos(a)*r,1.05+R()*0.45,Math.sin(a)*r,0,0,0,0.13,0.13,0.13),P(LEAF0,0xffffff,Math.cos(a)*r-0.03,1.1+R()*0.4,Math.sin(a)*r+0.04,0,0,0,0.03,0.03,0.03));}
+  if(s==='autumn')for(let i=0;i<8;i++)lf(p,cols[i%3],(R()-0.5)*1.5,0.02,(R()-0.5)*1.5,R()*6.28,0,0.12,0.09,0.02);
+  return p;}
+const wildTreeKinds=()=>['wild',season()];
 
 // the heart's clearing: inland grass well away from the landing beach, with room around it
 function heartSpot(isl){const R=mulberry((S.worldSeed|0)^0x4ea7);let best=null,bs=-1e9;
@@ -32,7 +50,7 @@ function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S
     else if(forest&&!wet(x,z))kd=r<0.6?'tree':r<0.75?'bush':r<0.86?'weed':null;
     else if(thicket)kd=r<0.16?'tree':r<0.42?'bush':r<0.55?'weed':r<0.6?'twig':null;
     else kd=r<0.05?'weed':r<0.075?'twig':r<0.095?'rock':r<0.11?'bush':null;
-    if(!kd)continue;const d=newDebris(x,z,kd);d.v=Math.floor(R()*3);d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}}
+    if(!kd)continue;const d=newDebris(x,z,kd);d.v=Math.floor(R()*(kd==='tree'?4:3));d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}}
 
 /* ---- paths wear in where you walk: every step onto a grass tile counts, and a well-trodden tile turns to path ---- */
 const PATH_WEAR=10;

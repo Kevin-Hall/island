@@ -1,20 +1,19 @@
 /* =========================================================
    The Island Heart: your level, made visible. It starts as a sapling in the square of the island you chose and grows
    with every level (farming, fishing, bugs, decorating, restoring other islands all feed it). Each level builds out
-   the island: the farm bridge, the store, the boat, the museum, the café, the town hall, the lighthouse, and plots
+   the island: the store, the boat, the museum, the café, the town hall, the lighthouse, and plots
    that neighbours move into the morning after they appear.
    Saves from before this (no S.scratch) have everything unlocked, as they always did.
    To add an unlock: an entry in HEART_UNLOCKS, then check unlocked(key) wherever it's built or used.
    ========================================================= */
 const HEART_UNLOCKS=[
-  {lv:2, k:'bridge', name:'Farm bridge',     icon:'sprout',desc:'A bridge across the water to the big farm field.'},
-  {lv:3, k:'shop',   name:'General store',   icon:'shop',  desc:'Decor, fences, sprinklers and tool upgrades.'},
+  {lv:2, k:'shop',   name:'General store',   icon:'shop',  desc:'Decor, fences, sprinklers and tool upgrades.'},
   {lv:3, k:'vh0',    name:'A plot for a neighbour',icon:'heart',desc:'Someone will move in the next morning.'},
   {lv:4, k:'boat',   name:'Your boat',       icon:'boat',  desc:'Repaired and seaworthy: sail out and explore the other islands.'},
   {lv:5, k:'museum', name:'Museum',          icon:'dex',   desc:'Every fish and bug you catch goes on display.'},
   {lv:5, k:'vh1',    name:'A second plot',   icon:'heart', desc:'Another neighbour arrives the next morning.'},
   {lv:6, k:'cafe',   name:'Harbour café',    icon:'star',  desc:'Cocoa and coffee that give you a boost for the day.'},
-  {lv:7, k:'hall',   name:'Town hall',       icon:'task',  desc:'Daily requests, and expanding the farm field.'},
+  {lv:7, k:'hall',   name:'Town hall',       icon:'task',  desc:'A home for the daily requests and island news.'},
   {lv:7, k:'vh2',    name:'A third plot',    icon:'heart', desc:'Another neighbour arrives the next morning.'},
   {lv:8, k:'light',  name:'Lighthouse',      icon:'boat',  desc:'Its beam guides you home at night.'},
   {lv:9, k:'vh3',    name:'A fourth plot',   icon:'heart', desc:'Another neighbour arrives the next morning.'},

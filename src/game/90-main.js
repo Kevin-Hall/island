@@ -65,7 +65,7 @@ function frame(now){
    ========================================================= */
 $('icoMenu').src=ICON.menu;$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
 // a brand-new game first chooses its island (85-islandpick), then boots; everything else boots straight away
-function bootGame(prebuilt){applyHomeStyle();
+function bootGame(prebuilt){applyHomeStyle();seasonCheck();
 if(!prebuilt){genIslands();for(const isl of islands)buildIsland(isl);rebuildSeaGrid();}
 if(S.wv!==3){if(!isNew){S.sea=false;S.boat=null;S.picked={};vil.x=vil.tx=0.3;vil.z=vil.tz=2.1;}S.wv=3;}
 ensureBoat(true);if(S.sea&&isLand(Math.round(S.boat.x),Math.round(S.boat.z))){S.sea=false;S.boat=null;ensureBoat(false);}
@@ -74,12 +74,12 @@ grantKits();const farmNew=!S.farmInit;if(farmNew){genDebris();if(S.scratch)genWi
 if(isNew||(!S.sea&&!walkable(Math.round(vil.x),Math.round(vil.z)))){if(S.scratch){vil.x=vil.tx=DOCK.x+0.5;vil.z=vil.tz=DOCK.z-1.2;}else{vil.x=vil.tx=TOWN.plaza[0]+0.5;vil.z=vil.tz=TOWN.plaza[1]+2.4;}}
 if(S.sea){vil.x=vil.tx=S.boat.x;vil.z=vil.tz=S.boat.z;}
 syncObjs();rebuildSoil();if(!S.orders.length)makeOrders();syncLife();setRod();initNPCs();
-let away=[];if(!isNew){const el=clamp((Date.now()-S.t)/1000,0,3*3600);if(el>5)away=simulate(el);}
+let away=[];if(!isNew){const el=clamp((Date.now()-S.t)/1000,0,21*86400);if(el>5)away=simulate(el);}
 syncAllCrops();fitZoom();cam.tx=vil.x;cam.tz=vil.z;resize();
 try{makeThumbs();}catch(e){console.warn(e);}
 applyLook();renderTools();showHeld();if(!S.tipTools){S.tipTools=1;setTimeout(()=>toast('Tap anywhere to walk. Pick a <b>tool</b> from the bar above the dock, then tap to dig, water, plant, chop, catch bugs or fish.','',ICON.shovel),5000);}shownShells=S.shells;$('shellTxt').textContent=fmt(S.shells);applyTime();updateHUD();
 window.addEventListener('resize',()=>{resize();});
-document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{const el=clamp((Date.now()-S.t)/1000,0,3*3600);if(el>5){const out=simulate(el);afterSim(out,'While you were away');}last=performance.now();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{const el=clamp((Date.now()-S.t)/1000,0,21*86400);if(el>5){const out=simulate(el);afterSim(out,'While you were away');}last=performance.now();}});
 window.addEventListener('pagehide',save);
 $('boot').remove();
 if(S.scratch&&isNew){setTimeout(()=>toast('Your raft scrapes onto the sand. No roads, no houses, no one: just the island. Look around, then choose a spot for your tent.','',ICON.sprout),900);

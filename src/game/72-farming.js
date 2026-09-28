@@ -74,7 +74,7 @@ function houseTap(){
   else toast(`Your ${HOUSES[S.house].toLowerCase()}.${S.house<3?' Upgrade it in Shop → Island.':' Home sweet villa.'}`);
 }
 function sleep(){clearAction();$('fade').classList.add('on');
-  setTimeout(()=>{const sec=((6.02-S.hour+24)%24)*DAY_LEN/24;const out=simulate(sec);afterSim(out,'While you slept');$('fade').classList.remove('on');},650);}
+  setTimeout(()=>{const h=((6.02-S.hour+24)%24);S.toff=(S.toff||0)+h;const out=simulate(h*3600);afterSim(out,'While you slept');$('fade').classList.remove('on');},650);}
 function afterSim(out,label){rebuildSoil();syncAllCrops();syncLife();for(const isl of islands)if(isl.pgroup)syncPlants(isl);
   if(out.length){const rare=out.filter(c=>c.v!=='normal').length;toast(`${label}: ${out.length} crop${out.length>1?'s':''} ripened${rare?` — ${rare} rare!`:''}`,rare?'rare':'',ICON.sprout);}
   toast(`Day ${S.day}${S.rain?' — rain today':''}. The market wants <b>${CROPS[S.demand].name}</b>.`,'',seedIcon(S.demand));}

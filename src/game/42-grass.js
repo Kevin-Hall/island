@@ -60,7 +60,7 @@ function updateNearGrass(dt){
   nearT-=dt;const cx=Math.round(cam.tx),cz=Math.round(cam.tz),key=cx+','+cz;if(key===nearAt&&nearT>0)return;nearAt=key;nearT=1.5;
   let i=0;const Ri=Math.ceil(NEAR_R);
   for(let dz=-Ri;dz<=Ri;dz++)for(let dx=-Ri;dx<=Ri;dx++){const d=Math.hypot(dx,dz);if(d>NEAR_R)continue;const x=cx+dx,z=cz+dz,k=K(x,z);
-    if(landMap.get(k)!=='grass')continue;const isl=islandAt(x,z);if(!isl||NEAR_SKIP.has(isl.biome))continue;
+    if(landMap.get(k)!=='grass')continue;const isl=islandAt(x,z);if(!isl||NEAR_SKIP.has(isl.biome)||(isl.home&&S.wild&&season()==='winter'))continue;
     if(S.tiles[k]||TOWN.path.has(k)||(isl.blocked&&isl.blocked.has(k))||objAt(x,z)||fixedAt(x,z)||debrisAt(x,z))continue;
     const f=Math.min(1,(NEAR_R-d)/2.5),gc=groundCol(BIOMES[isl.biome].grass,x,z,isl.seed);
     for(let j=0;j<NEAR_PER&&i<NEAR_MAX;j++,i++){clumpMat(x,z,j);if(f<1)_m.scale(_nv.set(f,f,f));nearIM.setMatrixAt(i,_m);nearIM.setColorAt(i,_c.setHex(gc).offsetHSL(0,0,(hash(x*3+j,z*5-j)-0.5)*0.05));}}

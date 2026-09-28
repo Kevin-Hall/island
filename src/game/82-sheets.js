@@ -70,7 +70,7 @@ function renderSheet(){
       for(const k in BUILD){const B=BUILD[k],lock=B.lvl>lv,n=S.store[k]||0;if(B.craft)continue;
         h+=`<button class="card ${lock?'lock':''}" data-buy="${k}" ${lock?'disabled':''}><img class="px" src="${THUMB[k]||''}" alt=""><span class="grow"><span class="nm">${B.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+B.lvl:(n?`${n} in storage — tap to place`:B.desc)}</span></span><span class="price">${n?'':sh(B.cost)}</span></button>`;}
       h+='</div>';}
-    else{const L=S.scratch&&built('hall')?LAND_UP[S.land]:null,HU=HOUSE_UP[S.house];
+    else{const L=null,HU=HOUSE_UP[S.house];
       h+=`<p class="note">Grow your island from a tent on a sandbar to a hilltop villa.</p><div class="grid">`;
       h+=L?`<div class="card wide"><img class="px" src="${THUMB.land}" alt=""><span class="grow"><span class="nm">Expand the farm field</span><br><span class="sub">Stage ${S.land+1} → ${S.land+2}. The field grows wider and taller (new ground comes up wild).${L.lvl>lv?' Needs Lv '+L.lvl+'.':''}</span></span><button class="pbtn go" data-land="1" ${L.lvl>lv||S.shells<L.cost?'disabled':''}>${fmt(L.cost)}</button></div>`
         :`<div class="card wide"><img class="px" src="${THUMB.land}" alt=""><span class="grow"><span class="nm">${TOWN.name}</span><br><span class="sub">Your town. Clear the farm field to the west for more room.</span></span></div>`;
@@ -125,7 +125,9 @@ function renderSheet(){
     h+=`<div class="setrow"><span class="note" style="margin:0">Drag to spin the camera, pinch to zoom. Your island and world save on this device.</span></div>`;
     h+=`<h3 class="sech">Dev tools</h3>`;
     h+=`<div class="setrow col"><div class="rowtop"><span>Time of day</span><b id="devHourLbl">${clockStr(S.hour)}</b></div><input type="range" id="devHour" min="0" max="23.9" step="0.05" value="${S.hour.toFixed(2)}" aria-label="Time of day"></div>`;
-    h+=`<div class="setrow"><span>Time speed</span><span class="seg">${[[0,'Pause'],[1,'1×'],[10,'10×'],[60,'60×']].map(([v,l])=>`<button data-spd="${v}" class="${devSpeed===v?'on':''}">${l}</button>`).join('')}</span></div>`;
+    h+=`<div class="setrow"><span>Time speed</span><span class="seg">${[[0,'Pause'],[1,'Real'],[10,'10×'],[60,'60×']].map(([v,l])=>`<button data-spd="${v}" class="${devSpeed===v?'on':''}">${l}</button>`).join('')}</span></div>`;
+    h+=`<div class="setrow"><span>Clock</span><span class="seg">${S.toff?`<button data-dev="realtime">Back to real time</button>`:'<button class="on" disabled>Your real time</button>'}</span></div>`;
+    h+=`<div class="setrow"><span>Season</span><span class="seg">${[['','Auto'],['spring','Spr'],['summer','Sum'],['autumn','Aut'],['winter','Win']].map(([v,l])=>`<button data-season="${v}" class="${(S.seasonOv||'')===v?'on':''}">${l}</button>`).join('')}</span></div>`;
     h+=`<div class="setrow"><span>Weather</span><span class="seg"><button data-wx="clear" class="${S.rain?'':'on'}">Clear</button><button data-wx="rain" class="${S.rain?'on':''}">Rain</button></span></div>`;
     h+=`<div class="setrow"><span>Night sky</span><span class="seg"><button data-dev="star">Shooting star</button><button data-dev="meteor" class="${S.meteor?'on':''}">Meteor shower</button></span></div>`;
     h+=`<div class="setrow"><span>Skip ahead</span><span class="seg"><button data-dev="morning">Next morning</button><button data-dev="shells">+1,000 shells</button></span></div>`;
@@ -155,7 +157,7 @@ function drawChart(){const cv=$('chart');if(!cv)return;const g=cv.getContext('2d
   cv.onclick=e=>{const r=cv.getBoundingClientRect();const wx=((e.clientX-r.left)/r.width*N-N/2)/sc,wz=((e.clientY-r.top)/r.height*N-N/2)/sc;
     let best=null,bd=1e9;for(const isl of disc){const d=Math.hypot(isl.cx-wx,isl.cz-wz);if(d<bd){bd=d;best=isl;}}if(best&&bd<18/sc+islR(best)){chartGo(best);}};}
 function chartGo(isl){if(!isl.home&&!unlocked('boat')){toast('You need your boat to reach other islands (Island Heart level 4).','',ICON.boat);return;}const here=curIsl();if(here&&here.id===isl.id){toast(`You're already on ${isl.name}.`);return;}closeSheet();fastTravel(isl);}
-$('sheetBody').addEventListener('input',e=>{if(e.target.id==='devHour'){const prev=S.hour;S.hour=Number(e.target.value);if(prev<6&&S.hour>=6&&S.hour-prev<3)dawn(false);$('devHourLbl').textContent=clockStr(S.hour);applyTime();updateHUD();}});
+$('sheetBody').addEventListener('input',e=>{if(e.target.id==='devHour'){setHour(Number(e.target.value));$('devHourLbl').textContent=clockStr(S.hour);applyTime();updateHUD();}});
 $('sheetTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;sheet.tab=b.dataset.tab;SFX.ui();renderSheet();});
 $('sheetBody').addEventListener('click',e=>{
   const el=e.target.closest('button');if(!el||el.disabled)return;const d=el.dataset;
@@ -182,11 +184,13 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.mus!==undefined){S.music=d.mus==='1';renderSheet();return;}
   if(d.spd!==undefined){devSpeed=Number(d.spd);renderSheet();return;}
   if(d.wx){if(d.wx==='rain'){S.rain=true;S.rainUntil=0;for(const k in S.tiles)S.tiles[k].w=1;rebuildSoil();}else if(S.rain)stopRain();renderSheet();return;}
-  if(d.dev==='star'){if(nightF<0.5){S.hour=22;applyTime();}spawnShootingStar();closeSheet();return;}
-  if(d.dev==='meteor'){S.meteor=!S.meteor;if(S.meteor&&nightF<0.5){S.hour=21.5;applyTime();}renderSheet();return;}
+  if(d.dev==='star'){if(nightF<0.5){setHour(22);applyTime();}spawnShootingStar();closeSheet();return;}
+  if(d.dev==='meteor'){S.meteor=!S.meteor;if(S.meteor&&nightF<0.5){setHour(21.5);applyTime();}renderSheet();return;}
   if(d.dev==='morning'){closeSheet();sleep();return;}
   if(d.dev==='showcase'){if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Tap again to load';return;}loadShowcase();return;}
   if(d.dev==='realsave'){restoreRealSave();return;}
+  if(d.dev==='realtime'){S.toff=0;devSpeed=1;S.hour=realHour();applyTime();updateHUD();renderSheet();return;}
+  if(d.season!==undefined){S.seasonOv=d.season||null;seasonCheck(true);renderSheet();return;}
   if(d.dev==='shells'){S.shells+=1000;SFX.coin();return;}
   if(d.snd!==undefined){S.sound=d.snd==='1';setWaveVol();if(S.sound)startWaves();renderSheet();return;}
   if(d.px!==undefined){S.pxAdj=Number(d.px);resize();renderSheet();return;}

@@ -1017,7 +1017,14 @@ const HOME_STYLES={
   tropic: {name:'Tropical',grass:[0x58b85a,0x64c464,0x4cac52],sand:[0xe6c890,0xdcbc84],trees:['palm','palmtall','oak','palmfan','bush','bush','flowerbed','bush'],blurb:'Palms, bright sand and warm turquoise shallows.'},
   autumn: {name:'Autumn',  grass:[0x8ea440,0x9aae46,0x84983c],sand:[0xd2aa74,0xc8a06c],trees:['maple','mapleR','maple','oak','pine','bush','flowerbed','bush'],blurb:'Golden grass and maples in red and amber.'},
   blossom:{name:'Blossom', grass:[0x7ab852,0x86c25a,0x70ae4c],sand:[0xe0bc8c,0xd6b284],trees:['cherry','cherry','oak','cherry','pine','bush','flowerbed','bush'],blurb:'Cherry trees in bloom and petals on the breeze.'}};
-function applyHomeStyle(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow']||HOME_STYLES.meadow;BIOMES.home.grass=st.grass;BIOMES.home.sand=st.sand;return st;}
+function applyHomeStyle(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow']||HOME_STYLES.meadow;BIOMES.home.grass=S.wild?SEASON_GRASS[season()]:st.grass;BIOMES.home.sand=st.sand;return st;}
+/* ---- real seasons (a wild island follows the calendar: northern-hemisphere months, or S.seasonOv from the dev tools) ---- */
+function season(){if(S.seasonOv)return S.seasonOv;const m=new Date(typeof gameNow==='function'?gameNow():Date.now()).getMonth();return m===11||m<2?'winter':m<5?'spring':m<8?'summer':'autumn';}
+const SEASON_GRASS={spring:[0x74be4c,0x80c858,0x6ab446],summer:[0x62a83e,0x6cb246,0x5a9e3a],autumn:[0x86a042,0x90a846,0x7c983e],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
+let seasonNow=null;
+// when the season turns (checked each morning), the island's trees and grass change with it
+function seasonCheck(force){const s=season();if(s===seasonNow&&!force)return;const first=seasonNow===null;seasonNow=s;if(!S.wild||first&&!force)return;
+  applyHomeStyle();rebuildHome();if(!force)setTimeout(()=>toast({spring:'Spring has come to the island: blossom on the branches.',summer:'Summer: the woods are deep green.',autumn:'Autumn is here. The leaves are turning.',winter:'Winter: snow on the pines and bare branches.'}[s],'rare',ICON.sprout),1500);}
 // each island expansion (S.land) also grows the field, west and north/south, away from the bridge. How far it can grow
 // depends on the world: the widest/tallest pair of factors (each up to 1.9×) whose shallows stay 2+ tiles clear of every
 // other island, picked for the most area
@@ -1034,7 +1041,8 @@ function farmGrowMax(){if(farmMaxG)return farmMaxG;if(islands.length<2)return{x:
 const farmGrow=()=>{const m=farmGrowMax(),t=Math.min(S.land||0,6)/6;return{x:1+(m.x-1)*t,z:1+(m.z-1)*t};};
 const farmCX=()=>FARM.x-7.6*(farmGrow().x-1);
 const farmWest=()=>Math.floor(farmCX()-7.6*farmGrow().x*1.3)-1; // the westmost column the field (with its shallows) can reach
-function farmQ(x,z){const g=farmGrow(),dx=Math.abs(x-farmCX())/(7.6*g.x),dz=Math.abs(z-FARM.z)/(6.6*g.z);return Math.pow(dx**4+dz**4,0.25)*(1+(hash(x*1.3,z*2.1)-0.5)*0.06);}
+function farmQ(x,z){if(S.wild)return 99; // a wild island is one island: you farm wherever you clear
+  const g=farmGrow(),dx=Math.abs(x-farmCX())/(7.6*g.x),dz=Math.abs(z-FARM.z)/(6.6*g.z);return Math.pow(dx**4+dz**4,0.25)*(1+(hash(x*1.3,z*2.1)-0.5)*0.06);}
 const landMap=new Map(),islMap=new Map();let landList=[];
 let islands=[];
 const isLandT=t=>t==='grass'||t==='sand'||t==='bridge';
@@ -1244,7 +1252,7 @@ function updateNearGrass(dt){
   nearT-=dt;const cx=Math.round(cam.tx),cz=Math.round(cam.tz),key=cx+','+cz;if(key===nearAt&&nearT>0)return;nearAt=key;nearT=1.5;
   let i=0;const Ri=Math.ceil(NEAR_R);
   for(let dz=-Ri;dz<=Ri;dz++)for(let dx=-Ri;dx<=Ri;dx++){const d=Math.hypot(dx,dz);if(d>NEAR_R)continue;const x=cx+dx,z=cz+dz,k=K(x,z);
-    if(landMap.get(k)!=='grass')continue;const isl=islandAt(x,z);if(!isl||NEAR_SKIP.has(isl.biome))continue;
+    if(landMap.get(k)!=='grass')continue;const isl=islandAt(x,z);if(!isl||NEAR_SKIP.has(isl.biome)||(isl.home&&S.wild&&season()==='winter'))continue;
     if(S.tiles[k]||TOWN.path.has(k)||(isl.blocked&&isl.blocked.has(k))||objAt(x,z)||fixedAt(x,z)||debrisAt(x,z))continue;
     const f=Math.min(1,(NEAR_R-d)/2.5),gc=groundCol(BIOMES[isl.biome].grass,x,z,isl.seed);
     for(let j=0;j<NEAR_PER&&i<NEAR_MAX;j++,i++){clumpMat(x,z,j);if(f<1)_m.scale(_nv.set(f,f,f));nearIM.setMatrixAt(i,_m);nearIM.setColorAt(i,_c.setHex(gc).offsetHSL(0,0,(hash(x*3+j,z*5-j)-0.5)*0.05));}}
@@ -1411,7 +1419,7 @@ function buildIsland(isl){
     // wooden bridge west to the farm field (two planks wide), wherever water separates them
     // (on a chosen island it isn't built until Island Heart level 2: until then just the old posts stand in the water)
     isl.bridge=[];const built=unlocked('bridge');
-    for(const bz of [FARM.z-1,FARM.z]){let x=FARM.x,n=0;while(isLandT(landMap.get(K(x,bz)))&&n++<40)x++;
+    if(!S.wild)for(const bz of [FARM.z-1,FARM.z]){let x=FARM.x,n=0;while(isLandT(landMap.get(K(x,bz)))&&n++<40)x++;
       n=0;while(n++<30){const k=K(x,bz),t=landMap.get(k);if(t==='grass'||t==='sand'||t==='river')break;
         if(!built){if(x%2===0)p.push(P(CYL8,0x5a3a2a,x,0.08,bz+(bz===FARM.z?0.46:-0.46),0,0,0.1,0.1,0.5,0.1));x++;continue;}
         landMap.set(k,'bridge');islMap.set(k,0);if(!isl.keys.includes(k))isl.keys.push(k);isl.bridge.push([x,bz]);x++;}}
@@ -1732,9 +1740,27 @@ function binGroup(){const g=new T.Group();g.add(M([P(BOX,0x8a5a36,0,0.22,0,0,0,0
    debris kind of their own: chop one down with the axe and its stump stays to be dug out.
    Also here: where the Island Heart grows (an ancient tree in an inland clearing) and the trail to it.
    ========================================================= */
-// the wild tree models for this island's style (instanced debris variants 0..2); a lighter build than town trees
-function wildTreeKinds(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow'];const t=st.trees.filter(k=>!['bush','flowerbed'].includes(k));return[t[0],t[1]||t[0],t[3]||t[2]||t[0]];}
-function wildTreeParts(v){const k=wildTreeKinds()[v%3],parts=treeParts(k,mulberry(hi(v,31,S.worldSeed|0)),0x9a9ea8);return PALMS.includes(k)?parts:lowParts(parts);}
+// the wild trees change with the real seasons. Four kinds (instanced debris variants): 0 and 2 round broadleaf trees,
+// 1 an evergreen pine, 3 a flowering/fruiting tree. Spring: fresh green with blossom (3 is a cherry in bloom); summer: deep
+// green (3 carries red fruit); autumn: amber, scarlet and gold; winter: bare branches dusted with snow, and snowy pines.
+const TREE_COLS={spring:[[0xa6e27e,0x72c050,0x42883a],null,[0x98d870,0x62b048,0x3a7a34],[0xffd8e6,0xf4a8c4,0xd07a9a]],
+  summer:[[0x7cc050,0x5f9e3a,0x467e2c],null,[0x6ab84a,0x4a9a3a,0x2e6a2a],[0x88c860,0x5aa040,0x3a7a30]],
+  autumn:[[0xf4a444,0xe8803a,0xc85e24],null,[0xec6a4a,0xc8402a,0x982a22],[0xf6d060,0xe0b040,0xb08a28]]};
+function bareTree(p,R,snow){trunkP(p,R,0x6a5444,0.9,0.13,0x4e3e32);
+  for(let i=0;i<7;i++){const a=i/7*6.283+R()*0.4,tl=0.55+R()*0.4,L=0.55+R()*0.3,y=0.95+R()*0.5,x=Math.cos(a)*Math.sin(tl)*L*0.5,z=Math.sin(a)*Math.sin(tl)*L*0.5;
+    p.push(P(CYL6,0x5e4a3c,x,y+Math.cos(tl)*L*0.5,z,Math.sin(a)*tl,0,-Math.cos(a)*tl,0.05,L,0.05));
+    const tx=Math.cos(a)*Math.sin(tl)*L,ty=y+Math.cos(tl)*L,tz=Math.sin(a)*Math.sin(tl)*L;for(let k=0;k<2;k++){const b2=a+(k?0.6:-0.6);p.push(P(CYL6,0x6a5444,tx+Math.cos(b2)*0.12,ty+0.1,tz+Math.sin(b2)*0.12,Math.sin(b2)*0.7,0,-Math.cos(b2)*0.7,0.03,0.3,0.03));}
+    if(snow)p.push(P(ICO,0xf4f8fa,tx,ty+0.03,tz,0,R()*3,0,0.16,0.06,0.16));}
+  if(snow)p.push(P(ICO2,0xf4f8fa,0,1.02,0,0,0,0,0.34,0.08,0.34));}
+function wildTreeParts(v){const s=season(),R=mulberry(hi(v,31,S.worldSeed|0)),p=[];v%=4;
+  if(v===1)return treeParts(s==='winter'?'snowpine':'pine',R,0x9a9ea8);
+  if(s==='winter'){bareTree(p,R,true);return p;}
+  const cols=TREE_COLS[s][v];trunkP(p,R,0x7a5230,0.9,0.13,0x5e3e24);canopy(p,R,cols,0,1.3,0,0.55);
+  if(s==='spring'&&v!==3)for(let i=0;i<7;i++){const a=R()*6.28,r=0.5+R()*0.3;bloom(p,[0xffffff,0xf8d8e4][i%2],0xf6d04a,Math.cos(a)*r,1.2+R()*0.6,Math.sin(a)*r,0.08);}
+  if(s==='summer'&&v===3)for(let i=0;i<6;i++){const a=i*1.1+R(),r=0.62;p.push(P(ICO2,0xe0402e,Math.cos(a)*r,1.05+R()*0.45,Math.sin(a)*r,0,0,0,0.13,0.13,0.13),P(LEAF0,0xffffff,Math.cos(a)*r-0.03,1.1+R()*0.4,Math.sin(a)*r+0.04,0,0,0,0.03,0.03,0.03));}
+  if(s==='autumn')for(let i=0;i<8;i++)lf(p,cols[i%3],(R()-0.5)*1.5,0.02,(R()-0.5)*1.5,R()*6.28,0,0.12,0.09,0.02);
+  return p;}
+const wildTreeKinds=()=>['wild',season()];
 
 // the heart's clearing: inland grass well away from the landing beach, with room around it
 function heartSpot(isl){const R=mulberry((S.worldSeed|0)^0x4ea7);let best=null,bs=-1e9;
@@ -1759,7 +1785,7 @@ function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S
     else if(forest&&!wet(x,z))kd=r<0.6?'tree':r<0.75?'bush':r<0.86?'weed':null;
     else if(thicket)kd=r<0.16?'tree':r<0.42?'bush':r<0.55?'weed':r<0.6?'twig':null;
     else kd=r<0.05?'weed':r<0.075?'twig':r<0.095?'rock':r<0.11?'bush':null;
-    if(!kd)continue;const d=newDebris(x,z,kd);d.v=Math.floor(R()*3);d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}}
+    if(!kd)continue;const d=newDebris(x,z,kd);d.v=Math.floor(R()*(kd==='tree'?4:3));d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}}
 
 /* ---- paths wear in where you walk: every step onto a grass tile counts, and a well-trodden tile turns to path ---- */
 const PATH_WEAR=10;
@@ -1770,20 +1796,19 @@ function wearPaths(){if(!S.scratch||S.sea||inside)return;const x=Math.round(vil.
 /* =========================================================
    The Island Heart: your level, made visible. It starts as a sapling in the square of the island you chose and grows
    with every level (farming, fishing, bugs, decorating, restoring other islands all feed it). Each level builds out
-   the island: the farm bridge, the store, the boat, the museum, the café, the town hall, the lighthouse, and plots
+   the island: the store, the boat, the museum, the café, the town hall, the lighthouse, and plots
    that neighbours move into the morning after they appear.
    Saves from before this (no S.scratch) have everything unlocked, as they always did.
    To add an unlock: an entry in HEART_UNLOCKS, then check unlocked(key) wherever it's built or used.
    ========================================================= */
 const HEART_UNLOCKS=[
-  {lv:2, k:'bridge', name:'Farm bridge',     icon:'sprout',desc:'A bridge across the water to the big farm field.'},
-  {lv:3, k:'shop',   name:'General store',   icon:'shop',  desc:'Decor, fences, sprinklers and tool upgrades.'},
+  {lv:2, k:'shop',   name:'General store',   icon:'shop',  desc:'Decor, fences, sprinklers and tool upgrades.'},
   {lv:3, k:'vh0',    name:'A plot for a neighbour',icon:'heart',desc:'Someone will move in the next morning.'},
   {lv:4, k:'boat',   name:'Your boat',       icon:'boat',  desc:'Repaired and seaworthy: sail out and explore the other islands.'},
   {lv:5, k:'museum', name:'Museum',          icon:'dex',   desc:'Every fish and bug you catch goes on display.'},
   {lv:5, k:'vh1',    name:'A second plot',   icon:'heart', desc:'Another neighbour arrives the next morning.'},
   {lv:6, k:'cafe',   name:'Harbour café',    icon:'star',  desc:'Cocoa and coffee that give you a boost for the day.'},
-  {lv:7, k:'hall',   name:'Town hall',       icon:'task',  desc:'Daily requests, and expanding the farm field.'},
+  {lv:7, k:'hall',   name:'Town hall',       icon:'task',  desc:'A home for the daily requests and island news.'},
   {lv:7, k:'vh2',    name:'A third plot',    icon:'heart', desc:'Another neighbour arrives the next morning.'},
   {lv:8, k:'light',  name:'Lighthouse',      icon:'boat',  desc:'Its beam guides you home at night.'},
   {lv:9, k:'vh3',    name:'A fourth plot',   icon:'heart', desc:'Another neighbour arrives the next morning.'},
@@ -2000,7 +2025,7 @@ function layoutTown(isl){
   {const lists=FLORA_GEOS.map(()=>[]),clov=[],peb=[];
     const wild=S.scratch?new Set(S.debris.filter(d=>d.k!=='weed').map(d=>K(d.x,d.z))):null;
     for(const [x,z] of isl.grass){const k=K(x,z);if(!G(x,z)||taken(k)||farmQ(x,z)<1.3||(wild&&wild.has(k)))continue;const h=hash(x*4.1-2,z*3.3+7);
-      if(h<0.34)lists[floraIndex(x,z)].push([x,z]);else if(h<0.43)clov.push([x,z]);}
+      if(wild&&season()==='winter')continue;/* no wildflowers under the snow */if(h<0.34)lists[floraIndex(x,z)].push([x,z]);else if(h<0.43)clov.push([x,z]);}
     for(const [k,v] of TOWN.path){if(v!==1)continue;const [x,z]=k.split(',').map(Number);for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(G(x+dx,z+dz)&&!TOWN.path.has(K(x+dx,z+dz))&&hash(x*7+dx,z*5+dz)<0.35)peb.push([x+dx*0.46,z+dz*0.46,x,z]);}
     const mk=(geo,list,mat,track)=>{if(!list.length)return null;const im=new T.InstancedMesh(geo,mat,list.length);list.forEach(([x,z,tx,tz],i)=>{const tile=tx===undefined?[x,z]:[tx,tz];
         _e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x+(tx===undefined?(hash(z,x)-0.5)*0.4:0),y0(...tile),z+(tx===undefined?(hash(x+1,z)-0.5)*0.4:0)),_q,_s.set(0.9,0.9+hash(z*2,x)*0.2,0.9));im.setMatrixAt(i,_m);
@@ -2821,7 +2846,7 @@ function clockStr(h){let hh=Math.floor(h),mm=Math.floor((h-hh)*6)*10;const ap=hh
    ========================================================= */
 let sprayT=0;
 function dawn(quiet){
-  S.day++;for(const k in S.tiles)S.tiles[k].w=0;regrowDebris();morningMoveIn();
+  S.day++;for(const k in S.tiles)S.tiles[k].w=0;regrowDebris();seasonCheck();morningMoveIn();
   S.rain=Math.random()<0.18;S.rainUntil=S.rain&&Math.random()<0.6?11+Math.random()*5:0;S.meteor=false;
   const wishes=Math.min(4,S.wishes||0);S.wishes=0;for(let i=0;i<wishes;i++){const c=islands[0].sand.filter(([x,z])=>freeTile(x,z));if(c.length){const [x,z]=pickR(c);S.finds.push({k:'starfrag',x,z});}}
   if(wishes&&!quiet)setTimeout(()=>toast('Star fragments washed up on your beach overnight!','rare',ICON['g:starfrag']),1200);
@@ -2847,9 +2872,27 @@ function growCrops(dt,quiet,out){
       if(!quiet){syncCrop(k);if(c.v!=='normal'){const V=VAR[c.v];toast(`A <b>${V.name} ${C.name}</b> is ready to harvest!`,'rare',seedIcon(c.t),c.v);SFX.rare();burst(x,0.9,z,0xfff0a0,14,1.4,0.07,2);}else SFX.pop();}}
     else if(!quiet&&stageOf(c.p)!==s0)syncCrop(k);}
 }
-function advance(dt){const prev=S.hour;S.hour+=dt*24/DAY_LEN;if(S.hour>=24)S.hour-=24;if(prev<6&&S.hour>=6)dawn(false);if(prev<19&&S.hour>=19)duskEvent();
-  if(S.rain&&S.rainUntil&&S.hour>=S.rainUntil&&S.hour<19&&S.hour>6)stopRain();growCrops(dt,false);}
-function simulate(sec){const out=[];let left=sec;while(left>0){const d=Math.min(1,left);left-=d;const prev=S.hour;S.hour+=d*24/DAY_LEN;if(S.hour>=24)S.hour-=24;if(prev<6&&S.hour>=6)dawn(true);growCrops(d,true,out);}return out;}
+/* ---- real time: the island keeps your clock, like Animal Crossing. The hour is your device's local time (plus S.toff,
+   an offset the dev tools use), a new day starts at 6am, and crops grow over real hours: CROPS.grow is in the old
+   units, so a real second counts as 1/GROW_SLOW of one (a turnip takes about 3 hours, dragon fruit about a day). ---- */
+const GROW_SLOW=300,DAY_MS=86400000,DAY_START=6;
+const gameNow=()=>Date.now()+(S.toff||0)*3600000;
+function realHour(ms=gameNow()){const d=new Date(ms);return d.getHours()+d.getMinutes()/60+d.getSeconds()/3600;}
+const tzOff=ms=>new Date(ms).getTimezoneOffset()*60000;
+function dayKeyAt(ms){return Math.floor((ms-tzOff(ms)-DAY_START*3600000)/DAY_MS);}
+function dayStartMs(key){const g=key*DAY_MS+DAY_START*3600000;return g+tzOff(g);}
+// jump the clock (dev tools, DS.hour): forward past 6am rolls the day over as usual
+function setHour(h){S.toff=(S.toff||0)+(h-realHour());S.hour=realHour();}
+function advance(dt){if(devSpeed!==1)S.toff=(S.toff||0)+dt*(devSpeed-1)/3600;
+  const prev=S.hour;S.hour=realHour();const key=dayKeyAt(gameNow());if(S.dayKey===undefined)S.dayKey=key;
+  if(key>S.dayKey){const n=Math.min(key-S.dayKey,30);S.dayKey=key;for(let i=0;i<n;i++)dawn(i<n-1);}
+  if(prev<19&&S.hour>=19&&S.hour<20)duskEvent();
+  if(S.rain&&S.rainUntil&&S.hour>=S.rainUntil&&S.hour<19&&S.hour>6)stopRain();growCrops(dt*Math.max(devSpeed,0)/GROW_SLOW,false);}
+// catch up on real time that passed while the game was closed (or skipped): crops grow, and each 6am brings a new day
+function simulate(sec){const out=[],end=gameNow();let t=end-sec*1000;if(S.dayKey===undefined)S.dayKey=dayKeyAt(t);
+  while(t<end){const next=dayStartMs(dayKeyAt(t)+1),stop=Math.min(next,end);growCrops((stop-t)/1000/GROW_SLOW,true,out);t=stop;
+    if(t>=next&&dayKeyAt(t)>S.dayKey){S.dayKey=dayKeyAt(t);dawn(true);}}
+  S.hour=realHour();return out;}
 
 /* =========================================================
    Audio (tiny synth)
@@ -3111,7 +3154,7 @@ function houseTap(){
   else toast(`Your ${HOUSES[S.house].toLowerCase()}.${S.house<3?' Upgrade it in Shop → Island.':' Home sweet villa.'}`);
 }
 function sleep(){clearAction();$('fade').classList.add('on');
-  setTimeout(()=>{const sec=((6.02-S.hour+24)%24)*DAY_LEN/24;const out=simulate(sec);afterSim(out,'While you slept');$('fade').classList.remove('on');},650);}
+  setTimeout(()=>{const h=((6.02-S.hour+24)%24);S.toff=(S.toff||0)+h;const out=simulate(h*3600);afterSim(out,'While you slept');$('fade').classList.remove('on');},650);}
 function afterSim(out,label){rebuildSoil();syncAllCrops();syncLife();for(const isl of islands)if(isl.pgroup)syncPlants(isl);
   if(out.length){const rare=out.filter(c=>c.v!=='normal').length;toast(`${label}: ${out.length} crop${out.length>1?'s':''} ripened${rare?` — ${rare} rare!`:''}`,rare?'rare':'',ICON.sprout);}
   toast(`Day ${S.day}${S.rain?' — rain today':''}. The market wants <b>${CROPS[S.demand].name}</b>.`,'',seedIcon(S.demand));}
@@ -3256,11 +3299,16 @@ function debrisParts(k,R,v){const p=[];switch(k){
     for(let i=0;i<4;i++){const a=i*1.57+R()*0.4;p.push(P(CYL6,0x6a4428,Math.cos(a)*0.22,0.05,Math.sin(a)*0.22,Math.sin(a)*1.1,0,-Math.cos(a)*1.1,0.08,0.26,0.08));}
     if(R()<0.5)p.push(P(CYL6,0xf2ead8,0.2,0.08,0.18,0,0,0,0.04,0.12,0.04),P(ICO2,0xd8453a,0.2,0.15,0.18,0,0,0,0.12,0.06,0.12));break;}
   return p;}
-function debrisGeo(k,v){const id=k+v+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0):'');if(!debGeo[id])debGeo[id]=merge(debrisParts(k,mulberry(hi(k.length,v,77)),v));return debGeo[id];}
+function debrisGeo(k,v,lo){const id=k+v+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo':''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v);debGeo[id]=merge(lo?lowParts(parts):parts);}return debGeo[id];}
 // debris is drawn instanced: one batch per model variant (a handful of draw calls for the whole field); debMesh maps a tile to its slot
-function syncDebris(){while(debrisRoot.children.length){const c=debrisRoot.children[0];debrisRoot.remove(c);c.dispose();}debMesh.clear();
+// wild trees come in two builds: full detail near the camera, a lighter one further off (treeLOD re-sorts them as you move)
+const treeGroups=[];let lodAt=null,lodT=0;
+function treeLOD(gr){let a=0,b=0;for(const e of gr.es){const near=Math.hypot(e.x-cam.tx,e.z-cam.tz)<26;e.im=near?gr.hi:gr.lo;e.i=near?a++:b++;setDebrisMatrix(e,0);}gr.hi.count=a;gr.lo.count=b;}
+function syncDebris(){while(debrisRoot.children.length){const c=debrisRoot.children[0];debrisRoot.remove(c);c.dispose();}debMesh.clear();treeGroups.length=0;lodAt=null;
   const groups=new Map();for(const d of S.debris){const id=d.k+d.v;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(d);}
-  for(const [,list] of groups){const im=new T.InstancedMesh(debrisGeo(list[0].k,list[0].v),vcMat,list.length);im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;
+  for(const [,list] of groups){if(list[0].k==='tree'){const mk=lo=>{const im=new T.InstancedMesh(debrisGeo('tree',list[0].v,lo),vcMat,list.length);im.castShadow=!lo;im.receiveShadow=true;im.frustumCulled=false;for(let i=0;i<list.length;i++)im.setColorAt(i,_c.setHex(0xffffff));debrisRoot.add(im);return im;};
+      const gr={hi:mk(false),lo:mk(true),es:list.map(d=>{const e={im:null,i:0,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};treeLOD(gr);treeGroups.push(gr);continue;}
+    const im=new T.InstancedMesh(debrisGeo(list[0].k,list[0].v),vcMat,list.length);im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;
     /* white instance colours: vcMat's cached program may expect them (r128 shares one program per material) */
     list.forEach((d,i)=>{im.setColorAt(i,_c.setHex(0xffffff));const e={im,i,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,shake:0};setDebrisMatrix(e,0);debMesh.set(K(d.x,d.z),e);});debrisRoot.add(im);}}
 function setDebrisMatrix(e,tilt){_e.set(0,e.r,tilt,'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(e.x,e.y,e.z),_q,_s.set(e.sc||1,e.sc||1,e.sc||1));e.im.setMatrixAt(e.i,_m);e.im.instanceMatrix.needsUpdate=true;}
@@ -3282,7 +3330,7 @@ function hitDebris(d){walkTo(d.x,d.z);vil.hop=0.2;d.hp--;const m=debMesh.get(K(d
   if(Math.random()<(d.k==='weed'||d.k==='bush'?0.08:0)){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+1;got.push('+1 '+CROPS[id].name+' seed');}
   floatText(d.x,1.1,d.z,got.join(' · '),'gold');SFX.pop();addXP(d.k==='boulder'||d.k==='stump'?2:1);burst(d.x,y,d.z,stone?0xc4c4d0:wood?0xb08050:0x8aba5a,14,1.8,0.08);
   if(!S.farmClear&&!S.debris.some(q=>farmQ(q.x,q.z)<1.05)){S.farmClear=1;SFX.level();toast('The whole farm field is cleared. Room for a proper harvest!','rare',ICON.sprout);}}
-function updateDebris(dt,tt){for(const e of debMesh.values())if(e.shake>0){e.shake=Math.max(0,e.shake-dt);setDebrisMatrix(e,e.shake>0?Math.sin(tt*60)*e.shake*0.35:0);}}
+function updateDebris(dt,tt){lodT-=dt;if(lodT<=0&&treeGroups.length){lodT=0.5;if(!lodAt||Math.hypot(cam.tx-lodAt[0],cam.tz-lodAt[1])>2){lodAt=[cam.tx,cam.tz];for(const gr of treeGroups)treeLOD(gr);}}for(const e of debMesh.values())if(e.shake>0){e.shake=Math.max(0,e.shake-dt);setDebrisMatrix(e,e.shake>0?Math.sin(tt*60)*e.shake*0.35:0);}}
 function syncLife(){syncDebris();
   while(lifeRoot.children.length){const c=lifeRoot.children[0];lifeRoot.remove(c);c.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
   S.finds=S.finds.filter(f=>isLand(f.x,f.z)&&FINDS[f.k]);S.weeds=S.weeds.filter(w=>isLand(w.x,w.z)&&!S.tiles[K(w.x,w.z)]);
@@ -3913,7 +3961,7 @@ function renderSheet(){
       for(const k in BUILD){const B=BUILD[k],lock=B.lvl>lv,n=S.store[k]||0;if(B.craft)continue;
         h+=`<button class="card ${lock?'lock':''}" data-buy="${k}" ${lock?'disabled':''}><img class="px" src="${THUMB[k]||''}" alt=""><span class="grow"><span class="nm">${B.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+B.lvl:(n?`${n} in storage — tap to place`:B.desc)}</span></span><span class="price">${n?'':sh(B.cost)}</span></button>`;}
       h+='</div>';}
-    else{const L=S.scratch&&built('hall')?LAND_UP[S.land]:null,HU=HOUSE_UP[S.house];
+    else{const L=null,HU=HOUSE_UP[S.house];
       h+=`<p class="note">Grow your island from a tent on a sandbar to a hilltop villa.</p><div class="grid">`;
       h+=L?`<div class="card wide"><img class="px" src="${THUMB.land}" alt=""><span class="grow"><span class="nm">Expand the farm field</span><br><span class="sub">Stage ${S.land+1} → ${S.land+2}. The field grows wider and taller (new ground comes up wild).${L.lvl>lv?' Needs Lv '+L.lvl+'.':''}</span></span><button class="pbtn go" data-land="1" ${L.lvl>lv||S.shells<L.cost?'disabled':''}>${fmt(L.cost)}</button></div>`
         :`<div class="card wide"><img class="px" src="${THUMB.land}" alt=""><span class="grow"><span class="nm">${TOWN.name}</span><br><span class="sub">Your town. Clear the farm field to the west for more room.</span></span></div>`;
@@ -3968,7 +4016,9 @@ function renderSheet(){
     h+=`<div class="setrow"><span class="note" style="margin:0">Drag to spin the camera, pinch to zoom. Your island and world save on this device.</span></div>`;
     h+=`<h3 class="sech">Dev tools</h3>`;
     h+=`<div class="setrow col"><div class="rowtop"><span>Time of day</span><b id="devHourLbl">${clockStr(S.hour)}</b></div><input type="range" id="devHour" min="0" max="23.9" step="0.05" value="${S.hour.toFixed(2)}" aria-label="Time of day"></div>`;
-    h+=`<div class="setrow"><span>Time speed</span><span class="seg">${[[0,'Pause'],[1,'1×'],[10,'10×'],[60,'60×']].map(([v,l])=>`<button data-spd="${v}" class="${devSpeed===v?'on':''}">${l}</button>`).join('')}</span></div>`;
+    h+=`<div class="setrow"><span>Time speed</span><span class="seg">${[[0,'Pause'],[1,'Real'],[10,'10×'],[60,'60×']].map(([v,l])=>`<button data-spd="${v}" class="${devSpeed===v?'on':''}">${l}</button>`).join('')}</span></div>`;
+    h+=`<div class="setrow"><span>Clock</span><span class="seg">${S.toff?`<button data-dev="realtime">Back to real time</button>`:'<button class="on" disabled>Your real time</button>'}</span></div>`;
+    h+=`<div class="setrow"><span>Season</span><span class="seg">${[['','Auto'],['spring','Spr'],['summer','Sum'],['autumn','Aut'],['winter','Win']].map(([v,l])=>`<button data-season="${v}" class="${(S.seasonOv||'')===v?'on':''}">${l}</button>`).join('')}</span></div>`;
     h+=`<div class="setrow"><span>Weather</span><span class="seg"><button data-wx="clear" class="${S.rain?'':'on'}">Clear</button><button data-wx="rain" class="${S.rain?'on':''}">Rain</button></span></div>`;
     h+=`<div class="setrow"><span>Night sky</span><span class="seg"><button data-dev="star">Shooting star</button><button data-dev="meteor" class="${S.meteor?'on':''}">Meteor shower</button></span></div>`;
     h+=`<div class="setrow"><span>Skip ahead</span><span class="seg"><button data-dev="morning">Next morning</button><button data-dev="shells">+1,000 shells</button></span></div>`;
@@ -3998,7 +4048,7 @@ function drawChart(){const cv=$('chart');if(!cv)return;const g=cv.getContext('2d
   cv.onclick=e=>{const r=cv.getBoundingClientRect();const wx=((e.clientX-r.left)/r.width*N-N/2)/sc,wz=((e.clientY-r.top)/r.height*N-N/2)/sc;
     let best=null,bd=1e9;for(const isl of disc){const d=Math.hypot(isl.cx-wx,isl.cz-wz);if(d<bd){bd=d;best=isl;}}if(best&&bd<18/sc+islR(best)){chartGo(best);}};}
 function chartGo(isl){if(!isl.home&&!unlocked('boat')){toast('You need your boat to reach other islands (Island Heart level 4).','',ICON.boat);return;}const here=curIsl();if(here&&here.id===isl.id){toast(`You're already on ${isl.name}.`);return;}closeSheet();fastTravel(isl);}
-$('sheetBody').addEventListener('input',e=>{if(e.target.id==='devHour'){const prev=S.hour;S.hour=Number(e.target.value);if(prev<6&&S.hour>=6&&S.hour-prev<3)dawn(false);$('devHourLbl').textContent=clockStr(S.hour);applyTime();updateHUD();}});
+$('sheetBody').addEventListener('input',e=>{if(e.target.id==='devHour'){setHour(Number(e.target.value));$('devHourLbl').textContent=clockStr(S.hour);applyTime();updateHUD();}});
 $('sheetTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;sheet.tab=b.dataset.tab;SFX.ui();renderSheet();});
 $('sheetBody').addEventListener('click',e=>{
   const el=e.target.closest('button');if(!el||el.disabled)return;const d=el.dataset;
@@ -4025,11 +4075,13 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.mus!==undefined){S.music=d.mus==='1';renderSheet();return;}
   if(d.spd!==undefined){devSpeed=Number(d.spd);renderSheet();return;}
   if(d.wx){if(d.wx==='rain'){S.rain=true;S.rainUntil=0;for(const k in S.tiles)S.tiles[k].w=1;rebuildSoil();}else if(S.rain)stopRain();renderSheet();return;}
-  if(d.dev==='star'){if(nightF<0.5){S.hour=22;applyTime();}spawnShootingStar();closeSheet();return;}
-  if(d.dev==='meteor'){S.meteor=!S.meteor;if(S.meteor&&nightF<0.5){S.hour=21.5;applyTime();}renderSheet();return;}
+  if(d.dev==='star'){if(nightF<0.5){setHour(22);applyTime();}spawnShootingStar();closeSheet();return;}
+  if(d.dev==='meteor'){S.meteor=!S.meteor;if(S.meteor&&nightF<0.5){setHour(21.5);applyTime();}renderSheet();return;}
   if(d.dev==='morning'){closeSheet();sleep();return;}
   if(d.dev==='showcase'){if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Tap again to load';return;}loadShowcase();return;}
   if(d.dev==='realsave'){restoreRealSave();return;}
+  if(d.dev==='realtime'){S.toff=0;devSpeed=1;S.hour=realHour();applyTime();updateHUD();renderSheet();return;}
+  if(d.season!==undefined){S.seasonOv=d.season||null;seasonCheck(true);renderSheet();return;}
   if(d.dev==='shells'){S.shells+=1000;SFX.coin();return;}
   if(d.snd!==undefined){S.sound=d.snd==='1';setWaveVol();if(S.sound)startWaves();renderSheet();return;}
   if(d.px!==undefined){S.pxAdj=Number(d.px);resize();renderSheet();return;}
@@ -4145,7 +4197,7 @@ window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('apps').hidden)
    boots on that island (bootGame(true) in 90-main), with you on its beach and nothing built.
    A candidate: seed (world and cliffs), style (HOME_STYLES), coastline wobble and carved coves, cliff layout, wildness.
    ========================================================= */
-function islandCandidate(){const r=Math.random,style=Object.keys(HOME_STYLES)[Math.floor(r()*4)];
+function islandCandidate(){const r=Math.random,style='meadow'; // every home island shares one temperate style; the seasons change it, the land makes it unique
   const coves=[];for(let i=0,n=1+(r()<0.5);i<n;i++){let a;do a=r()*6.283;while(Math.abs(Math.atan2(Math.sin(a-Math.PI),Math.cos(a-Math.PI)))<0.6);coves.push([a,0.16+r()*0.2,0.18+r()*0.22]);}
   return{seed:Math.floor(r()*1e9),style,shape:[0.02+r()*0.12,r()*0.1,r()*0.06,r()*6.283,r()*6.283,r()*6.283,2.8+r()*2.2],coves,cliff:[0.12+r()*0.32,r()<0.6?1:0],wild:0.3+r()*0.55};}
 const homeOf=c=>({style:c.style,shape:c.shape,coves:c.coves,cliff:c.cliff,wild:c.wild});
@@ -4166,25 +4218,25 @@ function buildCandidate(c){S.worldSeed=c.seed;S.home=homeOf(c);S.scratch=1;S.wil
   bits.push(c.cliff[1]&&high>250?'two tiers of cliffs':high>200?'cliffs to the north':'gentle, low hills');
   const cv=c.coves.slice().sort((a,b)=>b[1]-a[1])[0],dirs=['east','south-east','south','south-west','west','north-west','north','north-east'];
   bits.push(`a ${cv[1]>0.27?'deep bay':'sheltered cove'} to the ${dirs[Math.round(((cv[0]+6.283)%6.283)/0.785)%8]}`);
-  const epithet={meadow:'green',tropic:'sun-warmed',autumn:'golden',blossom:'blossoming'}[c.style];
-  return{title:`A ${epithet} ${st.name.toLowerCase()} island`,text:bits.slice(0,-1).join(', ')+' and '+bits[bits.length-1]+'.',near};}
+  // named for what stands out most about the land itself
+  const title=falls>2?'An island of waterfalls':trees>g*0.22?'A deep-forest island':c.cliff[1]&&high>250?'A cliff-top island':riv?'A river island':cv[1]>0.27?'An island with a deep bay':'A meadow island';
+  return{title,text:bits.slice(0,-1).join(', ')+' and '+bits[bits.length-1]+'.',near};}
 
 let arriving=null;
-function showArrival(){$('boot').style.display='none';document.body.classList.add('arriving');villager.visible=false;npcBoat.visible=false;resize();S.hour=7.4;applyTime();
+function showArrival(){$('boot').style.display='none';for(const c of clouds)c.visible=false;/* clouds would sit between the camera and the island */document.body.classList.add('arriving');villager.visible=false;npcBoat.visible=false;resize();S.hour=7.4;applyTime();
   const el=document.createElement('div');el.id='arrive';document.body.appendChild(el);
   arriving={el,t:0,last:performance.now(),n:0};
   const show=()=>{const c=islandCandidate();arriving.c=c;arriving.n++;const d=buildCandidate(c);cam.yaw=Math.random()*6.28;
     el.innerHTML=`<div class="arr"><small>${arriving.n===1?'Day 1 · adrift':'The current carries you on…'}</small><h2>${d.title}</h2><p>${d.text}${d.near?` ${d.near===1?'Another island':d.near+' other islands'} lie within sailing distance.`:''}</p>
       <div class="pkrow"><button class="pbtn" id="arMore">Keep drifting</button><button class="pbtn go" id="arLand">Make landfall</button></div></div>`;
     el.querySelector('#arMore').onclick=()=>{SFX.ui();fadeThen(show);};
-    el.querySelector('#arLand').onclick=()=>{SFX.ui();fadeThen(()=>{el.remove();arriving=null;document.body.classList.remove('arriving');villager.visible=true;npcBoat.visible=true;S.hour=7.2;bootGame(true);setTimeout(()=>$('fade').classList.remove('on'),300);},true);};};
+    el.querySelector('#arLand').onclick=()=>{SFX.ui();fadeThen(()=>{el.remove();arriving=null;for(const c of clouds)c.visible=true;document.body.classList.remove('arriving');villager.visible=true;npcBoat.visible=true;S.hour=7.2;bootGame(true);setTimeout(()=>$('fade').classList.remove('on'),300);},true);};};
   show();requestAnimationFrame(arrivalFrame);}
 function fadeThen(fn,keep){const f=$('fade');f.classList.add('on');setTimeout(()=>{fn();if(!keep)setTimeout(()=>f.classList.remove('on'),120);},650);}
 // a slow circle around the island from out at sea
 function arrivalFrame(now){if(!arriving)return;const dt=Math.min(0.1,(now-arriving.last)/1000);arriving.last=now;arriving.t+=dt;tt+=dt;
   cam.yaw+=dt*0.06;cam.tx=-9;cam.tz=1;cam.dist=62;cam.pitch=0.72;applyCam();cullIslands();
   scene.fog.near=cam.dist+18;scene.fog.far=cam.dist+120;grassU.uTime.value=tt;riverU.uTime.value=tt;water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
-  for(const c of clouds){const u=c.userData;u.ox+=dt*u.sp;const rx=((u.ox-cam.tx)%80+120)%80-40,rz=((u.oz-cam.tz)%80+120)%80-40;c.position.set(cam.tx+rx,11,cam.tz+rz);}
   updateSkyDome();renderer.setRenderTarget(rt);renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;
   renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);requestAnimationFrame(arrivalFrame);}
 /* =========================================================
@@ -4198,7 +4250,7 @@ function setupNew(){
   if(plot[0])S.tiles[K(...plot[0])].crop={t:'turnip',p:0.55,v:null,m:0};if(plot[1])S.tiles[K(...plot[1])].crop={t:'turnip',p:0.2,v:null,m:0};
   add('flowers',HOUSE_AT.x-1,HOUSE_AT.z+1);
   if(S.scratch)S.free={turnip:6,radish:3}; // a few seed packets washed up with you
-  S.hour=7.2;S.demand='carrot';S.rain=false;
+  S.demand='carrot';S.rain=false;
   S.finds=[];S.weeds=[];for(let i=0;i<3;i++)spawnFind(true,islands[0]);for(let i=0;i<2;i++)spawnWeed(true);makeOrders();
   const near=islands.slice(1).sort((a,b)=>Math.hypot(a.cx,a.cz)-Math.hypot(b.cx,b.cz))[0];if(near)S.disc[near.id]=1;
 }
@@ -4350,13 +4402,13 @@ function loadShowcase(){
   // late-game progress
   S.land=LAND_UP.length;S.house=HOUSE_UP.length;S.rod=RODS.length-1;S.can=CANS.length-1;
   S.xp=Math.max(S.xp,LV[LV.length-1]);S.shells=Math.max(S.shells,250000);S.earned=Math.max(S.earned,1200000);S.harvested=Math.max(S.harvested||0,4800);S.day=Math.max(S.day,120);
-  S.boat=null;S.tut=2;S.tipTools=1;S.tipSeed=1;S.tipPaint=1;S.boatTip=1;S.farmInit=1;S.farmClear=1;S.hour=9.5;S.rain=false;S.sea=false;
+  S.boat=null;S.tut=2;S.tipTools=1;S.tipSeed=1;S.tipPaint=1;S.boatTip=1;S.farmInit=1;S.farmClear=1;S.rain=false;S.sea=false;
   for(const isl of islands)if(!isl.home){S.disc[isl.id]=1;S.restore[isl.id]=RESTORE_N;}
   S.moved={};for(let n=0;n<6;n++)S.moved[n]=1;
   for(const [cat,,pre,tab] of DEX_CATS)for(const k in tab)S.alm[pre+k]=1;
   for(const id of CROP_IDS){for(const v of VARIANTS)S.alm[id+'|'+v.id]=1;S.almR[id]=1;}
   // the showcase is a classic, fully built town (a wild island's own layout is left behind)
-  delete S.scratch;delete S.home;delete S.homeAt;S.builds=[];S.debris=[];S.paths={};applyHomeStyle();
+  delete S.scratch;delete S.wild;delete S.home;delete S.homeAt;S.builds=[];S.debris=[];S.paths={};applyHomeStyle();
   buildIsland(islands[0]); // the field grows with S.land
   layShowcaseFarm();
   const g=showcaseGate;vil.x=vil.tx=g[0]-1.5;vil.z=vil.tz=g[1]+0.5;
@@ -4481,7 +4533,7 @@ function frame(now){
    ========================================================= */
 $('icoMenu').src=ICON.menu;$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
 // a brand-new game first chooses its island (85-islandpick), then boots; everything else boots straight away
-function bootGame(prebuilt){applyHomeStyle();
+function bootGame(prebuilt){applyHomeStyle();seasonCheck();
 if(!prebuilt){genIslands();for(const isl of islands)buildIsland(isl);rebuildSeaGrid();}
 if(S.wv!==3){if(!isNew){S.sea=false;S.boat=null;S.picked={};vil.x=vil.tx=0.3;vil.z=vil.tz=2.1;}S.wv=3;}
 ensureBoat(true);if(S.sea&&isLand(Math.round(S.boat.x),Math.round(S.boat.z))){S.sea=false;S.boat=null;ensureBoat(false);}
@@ -4490,12 +4542,12 @@ grantKits();const farmNew=!S.farmInit;if(farmNew){genDebris();if(S.scratch)genWi
 if(isNew||(!S.sea&&!walkable(Math.round(vil.x),Math.round(vil.z)))){if(S.scratch){vil.x=vil.tx=DOCK.x+0.5;vil.z=vil.tz=DOCK.z-1.2;}else{vil.x=vil.tx=TOWN.plaza[0]+0.5;vil.z=vil.tz=TOWN.plaza[1]+2.4;}}
 if(S.sea){vil.x=vil.tx=S.boat.x;vil.z=vil.tz=S.boat.z;}
 syncObjs();rebuildSoil();if(!S.orders.length)makeOrders();syncLife();setRod();initNPCs();
-let away=[];if(!isNew){const el=clamp((Date.now()-S.t)/1000,0,3*3600);if(el>5)away=simulate(el);}
+let away=[];if(!isNew){const el=clamp((Date.now()-S.t)/1000,0,21*86400);if(el>5)away=simulate(el);}
 syncAllCrops();fitZoom();cam.tx=vil.x;cam.tz=vil.z;resize();
 try{makeThumbs();}catch(e){console.warn(e);}
 applyLook();renderTools();showHeld();if(!S.tipTools){S.tipTools=1;setTimeout(()=>toast('Tap anywhere to walk. Pick a <b>tool</b> from the bar above the dock, then tap to dig, water, plant, chop, catch bugs or fish.','',ICON.shovel),5000);}shownShells=S.shells;$('shellTxt').textContent=fmt(S.shells);applyTime();updateHUD();
 window.addEventListener('resize',()=>{resize();});
-document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{const el=clamp((Date.now()-S.t)/1000,0,3*3600);if(el>5){const out=simulate(el);afterSim(out,'While you were away');}last=performance.now();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{const el=clamp((Date.now()-S.t)/1000,0,21*86400);if(el>5){const out=simulate(el);afterSim(out,'While you were away');}last=performance.now();}});
 window.addEventListener('pagehide',save);
 $('boot').remove();
 if(S.scratch&&isNew){setTimeout(()=>toast('Your raft scrapes onto the sand. No roads, no houses, no one: just the island. Look around, then choose a spot for your tent.','',ICON.sprout),900);
@@ -4519,7 +4571,7 @@ if(/[?&]debug\b/.test(location.search)){
   window.DS={
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
       islands:islands.length,town:TOWN.name,buildings:TOWN.bld.filter(b=>!b.locked).map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
-    hour:h=>{S.hour=h;applyTime();},
+    hour:h=>{setHour(h);applyTime();},
     tp:(x,z)=>{S.sea=false;vil.x=vil.tx=x;vil.z=vil.tz=z;vil.path=null;cam.tx=x;cam.tz=z;},
     visit:id=>{const i=islands[id];S.disc[id]=1;const sp=(i.spots&&i.spots[1])||i.grass[0];DS.tp(sp[0]+0.6,sp[1]+0.6);},
     islands:()=>islands.map(i=>({id:i.id,biome:i.biome,name:i.name,x:i.cx,z:i.cz,r:Math.round(islR(i)),grand:!!i.grand,river:(i.rtiles||[]).length})),
