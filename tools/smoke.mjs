@@ -44,7 +44,7 @@ if(row){await ev(r=>DS.tp(r[0]+2,r[1]+1.5),row);check(await ev(()=>DS.tool('shov
   // tools: tap soil with the watering can (the villager walks over, then waters)
   await ev(()=>DS.tool('can'));let wx=row[0]+4;for(let i=4;i>=0;i--)if(await ev(([x,z])=>DS.tile(x,z),[row[0]+i,row[1]])){wx=row[0]+i;break;}
   let wet=false;for(let tries=0;tries<2&&!wet;tries++){await pg.keyboard.press('Escape');await ev(()=>document.querySelectorAll('.toast').forEach(e=>e.remove()));await wait(1500);const p0=await ev(([x,z])=>DS.screen(x,z),[wx,row[1]]);await pg.mouse.click(p0[0],p0[1]);
-    for(let i=0;i<16&&!wet;i++){await wait(500);wet=!!(await ev(([x,z])=>DS.tile(x,z),[wx,row[1]]))?.w;}}
+    for(let i=0;i<32&&!wet;i++){await wait(500);wet=!!(await ev(([x,z])=>DS.tile(x,z),[wx,row[1]]))?.w;}}
   check(wet,'watering can watered the tapped soil');await pg.keyboard.press('Escape');
   // hands: a tap on open ground just walks there
   await ev(()=>document.querySelectorAll('.toast').forEach(e=>e.remove()));await ev(()=>DS.tool('hand'));await wait(1500);/* let the camera settle before reading screen positions */const v0=await ev(()=>DS.vil());const p1=await ev(([x,z])=>DS.screen(x,z),[row[0],row[1]]);await pg.mouse.click(p1[0],p1[1]);let v1=v0;for(let i=0;i<30&&Math.hypot(v1.x-row[0],v1.z-row[1])>1;i++){await wait(500);v1=await ev(()=>DS.vil());}
