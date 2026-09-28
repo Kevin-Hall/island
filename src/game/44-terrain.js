@@ -91,14 +91,15 @@ function buildIsland(isl){
     const bk=makeBake();for(const [mask,l] of groups)for(const [x,z] of l)bk.add(rtileGeo(mask),x,y,z,1,0.002,1,0xffffff,null,()=>true);const m=bk.mesh(mat,false);if(m){m.receiveShadow=false;g.add(m);isl.flats.push(m);}};
   flat(a1,s1Mat,0.012,1);flat(a2,s2Mat,0.006,2);
   // dark, wave-worn rocks poking out of the shallows here and there
+  const rockFoamMat=buildIsland.rfm||(buildIsland.rfm=new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.45,depthWrite:false}));
   {const rp=[],fp=[];const seaRock=(x,z,h,big)=>{const s=(big?0.5:0.32)+hash(z,x)*0.4,ox=(hash(x,z*3)-0.5)*0.5,oz=(hash(z*5,x)-0.5)*0.5,X=x+ox,Z=z+oz;
       rp.push(PG(SPH,0x6a7488,0x2a3242,X,0.0,Z,0,h*200,0,s,s*0.6,s*0.86),PG(SPH_LO,0x7a8498,0x30384a,X+s*0.4,-0.04,Z+s*0.25,0,0,0,s*0.5,s*0.34,s*0.46));
       if(h<0.02)rp.push(PG(SPH_LO,0x5aa048,0x2e6630,X-s*0.12,s*0.3,Z-s*0.06,0,0,0,s*0.42,s*0.3,s*0.4),PG(SPH_LO,0x64ac4e,0x2e6630,X+s*0.16,s*0.26,Z+s*0.1,0,0,0,s*0.28,s*0.22,s*0.26));/* a small dark shrub clinging to some */
-      fp.push(P(SPH_LO,0xffffff,X,0.016,Z,0,h*70,0,s*2.5,0.02,s*2.2));/* a ring of foam round each */};
+      fp.push(P(SPH_LO,0xffffff,X,0.014,Z,0,h*70,0,s*1.55,0.02,s*1.35));/* a ring of foam round each */};
     const nearDock=(x,z)=>isl.home&&Math.abs(x-DOCK.x)<=2&&z>DOCK.z-2&&z<DOCK.z+8;/* keep the pier and its mooring clear */
     for(const [x,z] of a1){const h=hash(x*1.37+isl.id,z*2.11);if(h<0.1&&!nearDock(x,z))seaRock(x,z,h,true);}
     for(const [x,z] of a2){const h=hash(x*1.37+isl.id,z*2.11);if(h<0.06&&!nearDock(x,z))seaRock(x,z,h,false);}
-    if(rp.length){const m=M(rp);m.castShadow=false;g.add(m);const f=M(fp,foamMat);f.castShadow=false;f.receiveShadow=false;f.renderOrder=1;g.add(f);}}
+    if(rp.length){const m=M(rp);m.castShadow=false;g.add(m);const f=M(fp,rockFoamMat);f.castShadow=false;f.receiveShadow=false;f.renderOrder=1;g.add(f);}}
   const blocked=new Set();
   // the odd dark stone lying at the water's edge of the beach
   {const bp=[];for(const [x,z] of isl.sand){const h=hash(x*2.71+isl.id*3,z*1.93);if(h>0.04||Math.abs(x-DOCK.x)<2&&isl.home)continue;

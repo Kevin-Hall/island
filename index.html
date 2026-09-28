@@ -798,7 +798,7 @@ const postMat=new T.ShaderMaterial({
       vec3 gl=vec3(0.);for(int i=0;i<4;i++){vec2 o=vec2(i<2?-2.:2.,mod(float(i),2.)<1.?-2.:2.)*px;gl+=max(texture2D(tC,vUv+o).rgb-.8,0.);}
       c+=gl*vec3(.09,.08,.06)*gw; // just a whisper of glow off the sand and surf
       // a sunny grade: a touch more colour, warm highlights, cool shadows, and a warm haze out towards the horizon
-      float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.+.04*gw);
+      float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.+.04*gw);c=mix(c,(c-.5)*1.08+.48,gw); // a little more contrast
       c*=mix(vec3(1.),mix(vec3(.96,.98,1.05),vec3(1.04,1.,.95),smoothstep(.25,.85,l)),gw);
       c=mix(c,c*vec3(1.04,1.,.95)+vec3(.03,.02,.0),smoothstep(110.,300.,d)*step(d,cf*.6)*.45*gw);
       vec2 vg=vUv-.5;c*=1.-dot(vg,vg)*.14;
@@ -952,16 +952,20 @@ sun.shadow.bias=-0.0015;sun.shadow.normalBias=0.02;scene.add(sun,sun.target);
 const waterMat=new T.MeshBasicMaterial({color:0x3565cc});
 // the open sea isn't flat colour: soft darker and lighter patches, and bright ripple streaks that drift with the swell
 // (the pixel pass turns them into little painted wave marks)
-const waterU={uT:{value:0}};
-waterMat.onBeforeCompile=sh=>{sh.uniforms.uT=waterU.uT;
+const waterU={uT:{value:0},uYaw:{value:0}};
+waterMat.onBeforeCompile=sh=>{sh.uniforms.uT=waterU.uT;sh.uniforms.uYaw=waterU.uYaw;
   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
-  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;')
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;uniform float uYaw;')
     .replace('#include <color_fragment>',`#include <color_fragment>
       {vec2 q=vWp.xz;float n=fract(sin(dot(floor(q*.45),vec2(12.9898,78.233)))*43758.5453)*.5+fract(sin(dot(floor(q*1.3),vec2(39.3,11.7)))*43758.5453)*.5;
        diffuseColor.rgb*=.93+.1*n;
-       float band=sin(q.y*2.8+sin(q.x*.6+uT*.5)*1.4-uT*.9),pch=sin(q.x*1.9+q.y*.4+uT*.45)*sin(q.y*.8-q.x*.5-uT*.3);
-       float wv=step(.96,band)*step(.3,pch);
-       diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*1.3+.1,wv*.8);}`);};
+       // soft swells: broad lighter and darker bands rolling slowly
+       float sw=sin(q.x*.35+q.y*.22+uT*.4)*sin(q.y*.3-q.x*.12-uT*.3);diffuseColor.rgb*=.93+.12*sw;
+       // glints: a short dash in some cells, lying along the screen, blinking on and off
+       float cy=cos(uYaw),sy=sin(uYaw);vec2 r=vec2(q.x*cy-q.y*sy,q.x*sy+q.y*cy)*vec2(.55,1.4);vec2 ce=floor(r),f=fract(r);
+       float h=fract(sin(dot(ce,vec2(27.1,61.7)))*43758.5453),tw=step(.55,sin(uT*1.3+h*40.));
+       float dsh=step(abs(f.y-.5),.09)*step(abs(f.x-.5),.2+.1*h)*step(h,.3)*tw;
+       diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.92,.97,1.),dsh*.85);}`);};
 const water=new T.Mesh(new T.PlaneGeometry(520,520,52,52).rotateX(-Math.PI/2),waterMat);water.frustumCulled=false;scene.add(water);
 const s1Mat=new T.MeshBasicMaterial({color:0x7ea6e8}),s2Mat=new T.MeshBasicMaterial({color:0x5584da});
 const TILE_PLANE=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2);
@@ -1466,14 +1470,15 @@ function buildIsland(isl){
     const bk=makeBake();for(const [mask,l] of groups)for(const [x,z] of l)bk.add(rtileGeo(mask),x,y,z,1,0.002,1,0xffffff,null,()=>true);const m=bk.mesh(mat,false);if(m){m.receiveShadow=false;g.add(m);isl.flats.push(m);}};
   flat(a1,s1Mat,0.012,1);flat(a2,s2Mat,0.006,2);
   // dark, wave-worn rocks poking out of the shallows here and there
+  const rockFoamMat=buildIsland.rfm||(buildIsland.rfm=new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.45,depthWrite:false}));
   {const rp=[],fp=[];const seaRock=(x,z,h,big)=>{const s=(big?0.5:0.32)+hash(z,x)*0.4,ox=(hash(x,z*3)-0.5)*0.5,oz=(hash(z*5,x)-0.5)*0.5,X=x+ox,Z=z+oz;
       rp.push(PG(SPH,0x6a7488,0x2a3242,X,0.0,Z,0,h*200,0,s,s*0.6,s*0.86),PG(SPH_LO,0x7a8498,0x30384a,X+s*0.4,-0.04,Z+s*0.25,0,0,0,s*0.5,s*0.34,s*0.46));
       if(h<0.02)rp.push(PG(SPH_LO,0x5aa048,0x2e6630,X-s*0.12,s*0.3,Z-s*0.06,0,0,0,s*0.42,s*0.3,s*0.4),PG(SPH_LO,0x64ac4e,0x2e6630,X+s*0.16,s*0.26,Z+s*0.1,0,0,0,s*0.28,s*0.22,s*0.26));/* a small dark shrub clinging to some */
-      fp.push(P(SPH_LO,0xffffff,X,0.016,Z,0,h*70,0,s*2.5,0.02,s*2.2));/* a ring of foam round each */};
+      fp.push(P(SPH_LO,0xffffff,X,0.014,Z,0,h*70,0,s*1.55,0.02,s*1.35));/* a ring of foam round each */};
     const nearDock=(x,z)=>isl.home&&Math.abs(x-DOCK.x)<=2&&z>DOCK.z-2&&z<DOCK.z+8;/* keep the pier and its mooring clear */
     for(const [x,z] of a1){const h=hash(x*1.37+isl.id,z*2.11);if(h<0.1&&!nearDock(x,z))seaRock(x,z,h,true);}
     for(const [x,z] of a2){const h=hash(x*1.37+isl.id,z*2.11);if(h<0.06&&!nearDock(x,z))seaRock(x,z,h,false);}
-    if(rp.length){const m=M(rp);m.castShadow=false;g.add(m);const f=M(fp,foamMat);f.castShadow=false;f.receiveShadow=false;f.renderOrder=1;g.add(f);}}
+    if(rp.length){const m=M(rp);m.castShadow=false;g.add(m);const f=M(fp,rockFoamMat);f.castShadow=false;f.receiveShadow=false;f.renderOrder=1;g.add(f);}}
   const blocked=new Set();
   // the odd dark stone lying at the water's edge of the beach
   {const bp=[];for(const [x,z] of isl.sand){const h=hash(x*2.71+isl.id*3,z*1.93);if(h>0.04||Math.abs(x-DOCK.x)<2&&isl.home)continue;
@@ -2915,9 +2920,9 @@ const KF=[
  {h:0,   sun:0x9ab0ff,si:.42,sky:0x5a6cb4,gnd:0x2c3466,hi:.78,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
  {h:4.8, sun:0x9aa8f0,si:.4,sky:0x6070b4,gnd:0x303868,hi:.76,water:0x243a78,s1:0x3e5ea4,s2:0x30488c,n:1,gl:0xc8d4ff,hz:0x1c2656,zen:0x0c1434,glow:0x7a6aa8,ga:.25},
  {h:6,   sun:0xff9a6a,si:.55,sky:0xffb896,gnd:0x5a4a6e,hi:.55,water:0x3a6cb4,s1:0x8ab8d4,s2:0x5c94c4,n:.25,gl:0xffe0c8,hz:0xf4b090,zen:0x5a78c8,glow:0xffa060,ga:1},
- {h:8,   sun:0xffe6c4,si:.88,sky:0xd8e6ff,gnd:0x76866a,hi:.7,water:0x2b6fd0,s1:0x8ee0ec,s2:0x44b2e4,n:0,gl:0xffffff,hz:0xa6d2fa,zen:0x3f8ae6,glow:0xfff0c0,ga:.3},
- {h:12.5,sun:0xfff8ea,si:.92,sky:0xeaf2ff,gnd:0x80927a,hi:.74,water:0x2a72d6,s1:0x92e4ee,s2:0x42b6e8,n:0,gl:0xffffff,hz:0xaad6fc,zen:0x2f7fe4,glow:0xfffbe8,ga:.15},
- {h:16.5,sun:0xffe0b0,si:.88,sky:0xffe6c8,gnd:0x7a7a6a,hi:.7,water:0x2e6ccc,s1:0x92dce6,s2:0x4aace0,n:0,gl:0xffffff,hz:0xbcd6f4,zen:0x3a84de,glow:0xffe0a0,ga:.35},
+ {h:8,   sun:0xffe6c4,si:1.0,sky:0xd8e6ff,gnd:0x5e6a58,hi:.5,water:0x2b6fd0,s1:0x8ee0ec,s2:0x44b2e4,n:0,gl:0xffffff,hz:0xa6d2fa,zen:0x3f8ae6,glow:0xfff0c0,ga:.3},
+ {h:12.5,sun:0xfff8ea,si:1.05,sky:0xeaf2ff,gnd:0x66725e,hi:.52,water:0x2a72d6,s1:0x92e4ee,s2:0x42b6e8,n:0,gl:0xffffff,hz:0xaad6fc,zen:0x2f7fe4,glow:0xfffbe8,ga:.15},
+ {h:16.5,sun:0xffe0b0,si:1.0,sky:0xffe6c8,gnd:0x625e54,hi:.5,water:0x2e6ccc,s1:0x92dce6,s2:0x4aace0,n:0,gl:0xffffff,hz:0xbcd6f4,zen:0x3a84de,glow:0xffe0a0,ga:.35},
  {h:18.3,sun:0xff8a54,si:.72,sky:0xff9c7a,gnd:0x5e4868,hi:.58,water:0x4c5aa8,s1:0x9a92cc,s2:0x6e70ba,n:.3,gl:0xffd0a0,hz:0xf89a78,zen:0x4a5aae,glow:0xffb050,ga:1},
  {h:19.4,sun:0xb07ad0,si:.4,sky:0x8a6ab0,gnd:0x3a3060,hi:.68,water:0x2e3a80,s1:0x505ea6,s2:0x3c4a92,n:.8,gl:0xe0c8ff,hz:0x4a3a78,zen:0x221f5a,glow:0xff7a6a,ga:.6},
  {h:21,  sun:0x9ab0ff,si:.42,sky:0x5a6cb4,gnd:0x2c3466,hi:.78,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
@@ -2937,7 +2942,7 @@ function applyTime(){
   lerpCol(skyHz,'hz',A,B,t,rm);lerpCol(skyZen,'zen',A,B,t,rm);lerpCol(skyGlow,'glow',A,B,t);skyGA=lerp(A.ga,B.ga,t)*(1-rm*0.8);scene.fog.color.copy(skyHz);
   nightF=lerp(A.n,B.n,t);
   let tt;if(h>=5.5&&h<19.25)tt=(h-5.5)/13.75;else tt=((h-19.25+24)%24)/10.25;
-  const az=lerp(-1.25,1.25,tt)+0.6,el=0.28+Math.sin(tt*Math.PI)*0.9;
+  const az=lerp(-1.25,1.25,tt)+0.6,el=0.28+Math.sin(tt*Math.PI)*0.62; // the sun never climbs too high, so shadows stay long and soft
   sun.position.set(cam.tx+Math.cos(el)*Math.sin(az)*32,Math.sin(el)*32,cam.tz+Math.cos(el)*Math.cos(az)*32);sun.target.position.set(cam.tx,0,cam.tz);
   glowMat.emissiveIntensity=nightF*1.3+rm*0.2;poolMat.opacity=nightF*0.55;lumMat.emissiveIntensity=0.6+nightF*0.8;
   moonMat.emissiveIntensity=0.35+nightF*0.9;postMat.uniforms.gw.value=(1-nightF*0.75)*(1-rm*0.6);ffMat.opacity=nightF*0.95;starMat.uniforms.op.value=nightF*(1-rm);
@@ -3394,7 +3399,7 @@ let weedSlow=new Set();
 const DEBRIS={weed:{hp:1},twig:{hp:1},bush:{hp:2},rock:{hp:2},stump:{hp:3},boulder:{hp:4},tree:{hp:5}}; // trees: the wild island's forests (53-wild)
 const debGeo={},debMesh=new Map(),debrisRoot=new T.Group();scene.add(debrisRoot);
 // a soft round shadow blob under every tree and bush (cheap: one instanced disc per batch), so they sit on the ground
-const BLOB_GEO=new T.CircleGeometry(0.5,12).rotateX(-Math.PI/2),blobMat=new T.MeshBasicMaterial({color:0x1e3a2e,transparent:true,opacity:0.22,depthWrite:false});
+const BLOB_GEO=new T.CircleGeometry(0.5,12).rotateX(-Math.PI/2),blobMat=new T.MeshBasicMaterial({color:0x1e3a2e,transparent:true,opacity:0.3,depthWrite:false});
 function addBlobs(list,r){const sb=new T.InstancedMesh(BLOB_GEO,blobMat,list.length);sb.frustumCulled=false;sb.renderOrder=1;
   list.forEach((d,i)=>{const s=(d.sc||1)*r;_e.set(0,0,0);_q.setFromEuler(_e);_m.compose(_v.set(d.x+0.12,topY(d.x,d.z)+0.015,d.z+0.1),_q,_s.set(s*2.2,1,s*1.7));sb.setMatrixAt(i,_m);});
   sb.instanceMatrix.needsUpdate=true;debrisRoot.add(sb);}
@@ -4523,12 +4528,17 @@ let devSpeed=1,wind=0.4,windT=0;
 const FOAMN=700;
 const foamMat=new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.7,depthWrite:false});
 const foamIM=new T.InstancedMesh(new T.PlaneGeometry(1.04,0.26).rotateX(-Math.PI/2),foamMat,FOAMN);foamIM.frustumCulled=false;foamIM.count=0;scene.add(foamIM);
+const waveMat=new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.55,depthWrite:false});
+const waveIM=new T.InstancedMesh(new T.PlaneGeometry(1.04,0.16).rotateX(-Math.PI/2),waveMat,FOAMN);waveIM.frustumCulled=false;waveIM.count=0;scene.add(waveIM);
 function updateFoam(tt){let n=0;_s.set(1,1,1);
   for(const isl of islands){if(!isl.edges)continue;const R=islR(isl)/0.62+30;if(Math.hypot(isl.cx-cam.tx,isl.cz-cam.tz)>R)continue;
     for(const e of isl.edges){if(n>=FOAMN)break;const dx=e[0]-cam.tx,dz=e[1]-cam.tz;if(dx*dx+dz*dz>1000)continue;
       const w=0.5+0.5*Math.sin(tt*1.3+e[4]),off=0.08+w*0.24;_e.set(0,Math.atan2(e[2],e[3]),0);_q.setFromEuler(_e);
-      _m.compose(_v.set(e[0]+e[2]*off,0.028+tideY,e[1]+e[3]*off),_q,_s.set(1,1,0.35+(1-w)*0.9));foamIM.setMatrixAt(n++,_m);}}
-  foamIM.count=n;foamIM.instanceMatrix.needsUpdate=true;foamMat.opacity=0.7+0.25*(1-nightF);}
+      _m.compose(_v.set(e[0]+e[2]*off,0.028+tideY,e[1]+e[3]*off),_q,_s.set(1,1,0.35+(1-w)*0.9));foamIM.setMatrixAt(n,_m);
+      // the incoming wave: starts thin out in the shallows, swells as it nears the sand, then melts into the foam line
+      const u=((tt*0.22+e[4]/6.283+Math.sin((e[0]+e[1])*0.35)*0.12)%1+1)%1,wo=0.3+(1-u)*1.5,ws=Math.sin(u*Math.PI);
+      _m.compose(_v.set(e[0]+e[2]*wo,0.026+tideY,e[1]+e[3]*wo),_q,_s.set(1,1,0.2+ws*1.1));waveIM.setMatrixAt(n++,_m);}}
+  foamIM.count=waveIM.count=n;foamIM.instanceMatrix.needsUpdate=waveIM.instanceMatrix.needsUpdate=true;foamMat.opacity=0.7+0.25*(1-nightF);waveMat.opacity=(0.5+0.2*(1-nightF));}
 
 // --- footprints in the sand, dust and footsteps ---
 const FPN=70;const fpIM=new T.InstancedMesh(new T.PlaneGeometry(0.1,0.15).rotateX(-Math.PI/2),new T.MeshBasicMaterial({color:0xb89a6a,transparent:true,opacity:0.55,depthWrite:false}),FPN);
@@ -4736,7 +4746,7 @@ function frame(now){
   const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;
   advance(dt*devSpeed);
   rainMix=clamp(rainMix+(S.rain?dt:-dt)*0.5,0,1);
-  grassU.uTime.value=tt;riverU.uTime.value=tt;waterU.uT.value=tt;
+  grassU.uTime.value=tt;riverU.uTime.value=tt;waterU.uT.value=tt;waterU.uYaw.value=cam.yaw;
   {const ci=S.sea?null:curIsl();if(ci&&ci.falls)for(const [x,y,z] of ci.falls){if(Math.random()<dt*3&&Math.abs(x-cam.tx)<16&&Math.abs(z-cam.tz)<16)emit(x+(Math.random()-0.5)*0.8,y+0.05,z+(Math.random()-0.5)*0.3,{vy:0.5+Math.random()*0.5,life:0.6,max:0.6,size:0.07,color:ci.lava?0xffc070:0xf4fbff,g:2});}}grassU.uWind.value=1+rainMix*1.3;grassU.uPl.value.set(vil.x,S.sea?-99:vil.y,vil.z);
   if(!S.sea){
     const dx=vil.tx-vil.x,dz=vil.tz-vil.z,d=Math.hypot(dx,dz);

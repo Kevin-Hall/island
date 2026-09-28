@@ -33,7 +33,7 @@ const postMat=new T.ShaderMaterial({
       vec3 gl=vec3(0.);for(int i=0;i<4;i++){vec2 o=vec2(i<2?-2.:2.,mod(float(i),2.)<1.?-2.:2.)*px;gl+=max(texture2D(tC,vUv+o).rgb-.8,0.);}
       c+=gl*vec3(.09,.08,.06)*gw; // just a whisper of glow off the sand and surf
       // a sunny grade: a touch more colour, warm highlights, cool shadows, and a warm haze out towards the horizon
-      float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.+.04*gw);
+      float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.+.04*gw);c=mix(c,(c-.5)*1.08+.48,gw); // a little more contrast
       c*=mix(vec3(1.),mix(vec3(.96,.98,1.05),vec3(1.04,1.,.95),smoothstep(.25,.85,l)),gw);
       c=mix(c,c*vec3(1.04,1.,.95)+vec3(.03,.02,.0),smoothstep(110.,300.,d)*step(d,cf*.6)*.45*gw);
       vec2 vg=vUv-.5;c*=1.-dot(vg,vg)*.14;
@@ -187,16 +187,20 @@ sun.shadow.bias=-0.0015;sun.shadow.normalBias=0.02;scene.add(sun,sun.target);
 const waterMat=new T.MeshBasicMaterial({color:0x3565cc});
 // the open sea isn't flat colour: soft darker and lighter patches, and bright ripple streaks that drift with the swell
 // (the pixel pass turns them into little painted wave marks)
-const waterU={uT:{value:0}};
-waterMat.onBeforeCompile=sh=>{sh.uniforms.uT=waterU.uT;
+const waterU={uT:{value:0},uYaw:{value:0}};
+waterMat.onBeforeCompile=sh=>{sh.uniforms.uT=waterU.uT;sh.uniforms.uYaw=waterU.uYaw;
   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
-  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;')
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;uniform float uYaw;')
     .replace('#include <color_fragment>',`#include <color_fragment>
       {vec2 q=vWp.xz;float n=fract(sin(dot(floor(q*.45),vec2(12.9898,78.233)))*43758.5453)*.5+fract(sin(dot(floor(q*1.3),vec2(39.3,11.7)))*43758.5453)*.5;
        diffuseColor.rgb*=.93+.1*n;
-       float band=sin(q.y*2.8+sin(q.x*.6+uT*.5)*1.4-uT*.9),pch=sin(q.x*1.9+q.y*.4+uT*.45)*sin(q.y*.8-q.x*.5-uT*.3);
-       float wv=step(.96,band)*step(.3,pch);
-       diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*1.3+.1,wv*.8);}`);};
+       // soft swells: broad lighter and darker bands rolling slowly
+       float sw=sin(q.x*.35+q.y*.22+uT*.4)*sin(q.y*.3-q.x*.12-uT*.3);diffuseColor.rgb*=.93+.12*sw;
+       // glints: a short dash in some cells, lying along the screen, blinking on and off
+       float cy=cos(uYaw),sy=sin(uYaw);vec2 r=vec2(q.x*cy-q.y*sy,q.x*sy+q.y*cy)*vec2(.55,1.4);vec2 ce=floor(r),f=fract(r);
+       float h=fract(sin(dot(ce,vec2(27.1,61.7)))*43758.5453),tw=step(.55,sin(uT*1.3+h*40.));
+       float dsh=step(abs(f.y-.5),.09)*step(abs(f.x-.5),.2+.1*h)*step(h,.3)*tw;
+       diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.92,.97,1.),dsh*.85);}`);};
 const water=new T.Mesh(new T.PlaneGeometry(520,520,52,52).rotateX(-Math.PI/2),waterMat);water.frustumCulled=false;scene.add(water);
 const s1Mat=new T.MeshBasicMaterial({color:0x7ea6e8}),s2Mat=new T.MeshBasicMaterial({color:0x5584da});
 const TILE_PLANE=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2);
