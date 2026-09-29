@@ -30,7 +30,7 @@ function applyTime(){
   const az=lerp(-1.25,1.25,tt)+0.6,el=0.28+Math.sin(tt*Math.PI)*0.62; // the sun never climbs too high, so shadows stay long and soft
   sun.position.set(cam.tx+Math.cos(el)*Math.sin(az)*32,Math.sin(el)*32,cam.tz+Math.cos(el)*Math.cos(az)*32);sun.target.position.set(cam.tx,0,cam.tz);
   glowMat.emissiveIntensity=nightF*1.3+rm*0.2;poolMat.opacity=nightF*0.55;lumMat.emissiveIntensity=0.6+nightF*0.8;
-  moonMat.emissiveIntensity=0.35+nightF*0.9;waterU.uSunD.value.copy(sun.position).sub(sun.target.position).normalize();waterU.uGl.value=(1-nightF*0.85)*(1-rm);postMat.uniforms.gw.value=(1-nightF*0.75)*(1-rm*0.6);ffMat.opacity=nightF*0.95;starMat.uniforms.op.value=nightF*(1-rm);
+  moonMat.emissiveIntensity=0.35+nightF*0.9;waterU.uSunD.value.copy(sun.position).sub(sun.target.position).normalize();waterU.uGl.value=(1-nightF*0.85)*(1-rm);bushSpriteLight();postMat.uniforms.gw.value=(1-nightF*0.75)*(1-rm*0.6);ffMat.opacity=nightF*0.95;starMat.uniforms.op.value=nightF*(1-rm);
 }
 function timeName(h){if(h<5)return'night';if(h<7)return'dawn';if(h<11)return'morning';if(h<14)return'midday';if(h<17)return'afternoon';if(h<19.3)return'dusk';if(h<22)return'evening';return'night';}
 function clockStr(h){let hh=Math.floor(h),mm=Math.floor((h-hh)*6)*10;const ap=hh<12?'am':'pm';hh=hh%12||12;return hh+':'+String(mm).padStart(2,'0')+' '+ap;}

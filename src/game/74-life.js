@@ -72,7 +72,8 @@ function syncDebris(){while(debrisRoot.children.length){const c=debrisRoot.child
   const groups=new Map();for(const d of S.debris){const id=d.k+d.v;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(d);}
   for(const [,list] of groups){if(list[0].k==='tree'){const mk=lo=>{const im=new T.InstancedMesh(debrisGeo('tree',list[0].v,lo),leafMat,list.length);im.castShadow=!lo;im.receiveShadow=true;im.frustumCulled=false;for(let i=0;i<list.length;i++)im.setColorAt(i,_c.setHex(0xffffff));debrisRoot.add(im);return im;};
       const gr={hi:mk(false),lo:mk(true),es:list.map(d=>{const e={im:null,i:0,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};treeLOD(gr);treeGroups.push(gr);addBlobs(list,0.62);continue;}
-    const im=new T.InstancedMesh(debrisGeo(list[0].k,list[0].v),list[0].k==='bush'?bushMat:vcMat,list.length);im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;
+    // bushes are pixel-art sprites (74b-bushsprites); everything else is modelled
+    const sp=list[0].k==='bush'&&S.wild;const im=new T.InstancedMesh(sp?BUSH_QUAD:debrisGeo(list[0].k,list[0].v),sp?bushSpriteMat(list[0].v%3):list[0].k==='bush'?bushMat:vcMat,list.length);im.castShadow=!sp;im.receiveShadow=true;im.frustumCulled=false;
     /* white instance colours: vcMat's cached program may expect them (r128 shares one program per material) */
     list.forEach((d,i)=>{im.setColorAt(i,_c.setHex(0xffffff));const e={im,i,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,shake:0};setDebrisMatrix(e,0);debMesh.set(K(d.x,d.z),e);});debrisRoot.add(im);if(list[0].k==='bush')addBlobs(list,0.42);}}
 function setDebrisMatrix(e,tilt){_e.set(0,e.r,tilt,'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(e.x,e.y,e.z),_q,_s.set(e.sc||1,e.sc||1,e.sc||1));e.im.setMatrixAt(e.i,_m);e.im.instanceMatrix.needsUpdate=true;}
