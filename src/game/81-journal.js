@@ -38,12 +38,17 @@ function jrChip(bump){const el=$('jrChip');if(!el||!S.jr){return;}const d=S.jr.t
   const sig=S.jr.day+':'+S.jr.tasks.map(q=>q.k+q.have).join(),changed=sig!==jrSig;if(changed){jrSig=sig;el.innerHTML=`${BOOK_SVG}<span><small>Today</small>${d===n?'All done!':`${d} / ${n} tasks`}</span><i>${S.jr.tasks.map(q=>`<b class="${q.done?'on':''}"></b>`).join('')}</i>`;}
   el.hidden=false;el.classList.toggle('done',d===n);if(bump){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}
   if(changed&&$('jrCard'))jrRender();/* only when something changed: rebuilding it would replay its pop-in */}
-function jrOpen(){SFX.ui();let c=$('jrCard');if(c){c.remove();return;}c=document.createElement('div');c.id='jrCard';c.className='jrcard';c.innerHTML='<div class="page"></div>';document.body.appendChild(c);
+function jrOpen(){SFX.ui();let c=$('jrCard');if(c){c.remove();return;}c=document.createElement('div');c.id='jrCard';c.className='jrcard';c.innerHTML='<div class="fncard"></div>';document.body.appendChild(c);
   c.onclick=e=>{if(e.target===c||e.target.closest('.x')){SFX.ui();c.classList.add('out');setTimeout(()=>c.remove(),220);}};jrRender();}
 function jrRender(){const c=$('jrCard');if(!c||!S.jr)return;const s=season();
-  c.firstChild.innerHTML=`<button class="x" aria-label="Close">×</button><div class="hd"><small>${s[0].toUpperCase()+s.slice(1)} · Day ${S.day}</small><h3>${TOWN.name||'The island'} journal</h3></div>
-  <ul>${S.jr.tasks.map(q=>{const T=JR_TASKS[q.k],ic=ICON[T.ico]||ICON.star;return`<li class="${q.done?'done':''}"><img class="px" src="${ic}" alt=""><span><b>${T.t(q.n)}</b><em>${q.done?'Done!':q.n>1?`${q.have} of ${q.n}`:'Not yet'}</em></span><i>+${T.pay+q.n*10}</i>${q.done?'<u>✓</u>':''}</li>`;}).join('')}</ul>
-  <p class="ft">${S.jr.all?'A perfect day. The island feels a little more like home.':'Finish them all for a bonus. New tasks every morning.'}</p>`;}
+  // a field-notes index card: the day's number, where and when, and the four tasks on ruled lines, stamped when done
+  const no=String(S.day).padStart(3,'0'),done=S.jr.tasks.filter(q=>q.done).length;
+  c.firstChild.innerHTML=`<i class="clip"></i><button class="x" aria-label="Close">×</button>
+  <div class="fn-top"><span>Field Notes</span><span>No. ${no}</span></div>
+  <div class="fn-grid"><div><label>Date sighted</label><b>${s[0].toUpperCase()+s.slice(1)} · Day ${S.day}</b></div><div><label>Station</label><b>${TOWN.name||'The island'}</b></div></div>
+  <div class="fn-subj"><label>Subject</label><h3>Today's Tasks</h3></div>
+  <ol class="fn-list">${S.jr.tasks.map((q,i)=>{const T=JR_TASKS[q.k],ic=ICON[T.ico]||ICON.star;return`<li class="${q.done?'done':''}"><span class="n">${['I','II','III','IV','V'][i]}.</span><img class="px" src="${ic}" alt=""><span class="t">${T.t(q.n)}</span><span class="c">${q.done?'':q.n>1?`${q.have}/${q.n}`:''}</span><span class="r">+${T.pay+q.n*10}</span>${q.done?'<u>Done</u>':''}</li>`;}).join('')}</ol>
+  <div class="fn-foot"><span>${S.jr.all?'A perfect day. Filed with pride.':`${done} of ${S.jr.tasks.length} complete · all four earn a bonus`}</span><span>Form ${no}-${S.jr.tasks.length} · Rev. ${s}</span></div>`;}
 // a big stamp across the top when a task is done
 function stamp(title,sub,big){const el=document.createElement('div');el.className='stamp'+(big?' big':'');el.innerHTML=`<i>✓</i><span><b>${title}</b><small>${sub}</small></span>`;document.body.appendChild(el);
   setTimeout(()=>el.classList.add('out'),big?3200:2400);setTimeout(()=>el.remove(),big?3700:2900);}
@@ -78,11 +83,14 @@ function diaryLine(t){const sum=p=>Object.keys(t.got).filter(k=>k.startsWith(p))
 function showDiary(then){const t=S.today&&S.today.d===S.day?S.today:{got:{},nw:[]},jr=S.jr&&S.jr.day===S.day?S.jr:null;
   const keys=Object.keys(t.got).sort((a,b)=>(t.nw.includes(b)-t.nw.includes(a))||t.got[b]-t.got[a]).slice(0,12);
   const el=document.createElement('div');el.id='diary';el.className='diary';
-  el.innerHTML=`<div class="page"><small>Day ${S.day} · ${season()}</small><h3>Dear diary,</h3><p>${diaryLine(t)}</p>
-    ${keys.length?`<div class="grid">${keys.map(k=>`<span class="${t.nw.includes(k)?'nw':''}"><img class="px" src="${ICON[k]||ICON.star}" alt=""><i>${t.got[k]}</i></span>`).join('')}</div>`:''}
-    ${jr?`<div class="tasks">${jr.tasks.map(q=>`<b class="${q.done?'on':''}">${q.done?'✓':'·'}</b>`).join('')}<span>${jr.tasks.filter(q=>q.done).length} of ${jr.tasks.length} tasks done</span></div>`:''}
-    <div class="tmw"><small>Tomorrow</small>${tomorrowLines().map(l=>`<span>${l}</span>`).join('')}</div>
-    <button class="pbtn go">Sleep</button></div>`;
+  // a page torn from the field notebook: the day in handwriting, what you collected in little specimen frames, and
+  // tomorrow's forecast on a tag clipped to the page
+  el.innerHTML=`<div class="page"><div class="perf"></div><div class="nhd"><h4>Notes</h4><span>Comments, statements</span><em>Day ${String(S.day).padStart(3,'0')} · ${season()}</em></div>
+    <p class="hand">Dear diary, ${diaryLine(t).replace(/^T/,'t')}</p>
+    ${keys.length?`<div class="grid">${keys.map(k=>`<span class="${t.nw.includes(k)?'nw':''}"><img class="px" src="${ICON[k]||ICON.star}" alt=""><i>×${t.got[k]}</i></span>`).join('')}</div>`:''}
+    ${jr?`<div class="tasks"><label>Tasks</label>${jr.tasks.map(q=>`<b class="${q.done?'on':''}">${q.done?'✓':''}</b>`).join('')}<span>${jr.tasks.filter(q=>q.done).length} of ${jr.tasks.length}</span></div>`:''}
+    <div class="tmw"><label>Forecast · tomorrow</label>${tomorrowLines().map(l=>`<span>${l}</span>`).join('')}</div>
+    <button class="pbtn go">Lights out</button></div>`;
   document.body.appendChild(el);requestAnimationFrame(()=>el.classList.add('on'));el.querySelector('button').onclick=()=>{SFX.ui();el.classList.remove('on');setTimeout(()=>el.remove(),400);then();};}
 
 // --- resting by the campfire: sit on the bench, the camera leans in, and time can slip by ---

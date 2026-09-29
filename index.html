@@ -8,7 +8,7 @@
 <title>Driftseed Isle</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Oswald:wght@500;600;700&family=Special+Elite&family=Caveat:wght@500;700&display=swap">
 <style>
 :root{
   --ink:#6b4f2f; --ink2:#9a8266; --cream:#fbf5e1; --paper:#fffcf2; --line:#eadfc2; --wash:#f1e8cf;
@@ -375,6 +375,68 @@ body.titling .say,body.cine .say{display:none}
 .diary .tmw small{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#11788e;font-weight:700}
 .say small{font-weight:600;color:var(--ink2)}
 @media (prefers-reduced-motion:reduce){.tidesweep::before,.tidesweep b,.morning .sun,.tidep.soon{animation:none}}
+
+/* ---------- field notes: the journal card, the diary page and the morning report ---------- */
+:root{--fn-sage:#e3e2c3;--fn-cream:#f4efdc;--fn-manila:#d9a74a;--fn-ink:#2f4d3f;--fn-teal:#3f6c6a;--fn-rust:#c2533a;--fn-pencil:#35508c;
+  --fn-head:'Oswald','Arial Narrow',Impact,sans-serif;--fn-type:'Special Elite','Courier New',monospace;--fn-hand:'Caveat','Bradley Hand','Segoe Print',cursive}
+.fncard{position:relative;width:min(350px,calc(100vw - 30px));box-sizing:border-box;background:var(--fn-sage);color:var(--fn-ink);border-radius:4px;padding:16px 16px 12px;
+  box-shadow:0 1px 0 rgba(0,0,0,.08),6px 8px 0 -2px #f0e8cf,6px 8px 0 -1px rgba(0,0,0,.1),0 18px 40px rgba(40,30,10,.3);outline:2px solid var(--fn-ink);outline-offset:-8px;
+  background-image:radial-gradient(rgba(90,80,40,.07) 1px,transparent 1.5px);background-size:5px 5px;animation:popIn .35s cubic-bezier(.3,1.5,.5,1) both;transform:rotate(-.6deg)}
+.fncard::after{content:'';position:absolute;inset:11px;border:1px solid var(--fn-ink);pointer-events:none}
+.fncard .clip{position:absolute;left:34px;top:-14px;width:12px;height:44px;border:2.5px solid #9aa0a8;border-radius:8px;border-bottom-color:#b8bec6;z-index:2}
+.fncard .x{position:absolute;right:16px;top:14px;z-index:3;width:28px;height:28px;border-radius:50%;background:transparent;color:var(--fn-ink);font-size:20px;line-height:1;border:1.5px solid var(--fn-ink)}
+.fn-top{display:flex;justify-content:space-between;padding:6px 44px 6px 8px;font:700 13px/1 var(--fn-head);letter-spacing:.18em;text-transform:uppercase;border-bottom:2px solid var(--fn-ink);margin:0 4px}
+.fn-grid{display:grid;grid-template-columns:1fr 1fr;margin:0 4px;border-bottom:1.5px solid var(--fn-ink)}
+.fn-grid>div{padding:6px 8px}.fn-grid>div+div{border-left:1.5px solid var(--fn-ink)}
+.fncard label,.diary label,.morning label{display:block;font:600 9.5px/1.2 var(--fn-head);letter-spacing:.16em;text-transform:uppercase;opacity:.85}
+.fn-grid b{font:15px/1.3 var(--fn-type)}
+.fn-subj{padding:8px 12px 4px}.fn-subj h3{margin:0;font:700 30px/1 var(--fn-head);letter-spacing:-.01em}
+.fn-list{list-style:none;margin:4px 4px 0;padding:0 8px}
+.fn-list li{position:relative;display:flex;align-items:center;gap:8px;min-height:40px;border-bottom:1px solid rgba(47,77,63,.35)}
+.fn-list .n{font:600 12px var(--fn-head);width:22px;opacity:.7}.fn-list img{width:24px;height:24px}
+.fn-list .t{flex:1;font:14.5px/1.2 var(--fn-type)}.fn-list .c{font:700 20px var(--fn-hand);color:var(--fn-pencil)}.fn-list .r{font:13px var(--fn-type);color:var(--fn-rust)}
+.fn-list li.done .t{text-decoration:line-through;text-decoration-color:var(--fn-pencil);text-decoration-thickness:2px;opacity:.75}
+.fn-list u{position:absolute;right:46px;top:50%;text-decoration:none;font:700 13px var(--fn-head);letter-spacing:.2em;text-transform:uppercase;color:var(--fn-rust);
+  border:2.5px solid var(--fn-rust);border-radius:6px;padding:1px 7px;transform:translateY(-50%) rotate(-9deg);opacity:.85;mix-blend-mode:multiply;box-shadow:inset 0 0 0 1.5px rgba(194,83,58,.35)}
+.fn-foot{display:flex;justify-content:space-between;gap:8px;margin:10px 8px 2px;font:600 9.5px/1.3 var(--fn-head);letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+.fn-foot span+span{color:var(--fn-rust);white-space:nowrap}
+/* the diary: a notes page with a perforated top, a red margin and blue rules */
+.diary .page{background:var(--fn-cream);border-radius:3px;border-left:0;transform:rotate(.8deg);padding:26px 20px 18px 34px;color:var(--fn-ink);position:relative;
+  background-image:linear-gradient(90deg,transparent 22px,rgba(194,83,58,.45) 22px,rgba(194,83,58,.45) 23.5px,transparent 23.5px),repeating-linear-gradient(transparent 0 27px,rgba(53,80,140,.2) 27px 28px);background-position:0 0,0 70px}
+.diary .perf{position:absolute;left:0;right:0;top:0;height:14px;background:radial-gradient(circle at 8px 4px,rgba(26,36,80,.9) 3px,transparent 3.5px) 0 0/16px 14px;border-bottom:1px dashed rgba(47,77,63,.3)}
+.diary .nhd{text-align:center;margin-bottom:6px}.diary .nhd h4{margin:0;font:700 22px var(--fn-head);letter-spacing:.3em;text-transform:uppercase;color:var(--fn-teal)}
+.diary .nhd span{display:block;font:600 10px var(--fn-head);letter-spacing:.2em;text-transform:uppercase;opacity:.7}.diary .nhd em{display:block;margin-top:4px;font:13px var(--fn-type);font-style:normal;color:var(--fn-rust)}
+.diary p.hand{font:600 23px/28px var(--fn-hand);color:var(--fn-pencil);margin:4px 0 12px}
+.diary .grid span{background:#fffaf0;border-radius:2px;box-shadow:0 0 0 1.5px var(--fn-ink),2px 2px 0 rgba(47,77,63,.2)}
+.diary .grid span.nw{box-shadow:0 0 0 1.5px var(--fn-rust),0 0 0 4px rgba(194,83,58,.18)}
+.diary .grid i{background:transparent;color:var(--fn-pencil);font:700 17px var(--fn-hand);right:-2px;bottom:-9px}
+.diary .tasks{gap:6px}.diary .tasks label{margin-right:4px}.diary .tasks b{border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--fn-ink);color:var(--fn-rust);font:700 16px var(--fn-hand)}
+.diary .tasks b.on{background:transparent}.diary .tasks span{font:13px var(--fn-type);color:var(--fn-ink)}
+.diary .tmw{background:var(--fn-manila);color:#3a2a14;border-radius:3px 3px 10px 10px;padding:10px 14px;transform:rotate(-1.4deg);box-shadow:2px 3px 0 rgba(60,40,10,.18);margin:4px -4px 16px}
+.diary .tmw span{font:13.5px/1.45 var(--fn-type)}
+.diary .pbtn{background:var(--fn-ink);box-shadow:0 4px 0 #1c3026;font:600 16px var(--fn-head);letter-spacing:.2em;text-transform:uppercase;border-radius:4px}
+/* the morning report: a manila explorer's card with a rubber stamp */
+.morning .mc{background:var(--fn-manila);color:#2e2412;border-radius:6px 6px 18px 18px;padding:26px 22px 16px;gap:0;align-items:stretch;text-align:left;max-width:320px;width:min(320px,calc(100vw - 40px));
+  box-shadow:0 2px 0 rgba(0,0,0,.12),0 20px 40px rgba(60,30,0,.3);background-image:radial-gradient(rgba(90,60,10,.12) 1px,transparent 1.5px);background-size:4px 4px}
+.morning .mc .tab{position:absolute;left:50%;top:0;width:90px;height:18px;margin-left:-45px;background:#b8862e;border-radius:0 0 45px 45px/0 0 18px 18px;opacity:.8}
+.morning h5{margin:4px 70px 0 0;font:700 21px/1 var(--fn-head);letter-spacing:.06em;text-transform:uppercase}
+.morning .mc>small{font:600 9.5px var(--fn-head);letter-spacing:.14em;text-transform:uppercase;color:#6a4a1a;margin:4px 0 10px}
+.morning .mrow{display:grid;grid-template-columns:44px 1fr;align-items:baseline;border-top:1.5px solid #2e2412;padding:6px 0 5px}
+.morning .mrow label{color:#2e2412;opacity:.8}.morning .mrow b{font:17px var(--fn-type);font-weight:400}.morning .mrow span{font:14px/1.3 var(--fn-type);color:#2e2412;font-weight:400}
+.morning .mfoot{margin:10px 0 0;padding-top:8px;border-top:3px double #2e2412;font:600 10px var(--fn-head);letter-spacing:.2em;text-transform:uppercase;text-align:center;opacity:.75}
+.morning .mstamp{position:absolute;right:12px;top:12px;width:78px;height:78px;color:var(--fn-rust);transform:rotate(-12deg);opacity:.85;mix-blend-mode:multiply;font-family:var(--fn-head)}
+.jrchip{background:var(--fn-sage);border-radius:4px;box-shadow:0 0 0 1.5px var(--fn-ink) inset,0 3px 0 rgba(47,77,63,.25),var(--shadow);color:var(--fn-ink)}
+.jrchip small{font-family:var(--fn-head);color:var(--fn-rust);letter-spacing:.14em}.jrchip span{font-family:var(--fn-type);font-weight:400}.jrchip i b{border-radius:1px;background:rgba(47,77,63,.2)}.jrchip i b.on{background:var(--fn-ink)}
+.jrchip.done{background:#dfe8c8}
+.jrcard .fn-list li{background:none;border-radius:0;box-shadow:none;padding:0 2px}
+.jrcard .fn-list li.done{background:none}
+.jrcard .fn-list u{width:auto;height:auto;display:block;background:none;box-shadow:inset 0 0 0 1.5px rgba(194,83,58,.35);border-radius:6px;color:var(--fn-rust);right:40px;top:50%;transform:translateY(-50%) rotate(-9deg)}
+.jrcard .fn-list .t{font-size:14px}
+.morning .mstamp{width:66px;height:66px;right:-8px;top:-10px}
+.morning h5{margin-right:40px}
+.morning .mc .tab{width:70px;height:14px;margin-left:-35px;background:rgba(70,45,10,.28)}
+.jrcard .fn-list u{right:auto;left:52%}
+.jrcard .fn-list li.done .r{opacity:.5}
 </style>
 </head>
 <body>
@@ -4969,7 +5031,10 @@ function morningCard(out,away){if(document.body.classList.contains('titling')){s
   if(out&&out.length)lines.push(`${out.length} crop${out.length>1?'s':''} ripened`);if(S.crateLast){lines.push(`${TRADER.name} collected your crate: +${fmt(S.crateLast)} shells`);S.crateLast=0;flyShells(8);}if(gifts)lines.push(`The sea left ${gifts} gift${gifts>1?'s':''} on the beach`);if(S.scratch&&!built('shop'))lines.push(`${TRADER.name}'s boat is at the dock 8am–6pm`);
   const lt=lowTimes(0).filter(h=>h>S.hour).map(h=>clockStr(h));if(lt.length)lines.push(`Low tide today at ${lt[0]}`);if(S.rain)lines.push('Rain today: the fish are biting');
   const wd=new Date(typeof gameNow==='function'?gameNow():Date.now()).toLocaleDateString(undefined,{weekday:'long'});
-  const el=document.createElement('div');el.className='morning';el.innerHTML=`<div class="sun"></div><div class="mc"><small>${away?'While you were away':'Good morning'}</small><b>Day ${S.day} · ${wd}</b>${lines.map(l=>`<span>${l}</span>`).join('')}</div>`;
+  // the morning report: a manila explorer's card with a rubber stamp, typed up like a field station's daily sheet
+  const stamp=`<svg class="mstamp" viewBox="0 0 100 100"><defs><path id="mcirc" d="M50,50 m-36,0 a36,36 0 1,1 72,0 a36,36 0 1,1 -72,0"/></defs><circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="50" cy="50" r="27" fill="none" stroke="currentColor" stroke-width="1.5"/><text font-size="10.5" letter-spacing="2.6" fill="currentColor"><textPath href="#mcirc">${away?'WHILE YOU WERE AWAY':'GOOD MORNING'} · ${(TOWN.name||'ISLAND').toUpperCase()} ·</textPath></text><g fill="currentColor"><circle cx="50" cy="52" r="8"/>${[0,1,2,3,4,5,6,7].map(i=>`<rect x="49" y="33" width="2" height="6" transform="rotate(${i*45} 50 52)"/>`).join('')}</g></svg>`;
+  const el=document.createElement('div');el.className='morning';el.innerHTML=`<div class="sun"></div><div class="mc"><div class="tab"></div>${stamp}<h5>Daily Field Report</h5><small>As filed by the ${(TOWN.name||'island')} field station</small>
+    <div class="mrow"><label>Date</label><b>Day ${S.day} · ${wd}</b></div>${lines.map((l,i)=>`<div class="mrow"><label>${['I','II','III','IV','V','VI'][i]}.</label><span>${l}</span></div>`).join('')}<p class="mfoot">Tap to begin the day</p></div>`;
   document.body.appendChild(el);SFX.discover();buzz(12);const go=()=>{el.classList.add('out');setTimeout(()=>el.remove(),500);};el.onclick=go;setTimeout(go,4200);}
 
 // ---- chance rewards: gleaming finds and golden fish ----
@@ -5139,12 +5204,17 @@ function jrChip(bump){const el=$('jrChip');if(!el||!S.jr){return;}const d=S.jr.t
   const sig=S.jr.day+':'+S.jr.tasks.map(q=>q.k+q.have).join(),changed=sig!==jrSig;if(changed){jrSig=sig;el.innerHTML=`${BOOK_SVG}<span><small>Today</small>${d===n?'All done!':`${d} / ${n} tasks`}</span><i>${S.jr.tasks.map(q=>`<b class="${q.done?'on':''}"></b>`).join('')}</i>`;}
   el.hidden=false;el.classList.toggle('done',d===n);if(bump){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}
   if(changed&&$('jrCard'))jrRender();/* only when something changed: rebuilding it would replay its pop-in */}
-function jrOpen(){SFX.ui();let c=$('jrCard');if(c){c.remove();return;}c=document.createElement('div');c.id='jrCard';c.className='jrcard';c.innerHTML='<div class="page"></div>';document.body.appendChild(c);
+function jrOpen(){SFX.ui();let c=$('jrCard');if(c){c.remove();return;}c=document.createElement('div');c.id='jrCard';c.className='jrcard';c.innerHTML='<div class="fncard"></div>';document.body.appendChild(c);
   c.onclick=e=>{if(e.target===c||e.target.closest('.x')){SFX.ui();c.classList.add('out');setTimeout(()=>c.remove(),220);}};jrRender();}
 function jrRender(){const c=$('jrCard');if(!c||!S.jr)return;const s=season();
-  c.firstChild.innerHTML=`<button class="x" aria-label="Close">×</button><div class="hd"><small>${s[0].toUpperCase()+s.slice(1)} · Day ${S.day}</small><h3>${TOWN.name||'The island'} journal</h3></div>
-  <ul>${S.jr.tasks.map(q=>{const T=JR_TASKS[q.k],ic=ICON[T.ico]||ICON.star;return`<li class="${q.done?'done':''}"><img class="px" src="${ic}" alt=""><span><b>${T.t(q.n)}</b><em>${q.done?'Done!':q.n>1?`${q.have} of ${q.n}`:'Not yet'}</em></span><i>+${T.pay+q.n*10}</i>${q.done?'<u>✓</u>':''}</li>`;}).join('')}</ul>
-  <p class="ft">${S.jr.all?'A perfect day. The island feels a little more like home.':'Finish them all for a bonus. New tasks every morning.'}</p>`;}
+  // a field-notes index card: the day's number, where and when, and the four tasks on ruled lines, stamped when done
+  const no=String(S.day).padStart(3,'0'),done=S.jr.tasks.filter(q=>q.done).length;
+  c.firstChild.innerHTML=`<i class="clip"></i><button class="x" aria-label="Close">×</button>
+  <div class="fn-top"><span>Field Notes</span><span>No. ${no}</span></div>
+  <div class="fn-grid"><div><label>Date sighted</label><b>${s[0].toUpperCase()+s.slice(1)} · Day ${S.day}</b></div><div><label>Station</label><b>${TOWN.name||'The island'}</b></div></div>
+  <div class="fn-subj"><label>Subject</label><h3>Today's Tasks</h3></div>
+  <ol class="fn-list">${S.jr.tasks.map((q,i)=>{const T=JR_TASKS[q.k],ic=ICON[T.ico]||ICON.star;return`<li class="${q.done?'done':''}"><span class="n">${['I','II','III','IV','V'][i]}.</span><img class="px" src="${ic}" alt=""><span class="t">${T.t(q.n)}</span><span class="c">${q.done?'':q.n>1?`${q.have}/${q.n}`:''}</span><span class="r">+${T.pay+q.n*10}</span>${q.done?'<u>Done</u>':''}</li>`;}).join('')}</ol>
+  <div class="fn-foot"><span>${S.jr.all?'A perfect day. Filed with pride.':`${done} of ${S.jr.tasks.length} complete · all four earn a bonus`}</span><span>Form ${no}-${S.jr.tasks.length} · Rev. ${s}</span></div>`;}
 // a big stamp across the top when a task is done
 function stamp(title,sub,big){const el=document.createElement('div');el.className='stamp'+(big?' big':'');el.innerHTML=`<i>✓</i><span><b>${title}</b><small>${sub}</small></span>`;document.body.appendChild(el);
   setTimeout(()=>el.classList.add('out'),big?3200:2400);setTimeout(()=>el.remove(),big?3700:2900);}
@@ -5179,11 +5249,14 @@ function diaryLine(t){const sum=p=>Object.keys(t.got).filter(k=>k.startsWith(p))
 function showDiary(then){const t=S.today&&S.today.d===S.day?S.today:{got:{},nw:[]},jr=S.jr&&S.jr.day===S.day?S.jr:null;
   const keys=Object.keys(t.got).sort((a,b)=>(t.nw.includes(b)-t.nw.includes(a))||t.got[b]-t.got[a]).slice(0,12);
   const el=document.createElement('div');el.id='diary';el.className='diary';
-  el.innerHTML=`<div class="page"><small>Day ${S.day} · ${season()}</small><h3>Dear diary,</h3><p>${diaryLine(t)}</p>
-    ${keys.length?`<div class="grid">${keys.map(k=>`<span class="${t.nw.includes(k)?'nw':''}"><img class="px" src="${ICON[k]||ICON.star}" alt=""><i>${t.got[k]}</i></span>`).join('')}</div>`:''}
-    ${jr?`<div class="tasks">${jr.tasks.map(q=>`<b class="${q.done?'on':''}">${q.done?'✓':'·'}</b>`).join('')}<span>${jr.tasks.filter(q=>q.done).length} of ${jr.tasks.length} tasks done</span></div>`:''}
-    <div class="tmw"><small>Tomorrow</small>${tomorrowLines().map(l=>`<span>${l}</span>`).join('')}</div>
-    <button class="pbtn go">Sleep</button></div>`;
+  // a page torn from the field notebook: the day in handwriting, what you collected in little specimen frames, and
+  // tomorrow's forecast on a tag clipped to the page
+  el.innerHTML=`<div class="page"><div class="perf"></div><div class="nhd"><h4>Notes</h4><span>Comments, statements</span><em>Day ${String(S.day).padStart(3,'0')} · ${season()}</em></div>
+    <p class="hand">Dear diary, ${diaryLine(t).replace(/^T/,'t')}</p>
+    ${keys.length?`<div class="grid">${keys.map(k=>`<span class="${t.nw.includes(k)?'nw':''}"><img class="px" src="${ICON[k]||ICON.star}" alt=""><i>×${t.got[k]}</i></span>`).join('')}</div>`:''}
+    ${jr?`<div class="tasks"><label>Tasks</label>${jr.tasks.map(q=>`<b class="${q.done?'on':''}">${q.done?'✓':''}</b>`).join('')}<span>${jr.tasks.filter(q=>q.done).length} of ${jr.tasks.length}</span></div>`:''}
+    <div class="tmw"><label>Forecast · tomorrow</label>${tomorrowLines().map(l=>`<span>${l}</span>`).join('')}</div>
+    <button class="pbtn go">Lights out</button></div>`;
   document.body.appendChild(el);requestAnimationFrame(()=>el.classList.add('on'));el.querySelector('button').onclick=()=>{SFX.ui();el.classList.remove('on');setTimeout(()=>el.remove(),400);then();};}
 
 // --- resting by the campfire: sit on the bench, the camera leans in, and time can slip by ---
