@@ -110,7 +110,7 @@ function islandVoice(){const night=nightF>0.6;
   if(night&&env.trees>0.2&&Math.random()<0.4){tone(392,0.35,'sine',0.02,370);setTimeout(()=>tone(370,0.55,'sine',0.018,330),420);return;}
   if(night&&env.river>0.2){for(let i=0;i<3;i++)setTimeout(()=>tone(160+Math.random()*30,0.09,'square',0.012,120),i*180);}}
 
-function updateAmbience(dt,tt){updateSay(dt);updateStreak(dt);updateLeaps(dt);updateFlocks(dt,tt);updateRays(dt,tt);
+function updateAmbience(dt,tt){updateSay(dt);shineLife(dt,tt);updateStreak(dt);updateLeaps(dt);updateFlocks(dt,tt);updateRays(dt,tt);
   if(flushT>0)flushT-=dt;
   envT-=dt;if(envT<=0){envT=0.6;if(!S.sea&&!inside)senseEnv();else{env.river=env.trees=0;env.sea=S.sea?1:0;}}
   updateBeds(dt,tt);

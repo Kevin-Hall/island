@@ -11,7 +11,7 @@ function bpOk(x,z){if(placing&&placing.bp==='seed')return seedOk(x,z);const l=lv
   for(let dx=0;dx<2;dx++){const k=K(x+dx,z+2);if(!walkable(x+dx,z+2)||debrisAt(x+dx,z+2)||fixedAt(x+dx,z+2))return false;}return true;}
 // the driftseed needs a tile with open, level grass all round it (the tree will spread), clear of your tent
 function seedOk(x,z){const l=lvlMap.get(K(x,z))||0;for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){const a=x+dx,b=z+dz;
-    if(!bpFree(a,b)||(lvlMap.get(K(a,b))||0)!==l||(a>=HOUSE_AT.x-1&&a<=HOUSE_AT.x+2&&b>=HOUSE_AT.z-1&&b<=HOUSE_AT.z+2))return false;}return true;}
+    if(!bpFree(a,b)||(lvlMap.get(K(a,b))||0)!==l||(S.homeAt&&a>=HOUSE_AT.x-1&&a<=HOUSE_AT.x+2&&b>=HOUSE_AT.z-1&&b<=HOUSE_AT.z+2))return false;}return true;}
 function bpGhost(k){if(k==='tent'){const g=houseGroup(0);return g;}
   if(k==='seed'){const q=seedTreeParts(1),g=new T.Group();g.add(M([...q.p,...q.gl]));return g;}
   const t=k.startsWith('vh')?'vh':k,b={t,n:t==='vh'?+k.slice(2):0,x:0,z:0},g=new T.Group();
@@ -70,6 +70,11 @@ function nameIsland(){const el=document.createElement('div');el.id='heartUp';con
 // planting your driftseed: it takes root on the spot and becomes the Island Heart, growing with your level from now on
 function plantSeed(x,z){const y=topY(x,z);S.heartAt={x,z};S.heart=Object.assign(S.heart||{},{planted:S.day,revived:S.day});SFX.splash&&SFX.splash();
   for(let i=0;i<40;i++)sparkle(x+(Math.random()-0.5)*1.6,y+0.2+Math.random()*1.4,z+(Math.random()-0.5)*1.6,[0xc8fff0,0xfff0c0,0xa8ec84][i%3]);
-  rebuildHome();syncObjs();updateHUD();save();
-  toast('You press the driftseed into the soil. It glows, and a first pair of leaves unfurls. This is your <b>Island Heart</b>: it will grow as your island thrives.','rare',ICON.sprout);
-  if(level()>1)setTimeout(()=>heartLevelUp(1,level()),2200);}
+  rebuildHome();syncObjs();updateHUD();save();buzz(20);
+  setTimeout(()=>say('It took root. What will it grow into?'),600);
+  // the first time: your tent goes up right beside the sprout
+  if(!S.homeAt){const t=tentBeside(x,z);if(t)setTimeout(()=>{if(!S.homeAt)pitchTent(t[0],t[1]);},2600);else setTimeout(()=>startBlueprint('tent'),2600);}
+  else if(level()>1)setTimeout(()=>heartLevelUp(1,level()),2200);}
+// a clear 2x2 spot for the tent a few steps from the sprout (outside its ring), nearest you
+function tentBeside(sx,sz){let best=null,bd=1e9;for(let dx=-6;dx<=5;dx++)for(let dz=-6;dz<=5;dz++){const x=sx+dx,z=sz+dz;
+    if(x+1>=sx-1&&x<=sx+1&&z+1>=sz-1&&z<=sz+1)continue;if(Math.hypot(x+0.5-sx,z+0.5-sz)<2.6||!bpOk(x,z))continue;const d=Math.hypot(x+0.5-sx,z+0.5-sz)*2+Math.hypot(x-vil.x,z-vil.z);if(d<bd){bd=d;best=[x,z];}}return best;}

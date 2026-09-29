@@ -60,11 +60,11 @@ const REVEAL_LINES={
   p:['It smells wonderful.','Picked with care.','Such a pretty little thing.','The meadow gave me this.'],
 };
 const revQ=[];let revOn=false;
-function reveal(key){if(!/^[bgp]:/.test(key))return;const I=itemInfo(key);if(I&&I.w>=5){say(`<b>New!</b> ${I.name}`,ICON[key]);pluck(1318.5,0.025,0.6);setTimeout(()=>pluck(1568,0.025,0.8),110);return;}/* everyday firsts: a caption; the card is for rare ones */revQ.push(key);if(!revOn)revNext();}
+function reveal(key){if(!/^[bgp]:/.test(key))return;const I=itemInfo(key);if(I&&I.w>=5){const [dg,dt]=dexCount();say(`<b>New!</b> ${I.name} <small>· Islandex ${Math.floor(dg/dt*100)}%</small>`,ICON[key]);pluck(1318.5,0.025,0.6);setTimeout(()=>pluck(1568,0.025,0.8),110);return;}/* everyday firsts: a caption; the card is for rare ones */revQ.push(key);if(!revOn)revNext();}
 function revNext(){const key=revQ.shift();if(!key){revOn=false;return;}revOn=true;const I=itemInfo(key);if(!I){revNext();return;}
   const L=REVEAL_LINES[key[0]],line=L[(hash(key.length*7,key.charCodeAt(2)+key.charCodeAt(key.length-1)*13)*L.length|0)%L.length];
   const cat={b:'Bug',g:'Treasure',p:'Wild plant'}[key[0]],el=document.createElement('div');el.className='reveal'+(I.w<5?' rare':'');
-  el.innerHTML=`<div class="rays"></div><div class="rv"><small>New discovery</small><img class="px" src="${ICON[key]}" alt=""><b>${I.name}</b><em>${cat}${I.w?' · '+rarity(I.w):''}</em><p>“${line}”</p><u>Added to your Islandex</u></div>`;
+  el.innerHTML=`<div class="rays"></div><div class="rv"><small>New discovery</small><img class="px" src="${ICON[key]}" alt=""><b>${I.name}</b><em>${cat}${I.w?' · '+rarity(I.w):''}</em><p>“${line}”</p><u>Islandex ${(([g,t])=>Math.floor(g/t*100))(dexCount())}% complete</u></div>`;
   document.body.appendChild(el);SFX.discover();requestAnimationFrame(()=>el.classList.add('on'));
   setTimeout(()=>el.classList.add('out'),2900);setTimeout(()=>{el.remove();setTimeout(revNext,250);},3400);}
 
@@ -81,6 +81,7 @@ function showDiary(then){const t=S.today&&S.today.d===S.day?S.today:{got:{},nw:[
   el.innerHTML=`<div class="page"><small>Day ${S.day} · ${season()}</small><h3>Dear diary,</h3><p>${diaryLine(t)}</p>
     ${keys.length?`<div class="grid">${keys.map(k=>`<span class="${t.nw.includes(k)?'nw':''}"><img class="px" src="${ICON[k]||ICON.star}" alt=""><i>${t.got[k]}</i></span>`).join('')}</div>`:''}
     ${jr?`<div class="tasks">${jr.tasks.map(q=>`<b class="${q.done?'on':''}">${q.done?'✓':'·'}</b>`).join('')}<span>${jr.tasks.filter(q=>q.done).length} of ${jr.tasks.length} tasks done</span></div>`:''}
+    <div class="tmw"><small>Tomorrow</small>${tomorrowLines().map(l=>`<span>${l}</span>`).join('')}</div>
     <button class="pbtn go">Sleep</button></div>`;
   document.body.appendChild(el);requestAnimationFrame(()=>el.classList.add('on'));el.querySelector('button').onclick=()=>{SFX.ui();el.classList.remove('on');setTimeout(()=>el.remove(),400);then();};}
 

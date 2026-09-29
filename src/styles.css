@@ -340,3 +340,26 @@ body.titling .say,body.cine .say{display:none}
 .streak.pop b{animation:bump .35s cubic-bezier(.3,1.8,.5,1)}
 .flyitem{position:fixed;z-index:13;width:30px;height:30px;pointer-events:none;transition:transform .55s cubic-bezier(.4,-0.35,.7,1),opacity .55s ease-in;filter:drop-shadow(0 2px 0 rgba(107,79,47,.25))}
 @media (prefers-reduced-motion:reduce){.streak.pop b{animation:none}}
+
+/* ---------- the heartbeat: tide pill and sweep, the morning card, tomorrow in the diary ---------- */
+.tidep{display:inline-flex;align-items:center;gap:5px;margin-top:8px;margin-right:4px;background:rgba(255,252,242,.93);color:#2a86a8;border-radius:999px;padding:3px 10px 3px 7px;font-size:12.5px;font-weight:700;
+  box-shadow:0 2px 0 rgba(107,79,47,.12);white-space:nowrap;vertical-align:top}
+.tidep svg{width:17px;height:17px}.tidep.low{background:#dff6f8;color:#11788e}.tidep.soon{animation:pulse 1.4s ease-in-out infinite;background:#fff3cf;color:#b27a10}
+.tidesweep{position:fixed;inset:0;z-index:11;pointer-events:none;overflow:hidden}
+.tidesweep::before{content:'';position:absolute;top:-10%;bottom:-10%;width:70%;left:-80%;background:linear-gradient(90deg,transparent,rgba(160,230,245,.55) 35%,rgba(255,255,255,.7) 50%,rgba(160,230,245,.55) 65%,transparent);
+  transform:skewX(-14deg);animation:tsweep 1.6s cubic-bezier(.4,0,.3,1) forwards}
+.tidesweep.in::before{left:auto;right:-80%;animation-name:tsweepin}
+.tidesweep b{position:absolute;left:0;right:0;top:34%;text-align:center;font-size:30px;font-weight:800;color:#fff;text-shadow:0 3px 0 rgba(20,90,120,.45),0 0 18px rgba(80,180,220,.6);opacity:0;animation:tword 2.4s ease forwards}
+@keyframes tsweep{to{left:120%}}@keyframes tsweepin{to{right:120%}}
+@keyframes tword{15%{opacity:1;transform:translateY(-4px)}70%{opacity:1}100%{opacity:0;transform:translateY(-12px)}}
+.morning{position:fixed;inset:0;z-index:13;display:grid;place-items:center;background:linear-gradient(180deg,rgba(255,214,160,.55),rgba(255,236,200,.25) 45%,transparent 75%);animation:fadeIn .6s both;cursor:pointer}
+.morning.out{animation:fadeOut .5s both}
+.morning .sun{position:absolute;left:50%;top:18%;width:120px;height:120px;margin-left:-60px;border-radius:50%;background:radial-gradient(circle,#fff6d0 0,#ffd27a 45%,rgba(255,190,110,0) 70%);animation:sunup 1.4s cubic-bezier(.2,.8,.3,1) both}
+@keyframes sunup{from{transform:translateY(80px) scale(.6);opacity:0}}
+.morning .mc{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--paper);border-radius:22px;padding:14px 24px 16px;box-shadow:var(--shadow);animation:popIn .5s .25s cubic-bezier(.3,1.5,.5,1) both;max-width:300px;text-align:center}
+.morning small{font-size:12px;font-weight:700;color:#c9604f;letter-spacing:.12em;text-transform:uppercase}.morning b{font-size:22px;margin-bottom:4px}
+.morning span{font-size:14.5px;font-weight:600;color:var(--ink2)}
+.diary .tmw{display:flex;flex-direction:column;gap:2px;margin:0 0 14px;padding:8px 12px;background:#eef8fb;border-radius:12px;font-size:13.5px;font-weight:600;color:#2a6a80}
+.diary .tmw small{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#11788e;font-weight:700}
+.say small{font-weight:600;color:var(--ink2)}
+@media (prefers-reduced-motion:reduce){.tidesweep::before,.tidesweep b,.morning .sun,.tidep.soon{animation:none}}

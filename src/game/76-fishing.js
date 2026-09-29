@@ -35,16 +35,17 @@ function spawnShadow(){
   if(S.sea){const a=Math.random()*6.283,r=3+Math.random()*7;px=vil.x+Math.sin(a)*r;pz=vil.z+Math.cos(a)*r;}
   else{const isl=curIsl();if(!isl||!isl.sand.length)return;
     if(isl.rtiles&&!isl.lava&&Math.random()<0.5){const q=pickR(isl.rtiles);if(Math.hypot(q.x-vil.x,q.z-vil.z)>13||landMap.get(K(q.x,q.z))!=='river')return;
-      spawnShadowAt(q.x+(Math.random()-0.5)*0.4,q.z+(Math.random()-0.5)*0.4,chooseFish(isl.biome,false,true),q.surf);return;}
+      const gold=Math.random()<0.06,fish=gold?goldFish(isl.biome,false,true):null;spawnShadowAt(q.x+(Math.random()-0.5)*0.4,q.z+(Math.random()-0.5)*0.4,fish||chooseFish(isl.biome,false,true),q.surf,!!fish);return;}
     const [sx,sz]=pickR(isl.sand);if(Math.hypot(sx-vil.x,sz-vil.z)>13)return;
     const cx=isl.home?0:isl.cx,cz=isl.home?0:isl.cz,d0=Math.hypot(sx-cx,sz-cz)||1,r=1.8+Math.random()*2.6;px=sx+(sx-cx)/d0*r;pz=sz+(sz-cz)/d0*r;}
   if(landMap.has(K(Math.round(px),Math.round(pz)))&&isLand(Math.round(px),Math.round(pz)))return;
-  const deep=landDist(px,pz)>2.8,region=regionAt(px,pz);spawnShadowAt(px,pz,chooseFish(region,deep),0);}
-function spawnShadowAt(px,pz,fish,wy){if(!fish)return;
-  const F=FISH[fish],g=new T.Group(),m=new T.Mesh(SHADOW_GEO,shadowMat);m.frustumCulled=false;const sz=0.24+F.size*0.13;m.scale.set(sz,1,sz*2.1);g.add(m);
+  const deep=landDist(px,pz)>2.8,region=regionAt(px,pz),gf=Math.random()<0.06?goldFish(region,deep,false):null;spawnShadowAt(px,pz,gf||chooseFish(region,deep),0,!!gf);
+  if(gf&&Math.hypot(px-vil.x,pz-vil.z)<10)say('Something golden glints in the water…');}
+function spawnShadowAt(px,pz,fish,wy,gold){if(!fish)return;
+  const F=FISH[fish],g=new T.Group(),m=new T.Mesh(SHADOW_GEO,gold?goldShadowMat:shadowMat);m.frustumCulled=false;const sz=0.24+F.size*0.13;m.scale.set(sz,1,sz*2.1);g.add(m);
   if(F.size>=5||F.fin){const fin=new T.Mesh(FIN_GEO,vcMat);fin.frustumCulled=false;fin.scale.setScalar(0.7+F.size*0.1);g.add(fin);}
   g.position.set(px,0.015,pz);const h=Math.random()*6.28;g.rotation.y=h;scene.add(g);
-  shadows.push({g,fish,ax:px,az:pz,x:px,z:pz,t:0,life:45+Math.random()*40,out:0,hooked:false,heading:h,tx:px,tz:pz,wy,riv:wy>0});
+  shadows.push({g,fish,ax:px,az:pz,x:px,z:pz,t:0,life:45+Math.random()*40,out:0,hooked:false,heading:h,tx:px,tz:pz,wy,riv:wy>0,gold:!!gold});
 }
 function nearestShadow(x,z,r){let best=null,bd=r;for(const s of shadows){if(s.out||s.hooked)continue;const d=Math.hypot(s.x-x,s.z-z);if(d<bd){bd=d;best=s;}}return best;}
 function fleeShadow(s,fx,fz){if(!s)return;s.hooked=false;s.out=0.001;s.heading=Math.atan2(s.x-fx,s.z-fz);}
@@ -118,7 +119,8 @@ function reel(){const f=fishing;if(!f)return;
   if(f.state==='bite'){catchFish();return;}
   if(f.state==='nibble'||f.state==='approach'){SFX.no();endFishing('Too soon! The fish got spooked.');return;}
   endFishing();}
-function catchFish(){const f=fishing,id=f.target.fish,F=FISH[id],key='f:'+id;const first=gain(key);
+function catchFish(){const f=fishing,id=f.target.fish,F=FISH[id],key='f:'+id;const first=gain(key);buzz(25);
+  if(f.target.gold){const b=F.price;S.shells+=b;setTimeout(()=>{SFX.discover();stamp('A golden catch!',`${F.name} · +${b} bonus shells`,true);flyShells(10);},700);for(let i=0;i<24;i++)sparkle(f.px+(Math.random()-0.5),0.4+Math.random(),f.pz+(Math.random()-0.5),0xffe27a);}
   const kg=Math.round((F.size*(0.5+Math.random()*0.9)+Math.random()*0.3)*F.size*10)/10;const rec=!F.junk&&kg>(S.rec[id]||0);if(!F.junk)S.rec[id]=Math.max(S.rec[id]||0,kg);
   f.caughtIt=true;const s=f.target;scene.remove(s.g);shadows.splice(shadows.indexOf(s),1);
   burst(f.px,0.1,f.pz,0xe8f4ff,18,1.9,0.08,5);ripple(f.px,f.pz,true);SFX.splash();vil.hop=0.3;
@@ -161,10 +163,10 @@ function updateFishing(dt,tt){updateShadows(dt);updateRings(dt);updateCaught(dt,
       let s=nearestShadow(f.px,f.pz,3.6);
       if(!s&&S.inv['x:bait']>0){const riv=f.wy>0,fish=riv?chooseFish((curIsl()||{}).biome,false,true):chooseFish(S.sea?regionAt(f.px,f.pz):regionAt(f.px,f.pz),landDist(f.px,f.pz)>2.8);
         if(fish){const a=Math.random()*6.28;spawnShadowAt(f.px+Math.cos(a)*(riv?0.5:1.6),f.pz+Math.sin(a)*(riv?0.5:1.6),fish,f.wy||0);s=shadows[shadows.length-1];takeOf('x:bait',1);floatText(f.px,0.8+(f.wy||0),f.pz,'bait!');}}
-      if(s){s.hooked=true;f.target=s;f.state='approach';f.win=fishWindow(FISH[s.fish]);}else f.state='empty';}}
+      if(s){s.hooked=true;f.target=s;f.state='approach';f.win=fishWindow(FISH[s.fish])*(s.gold?0.55:1);}/* golden ones bite and let go fast */else f.state='empty';}}
   let bend=0.06+Math.sin(tt*1.3)*0.03,taut=0.15;if(f.state!=='cast'){rod.rotation.x=0.72+Math.sin(tt*1.1)*0.03;fishLean=0.05;}/* waiting: the rod rests, swaying a little */
   if(f.state==='empty'){bobber.position.set(f.px,Math.sin(tt*2.2)*0.015,f.pz);
-    if(f.t>2){const s=nearestShadow(f.px,f.pz,3.6);if(s){s.hooked=true;f.target=s;f.state='approach';f.t=0;f.win=fishWindow(FISH[s.fish]);}}
+    if(f.t>2){const s=nearestShadow(f.px,f.pz,3.6);if(s){s.hooked=true;f.target=s;f.state='approach';f.t=0;f.win=fishWindow(FISH[s.fish])*(s.gold?0.55:1);}}
     if(f.t>6)endFishing("Nothing's biting here. Cast close to a fish shadow!");}
   else if(f.state==='approach'){const s=f.target,dx=f.px-s.x,dz=f.pz-s.z,d=Math.hypot(dx,dz);s.heading=Math.atan2(dx,dz);
     bobber.position.set(f.px,Math.sin(tt*2.2)*0.015,f.pz);

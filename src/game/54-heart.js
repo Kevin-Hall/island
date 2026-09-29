@@ -30,8 +30,8 @@ function grantKits(){if(!S.scratch)return;S.kits=S.kits||{};const placed=k=>(S.b
 const nextUnlock=()=>S.scratch?HEART_UNLOCKS.find(u=>u.lv>level())||null:null;
 // what to do next, shown under your level (and tapping it does it where it can)
 function nextGoal(){if(!S.scratch)return null;const h=S.heart||{};
-  if(!S.homeAt)return{tag:'First',name:'Pitch your tent',act:'tent'};
-  if(!S.heartAt)return{tag:'Your driftseed',name:'Plant your driftseed',act:'seed'};
+  if(!S.heartAt)return{tag:'Glowing in your pack',name:'Plant your driftseed',act:'seed'};
+  if(!S.homeAt)return{tag:'Home',name:'Pitch your tent',act:'tent'};
   const k=Object.keys(S.kits||{}).find(q=>S.kits[q]);if(k){const u=HEART_UNLOCKS.find(q=>q.k===k);return{tag:'Build',name:'Place: '+u.name.replace(/^A |^The /,'').toLowerCase(),act:'kit:'+k};}
   const u=nextUnlock();return u?{tag:'Heart Lv '+u.lv,name:u.name,act:'info'}:null;}
 function goalTap(){const g=nextGoal();if(!g)return;SFX.ui();

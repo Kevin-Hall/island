@@ -88,7 +88,7 @@ syncObjs();rebuildSoil();if(!S.orders.length)makeOrders();syncLife();setRod();in
 let away=[];if(!isNew){const el=clamp((Date.now()-S.t)/1000,0,21*86400);if(el>5)away=simulate(el);}
 syncAllCrops();fitZoom();cam.tx=vil.x;cam.tz=vil.z;resize();
 if(isNew&&S.scratch){introCam={t:0,d:cam.dist,p:cam.pitch,y:cam.yaw};cam.dist=10;cam.pitch=0.22;cam.yaw-=0.5;
-  const el=document.createElement('div');el.id='introTitle';el.innerHTML='<div>Day 1</div><b>An island no one has found</b><small>The woods are waiting.</small>';document.body.appendChild(el);
+  const el=document.createElement('div');el.id='introTitle';el.innerHTML='<div>Day 1</div><b>A strange seed washed up at your door.</b><small>It pointed here.</small>';document.body.appendChild(el);
   setTimeout(()=>el.classList.add('on'),600);setTimeout(()=>el.classList.remove('on'),5200);setTimeout(()=>el.remove(),7000);}
 try{makeThumbs();}catch(e){console.warn(e);}
 applyLook();renderTools();showHeld();if(!S.tipTools){S.tipTools=1;setTimeout(()=>say(S.scratch?'Tap anything that looks interesting.':'Tap anywhere to walk, and tap things to use them.'),S.scratch&&isNew?17000:5000);}/* one line, not a manual: the rest is found by tapping */shownShells=S.shells;$('shellTxt').textContent=fmt(S.shells);applyTime();updateHUD();
@@ -96,15 +96,16 @@ window.addEventListener('resize',()=>{resize();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{const el=clamp((Date.now()-S.t)/1000,0,21*86400);if(el>5){const out=simulate(el);afterSim(out,'While you were away');}last=performance.now();}});
 window.addEventListener('pagehide',save);
 $('boot').remove();
-if(S.scratch&&isNew){/* after the opening shot */setTimeout(()=>say('Nobody here but the birds…'),7600);
-  setTimeout(()=>{if(!S.homeAt&&!placing)startBlueprint('tent');},11500);}
-else if(S.scratch&&!S.homeAt)setTimeout(()=>{if(!placing)startBlueprint('tent');},1500);
+// the opening: the driftseed glowing in your pack is the first thing you do; your tent goes up beside the sprout
+if(S.scratch&&isNew){/* after the opening shot */setTimeout(()=>{say('The driftseed is glowing in your pack…');for(let i=0;i<14;i++)sparkle(vil.x,vil.y+0.7,vil.z,0xc8fff0);},7600);
+  setTimeout(()=>{if(!S.heartAt&&!placing)startBlueprint('seed');},10500);}
+else if(S.scratch&&(!S.heartAt||!S.homeAt))setTimeout(()=>{if(!placing)startBlueprint(S.heartAt?'tent':'seed');},1500);
 else if(!S.scratch){if(farmNew)setTimeout(()=>toast('Across the bridge to the west is your farm field, overgrown with weeds, rocks and stumps. Clear it to make room for crops. Tip: press and hold, then drag, to till, plant, water or harvest a whole row.','',ICON.sprout),isNew?9000:1500);
 if(isNew){setTimeout(()=>toast('Welcome to Driftseed Isle! Tap soil to plant, and tap ripe crops to harvest.','',ICON.sprout),500);
   setTimeout(()=>toast('Your boat waits at the dock. Sail to other islands to fill your Islandex!','',ICON.boat),4200);}
 else if(!S.boatTip)setTimeout(()=>toast('New: your boat waits at the dock! Sail to new islands and fill your Islandex.','',ICON.boat),800);
 }
-if(away.length)afterSim(away,'While you were away');
+if(away.length||(Date.now()-(S.t||Date.now()))>3*3600000){afterSim(away,'');setTimeout(()=>morningCard(away,true),isNew?0:1500);}/* back after a while: what changed */
 if(!isNew)showTitle();
 requestAnimationFrame(t=>{last=t;frame(t);});
 }

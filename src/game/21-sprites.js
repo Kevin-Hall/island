@@ -116,6 +116,7 @@ const FIND_SPR={
 'g:amber':['...OO....','..OyyO...','.OyyyyO..','.OyBByO..','.OyyyyO..','..OyyO...','...OO....'],
 'g:frostshell':['.....ww.....','...wcwwcw...','..wcwcwcwc..','.wcwcwcwcww.','.wcwcwcwcwc.','..wcwcwcwc..','...wwwwww...'],
 'g:driftseed':['....cc....','...cwwc...','..cwccwc..','.cwcggcwc.','.ccgllgcc.','.cgllllgc.','..cgllgc..','...cggc...','....cc....'],
+'g:seahorse':['...yyy....','..yyyyk...','..yykyyyy.','...yyy.yy.','...Oyy....','..Oyyy....','..yyyO....','...yyy....','....yyO...','..y..yy...','...yyy....'],
 'g:hermit':['...nnnn...','..nwwnnn..','.nwnnwnnn.','.nnwnnwnn.','..nnnnnn..','.oo.oo.oo.','o.oo..oo.o','.r.r..r.r.'],
 'g:anemone':['.p.p.p.p.','.p.p.p.p..','..ppppp...','.ppwppwp..','.ppppppp..','..mmmmm...','.mmmmmmm..'],
 'g:starfrag':['....y....','...ywy...','yyyywyyyy','.yywwwyy.','..yywyy..','.yy...yy.','y.......y'],

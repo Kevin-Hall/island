@@ -24,7 +24,7 @@ function updateHUD(){
   const lv=level();$('lvlTxt').textContent='Lv '+lv;
   const a=LV[lv-1]||0,b=LV[lv];$('xpFill').style.width=(b?clamp((S.xp-a)/(b-a),0,1)*100:100)+'%';
   {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;
-    const wk=S.rain?'rain':nightF>0.5?'moon':'sun';if(wxKind!==wk){wxKind=wk;$('wxIco').innerHTML=WX_ICO[wk];}}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${S.rain?' · rain':''}${lowTide?' · low tide':''}`;$('locTxt').textContent=locName();
+    const wk=S.rain?'rain':nightF>0.5?'moon':'sun';if(wxKind!==wk){wxKind=wk;$('wxIco').innerHTML=WX_ICO[wk];}}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${S.rain?' · rain':''}`;tideHUD();$('locTxt').textContent=locName();
   refreshMuseumShow();$('bTask').classList.toggle('ready',ordersReady());$('bMenu').classList.toggle('ready',ordersReady());
   {const g=nextGoal(),el=$('nextUp');el.hidden=!g;if(g){const h=`<small>${g.tag}</small>${g.name}`;if(el.innerHTML!==h)el.innerHTML=h;}}
   jrCheck();

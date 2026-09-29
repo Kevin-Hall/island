@@ -56,7 +56,7 @@ function forageSpawn(quiet,n=1){const isl=islands[0];if(!isl||!S.wild)return;con
     else if(r<0.54&&bushes.length&&s!=='winter'){const b=pickR(bushes);at=openBy(b.x,b.z);k='berries';}
     else if(r<0.74){const c=pickR(isl.grass);if(c&&freeTile(...c)&&!TOWN.path.has(K(...c)))at=c;k=R()<0.06?'clover4':'dig';}
     else{const c=pickR(isl.sand);if(c&&freeTile(...c))at=c;k='bubbles';}
-    if(!k||!at||findAt(...at))continue;S.finds.push({k,x:at[0],z:at[1]});}
+    if(!k||!at||findAt(...at))continue;S.finds.push({k,x:at[0],z:at[1],shiny:k!=='dig'&&k!=='bubbles'&&R()<0.07?1:undefined});}
   if(S.finds.length>60)S.finds.splice(0,S.finds.length-60);
   if(!quiet)syncLife();}
 

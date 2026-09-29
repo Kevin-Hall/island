@@ -16,7 +16,7 @@ function pick(cx,cy){
   if(rb&&rd<bd&&Math.sqrt(rd)<tp*0.8)return{x:rb[0],z:rb[1],river:true};
   if(best&&Math.sqrt(bd)<tp*0.8)return{x:best[0],z:best[1]};
   return null;}
-function onTap(cx,cy){
+function onTap(cx,cy){buzz(6);
   if(inside){if(!$('actionBar').hidden&&!$('actionBar').classList.contains('tapnext')){clearAction();return;}roomTap(cx,cy);return;}
   if(shoot&&!shoot.wished){makeWish();return;}
   if(caught){dismissCatch();return;}

@@ -8,6 +8,7 @@ function findGroup(k,seed){const p=[],g=new T.Group();
     case'frostshell':p.push(P(ICO,0xd8f0ff,0,0.05,0,0,0,0,0.28,0.09,0.26),P(BOX,0x8ac8f0,0,0.09,0,0,0,0,0.04,0.03,0.24),P(BOX,0x8ac8f0,0.08,0.08,0,0,0.3,0,0.03,0.03,0.2),P(BOX,0x8ac8f0,-0.08,0.08,0,0,-0.3,0,0.03,0.03,0.2));break;
     case'driftseed':p.push(P(ICO2,0x6ad8b8,0,0.12,0,0.4,0,0.3,0.16,0.26,0.16),P(ICO2,0xc8fff0,0.02,0.18,0.03,0.4,0,0.3,0.07,0.1,0.07),P(CONE4,0x3a9a78,0,0.28,0,0,0.785,0.2,0.05,0.1,0.05));break;
     case'hermit':p.push(P(CONE6,0xe8c8a0,0,0.1,-0.02,-0.4,0,0,0.18,0.24,0.18),P(ICO2,0xd86a4a,0,0.04,0.1,0,0,0,0.12,0.06,0.1),P(ICO2,0x2b1e2e,-0.03,0.08,0.15,0,0,0,0.02,0.03,0.02),P(ICO2,0x2b1e2e,0.03,0.08,0.15,0,0,0,0.02,0.03,0.02));for(const sd of [-1,1])p.push(P(BOX,0xd86a4a,sd*0.07,0.02,0.06,0,sd*0.5,0,0.08,0.02,0.02));break;
+    case'seahorse':p.push(PG(SPH_LO,0xf6c83a,0xd8952a,0,0.28,0,0.2,0,0,0.13,0.22,0.12),PG(SPH_LO,0xf6c83a,0xd8952a,0,0.46,0.04,0,0,0,0.12,0.12,0.12),P(CYL6,0xf0b030,0,0.47,0.12,1.4,0,0,0.035,0.12,0.035),P(SPH_XS,0x2b1e2e,0.05,0.49,0.07,0,0,0,0.025,0.025,0.025),P(SPH_XS,0x2b1e2e,-0.05,0.49,0.07,0,0,0,0.025,0.025,0.025),P(CONE5,0xe8a030,0,0.18,-0.07,-0.6,0,0,0.07,0.14,0.05),P(ICO2,0xd8952a,0,0.1,-0.04,0,0,0,0.08,0.1,0.08),P(SPH_XS,0xe8d4a8,0,0.03,0,0,0,0,0.3,0.05,0.3));break;
     case'anemone':p.push(P(CYL8,0xd870a8,0,0.04,0,0,0,0,0.18,0.08,0.18));for(let i=0;i<9;i++){const a=i/9*6.283;p.push(P(CYL6,0xf2a6c8,Math.cos(a)*0.06,0.12,Math.sin(a)*0.06,Math.sin(a)*0.5,0,-Math.cos(a)*0.5,0.025,0.14,0.025));}break;
     case'conch':p.push(P(CONE6,0xf0d8c0,0,0.1,0,0,0,Math.PI/2,0.24,0.4,0.24),P(ICO,0xf39ab0,-0.1,0.09,0,0,0,0,0.16,0.12,0.16));break;
     case'dollar':p.push(P(CYL8,0xe8dcc0,0,0.02,0,0,0,0,0.32,0.03,0.32));for(let i=0;i<5;i++)p.push(P(BOX,0xc0ae88,Math.sin(i*1.256)*0.07,0.04,Math.cos(i*1.256)*0.07,0,i*1.256,0,0.03,0.01,0.08));break;
@@ -122,7 +123,8 @@ function pullWeed(w){S.weeds=S.weeds.filter(q=>q!==w);syncLife();walkTo(w.x,w.z)
   else floatText(w.x,1,w.z,'pulled!');}
 function collectFind(f){S.finds=S.finds.filter(q=>q!==f);syncLife();walkTo(f.x,f.z);vil.hop=0.25;popHold(findGroup(f.k,f.x*31+f.z),f.x,f.z,1.3);
   if(f.k==='bottle'){const first=!S.alm['g:bottle'];S.alm['g:bottle']=(S.alm['g:bottle']||0)+1;if(first)setTimeout(()=>checkDex('g:bottle'),600);openBottle();return;}
-  const I=FINDS[f.k],first=gain('g:'+f.k);if(f.k==='driftseed')driftseedFound(first);burst(f.x,0.5,f.z,0xfff6e2,8,1,0.06);floatText(f.x,0.9,f.z,'+ '+I.name,I.w<5?'gold':'');
+  const I=FINDS[f.k],first=gain('g:'+f.k);buzz(10);
+  if(f.shiny){gain('g:'+f.k);const b=I.price;S.shells+=b;SFX.rare();floatText(f.x,1.3,f.z,`Shiny! ×2 +${b}`,'gold');flyShells(5);for(let i=0;i<14;i++)sparkle(f.x,0.6,f.z,0xfff0a0);}if(f.k==='driftseed')driftseedFound(first);burst(f.x,0.5,f.z,0xfff6e2,8,1,0.06);floatText(f.x,0.9,f.z,'+ '+I.name,I.w<5?'gold':'');
   if(I.w<5){SFX.rare();if(!first)toast(`You found a <b>${I.name}</b>!`,'rare',ICON['g:'+f.k]);}else SFX.harvest();addXP(2);}
 function openBottle(){SFX.rare();const lv=level(),r=Math.random();let msg;
   const un=CROP_IDS.filter(i=>CROPS[i].lvl<=lv);

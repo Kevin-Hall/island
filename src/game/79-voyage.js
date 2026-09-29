@@ -63,10 +63,10 @@ function driftseedFound(first){if(first)setTimeout(()=>setAction('A glowing <b>D
 
 /* ---- tides: two highs and two lows a day; low tide uncovers tide-pool creatures ---- */
 let tideY=0,lowTide=null;
-const tideAt=h=>0.045*Math.cos((h-3)/12.4*Math.PI*2)-0.03;
-function updateTides(){tideY=tideAt(S.hour);const low=tideY<-0.055;
+const tideAt=t=>0.045*Math.cos((t-3)/12.4*Math.PI*2)-0.03;/* t: absolute hours on the island clock, so the tides drift about 50 minutes later each day */
+const tideNow=()=>gameNow()/3600000;
+function updateTides(){tideY=tideAt(tideNow());const low=tideY<-0.055;
   water.position.y=tideY;for(const isl of islands)if(isl.flats&&isl.group&&isl.group.visible)for(const m of isl.flats)m.position.y=tideY;
-  if(low!==lowTide){lowTide=low;const isl=S.sea?null:curIsl();
-    if(low&&isl){const edge=isl.sand.filter(([x,z])=>{const c=SAND_CH.get(K(x,z));return c&&Math.min(...c)<0.1&&freeTile(x,z);});for(let i=0;i<3&&edge.length;i++){const [x,z]=edge.splice(Math.floor(Math.random()*edge.length),1)[0];S.finds.push({k:pickR(['hermit','anemone','star']),x,z,tide:1});}
-      syncLife();if(!S.tipTide){S.tipTide=1;toast('Low tide! Creatures are hiding in the tide pools along the beach.','',ICON['g:hermit']);}}
-    else if(!low&&S.finds.some(f=>f.tide)){S.finds=S.finds.filter(f=>!f.tide);syncLife();}}}
+  if(low!==lowTide){const boot=lowTide===null;lowTide=low;const isl=S.sea?null:curIsl();
+    if(!low&&S.finds.some(f=>f.tide)){S.finds=S.finds.filter(f=>!f.tide);syncLife();}
+    tideTurn(low,low?isl:null,boot);/* 79b: the sweep, the pools opening */}}
