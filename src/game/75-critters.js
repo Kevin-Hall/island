@@ -75,7 +75,7 @@ function spawnCritter(k){const a=Math.random()*6.283,d=(k==='deer'?8:4)+Math.ran
     for(let i=0;i<n;i++){const v=Math.floor(Math.random()*3),g=critModel(k,k==='bird'&&i>0?critters[critters.length-1].v:v),cx=x+(Math.random()-0.5)*0.8,cz=z+(Math.random()-0.5)*0.8;
       const c={k,v,g,x:cx,z:cz,y:critY(cx,cz),state:'idle',t:Math.random()*2,wait:1+Math.random()*3,tx:cx,tz:cz,ph:Math.random()*6.28,out:0,hx:x,hz:z,sc:k==='deer'?1:1.1};
       g.position.set(cx,c.y,cz);g.rotation.y=Math.random()*6.28;g.scale.setScalar(0.01);scene.add(g);critters.push(c);}
-    if(k==='deer'&&!S.sawDeer){S.sawDeer=1;setTimeout(()=>toast('A deer has stepped out of the trees! Creep closer slowly… or not at all.','rare',ICON.star),600);}
+    if(k==='deer'&&!S.sawDeer){S.sawDeer=1;setTimeout(()=>say('A deer! Shh…'),600);}
     return true;}
   return false;}
 // a critter bursting out of a tree or bush where you shook it (runs or flies off at once)
@@ -87,7 +87,8 @@ function dropCritter(i){const c=critters[i];scene.remove(c.g);c.g.traverse(o=>{i
 function critWander(c){const r=c.k==='deer'?3:c.k==='crab'?1.5:2;for(let it=0;it<8;it++){const x=c.hx+(Math.random()-0.5)*2*r,z=c.hz+(Math.random()-0.5)*2*r,rx=Math.round(x),rz=Math.round(z);
     if(critHabitat(c.k,rx,rz)&&critLvl(rx,rz)===critLvl(c.x,c.z)){c.tx=x;c.tz=z;c.state='move';c.t=0;return;}}c.wait=1+Math.random()*2;}
 function critFlee(c){c.state='flee';c.t=0;const a=Math.atan2(c.z-vil.z,c.x-vil.x);c.fx=Math.cos(a);c.fz=Math.sin(a);
-  if(c.k==='squirrel'){const t=nearTree(Math.round(c.x),Math.round(c.z),2);if(t){c.tree=t;}}
+  if(c.k==='squirrel'){const t=nearTree(Math.round(c.x),Math.round(c.z),2);if(t){c.tree=t;}
+    if(Math.random()<0.4&&freeTile(Math.round(c.x),Math.round(c.z))){dropFind('acorn',Math.round(c.x),Math.round(c.z));floatText(c.x,c.y+0.6,c.z,'It dropped something!');}}/* startled, it lets go of its acorn */
   if(c.k==='frog'){const w=nearWater(Math.round(c.x),Math.round(c.z),2);if(w)c.water=w;}}
 
 function updateCritters(dt,tt){

@@ -323,3 +323,20 @@ body.arriving>:not(#arrive):not(#fade):not(#c){visibility:hidden}
 body.titling .hud,body.titling #bar,body.titling #toasts,body.titling #actionBar,body.titling #floats{opacity:0;pointer-events:none}
 .hud,#bar{transition:opacity .8s}
 body.cine .hud,body.cine #bar,body.cine #toasts{opacity:0;pointer-events:none}
+
+/* ---------- ambience: the caption over your head, the gathering streak, finds flying to the bag ---------- */
+.say{position:fixed;left:0;top:0;z-index:6;pointer-events:none;display:flex;align-items:center;gap:6px;max-width:230px;padding:5px 11px;border-radius:14px;
+  background:rgba(255,252,242,.93);box-shadow:0 2px 0 rgba(107,79,47,.14),0 6px 14px rgba(60,40,20,.12);font-size:13.5px;font-weight:600;line-height:1.25;color:var(--ink);
+  opacity:0;transition:opacity .3s;white-space:normal;text-align:center}
+.say::after{content:'';position:absolute;left:50%;bottom:-5px;margin-left:-5px;border:5px solid transparent;border-bottom:0;border-top-color:rgba(255,252,242,.93)}
+.say.on{opacity:1}.say img{width:20px;height:20px;flex:none}
+body.titling .say,body.cine .say{display:none}
+.streak{position:fixed;z-index:6;left:18px;top:calc(env(safe-area-inset-top,0px) + 186px);transform:scale(.8);transform-origin:left center;pointer-events:none;opacity:0;transition:opacity .3s,transform .3s;
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;color:#fffaf0;text-shadow:0 2px 0 rgba(90,50,30,.4)}
+.streak.on{opacity:1;transform:scale(1)}
+.streak b{font-size:30px;line-height:1;font-weight:800;color:#fff3b0;-webkit-text-stroke:1px #c98a10;paint-order:stroke fill}
+.streak span{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.streak i{width:74px;height:5px;border-radius:3px;background:rgba(255,255,255,.35);overflow:hidden}.streak i u{display:block;height:100%;background:#fff3b0;text-decoration:none}
+.streak.pop b{animation:bump .35s cubic-bezier(.3,1.8,.5,1)}
+.flyitem{position:fixed;z-index:13;width:30px;height:30px;pointer-events:none;transition:transform .55s cubic-bezier(.4,-0.35,.7,1),opacity .55s ease-in;filter:drop-shadow(0 2px 0 rgba(107,79,47,.25))}
+@media (prefers-reduced-motion:reduce){.streak.pop b{animation:none}}

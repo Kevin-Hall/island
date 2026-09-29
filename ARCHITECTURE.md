@@ -55,6 +55,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 84-input | Tap, drag, pinch and picking (`pick`, `onTap`) |
 | 85-arrival | New game: drifting past islands (`islandCandidate`, `buildCandidate` builds the whole world and describes it), the flyover render loop (`arrivalFrame`), then landfall (`bootGame(true)`) |
 | 86–87 | New-game setup; atmosphere (foam, footprints, sky events, motes, music) |
+| 87b-ambience | Ambience and the small rewards of gathering: `say` (the caption over your head; `toast` sends every non-rare message here), the gathering streak (`streakBump`, pays out every 5), finds flying into the bag (`flyItem`), wildlife stirred up as you walk (`stirWildlife`), leaping fish that leave a shadow to cast at (`fishJump`), flocks passing over, morning mist and sunbeams through the trees (`updateRays`), and a soundscape that follows where you stand (`senseEnv`, wind/leaves/river/surf beds, the odd woodpecker, owl or frog) |
 | 88-showcase | Dev **Showcase farm** (`loadShowcase`, `layShowcaseFarm`): backs up the save to `SAVE_KEY+'-real'`, maxes progress, lays out a planned late-game farm and reloads; `restoreRealSave` undoes it |
 | 90-main | Main loop (`frame`) and boot (`bootGame`; a brand-new game arrives by sea first) |
 | 95-debug | `window.DS` (only with `?debug`) |

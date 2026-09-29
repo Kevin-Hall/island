@@ -5,7 +5,7 @@ let wxKind='';const WX_ICO={sun:'<svg viewBox="0 0 32 32">'+[0,1,2,3,4,5,6,7].ma
 /* =========================================================
    UI helpers
    ========================================================= */
-function toast(html,cls='',icon,variant){const el=document.createElement('div');el.className='toast '+cls;
+function toast(html,cls='',icon,variant){if(cls!=='rare'){say(html,icon);return;}/* everyday messages are a quiet caption over your head (87b) */const el=document.createElement('div');el.className='toast '+cls;
   el.innerHTML=(icon?`<img class="px v-${variant||'normal'}" src="${icon}" alt="">`:'')+`<span>${html}</span>`;
   const box=$('toasts');box.appendChild(el);while(box.children.length>3)box.firstChild.remove();
   setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300);},cls==='rare'?4200:2800);}

@@ -64,8 +64,7 @@ function nameIsland(){const el=document.createElement('div');el.id='heartUp';con
   el.innerHTML=`<div class="hu"><h2>Home, for now</h2><p class="husub">The tent's up and the fire is crackling. The sea hushes somewhere below. Every island deserves a name: what will you call this one?</p>
     <label class="pkname"><span>Island name</span><input id="pkName" maxlength="16" value="${sug}" autocomplete="off"></label><button class="pbtn go" id="huOk">That's the one</button></div>`;
   document.body.appendChild(el);const done=()=>{S.islandName=(el.querySelector('#pkName').value||'').trim().slice(0,16)||sug;TOWN.name=S.islandName;el.remove();pitchDone();updateHUD();save();
-    setTimeout(()=>toast(`Welcome to <b>${S.islandName}</b>. You still have the glowing <b>driftseed</b> that washed up with you: find it a spot to grow.`,'',ICON.sprout),500);
-    setTimeout(()=>{if(!S.heartAt&&!placing&&!S.sea&&!inside)startBlueprint('seed');},3500);};
+    setTimeout(()=>say(`<b>${S.islandName}</b>. It suits it.`),700);};/* the driftseed waits in the goal chip: no prompt pushed on you */
   el.querySelector('#huOk').onclick=done;el.querySelector('#pkName').onkeydown=e=>{if(e.key==='Enter')done();};}
 
 // planting your driftseed: it takes root on the spot and becomes the Island Heart, growing with your level from now on

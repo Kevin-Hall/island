@@ -27,7 +27,7 @@ function jrDone(t){t.done=1;const T=JR_TASKS[t.k],pay=T.pay+t.n*10;S.shells+=pay
     if(S.jr.tasks.every(q=>q.done)&&!S.jr.all){S.jr.all=1;setTimeout(()=>{const b=250+S.day*10;S.shells+=b;addXP(10);SFX.discover();stamp('A perfect day!',`Every task done · +${b} shells`,true);flyShells(12);
       for(let i=0;i<24;i++)sparkle(vil.x+(Math.random()-0.5)*2,1+Math.random(),vil.z+(Math.random()-0.5)*2,pickR([0xfff0a0,0xffc8e0,0xbff4ff]));},2600);}},500);}
 // everything you pick up counts towards the day's tasks and diary; a first-ever catch or find gets the discovery card
-function jrGain(key,n,first){todayNote(key,n,first);const c=key.slice(0,2);
+function jrGain(key,n,first){todayNote(key,n,first);const c=key.slice(0,2);if(/^[bfgpm]:/.test(key)||key.includes('|')){streakBump();flyItem(key);}/* 87b */
   if(c==='b:')jrNote('bug',n);else if(c==='f:'){if(!FISH[key.slice(2)].junk)jrNote('fish',n);}else if(c==='g:')jrNote('find',n);else if(key==='m:wood')jrNote('wood',n);else if(key.includes('|'))jrNote('harvest',n);
   if(first&&/^[bfgp]:/.test(key)){jrNote('fresh');reveal(key);}}
 // tasks that finish by reaching a state rather than by an action (like pitching your tent)
@@ -60,7 +60,7 @@ const REVEAL_LINES={
   p:['It smells wonderful.','Picked with care.','Such a pretty little thing.','The meadow gave me this.'],
 };
 const revQ=[];let revOn=false;
-function reveal(key){if(!/^[bgp]:/.test(key))return;revQ.push(key);if(!revOn)revNext();}
+function reveal(key){if(!/^[bgp]:/.test(key))return;const I=itemInfo(key);if(I&&I.w>=5){say(`<b>New!</b> ${I.name}`,ICON[key]);pluck(1318.5,0.025,0.6);setTimeout(()=>pluck(1568,0.025,0.8),110);return;}/* everyday firsts: a caption; the card is for rare ones */revQ.push(key);if(!revOn)revNext();}
 function revNext(){const key=revQ.shift();if(!key){revOn=false;return;}revOn=true;const I=itemInfo(key);if(!I){revNext();return;}
   const L=REVEAL_LINES[key[0]],line=L[(hash(key.length*7,key.charCodeAt(2)+key.charCodeAt(key.length-1)*13)*L.length|0)%L.length];
   const cat={b:'Bug',g:'Treasure',p:'Wild plant'}[key[0]],el=document.createElement('div');el.className='reveal'+(I.w<5?' rare':'');

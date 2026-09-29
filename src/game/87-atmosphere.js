@@ -125,7 +125,7 @@ function updateAudio(dt){if(!AC||!S.sound)return;
 function updateAtmos(dt,tt){
   windT-=dt;if(windT<=0){windT=4+Math.random()*6;}wind=lerp(wind,0.3+0.5*Math.sin(tt*0.13)+0.25*Math.sin(tt*0.41),Math.min(1,dt));
   updateFoam(tt);updatePrints(dt);updateSky(dt,tt);updateMotes(dt,tt);updateAudio(dt);
-  if(!S.sea){if(lastVX!==null){const d=Math.hypot(vil.x-lastVX,vil.z-lastVZ);if(d>0.001&&d<1){stepAcc+=d;if(stepAcc>0.3){stepAcc=0;footstep();}}}
+  if(!S.sea){if(lastVX!==null){const d=Math.hypot(vil.x-lastVX,vil.z-lastVZ);if(d>0.001&&d<1){stepAcc+=d;if(stepAcc>0.3){stepAcc=0;footstep();stirWildlife();}}}
     else stepAcc=0;}
   lastVX=vil.x;lastVZ=vil.z;
   // idle: glance around like a villager

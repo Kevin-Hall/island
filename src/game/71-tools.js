@@ -41,13 +41,13 @@ function showHeld(){for(const k in heldMesh)heldMesh[k].visible=S.tool===k;}
 // every use of a tool is a little performance: a wind-up, the strike (the moment its effect happens, `hit`), and a
 // follow-through. Keys are [u, tool pitch, tool roll, tool lift, body lean]; the body leans back to wind up and into the blow.
 const TOOL_ANIM={
-  shovel:{d:0.62,hit:0.42,k:[[0,0,0,0,0],[0.3,-0.9,0,0.06,-0.16],[0.42,1.05,0,-0.1,0.38],[0.62,1.0,0,-0.12,0.34],[0.8,-0.35,0.25,0,-0.12],[1,0,0,0,0]]},/* stab in, then lever the dirt out */
-  axe:{d:0.62,hit:0.56,k:[[0,0,0,0,0],[0.45,-1.9,0.3,0.08,-0.22],[0.56,0.9,0,-0.04,0.34],[0.7,0.8,0,-0.04,0.3],[1,0,0,0,0]]},/* a slow wind-up over the shoulder, a fast chop */
-  net:{d:0.46,hit:0.5,k:[[0,0,0,0,0],[0.25,-0.4,-1.2,0.05,-0.08],[0.55,0.95,1.1,-0.05,0.28],[0.75,0.8,1.2,-0.05,0.22],[1,0,0,0,0]]},/* a big sideways swoop */
-  can:{d:0.75,hit:0.3,k:[[0,0,0,0,0],[0.25,0.95,0,0.04,0.12],[0.75,1.0,0.1,0.04,0.14],[1,0,0,0,0]]},/* tip and pour */
+  shovel:{d:0.5,hit:0.42,k:[[0,0,0,0,0],[0.3,-0.9,0,0.06,-0.16],[0.42,1.05,0,-0.1,0.38],[0.62,1.0,0,-0.12,0.34],[0.8,-0.35,0.25,0,-0.12],[1,0,0,0,0]]},/* stab in, then lever the dirt out */
+  axe:{d:0.5,hit:0.56,k:[[0,0,0,0,0],[0.45,-1.9,0.3,0.08,-0.22],[0.56,0.9,0,-0.04,0.34],[0.7,0.8,0,-0.04,0.3],[1,0,0,0,0]]},/* a slow wind-up over the shoulder, a fast chop */
+  net:{d:0.38,hit:0.5,k:[[0,0,0,0,0],[0.25,-0.4,-1.2,0.05,-0.08],[0.55,0.95,1.1,-0.05,0.28],[0.75,0.8,1.2,-0.05,0.22],[1,0,0,0,0]]},/* a big sideways swoop */
+  can:{d:0.6,hit:0.3,k:[[0,0,0,0,0],[0.25,0.95,0,0.04,0.12],[0.75,1.0,0.1,0.04,0.14],[1,0,0,0,0]]},/* tip and pour */
   seeds:{d:0.42,hit:0.5,k:[[0,0,0,0,0],[0.35,-0.6,0,0.04,-0.06],[0.55,0.7,0,0.06,0.16],[1,0,0,0,0]]},/* a scattering toss */
   rod:{d:0.4,hit:0.5,k:[[0,0,0,0,0],[0.5,0.5,0,0,0.12],[1,0,0,0,0]]},
-  hand:{d:0.4,hit:0.45,k:[[0,0,0,0,0],[0.45,0,0,0,0.3],[1,0,0,0,0]]}};/* reach out */
+  hand:{d:0.3,hit:0.45,k:[[0,0,0,0,0],[0.45,0,0,0,0.3],[1,0,0,0,0]]}};/* reach out */
 let anim=null,poseLean=0,fishLean=0;
 function swingTool(onHit){if(anim&&anim.hit)fireHit(anim);anim={A:TOOL_ANIM[S.tool]||TOOL_ANIM.hand,t:0,t0:performance.now(),hit:onHit||null};}
 function fireHit(a){const h=a.hit;a.hit=null;if(h)h();}

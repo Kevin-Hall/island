@@ -335,6 +335,23 @@ body.arriving>:not(#arrive):not(#fade):not(#c){visibility:hidden}
 body.titling .hud,body.titling #bar,body.titling #toasts,body.titling #actionBar,body.titling #floats{opacity:0;pointer-events:none}
 .hud,#bar{transition:opacity .8s}
 body.cine .hud,body.cine #bar,body.cine #toasts{opacity:0;pointer-events:none}
+
+/* ---------- ambience: the caption over your head, the gathering streak, finds flying to the bag ---------- */
+.say{position:fixed;left:0;top:0;z-index:6;pointer-events:none;display:flex;align-items:center;gap:6px;max-width:230px;padding:5px 11px;border-radius:14px;
+  background:rgba(255,252,242,.93);box-shadow:0 2px 0 rgba(107,79,47,.14),0 6px 14px rgba(60,40,20,.12);font-size:13.5px;font-weight:600;line-height:1.25;color:var(--ink);
+  opacity:0;transition:opacity .3s;white-space:normal;text-align:center}
+.say::after{content:'';position:absolute;left:50%;bottom:-5px;margin-left:-5px;border:5px solid transparent;border-bottom:0;border-top-color:rgba(255,252,242,.93)}
+.say.on{opacity:1}.say img{width:20px;height:20px;flex:none}
+body.titling .say,body.cine .say{display:none}
+.streak{position:fixed;z-index:6;left:18px;top:calc(env(safe-area-inset-top,0px) + 186px);transform:scale(.8);transform-origin:left center;pointer-events:none;opacity:0;transition:opacity .3s,transform .3s;
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;color:#fffaf0;text-shadow:0 2px 0 rgba(90,50,30,.4)}
+.streak.on{opacity:1;transform:scale(1)}
+.streak b{font-size:30px;line-height:1;font-weight:800;color:#fff3b0;-webkit-text-stroke:1px #c98a10;paint-order:stroke fill}
+.streak span{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.streak i{width:74px;height:5px;border-radius:3px;background:rgba(255,255,255,.35);overflow:hidden}.streak i u{display:block;height:100%;background:#fff3b0;text-decoration:none}
+.streak.pop b{animation:bump .35s cubic-bezier(.3,1.8,.5,1)}
+.flyitem{position:fixed;z-index:13;width:30px;height:30px;pointer-events:none;transition:transform .55s cubic-bezier(.4,-0.35,.7,1),opacity .55s ease-in;filter:drop-shadow(0 2px 0 rgba(107,79,47,.25))}
+@media (prefers-reduced-motion:reduce){.streak.pop b{animation:none}}
 </style>
 </head>
 <body>
@@ -3297,7 +3314,7 @@ let wxKind='';const WX_ICO={sun:'<svg viewBox="0 0 32 32">'+[0,1,2,3,4,5,6,7].ma
 /* =========================================================
    UI helpers
    ========================================================= */
-function toast(html,cls='',icon,variant){const el=document.createElement('div');el.className='toast '+cls;
+function toast(html,cls='',icon,variant){if(cls!=='rare'){say(html,icon);return;}/* everyday messages are a quiet caption over your head (87b) */const el=document.createElement('div');el.className='toast '+cls;
   el.innerHTML=(icon?`<img class="px v-${variant||'normal'}" src="${icon}" alt="">`:'')+`<span>${html}</span>`;
   const box=$('toasts');box.appendChild(el);while(box.children.length>3)box.firstChild.remove();
   setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300);},cls==='rare'?4200:2800);}
@@ -3411,13 +3428,13 @@ function showHeld(){for(const k in heldMesh)heldMesh[k].visible=S.tool===k;}
 // every use of a tool is a little performance: a wind-up, the strike (the moment its effect happens, `hit`), and a
 // follow-through. Keys are [u, tool pitch, tool roll, tool lift, body lean]; the body leans back to wind up and into the blow.
 const TOOL_ANIM={
-  shovel:{d:0.62,hit:0.42,k:[[0,0,0,0,0],[0.3,-0.9,0,0.06,-0.16],[0.42,1.05,0,-0.1,0.38],[0.62,1.0,0,-0.12,0.34],[0.8,-0.35,0.25,0,-0.12],[1,0,0,0,0]]},/* stab in, then lever the dirt out */
-  axe:{d:0.62,hit:0.56,k:[[0,0,0,0,0],[0.45,-1.9,0.3,0.08,-0.22],[0.56,0.9,0,-0.04,0.34],[0.7,0.8,0,-0.04,0.3],[1,0,0,0,0]]},/* a slow wind-up over the shoulder, a fast chop */
-  net:{d:0.46,hit:0.5,k:[[0,0,0,0,0],[0.25,-0.4,-1.2,0.05,-0.08],[0.55,0.95,1.1,-0.05,0.28],[0.75,0.8,1.2,-0.05,0.22],[1,0,0,0,0]]},/* a big sideways swoop */
-  can:{d:0.75,hit:0.3,k:[[0,0,0,0,0],[0.25,0.95,0,0.04,0.12],[0.75,1.0,0.1,0.04,0.14],[1,0,0,0,0]]},/* tip and pour */
+  shovel:{d:0.5,hit:0.42,k:[[0,0,0,0,0],[0.3,-0.9,0,0.06,-0.16],[0.42,1.05,0,-0.1,0.38],[0.62,1.0,0,-0.12,0.34],[0.8,-0.35,0.25,0,-0.12],[1,0,0,0,0]]},/* stab in, then lever the dirt out */
+  axe:{d:0.5,hit:0.56,k:[[0,0,0,0,0],[0.45,-1.9,0.3,0.08,-0.22],[0.56,0.9,0,-0.04,0.34],[0.7,0.8,0,-0.04,0.3],[1,0,0,0,0]]},/* a slow wind-up over the shoulder, a fast chop */
+  net:{d:0.38,hit:0.5,k:[[0,0,0,0,0],[0.25,-0.4,-1.2,0.05,-0.08],[0.55,0.95,1.1,-0.05,0.28],[0.75,0.8,1.2,-0.05,0.22],[1,0,0,0,0]]},/* a big sideways swoop */
+  can:{d:0.6,hit:0.3,k:[[0,0,0,0,0],[0.25,0.95,0,0.04,0.12],[0.75,1.0,0.1,0.04,0.14],[1,0,0,0,0]]},/* tip and pour */
   seeds:{d:0.42,hit:0.5,k:[[0,0,0,0,0],[0.35,-0.6,0,0.04,-0.06],[0.55,0.7,0,0.06,0.16],[1,0,0,0,0]]},/* a scattering toss */
   rod:{d:0.4,hit:0.5,k:[[0,0,0,0,0],[0.5,0.5,0,0,0.12],[1,0,0,0,0]]},
-  hand:{d:0.4,hit:0.45,k:[[0,0,0,0,0],[0.45,0,0,0,0.3],[1,0,0,0,0]]}};/* reach out */
+  hand:{d:0.3,hit:0.45,k:[[0,0,0,0,0],[0.45,0,0,0,0.3],[1,0,0,0,0]]}};/* reach out */
 let anim=null,poseLean=0,fishLean=0;
 function swingTool(onHit){if(anim&&anim.hit)fireHit(anim);anim={A:TOOL_ANIM[S.tool]||TOOL_ANIM.hand,t:0,t0:performance.now(),hit:onHit||null};}
 function fireHit(a){const h=a.hit;a.hit=null;if(h)h();}
@@ -3713,8 +3730,7 @@ function nameIsland(){const el=document.createElement('div');el.id='heartUp';con
   el.innerHTML=`<div class="hu"><h2>Home, for now</h2><p class="husub">The tent's up and the fire is crackling. The sea hushes somewhere below. Every island deserves a name: what will you call this one?</p>
     <label class="pkname"><span>Island name</span><input id="pkName" maxlength="16" value="${sug}" autocomplete="off"></label><button class="pbtn go" id="huOk">That's the one</button></div>`;
   document.body.appendChild(el);const done=()=>{S.islandName=(el.querySelector('#pkName').value||'').trim().slice(0,16)||sug;TOWN.name=S.islandName;el.remove();pitchDone();updateHUD();save();
-    setTimeout(()=>toast(`Welcome to <b>${S.islandName}</b>. You still have the glowing <b>driftseed</b> that washed up with you: find it a spot to grow.`,'',ICON.sprout),500);
-    setTimeout(()=>{if(!S.heartAt&&!placing&&!S.sea&&!inside)startBlueprint('seed');},3500);};
+    setTimeout(()=>say(`<b>${S.islandName}</b>. It suits it.`),700);};/* the driftseed waits in the goal chip: no prompt pushed on you */
   el.querySelector('#huOk').onclick=done;el.querySelector('#pkName').onkeydown=e=>{if(e.key==='Enter')done();};}
 
 // planting your driftseed: it takes root on the spot and becomes the Island Heart, growing with your level from now on
@@ -4051,7 +4067,7 @@ function spawnCritter(k){const a=Math.random()*6.283,d=(k==='deer'?8:4)+Math.ran
     for(let i=0;i<n;i++){const v=Math.floor(Math.random()*3),g=critModel(k,k==='bird'&&i>0?critters[critters.length-1].v:v),cx=x+(Math.random()-0.5)*0.8,cz=z+(Math.random()-0.5)*0.8;
       const c={k,v,g,x:cx,z:cz,y:critY(cx,cz),state:'idle',t:Math.random()*2,wait:1+Math.random()*3,tx:cx,tz:cz,ph:Math.random()*6.28,out:0,hx:x,hz:z,sc:k==='deer'?1:1.1};
       g.position.set(cx,c.y,cz);g.rotation.y=Math.random()*6.28;g.scale.setScalar(0.01);scene.add(g);critters.push(c);}
-    if(k==='deer'&&!S.sawDeer){S.sawDeer=1;setTimeout(()=>toast('A deer has stepped out of the trees! Creep closer slowly… or not at all.','rare',ICON.star),600);}
+    if(k==='deer'&&!S.sawDeer){S.sawDeer=1;setTimeout(()=>say('A deer! Shh…'),600);}
     return true;}
   return false;}
 // a critter bursting out of a tree or bush where you shook it (runs or flies off at once)
@@ -4063,7 +4079,8 @@ function dropCritter(i){const c=critters[i];scene.remove(c.g);c.g.traverse(o=>{i
 function critWander(c){const r=c.k==='deer'?3:c.k==='crab'?1.5:2;for(let it=0;it<8;it++){const x=c.hx+(Math.random()-0.5)*2*r,z=c.hz+(Math.random()-0.5)*2*r,rx=Math.round(x),rz=Math.round(z);
     if(critHabitat(c.k,rx,rz)&&critLvl(rx,rz)===critLvl(c.x,c.z)){c.tx=x;c.tz=z;c.state='move';c.t=0;return;}}c.wait=1+Math.random()*2;}
 function critFlee(c){c.state='flee';c.t=0;const a=Math.atan2(c.z-vil.z,c.x-vil.x);c.fx=Math.cos(a);c.fz=Math.sin(a);
-  if(c.k==='squirrel'){const t=nearTree(Math.round(c.x),Math.round(c.z),2);if(t){c.tree=t;}}
+  if(c.k==='squirrel'){const t=nearTree(Math.round(c.x),Math.round(c.z),2);if(t){c.tree=t;}
+    if(Math.random()<0.4&&freeTile(Math.round(c.x),Math.round(c.z))){dropFind('acorn',Math.round(c.x),Math.round(c.z));floatText(c.x,c.y+0.6,c.z,'It dropped something!');}}/* startled, it lets go of its acorn */
   if(c.k==='frog'){const w=nearWater(Math.round(c.x),Math.round(c.z),2);if(w)c.water=w;}}
 
 function updateCritters(dt,tt){
@@ -4199,10 +4216,11 @@ function updateCaught(dt,tt){if(!caught)return;caught.t+=dt;const c=caught,u=Mat
   const hx=vil.x,hz=vil.z,hy=(S.sea?0.14:vil.y)+1.15;
   if(c.t<0.55){c.g.position.set(lerp(c.fx,hx,u),lerp(0.1,hy,u)+Math.sin(u*Math.PI)*1.4,lerp(c.fz,hz,u));c.g.rotation.x+=dt*12;}
   else{c.g.position.set(hx,hy+Math.sin(tt*6)*0.03,hz);c.g.rotation.set(-Math.PI/2+Math.sin(tt*9)*0.15,cam.yaw+Math.PI/2,0);villager.rotation.y+=angDiff(villager.rotation.y,cam.yaw)*Math.min(1,dt*6);
-    if(!c.shown){c.shown=true;setAction(c.msg,[],'Fishing',dismissCatch);}}}
-function dismissCatch(){if(!caught||caught.t<0.6)return;scene.remove(caught.g);caught=null;SFX.ui();clearAction();}
+    if(!c.shown){c.shown=true;say(c.msg);}if(c.t>3)dismissCatch();}}/* held up for a moment, then away: no box to close */
+function dismissCatch(){if(!caught||caught.t<0.6)return;scene.remove(caught.g);caught=null;}
 
-function fishingBar(msg){setAction(msg||`Wait for a nibble… when the bobber is <b>pulled under</b>, tap!`,[{label:'Reel in',cls:'go',fn:reel},{label:'Stop',fn:()=>endFishing()}],'Fishing');}
+// no menu while you fish: a tap anywhere reels in (onTap), with one hint the first time
+function fishingBar(){clearAction();if(!S.tipFish){S.tipFish=1;setTimeout(()=>say('Tap the moment the bobber is <b>pulled under</b>!'),900);}}
 function startFishing(px,pz){
   const isl=curIsl();if(!isl)return;
   const sh=nearestShadow(px,pz,1.6);
@@ -4684,7 +4702,7 @@ function jrDone(t){t.done=1;const T=JR_TASKS[t.k],pay=T.pay+t.n*10;S.shells+=pay
     if(S.jr.tasks.every(q=>q.done)&&!S.jr.all){S.jr.all=1;setTimeout(()=>{const b=250+S.day*10;S.shells+=b;addXP(10);SFX.discover();stamp('A perfect day!',`Every task done · +${b} shells`,true);flyShells(12);
       for(let i=0;i<24;i++)sparkle(vil.x+(Math.random()-0.5)*2,1+Math.random(),vil.z+(Math.random()-0.5)*2,pickR([0xfff0a0,0xffc8e0,0xbff4ff]));},2600);}},500);}
 // everything you pick up counts towards the day's tasks and diary; a first-ever catch or find gets the discovery card
-function jrGain(key,n,first){todayNote(key,n,first);const c=key.slice(0,2);
+function jrGain(key,n,first){todayNote(key,n,first);const c=key.slice(0,2);if(/^[bfgpm]:/.test(key)||key.includes('|')){streakBump();flyItem(key);}/* 87b */
   if(c==='b:')jrNote('bug',n);else if(c==='f:'){if(!FISH[key.slice(2)].junk)jrNote('fish',n);}else if(c==='g:')jrNote('find',n);else if(key==='m:wood')jrNote('wood',n);else if(key.includes('|'))jrNote('harvest',n);
   if(first&&/^[bfgp]:/.test(key)){jrNote('fresh');reveal(key);}}
 // tasks that finish by reaching a state rather than by an action (like pitching your tent)
@@ -4717,7 +4735,7 @@ const REVEAL_LINES={
   p:['It smells wonderful.','Picked with care.','Such a pretty little thing.','The meadow gave me this.'],
 };
 const revQ=[];let revOn=false;
-function reveal(key){if(!/^[bgp]:/.test(key))return;revQ.push(key);if(!revOn)revNext();}
+function reveal(key){if(!/^[bgp]:/.test(key))return;const I=itemInfo(key);if(I&&I.w>=5){say(`<b>New!</b> ${I.name}`,ICON[key]);pluck(1318.5,0.025,0.6);setTimeout(()=>pluck(1568,0.025,0.8),110);return;}/* everyday firsts: a caption; the card is for rare ones */revQ.push(key);if(!revOn)revNext();}
 function revNext(){const key=revQ.shift();if(!key){revOn=false;return;}revOn=true;const I=itemInfo(key);if(!I){revNext();return;}
   const L=REVEAL_LINES[key[0]],line=L[(hash(key.length*7,key.charCodeAt(2)+key.charCodeAt(key.length-1)*13)*L.length|0)%L.length];
   const cat={b:'Bug',g:'Treasure',p:'Wild plant'}[key[0]],el=document.createElement('div');el.className='reveal'+(I.w<5?' rare':'');
@@ -5271,7 +5289,7 @@ function updateAudio(dt){if(!AC||!S.sound)return;
 function updateAtmos(dt,tt){
   windT-=dt;if(windT<=0){windT=4+Math.random()*6;}wind=lerp(wind,0.3+0.5*Math.sin(tt*0.13)+0.25*Math.sin(tt*0.41),Math.min(1,dt));
   updateFoam(tt);updatePrints(dt);updateSky(dt,tt);updateMotes(dt,tt);updateAudio(dt);
-  if(!S.sea){if(lastVX!==null){const d=Math.hypot(vil.x-lastVX,vil.z-lastVZ);if(d>0.001&&d<1){stepAcc+=d;if(stepAcc>0.3){stepAcc=0;footstep();}}}
+  if(!S.sea){if(lastVX!==null){const d=Math.hypot(vil.x-lastVX,vil.z-lastVZ);if(d>0.001&&d<1){stepAcc+=d;if(stepAcc>0.3){stepAcc=0;footstep();stirWildlife();}}}
     else stepAcc=0;}
   lastVX=vil.x;lastVZ=vil.z;
   // idle: glance around like a villager
@@ -5281,6 +5299,113 @@ function updateAtmos(dt,tt){
 }
 let fogBoost=0;
 
+/* =========================================================
+   Ambience and life around you: a soundscape that follows where you stand (wind, leaves, river, surf), morning mist
+   and sunbeams through the woods, wildlife that flushes out as you walk, fish that leap, flocks passing over;
+   and the small rewards of gathering: a streak that builds as you pick things up, and each find flying into your bag.
+   Also `say`, the quiet caption over your head that stands in for most messages.
+   ========================================================= */
+// ---- a caption over your head instead of a message box: one line at a time, gone in a moment ----
+let sayEl=null,sayT=0;
+function say(html,icon){if(!sayEl){sayEl=document.createElement('div');sayEl.className='say';document.body.appendChild(sayEl);}
+  sayEl.innerHTML=(icon?`<img class="px" src="${icon}" alt="">`:'')+`<span>${html}</span>`;sayT=Math.min(5,2.2+html.replace(/<[^>]+>/g,'').length*0.025);
+  sayEl.classList.remove('on');void sayEl.offsetWidth;sayEl.classList.add('on');}
+function updateSay(dt){if(!sayEl||sayT<=0)return;sayT-=dt;if(sayT<=0){sayEl.classList.remove('on');return;}
+  const [sx,sy]=toScreen(vil.x,(S.sea?0.14:vil.y)+1.55,vil.z);sayEl.style.transform=`translate(${Math.round(sx)}px,${Math.round(sy)}px) translate(-50%,-100%)`;}
+
+// ---- the gathering streak: every find within a few seconds of the last builds it; milestones pay out ----
+const streak={n:0,t:0,el:null};
+const STREAK_NOTES=[523.25,587.33,659.25,783.99,880,1046.5,1174.66,1318.5,1568];
+function streakBump(){streak.n++;streak.t=7;const n=streak.n;
+  pluck(STREAK_NOTES[Math.min(n-1,STREAK_NOTES.length-1)],0.03,0.5);
+  if(n<2)return;if(!streak.el){streak.el=document.createElement('div');streak.el.className='streak';document.body.appendChild(streak.el);}
+  streak.el.innerHTML=`<b>×${n}</b><span>gathering streak</span><i><u></u></i>`;streak.el.classList.add('on');streak.el.classList.remove('pop');void streak.el.offsetWidth;streak.el.classList.add('pop');
+  if(n%5===0){const b=n*8;S.shells+=b;addXP(Math.ceil(n/5));flyShells(Math.min(10,4+n/5));SFX.coin();floatText(vil.x,1.6,vil.z,`Streak ×${n}! +${b}`,'gold');
+    for(let i=0;i<14;i++)sparkle(vil.x+(Math.random()-0.5)*1.4,0.8+Math.random(),vil.z+(Math.random()-0.5)*1.4,pickR([0xfff0a0,0xffc8e0,0xbff4ff]));}}
+function updateStreak(dt){if(streak.n===0)return;streak.t-=dt;if(streak.el){const u=streak.el.querySelector('u');if(u)u.style.width=Math.max(0,streak.t/7*100)+'%';}
+  if(streak.t<=0){streak.n=0;if(streak.el)streak.el.classList.remove('on');}}
+// a find sails off your head into the bag button
+function flyItem(key){const ic=ICON[key],to=$('bMenu');if(!ic||!to)return;setTimeout(()=>{const [sx,sy]=toScreen(vil.x,(vil.y||0)+1.2,vil.z),r=to.getBoundingClientRect(),s=document.createElement('img');
+  s.src=ic;s.className='flyitem';s.style.left=sx+'px';s.style.top=sy+'px';document.body.appendChild(s);
+  requestAnimationFrame(()=>{s.style.transform=`translate(${r.left+r.width/2-sx-15}px,${r.top+r.height/2-sy-15}px) scale(.55)`;s.style.opacity='0.3';});
+  setTimeout(()=>{s.remove();to.classList.remove('bump');void to.offsetWidth;to.classList.add('bump');tone(1300,0.03,'triangle',0.018);},560);},520);}
+
+// ---- wildlife around you ----
+let flushT=0,jumpT=8,flockT=25;
+// walking through flowers and long grass stirs things up: a butterfly lifts off, a bird bursts from a bush
+function stirWildlife(){if(flushT>0||S.sea||inside)return;const x=Math.round(vil.x),z=Math.round(vil.z),isl=curIsl();if(!isl||landMap.get(K(x,z))!=='grass')return;
+  let flora=0,bush=null;for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){if(TOWN.flora&&TOWN.flora.has(K(x+dx,z+dz)))flora++;const d=debrisAt(x+dx,z+dz);if(d&&(d.k==='bush'||d.k==='weed'))bush=d;}
+  const night=isNight(),r=Math.random();
+  if(!night&&flora>0&&r<0.06+flora*0.015){const a=Math.random()*6.28;spawnBugAt(vil.x+Math.cos(a)*0.9,vil.z+Math.sin(a)*0.9,false);for(let i=0;i<5;i++)emit(vil.x,vil.y+0.2,vil.z,{vx:(Math.random()-0.5)*0.8,vy:0.8,vz:(Math.random()-0.5)*0.8,life:0.7,max:0.7,size:0.04,color:0x9ad05a,g:2});flushT=5;}
+  else if(bush&&bush.k==='bush'&&r<0.08&&!night){critterAt('bird',bush.x,bush.z,true);noise(0.2,0.05,1800);flushT=6;}}
+// a fish leaps out of the water near you, and leaves its shadow behind to cast at
+function fishJump(){const isl=curIsl();if(!isl||isl.lava)return;let wx,wz,wy=0,riv=false;
+  const rs=[];for(let dx=-7;dx<=7;dx++)for(let dz=-7;dz<=7;dz++){const k=K(Math.round(vil.x)+dx,Math.round(vil.z)+dz);if(riverSurf.has(k))rs.push([Math.round(vil.x)+dx,Math.round(vil.z)+dz,riverSurf.get(k)]);}
+  if(rs.length&&Math.random()<0.6){const q=pickR(rs);wx=q[0]+(Math.random()-0.5)*0.4;wz=q[1]+(Math.random()-0.5)*0.4;wy=q[2]||0;riv=true;}
+  else{let ok=false;for(let it=0;it<12&&!ok;it++){const a=Math.random()*6.28,d=3+Math.random()*5;wx=vil.x+Math.cos(a)*d;wz=vil.z+Math.sin(a)*d;const rx=Math.round(wx),rz=Math.round(wz);ok=!isLand(rx,rz)&&landMap.get(K(rx,rz))!=='river'&&landDist(wx,wz)>1.2;}if(!ok)return;wy=tideY;}
+  const id=riv?chooseFish(isl.biome,false,true):chooseFish(regionAt(wx,wz),landDist(wx,wz)>2.8);if(!id||FISH[id].junk)return;
+  const g=fishModel(FISH[id]);g.scale.setScalar(0.7);scene.add(g);const a=Math.random()*6.28;leaps.push({g,x:wx,z:wz,y:wy,dx:Math.cos(a)*0.8,dz:Math.sin(a)*0.8,t:0,id,riv});
+  ripple(wx,wz,false);burst(wx,wy+0.05,wz,0xe8f4ff,8,1.1,0.05,5);if(Math.hypot(wx-vil.x,wz-vil.z)<9)noise(0.18,0.05,1400,1);}
+const leaps=[];
+function updateLeaps(dt){for(let i=leaps.length-1;i>=0;i--){const l=leaps[i];l.t+=dt;const u=l.t/0.7;
+  l.g.position.set(l.x+l.dx*u,l.y+Math.sin(Math.min(1,u)*Math.PI)*0.8,l.z+l.dz*u);l.g.rotation.set(-Math.cos(u*Math.PI)*1.1,Math.atan2(l.dx,l.dz),0);
+  if(u>=1){const x=l.x+l.dx,z=l.z+l.dz;scene.remove(l.g);leaps.splice(i,1);ripple(x,z,true);burst(x,l.y+0.05,z,0xe8f4ff,12,1.4,0.06,5);if(Math.hypot(x-vil.x,z-vil.z)<9)SFX.plop();
+    if(!fishing)spawnShadowAt(x,z,l.id,l.riv?l.y:0);}}}
+// a skein of birds passing over, high up
+const flocks=[];const FLOCK_GEO=merge([P(BOX,0x3a3440,-0.14,0,0,0,0,0.35,0.26,0.02,0.07),P(BOX,0x3a3440,0.14,0,0,0,0,-0.35,0.26,0.02,0.07),P(SPH_XS,0x3a3440,0,0,0.02,0,0,0,0.07,0.05,0.12)]);
+function spawnFlock(){const n=5+Math.floor(Math.random()*4),a=Math.random()*6.28,g=new T.Group(),ms=[];
+  for(let i=0;i<n;i++){const m=new T.Mesh(FLOCK_GEO,vcMat);m.castShadow=false;const row=Math.ceil(i/2),sd=i%2?1:-1;m.position.set(sd*row*0.55,Math.random()*0.2,-row*0.5);g.add(m);ms.push(m);}
+  g.position.set(cam.tx-Math.cos(a)*24,7+Math.random()*2,cam.tz-Math.sin(a)*24);g.rotation.y=Math.atan2(Math.cos(a),Math.sin(a));scene.add(g);flocks.push({g,ms,vx:Math.cos(a)*3.2,vz:Math.sin(a)*3.2,t:0});
+  setTimeout(()=>{if(S.sound&&!S.sea)for(let i=0;i<3;i++)setTimeout(chirp,i*260);},3500);}
+function updateFlocks(dt,tt){for(let i=flocks.length-1;i>=0;i--){const f=flocks[i];f.t+=dt;f.g.position.x+=f.vx*dt;f.g.position.z+=f.vz*dt;
+  f.ms.forEach((m,j)=>{m.scale.set(1,1+Math.sin(tt*9+j)*0.6,1);m.rotation.z=Math.sin(tt*9+j)*0.35;});if(f.t>16){scene.remove(f.g);flocks.splice(i,1);}}}
+
+// ---- light: morning mist, and sunbeams slanting through the trees early and late in the day ----
+const RAY_TEX=(()=>{const c=document.createElement('canvas');c.width=16;c.height=64;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,0,64);
+  g.addColorStop(0,'rgba(255,240,200,0)');g.addColorStop(0.35,'rgba(255,236,190,0.9)');g.addColorStop(1,'rgba(255,230,180,0)');x.fillStyle=g;x.fillRect(0,0,16,64);
+  const h=x.createLinearGradient(0,0,16,0);h.addColorStop(0,'rgba(0,0,0,1)');h.addColorStop(0.5,'rgba(0,0,0,0)');h.addColorStop(1,'rgba(0,0,0,1)');x.globalCompositeOperation='destination-out';x.fillStyle=h;x.fillRect(0,0,16,64);
+  return new T.CanvasTexture(c);})();
+const rayMat=new T.MeshBasicMaterial({map:RAY_TEX,transparent:true,blending:T.AdditiveBlending,depthWrite:false,depthTest:false,opacity:0,side:T.DoubleSide,fog:false});/* shafts of light hang in the air in front of the leaves */
+const RAY_GEO=new T.PlaneGeometry(1,1).translate(0,0.5,0);const rays=[];for(let i=0;i<7;i++){const m=new T.Mesh(RAY_GEO,rayMat);m.frustumCulled=false;m.visible=false;m.renderOrder=3;scene.add(m);rays.push({m,ph:Math.random()*6.28,x:0,z:0});}
+let rayT=0,rayK=0;
+function updateRays(dt,tt){const h=S.hour,golden=S.rain||S.sea||inside?0:Math.max(smooth(6,7.2,h)*(1-smooth(9.5,11,h)),smooth(15.5,16.8,h)*(1-smooth(18.6,19.4,h)));
+  rayT-=dt;if(rayT<=0){rayT=2;/* re-seat them among the trees near you */const ts=S.debris.filter(d=>d.k==='tree'&&Math.abs(d.x-cam.tx)<9&&Math.abs(d.z-cam.tz)<9);rayK=Math.min(1,ts.length/6);
+    for(const r of rays){if(r.m.visible&&Math.abs(r.x-cam.tx)<10&&Math.abs(r.z-cam.tz)<10)continue;if(!ts.length){r.m.visible=false;continue;}/* in a gap beside a tree, where the light gets through */const t=pickR(ts);let gx=t.x,gz=t.z;for(const [a,b] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1]])if(!debrisAt(t.x+a,t.z+b)&&isLand(t.x+a,t.z+b)){gx=t.x+a;gz=t.z+b;break;}r.x=gx+(Math.random()-0.5)*0.6;r.z=gz+(Math.random()-0.5)*0.6;r.ph=Math.random()*6.28;}}
+  const a=golden*rayK;rayMat.opacity=a*0.5;const sunSide=h<12?1:-1;
+  for(const r of rays){r.m.visible=a>0.02&&r.x!==0;if(!r.m.visible)continue;r.m.position.set(r.x,topY(Math.round(r.x),Math.round(r.z))||0.3,r.z);r.m.rotation.set(0,cam.yaw,0.42*sunSide);
+    const w=0.7+0.3*Math.sin(tt*0.4+r.ph);r.m.scale.set(0.3+0.35*w,7,1);if(Math.random()<dt*0.8*a)emit(r.x+(Math.random()-0.5)*0.4,1+Math.random()*2,r.z+(Math.random()-0.5)*0.4,{vy:-0.05,life:3,max:3,size:0.03,color:0xfff4c8,g:0,sw:0.4,ph:Math.random()*6});}}
+
+// ---- the soundscape follows you: wind always, leaves in the woods, the river when it's near, surf by the shore ----
+let beds=null,envT=0;const env={sea:0,river:0,trees:0};
+function bed(type,freq,q){const a=AC,s=a.createBufferSource();s.buffer=noiseBuf;s.loop=true;s.playbackRate.value=0.6+Math.random()*0.5;const f=a.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;
+  const g=a.createGain();g.gain.value=0;s.connect(f);f.connect(g);g.connect(a.destination);s.start(0,Math.random()*2);return{g,f};}
+function startBeds(){if(beds||!AC||!noiseBuf)return;beds={wind:bed('lowpass',380,0.7),leaves:bed('highpass',3200,0.5),river:bed('bandpass',1100,0.7)};}
+function senseEnv(){const x=Math.round(vil.x),z=Math.round(vil.z);let sea=9,riv=9,tr=0;
+  for(let dx=-6;dx<=6;dx++)for(let dz=-6;dz<=6;dz++){const d=Math.hypot(dx,dz);if(d>6.5)continue;const k=K(x+dx,z+dz);
+    if(riverSurf.has(k))riv=Math.min(riv,d);else if(!isLand(x+dx,z+dz))sea=Math.min(sea,d);const db=S.debris.length&&d<5?debrisAt(x+dx,z+dz):null;if(db&&db.k==='tree')tr++;}
+  env.sea=S.sea?1:clamp(1-(sea-1)/6,0,1);env.river=clamp(1-(riv-0.5)/5,0,1);env.trees=clamp(tr/14,0,1);}
+function updateBeds(dt,tt){if(!AC)return;if(!beds){if(noiseBuf)startBeds();return;}const on=S.sound&&!inside?1:0,k=Math.min(1,dt*1.5),gust=0.55+0.45*Math.sin(tt*0.23)*Math.sin(tt*0.61+1);
+  beds.wind.g.gain.value=lerp(beds.wind.g.gain.value,on*(0.012+0.02*wind*gust+rainMix*0.01),k);beds.wind.f.frequency.value=260+gust*260;
+  beds.leaves.g.gain.value=lerp(beds.leaves.g.gain.value,on*env.trees*(0.004+0.012*gust)*(S.rain?0.4:1),k);
+  beds.river.g.gain.value=lerp(beds.river.g.gain.value,on*env.river*0.03,k);
+  if(waves)waves.g.gain.value=lerp(waves.g.gain.value,on*(0.006+0.03*env.sea+rainMix*0.03),k);}
+// a few voices of the island now and then: a woodpecker in the woods, an owl at night, frogs by the water after dark
+let voiceT=6;
+function islandVoice(){const night=nightF>0.6;
+  if(!night&&env.trees>0.3&&Math.random()<0.35){for(let i=0;i<9;i++)setTimeout(()=>noise(0.025,0.05,1700+Math.random()*200,4),i*45);return;}
+  if(night&&env.trees>0.2&&Math.random()<0.4){tone(392,0.35,'sine',0.02,370);setTimeout(()=>tone(370,0.55,'sine',0.018,330),420);return;}
+  if(night&&env.river>0.2){for(let i=0;i<3;i++)setTimeout(()=>tone(160+Math.random()*30,0.09,'square',0.012,120),i*180);}}
+
+function updateAmbience(dt,tt){updateSay(dt);updateStreak(dt);updateLeaps(dt);updateFlocks(dt,tt);updateRays(dt,tt);
+  if(flushT>0)flushT-=dt;
+  envT-=dt;if(envT<=0){envT=0.6;if(!S.sea&&!inside)senseEnv();else{env.river=env.trees=0;env.sea=S.sea?1:0;}}
+  updateBeds(dt,tt);
+  if(S.sea||inside)return;
+  voiceT-=dt;if(voiceT<=0){voiceT=8+Math.random()*14;if(S.sound&&AC)islandVoice();}
+  jumpT-=dt;if(jumpT<=0){jumpT=7+Math.random()*9;if(env.sea>0.15||env.river>0.1)fishJump();}
+  flockT-=dt;if(flockT<=0){flockT=35+Math.random()*50;if(nightF<0.4&&!S.rain)spawnFlock();}
+  // dawn mist: a soft haze over the island until the sun burns it off
+  const mist=smooth(4.5,6,S.hour)*(1-smooth(7.5,9,S.hour))*0.5;fogBoost=Math.max(fogBoost,mist);}
 /* =========================================================
    Dev: the showcase farm. One tap turns this save into a late-game, hand-planned farm (what a player who has
    put in the hours could build): the field grown to full size and fenced, a stone avenue and cross path, sprinkler-fed
@@ -5476,7 +5601,7 @@ function frame(now){
   {const ci=S.sea?null:curIsl();if(ci&&ci.falls)for(const [x,y,z] of ci.falls){if(Math.random()<dt*3&&Math.abs(x-cam.tx)<16&&Math.abs(z-cam.tz)<16)emit(x+(Math.random()-0.5)*0.8,y+0.05,z+(Math.random()-0.5)*0.3,{vy:0.5+Math.random()*0.5,life:0.6,max:0.6,size:0.07,color:ci.lava?0xffc070:0xf4fbff,g:2});}}grassU.uWind.value=1+rainMix*1.3;grassU.uPl.value.set(vil.x,S.sea?-99:vil.y,vil.z);
   if(!S.sea){
     const dx=vil.tx-vil.x,dz=vil.tz-vil.z,d=Math.hypot(dx,dz);
-    if(d>0.04){const sp=Math.min(d,dt*3*(buffOn('tail')?1.35:1)),nx=vil.x+dx/d*sp,nz=vil.z+dz/d*sp;
+    if(d>0.04){const sp=Math.min(d,dt*4.3*(buffOn('tail')?1.3:1)),nx=vil.x+dx/d*sp,nz=vil.z+dz/d*sp;
       if(landMap.get(K(Math.round(nx),Math.round(nz)))==='river'&&landMap.get(K(Math.round(vil.x),Math.round(vil.z)))!=='river'){vil.tx=vil.x;vil.tz=vil.z;vil.path=null;}
       else{vil.x=nx;vil.z=nz;villager.rotation.y=Math.atan2(dx,dz);}}
     else if(vil.path&&vil.path.length){const p=vil.path.shift();vil.tx=p[0];vil.tz=p[1];}
@@ -5493,7 +5618,7 @@ function frame(now){
   updateBoat(dt,tt);
   if(S.sea){vil.hop=Math.max(0,vil.hop-dt);villager.position.set(vil.x,0.14+Math.sin(tt*1.5)*0.04+Math.sin(vil.hop/0.35*Math.PI)*0.3*(vil.hop>0),vil.z);if(!fishing)villager.rotation.y=S.boat.r;}
   if(introCam){introCam.t+=dt;const u=smooth(0,1,introCam.t/7);cam.dist=lerp(10,introCam.d,u);cam.pitch=lerp(0.22,introCam.p,u);cam.yaw=lerp(introCam.y-0.5,introCam.y,u);if(introCam.t>=7||drag||pinch)introCam=null;}
-  const k=paint?0:Math.min(1,dt*3);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();cullIslands();updateNearGrass(dt); // hold the view still while drag-farming so tiles stay under the finger
+  const k=paint?0:Math.min(1,dt*5);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();cullIslands();updateNearGrass(dt); // hold the view still while drag-farming so tiles stay under the finger
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
   scene.fog.near=camD()+45-fogBoost*30;scene.fog.far=camD()+300-fogBoost*200;/* a light haze: neighbouring islands stay green on the horizon */
@@ -5505,7 +5630,7 @@ function frame(now){
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);
   for(const a of anims)a(tt,dt);
   {let t0=performance.now();const lap=k=>{const t=performance.now();FRAME_STAT[k]=(FRAME_STAT[k]||0)*0.9+(t-t0)*0.1;t0=t;};/* smoothed per-system timings, read by DS.perf() */
-    updateLife(dt,tt);lap('life');updateAtmos(dt,tt);lap('atmos');updateNPCs(dt,tt);lap('npcs');updateSeaLife(dt,tt);lap('sea');updateDebris(dt,tt);updateTool(dt);updateMuseumShow(dt,tt);updateLighthouse(dt,tt);lap('misc');}
+    updateLife(dt,tt);lap('life');updateAtmos(dt,tt);updateAmbience(dt,tt);lap('atmos');updateNPCs(dt,tt);lap('npcs');updateSeaLife(dt,tt);lap('sea');updateDebris(dt,tt);updateTool(dt);updateMuseumShow(dt,tt);updateLighthouse(dt,tt);lap('misc');}
   if(sprayT>0){sprayT-=dt;for(const o of S.objs)if(o.k==='sprinkler'&&Math.random()<0.8){const a=Math.random()*6.28;emit(o.x,topY(o.x,o.z)+0.4,o.z,{vx:Math.cos(a)*1.6,vy:1.6,vz:Math.sin(a)*1.6,life:0.6,max:0.6,size:0.05,color:0x9ad0ff,g:6});}}
   for(const c of clouds){const u=c.userData;u.ox+=dt*u.sp;const rx=((u.ox-cam.tx)%80+120)%80-40,rz=((u.oz-cam.tz)%80+120)%80-40;c.position.set(cam.tx+rx,11,cam.tz+rz);}
   const day=1-nightF;
@@ -5556,12 +5681,12 @@ if(isNew&&S.scratch){introCam={t:0,d:cam.dist,p:cam.pitch,y:cam.yaw};cam.dist=10
   const el=document.createElement('div');el.id='introTitle';el.innerHTML='<div>Day 1</div><b>An island no one has found</b><small>The woods are waiting.</small>';document.body.appendChild(el);
   setTimeout(()=>el.classList.add('on'),600);setTimeout(()=>el.classList.remove('on'),5200);setTimeout(()=>el.remove(),7000);}
 try{makeThumbs();}catch(e){console.warn(e);}
-applyLook();renderTools();showHeld();if(!S.tipTools){S.tipTools=1;setTimeout(()=>toast(S.scratch?'Just tap things: a butterfly to catch it, a tree to shake it, a mushroom or shell to pick it up, a glinting dig spot to dig. The tool bar is for digging new soil and dragging along a row.':'Tap anywhere to walk. Pick a <b>tool</b> from the bar above the dock, then tap to dig, water, plant, chop, catch bugs or fish.','',ICON.sprout),S.scratch&&isNew?17000:5000);}shownShells=S.shells;$('shellTxt').textContent=fmt(S.shells);applyTime();updateHUD();
+applyLook();renderTools();showHeld();if(!S.tipTools){S.tipTools=1;setTimeout(()=>say(S.scratch?'Tap anything that looks interesting.':'Tap anywhere to walk, and tap things to use them.'),S.scratch&&isNew?17000:5000);}/* one line, not a manual: the rest is found by tapping */shownShells=S.shells;$('shellTxt').textContent=fmt(S.shells);applyTime();updateHUD();
 window.addEventListener('resize',()=>{resize();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{const el=clamp((Date.now()-S.t)/1000,0,21*86400);if(el>5){const out=simulate(el);afterSim(out,'While you were away');}last=performance.now();}});
 window.addEventListener('pagehide',save);
 $('boot').remove();
-if(S.scratch&&isNew){/* after the opening shot */setTimeout(()=>toast('Your raft scrapes onto the sand. No roads, no houses, no one: just the island. Look around, then choose a spot for your tent.','',ICON.sprout),7600);
+if(S.scratch&&isNew){/* after the opening shot */setTimeout(()=>say('Nobody here but the birds…'),7600);
   setTimeout(()=>{if(!S.homeAt&&!placing)startBlueprint('tent');},11500);}
 else if(S.scratch&&!S.homeAt)setTimeout(()=>{if(!placing)startBlueprint('tent');},1500);
 else if(!S.scratch){if(farmNew)setTimeout(()=>toast('Across the bridge to the west is your farm field, overgrown with weeds, rocks and stumps. Clear it to make room for crops. Tip: press and hold, then drag, to till, plant, water or harvest a whole row.','',ICON.sprout),isNew?9000:1500);
@@ -5584,7 +5709,7 @@ if(/[?&]debug\b/.test(location.search)){
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
       islands:islands.length,town:TOWN.name,buildings:TOWN.bld.filter(b=>!b.locked).map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
     hour:h=>{setHour(h);applyTime();},
-    jr:()=>S.jr,falls:()=>falls.map(f=>[+f.a.toFixed(2),f.hit]),fell:()=>{const d=S.debris.filter(q=>q.k==='tree').sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];d.hp=1;S.tool='axe';showHeld();villager.rotation.y=Math.atan2(d.x-vil.x,d.z-vil.z);swingTool(()=>hitDebris(d));return[d.x,d.z];},digHere:()=>{const x=Math.round(vil.x),z=Math.round(vil.z)-1;S.tool='shovel';showHeld();villager.rotation.y=Math.PI;swingTool(()=>{digStab(x,z,0.6);swingTool(()=>digStab(x,z,1));});return[x,z];},pitch:()=>pitch&&{t:pitch.t,sy:pitch.sy,step:pitch.step,end:pitch.end},gain:(k,n=1)=>gain(k,n),campfire:()=>campfire(),tent:()=>S.home&&S.home.tent,resting:()=>!!rest,
+    jr:()=>S.jr,rays:()=>({op:rayMat.opacity,k:rayK,vis:rays.filter(r=>r.m.visible).map(r=>[+r.x.toFixed(1),+r.z.toFixed(1)]),cam:[cam.tx,cam.tz],hour:S.hour}),falls:()=>falls.map(f=>[+f.a.toFixed(2),f.hit]),fell:()=>{const d=S.debris.filter(q=>q.k==='tree').sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];d.hp=1;S.tool='axe';showHeld();villager.rotation.y=Math.atan2(d.x-vil.x,d.z-vil.z);swingTool(()=>hitDebris(d));return[d.x,d.z];},digHere:()=>{const x=Math.round(vil.x),z=Math.round(vil.z)-1;S.tool='shovel';showHeld();villager.rotation.y=Math.PI;swingTool(()=>{digStab(x,z,0.6);swingTool(()=>digStab(x,z,1));});return[x,z];},pitch:()=>pitch&&{t:pitch.t,sy:pitch.sy,step:pitch.step,end:pitch.end},gain:(k,n=1)=>gain(k,n),campfire:()=>campfire(),tent:()=>S.home&&S.home.tent,resting:()=>!!rest,
     tp:(x,z)=>{S.sea=false;vil.x=vil.tx=x;vil.z=vil.tz=z;vil.path=null;cam.tx=x;cam.tz=z;},
     visit:id=>{const i=islands[id];S.disc[id]=1;const sp=(i.spots&&i.spots[1])||i.grass[0];DS.tp(sp[0]+0.6,sp[1]+0.6);},
     islands:()=>islands.map(i=>({id:i.id,biome:i.biome,name:i.name,x:i.cx,z:i.cz,r:Math.round(islR(i)),grand:!!i.grand,river:(i.rtiles||[]).length})),

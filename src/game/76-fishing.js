@@ -87,10 +87,11 @@ function updateCaught(dt,tt){if(!caught)return;caught.t+=dt;const c=caught,u=Mat
   const hx=vil.x,hz=vil.z,hy=(S.sea?0.14:vil.y)+1.15;
   if(c.t<0.55){c.g.position.set(lerp(c.fx,hx,u),lerp(0.1,hy,u)+Math.sin(u*Math.PI)*1.4,lerp(c.fz,hz,u));c.g.rotation.x+=dt*12;}
   else{c.g.position.set(hx,hy+Math.sin(tt*6)*0.03,hz);c.g.rotation.set(-Math.PI/2+Math.sin(tt*9)*0.15,cam.yaw+Math.PI/2,0);villager.rotation.y+=angDiff(villager.rotation.y,cam.yaw)*Math.min(1,dt*6);
-    if(!c.shown){c.shown=true;setAction(c.msg,[],'Fishing',dismissCatch);}}}
-function dismissCatch(){if(!caught||caught.t<0.6)return;scene.remove(caught.g);caught=null;SFX.ui();clearAction();}
+    if(!c.shown){c.shown=true;say(c.msg);}if(c.t>3)dismissCatch();}}/* held up for a moment, then away: no box to close */
+function dismissCatch(){if(!caught||caught.t<0.6)return;scene.remove(caught.g);caught=null;}
 
-function fishingBar(msg){setAction(msg||`Wait for a nibble… when the bobber is <b>pulled under</b>, tap!`,[{label:'Reel in',cls:'go',fn:reel},{label:'Stop',fn:()=>endFishing()}],'Fishing');}
+// no menu while you fish: a tap anywhere reels in (onTap), with one hint the first time
+function fishingBar(){clearAction();if(!S.tipFish){S.tipFish=1;setTimeout(()=>say('Tap the moment the bobber is <b>pulled under</b>!'),900);}}
 function startFishing(px,pz){
   const isl=curIsl();if(!isl)return;
   const sh=nearestShadow(px,pz,1.6);
