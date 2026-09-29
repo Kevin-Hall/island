@@ -211,7 +211,7 @@ function updateBugs(dt,tt){for(let i=bugs.length-1;i>=0;i--){const b=bugs[i];b.t
     if(b.crawl){const x=b.hx+Math.sin(b.t*0.25+b.ph)*0.7,z=b.hz+Math.cos(b.t*0.2+b.ph*2)*0.7;const px=b.g.position.x,pz=b.g.position.z;
       b.g.position.set(x,(topY(Math.round(x),Math.round(z))||TOP.grass)+0.02,z);if(Math.hypot(x-px,z-pz)>1e-4)b.g.rotation.y=Math.atan2(x-px,z-pz);
       if(b.out){b.g.scale.setScalar(BUG_SCALE*Math.max(0.01,1-b.out));b.out+=dt;if(b.out>1){scene.remove(b.g);bugs.splice(i,1);}}continue;}
-    const x=b.hx+Math.sin(b.t*0.7+b.ph)*1.2+Math.sin(b.t*1.9)*0.3,z=b.hz+Math.cos(b.t*0.55+b.ph)*1.2;
+    const x=b.still?b.hx:b.hx+Math.sin(b.t*0.7+b.ph)*1.2+Math.sin(b.t*1.9)*0.3,z=b.still?b.hz:b.hz+Math.cos(b.t*0.55+b.ph)*1.2;
     let y=(topY(Math.round(b.hx),Math.round(b.hz))||0.5)+0.4+Math.sin(b.t*2.3)*0.16;
     if(b.out){b.out+=dt;y+=b.out*b.out*2;if(b.out>3){scene.remove(b.g);bugs.splice(i,1);continue;}}
     const px=b.g.position.x,pz=b.g.position.z;b.g.position.set(x,y,z);if(Math.hypot(x-px,z-pz)>1e-4)b.g.rotation.y=Math.atan2(x-px,z-pz);

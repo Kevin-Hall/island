@@ -46,7 +46,7 @@ if(/[?&]debug\b/.test(location.search)){
     harvestAt:(x,z)=>{harvest(K(x,z),x,z);},
     // a butterfly a couple of tiles from you; bugAt gives its screen position and how many bugs you've caught
     bugNear:()=>{const isl=curIsl(),id=Object.keys(BUGS).find(k=>BUGS[k].kind!=='crawl'&&BUGS[k].time!=='night'&&BUGS[k].bio.includes(isl.biome));const g=bugGroup(BUGS[id]);g.scale.setScalar(BUG_SCALE);scene.add(g);
-      const hx=Math.round(vil.x)+2,hz=Math.round(vil.z)+1;g.position.set(hx,topY(hx,hz)+0.4,hz);bugs.push({id,g,hx,hz,t:0,life:999,ph:0,out:0,isl:isl.id,crawl:false});return id;},
+      const hx=Math.round(vil.x)+2,hz=Math.round(vil.z)+1;g.position.set(hx,topY(hx,hz)+0.4,hz);bugs.push({id,g,hx,hz,t:0,life:999,ph:0,out:0,isl:isl.id,crawl:false,still:true});return id;},
     bugAt:()=>{const b=bugs[bugs.length-1];const caught=Object.keys(S.alm).filter(k=>k.startsWith('b:')).length;if(!b)return{caught};const s=toScreen(b.g.position.x,b.g.position.y,b.g.position.z);return{x:s[0],y:s[1],n:bugs.length,caught,tool:S.tool};},
     camInfo:()=>({dist:cam.dist,pitch:cam.pitch,fov:camera.fov,pos:camera.position.toArray(),W,H,PX,hy:skyMat.uniforms.hy.value}),
     critters:()=>{const o={};for(const c of critters)o[c.k]=(o[c.k]||0)+1;return o;},spawnCritter:k=>spawnCritter(k),
