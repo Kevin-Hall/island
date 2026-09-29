@@ -1832,7 +1832,40 @@ function flowMat(col,hi,emi,fall){const m=toon({color:col,emissive:emi||0,emissi
       // little sparkles riding the current
       {vec2 c=floor(vRW.xz*3.+vec2(uTime*.9,uTime*.6));float h=fract(sin(dot(c,vec2(12.9898,78.233)))*43758.5453);diffuseColor.rgb+=vec3(.9,.95,1.)*step(.965,h)*step(.5,sin(uTime*3.+h*30.))*.6;}`);};
   return m;}
-const RIVER_MATS={water:flowMat(0x4aaee6,'0.9,0.98,1.0'),swamp:flowMat(0x4a8070,'0.7,0.86,0.78'),snow:flowMat(0x72b4e8,'0.92,0.98,1.0'),lava:flowMat(0xe0582a,'1.0,0.86,0.3',0xb03a10)};
+// river water: deep in the channel and clear teal in the shallows by the banks (a blurred mask of every river tile,
+// uRMask), streaks of current flowing downstream along each tile's flow (aFlow), soft foam lapping the banks, and glints
+const RMASK_N=512,RMASK_O=256,rmaskData=new Uint8Array(RMASK_N*RMASK_N*4);
+const rmaskTex=new T.DataTexture(rmaskData,RMASK_N,RMASK_N,T.RGBAFormat);rmaskTex.magFilter=rmaskTex.minFilter=T.LinearFilter;
+let rmaskN=-1;
+function buildRiverMask(){rmaskN=riverSurf.size;rmaskData.fill(0);const r=3;
+  for(const k of riverSurf.keys()){const [x,z]=k.split(',').map(Number),ix=x+RMASK_O,iz=z+RMASK_O;if(ix<0||iz<0||ix>=RMASK_N||iz>=RMASK_N)continue;
+    let d=r+1;for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){if(riverSurf.has(K(x+dx,z+dz)))continue;const e=Math.hypot(dx,dz);if(e<d)d=e;}
+    const i=(iz*RMASK_N+ix)*4;rmaskData[i]=Math.round(Math.min(1,d/(r+0.6))*255);rmaskData[i+3]=255;}
+  rmaskTex.needsUpdate=true;}
+const rmaskU={value:rmaskTex};
+function riverMat(col,deepK,shal,hi,speed){const m=toon({color:0xffffff});
+  m.onBeforeCompile=sh=>{sh.uniforms.uTime=riverU.uTime;sh.uniforms.uRMask=rmaskU;
+    sh.vertexShader='varying vec3 vRW;varying vec2 vFlow;attribute vec2 aFlow;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n  vFlow=aFlow;vec4 rw=vec4(transformed,1.);\n  #ifdef USE_INSTANCING\n  rw=instanceMatrix*rw;\n  #endif\n  vRW=(modelMatrix*rw).xyz;');
+    sh.fragmentShader='uniform float uTime;uniform sampler2D uRMask;varying vec3 vRW;varying vec2 vFlow;\n'+sh.fragmentShader.replace('vec4 diffuseColor = vec4( diffuse, opacity );',`vec4 diffuseColor = vec4( diffuse, opacity );
+      {vec2 fd=normalize(vFlow+vec2(0.0001,0.0));vec2 pp=vec2(-fd.y,fd.x);float u=dot(vRW.xz,fd),v=dot(vRW.xz,pp);
+      float bank=texture2D(uRMask,(vRW.xz+${RMASK_O}.5)/${RMASK_N}.).r;
+      vec3 deep=vec3(${col})*${deepK},shal=vec3(${shal});
+      vec3 c=mix(shal,deep,smoothstep(0.1,0.6,bank));
+      c*=0.95+0.05*sin(u*0.8+v*1.3-uTime*0.7);
+      // streaks of current: long thin highlights drifting downstream, wobbling across the flow
+      float wob=sin(v*4.1+sin(u*0.9+uTime*0.4)*1.4);
+      float s1=sin((u-uTime*${speed})*2.6+wob*2.2)*0.5+0.5,s2=sin((u*1.7-uTime*${speed}*1.4)*1.9+v*6.3)*0.5+0.5;
+      float streak=smoothstep(0.86,0.97,s1)*smoothstep(-0.2,0.6,sin(v*3.3+1.7))+smoothstep(0.93,0.99,s2)*0.6;
+      c=mix(c,vec3(${hi}),clamp(streak,0.,1.)*0.5*smoothstep(0.1,0.35,bank));
+      // foam lapping the banks, a lacy line that breathes with the water
+      float lace=0.55+0.45*sin(u*5.3-uTime*2.2+v*1.7)*sin(u*2.1+uTime*1.1);
+      float foam=smoothstep(0.26,0.1,bank)*lace+smoothstep(0.16,0.06,bank)*0.7;
+      c=mix(c,vec3(0.86,0.92,0.94),clamp(foam,0.,1.)*0.75);
+      // glints riding the current
+      {vec2 g=floor(vec2(u-uTime*${speed}*0.8,v)*vec2(3.,4.));float h=fract(sin(dot(g,vec2(12.9898,78.233)))*43758.5453);c+=vec3(.9,.95,1.)*step(.975,h)*step(.4,sin(uTime*4.+h*40.))*.5*step(0.25,bank);}
+      diffuseColor.rgb=c;}`);};
+  return m;}
+const RIVER_MATS={water:riverMat('0.06,0.25,0.5','1.0','0.24,0.56,0.62','0.62,0.84,0.94','0.9'),swamp:riverMat('0.15,0.3,0.25','1.0','0.28,0.44,0.34','0.56,0.7,0.62','0.4'),snow:riverMat('0.18,0.42,0.7','1.0','0.42,0.66,0.78','0.8,0.92,1.0','0.8'),lava:flowMat(0xe0582a,'1.0,0.86,0.3',0xb03a10)};
 const FALL_MATS={water:flowMat(0x7ab8f0,'0.95,0.99,1.0',0,1),swamp:flowMat(0x6a9a88,'0.85,0.95,0.9',0,1),snow:flowMat(0x9accf4,'1.0,1.0,1.0',0,1),lava:flowMat(0xf0782a,'1.0,0.92,0.4',0xc04a10,1)};
 const FALL_PLANE=new T.PlaneGeometry(1,1);
 // carve rivers from an inland pond down to the sea; they drop a tier at a time as waterfalls and get wooden bridges
@@ -1881,14 +1914,15 @@ function carveRivers(isl,g){const R=mulberry(isl.seed^0x71e5),B=BIOMES[isl.biome
           pb.push(P(BOX,0x7a5230,rx,y+0.2,rz,0,0,0,along?0.06:1.02,0.06,along?1.02:0.06),P(CYL8,0x5a3a2a,rx,y-0.12,rz,0,0,0,0.09,0.7,0.09));}}
       isl.bridges++;break;}}}
   // river beds, water, waterfalls
-  const bed=new T.InstancedMesh(BOX,vcMatFlat,list.length),wat=new T.InstancedMesh(TILE_PLANE,RIVER_MATS[mk],list.length);
+  const bed=new T.InstancedMesh(BOX,vcMatFlat,list.length),wat=new T.InstancedMesh(lava?TILE_PLANE:TILE_PLANE.clone(),RIVER_MATS[mk],list.length);
+  if(!lava){const fl=new Float32Array(list.length*2);list.forEach((q,i)=>{const L=Math.hypot(q.fx||0,q.fz||0)||1;fl[i*2]=(q.fx||1)/L;fl[i*2+1]=(q.fz||0)/L;});wat.geometry.setAttribute('aFlow',new T.InstancedBufferAttribute(fl,2));}
   list.forEach((q,i)=>{const bt=q.surf-0.14,h=bt+0.6;_m.compose(_v.set(q.x,-0.6+h/2,q.z),_q.identity(),_s.set(1,h,1));bed.setMatrixAt(i,_m);bed.setColorAt(i,_c.set(lava?0x3a2a2a:B.cliff||0x9a7050).multiplyScalar(0.72));
     _m.makeTranslation(q.x,q.surf,q.z);wat.setMatrixAt(i,_m);});
   for(const m of [bed,wat]){m.frustumCulled=false;m.receiveShadow=true;g.add(m);}
   // banks: a soft line of foam where the water meets the land, rounded pebbles along the edge, and tufts of reeds
   if(!lava){const fo=[],pb=[],Rb=mulberry(isl.seed^0xba2c);
     for(const q of list)for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const k2=K(q.x+dx,q.z+dz),t2=landMap.get(k2);if(riverSurf.has(k2)||t2==='bridge'||!isLandT(t2))continue;
-      const ex=q.x+dx*0.42,ez=q.z+dz*0.42;fo.push(P(BOX,0xffffff,ex,q.surf+0.012,ez,0,0,0,dz?0.96:0.12,0.01,dx?0.96:0.12));
+      const ex=q.x+dx*0.42,ez=q.z+dz*0.42;if(false)fo.push(P(BOX,/* (the water's own foam replaces the old strips) */0xffffff,ex,q.surf+0.012,ez,0,0,0,dz?0.96:0.12,0.01,dx?0.96:0.12));
       if(Rb()<0.45){const s=0.1+Rb()*0.1,ox=dz?(Rb()-0.5)*0.8:0,oz=dx?(Rb()-0.5)*0.8:0;pb.push(PG(SPH_LO,0x8a909c,0x565c68,q.x+dx*0.5+ox,q.surf+0.03,q.z+dz*0.5+oz,0,Rb()*3,0,s*1.4,s*0.7,s));}
       if(Rb()<0.18&&t2==='grass'){const bx=q.x+dx*0.62+(dz?(Rb()-0.5)*0.6:0),bz=q.z+dz*0.62+(dx?(Rb()-0.5)*0.6:0),by=topY(q.x+dx,q.z+dz);for(let i=0;i<4;i++){const h=0.28+Rb()*0.25;pb.push(P(CYL5,i%2?0x5a8a3a:0x6a9a44,bx+(Rb()-0.5)*0.16,by+h/2,bz+(Rb()-0.5)*0.16,(Rb()-0.5)*0.3,0,(Rb()-0.5)*0.3,0.025,h,0.025));}}}
     if(fo.length){const m=M(fo,new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.55,depthWrite:false}));m.castShadow=false;m.receiveShadow=false;g.add(m);}
@@ -6249,7 +6283,7 @@ function frame(now){
   const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;
   advance(dt*devSpeed);
   rainMix=clamp(rainMix+(S.rain?dt:-dt)*0.5,0,1);
-  grassU.uTime.value=tt;leafU.uT.value=tt;leafU.uWind.value=S.rain?1.8:1;riverU.uTime.value=tt;waterU.uT.value=tt;waterU.uCam.value.copy(camera.position);if(depthDirty)buildDepthTex();
+  grassU.uTime.value=tt;leafU.uT.value=tt;leafU.uWind.value=S.rain?1.8:1;riverU.uTime.value=tt;if(riverSurf.size!==rmaskN)buildRiverMask();waterU.uT.value=tt;waterU.uCam.value.copy(camera.position);if(depthDirty)buildDepthTex();
   {const ci=S.sea?null:curIsl();if(ci&&ci.falls)for(const [x,y,z] of ci.falls){if(Math.random()<dt*3&&Math.abs(x-cam.tx)<16&&Math.abs(z-cam.tz)<16)emit(x+(Math.random()-0.5)*0.8,y+0.05,z+(Math.random()-0.5)*0.3,{vy:0.5+Math.random()*0.5,life:0.6,max:0.6,size:0.07,color:ci.lava?0xffc070:0xf4fbff,g:2});}}grassU.uWind.value=1+rainMix*1.3;grassU.uPl.value.set(vil.x,S.sea?-99:vil.y,vil.z);
   if(!S.sea){
     const dx=vil.tx-vil.x,dz=vil.tz-vil.z,d=Math.hypot(dx,dz);
