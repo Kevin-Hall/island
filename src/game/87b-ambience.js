@@ -32,7 +32,7 @@ function flyItem(key){const ic=ICON[key],to=$('bMenu');if(!ic||!to)return;setTim
 // ---- wildlife around you ----
 let flushT=0,jumpT=8,flockT=25;
 // walking through flowers and long grass stirs things up: a butterfly lifts off, a bird bursts from a bush
-function stirWildlife(){if(flushT>0||S.sea||inside)return;const x=Math.round(vil.x),z=Math.round(vil.z),isl=curIsl();if(!isl||landMap.get(K(x,z))!=='grass')return;
+function stirWildlife(){if(flushT>0||forageOff||S.sea||inside)return;const x=Math.round(vil.x),z=Math.round(vil.z),isl=curIsl();if(!isl||landMap.get(K(x,z))!=='grass')return;
   let flora=0,bush=null;for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){if(TOWN.flora&&TOWN.flora.has(K(x+dx,z+dz)))flora++;const d=debrisAt(x+dx,z+dz);if(d&&(d.k==='bush'||d.k==='weed'))bush=d;}
   const night=isNight(),r=Math.random();
   if(!night&&flora>0&&r<0.06+flora*0.015){const a=Math.random()*6.28;spawnBugAt(vil.x+Math.cos(a)*0.9,vil.z+Math.sin(a)*0.9,false);for(let i=0;i<5;i++)emit(vil.x,vil.y+0.2,vil.z,{vx:(Math.random()-0.5)*0.8,vy:0.8,vz:(Math.random()-0.5)*0.8,life:0.7,max:0.7,size:0.04,color:0x9ad05a,g:2});flushT=5;}
@@ -64,15 +64,30 @@ const RAY_TEX=(()=>{const c=document.createElement('canvas');c.width=16;c.height
   g.addColorStop(0,'rgba(255,240,200,0)');g.addColorStop(0.35,'rgba(255,236,190,0.9)');g.addColorStop(1,'rgba(255,230,180,0)');x.fillStyle=g;x.fillRect(0,0,16,64);
   const h=x.createLinearGradient(0,0,16,0);h.addColorStop(0,'rgba(0,0,0,1)');h.addColorStop(0.5,'rgba(0,0,0,0)');h.addColorStop(1,'rgba(0,0,0,1)');x.globalCompositeOperation='destination-out';x.fillStyle=h;x.fillRect(0,0,16,64);
   return new T.CanvasTexture(c);})();
-const rayMat=new T.MeshBasicMaterial({map:RAY_TEX,transparent:true,blending:T.AdditiveBlending,depthWrite:false,depthTest:false,opacity:0,side:T.DoubleSide,fog:false});/* shafts of light hang in the air in front of the leaves */
-const RAY_GEO=new T.PlaneGeometry(1,1).translate(0,0.5,0);const rays=[];for(let i=0;i<7;i++){const m=new T.Mesh(RAY_GEO,rayMat);m.frustumCulled=false;m.visible=false;m.renderOrder=3;scene.add(m);rays.push({m,ph:Math.random()*6.28,x:0,z:0});}
-let rayT=0,rayK=0;
+// Each beam is pinned to a real gap between trees and slants along the actual sun direction, so it stays put as you walk
+// and turn the camera; two crossed planes give it body from every side. Beams fade in and out (never jump): one is only
+// moved to a new gap once it has faded away. All of them are one instanced draw; fading is the instance colour (additive).
+const rayMat=new T.MeshBasicMaterial({map:RAY_TEX,transparent:true,blending:T.AdditiveBlending,depthWrite:false,depthTest:false,side:T.DoubleSide,fog:false,opacity:0.4});/* shafts of light hang in the air in front of the leaves */
+const RAY_N=9,RAY_GEO=(()=>{/* two planes crossed at right angles along the beam */const a=new T.PlaneGeometry(1,1).translate(0,0.5,0),b=a.clone().rotateY(Math.PI/2),g=new T.BufferGeometry();
+  const cat=k=>{const A=a.attributes[k].array,B=b.attributes[k].array,o=new Float32Array(A.length+B.length);o.set(A);o.set(B,A.length);return new T.BufferAttribute(o,a.attributes[k].itemSize);};
+  g.setAttribute('position',cat('position'));g.setAttribute('uv',cat('uv'));const ia=[...a.index.array],n=a.attributes.position.count;g.setIndex([...ia,...ia.map(i=>i+n)]);return g;})();
+const rayIM=new T.InstancedMesh(RAY_GEO,rayMat,RAY_N);rayIM.frustumCulled=false;rayIM.renderOrder=3;rayIM.castShadow=false;scene.add(rayIM);
+const rays=[];for(let i=0;i<RAY_N;i++){rays.push({x:0,z:0,a:0,want:0,w:0.5,ph:Math.random()*6.28});rayIM.setColorAt(i,_c.setHex(0));}
+const _sunD=new T.Vector3(),RAY_UP=new T.Vector3(0,1,0);let rayT=0,rayK=0;
+function rayGap(){const ts=S.debris.filter(d=>d.k==='tree'&&Math.abs(d.x-cam.tx)<10&&Math.abs(d.z-cam.tz)<10);rayK=Math.min(1,ts.length/6);if(!ts.length)return null;
+  for(let it=0;it<6;it++){const t=pickR(ts);for(const [a,b] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1]]){const x=t.x+a,z=t.z+b;if(!debrisAt(x,z)&&isLand(x,z)&&!rays.some(r=>(r.a>0.01||r.want)&&Math.abs(r.x-x)<1.6&&Math.abs(r.z-z)<1.6))return[x+(Math.random()-0.5)*0.5,z+(Math.random()-0.5)*0.5];}}return null;}
 function updateRays(dt,tt){const h=S.hour,golden=S.rain||S.sea||inside?0:Math.max(smooth(6,7.2,h)*(1-smooth(9.5,11,h)),smooth(15.5,16.8,h)*(1-smooth(18.6,19.4,h)));
-  rayT-=dt;if(rayT<=0){rayT=2;/* re-seat them among the trees near you */const ts=S.debris.filter(d=>d.k==='tree'&&Math.abs(d.x-cam.tx)<9&&Math.abs(d.z-cam.tz)<9);rayK=Math.min(1,ts.length/6);
-    for(const r of rays){if(r.m.visible&&Math.abs(r.x-cam.tx)<10&&Math.abs(r.z-cam.tz)<10)continue;if(!ts.length){r.m.visible=false;continue;}/* in a gap beside a tree, where the light gets through */const t=pickR(ts);let gx=t.x,gz=t.z;for(const [a,b] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1]])if(!debrisAt(t.x+a,t.z+b)&&isLand(t.x+a,t.z+b)){gx=t.x+a;gz=t.z+b;break;}r.x=gx+(Math.random()-0.5)*0.6;r.z=gz+(Math.random()-0.5)*0.6;r.ph=Math.random()*6.28;}}
-  const a=golden*rayK;rayMat.opacity=a*0.5;const sunSide=h<12?1:-1;
-  for(const r of rays){r.m.visible=a>0.02&&r.x!==0;if(!r.m.visible)continue;r.m.position.set(r.x,topY(Math.round(r.x),Math.round(r.z))||0.3,r.z);r.m.rotation.set(0,cam.yaw,0.42*sunSide);
-    const w=0.7+0.3*Math.sin(tt*0.4+r.ph);r.m.scale.set(0.3+0.35*w,7,1);if(Math.random()<dt*0.8*a)emit(r.x+(Math.random()-0.5)*0.4,1+Math.random()*2,r.z+(Math.random()-0.5)*0.4,{vy:-0.05,life:3,max:3,size:0.03,color:0xfff4c8,g:0,sw:0.4,ph:Math.random()*6});}}
+  rayT-=dt;if(rayT<=0){rayT=1.2;const vis=golden>0.02;
+    for(const r of rays){const far=Math.abs(r.x-cam.tx)>12||Math.abs(r.z-cam.tz)>12;if((far&&r.a>=0.01)||!vis)r.want=0;
+      else if(r.a<0.01&&(r.want===0||far)&&Math.random()<0.5){const g=rayGap();if(g){r.x=g[0];r.z=g[1];r.w=0.3+Math.random()*0.35;r.want=1;r.ph=Math.random()*6.28;}}
+      else if(r.want===1&&Math.random()<0.04)r.want=0;/* now and then one fades as the leaves shift */}}
+  // the sun's direction, kept steep enough that the shafts read as falling light
+  _sunD.copy(sun.position).sub(sun.target.position).normalize();_sunD.y=Math.max(_sunD.y,0.72);_sunD.normalize();_q.setFromUnitVectors(RAY_UP,_sunD);
+  let any=false;for(let i=0;i<RAY_N;i++){const r=rays[i];r.a+=((r.want?1:0)-r.a)*Math.min(1,dt*(r.want?0.6:0.8));
+    const b=r.a*golden*(0.75+0.25*Math.sin(tt*0.5+r.ph));rayIM.setColorAt(i,_c.setRGB(b,b*0.95,b*0.82));if(b>0.01)any=true;
+    _m.compose(_v.set(r.x,(topY(Math.round(r.x),Math.round(r.z))||0.3)-0.2,r.z),_q,_s.set(r.w,6,r.w));rayIM.setMatrixAt(i,_m);
+    if(b>0.2&&Math.random()<dt*0.6)emit(r.x+(Math.random()-0.5)*0.3,1+Math.random()*2,r.z+(Math.random()-0.5)*0.3,{vy:-0.05,life:3,max:3,size:0.03,color:0xfff4c8,g:0,sw:0.4,ph:Math.random()*6});}
+  rayIM.visible=any;if(any){rayIM.instanceMatrix.needsUpdate=true;rayIM.instanceColor.needsUpdate=true;}}
 
 // ---- the soundscape follows you: wind always, leaves in the woods, the river when it's near, surf by the shore ----
 let beds=null,envT=0;const env={sea:0,river:0,trees:0};

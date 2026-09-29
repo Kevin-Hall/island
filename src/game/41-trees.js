@@ -13,20 +13,21 @@ function canopy(p,R,cols,cx,cy,cz,rad){const [L,Mc,Dk]=cols,sh=lerpHex(Dk,0x1426
   p.push(PG(SPH,L,lerpHex(L,Mc,0.6),cx+(R()-0.5)*rad*0.2,cy+rad*0.72,cz+(R()-0.5)*rad*0.2,0,a0,0,rad*1.9,rad*1.5,rad*1.9));
   const a1=a0+0.8;p.push(PG(SPH,L,Mc,cx+Math.cos(a1)*rad*0.55,cy+rad*0.42,cz+Math.sin(a1)*rad*0.55,0,0,0,rad*1.3,rad*1.1,rad*1.3));}
 // a round, leafy bush: a soft mound with a few lobes, lit on top (s scales it; returns the top height)
+const LEAF8=new T.OctahedronGeometry(0.5);/* a flattened diamond: a leaf blade in 8 triangles */
 function bushClump(p,R,cols,s=1){const [L,Mc,Dk]=cols,sh=lerpHex(Dk,0x14261e,0.3),a0=R()*6.283;
   const w=(0.84+R()*0.1)*s,h=(0.66+R()*0.1)*s;
   // a lumpy body: one core dome plus two or three smaller lobes bulging out of its sides, so it never reads as one ball
-  p.push(PG(SPH,lerpHex(L,Mc,0.45),sh,0,h*0.44,0,0,a0,0,w,h,w*(0.92+R()*0.1)));
+  p.push(PG(SPH_LO,lerpHex(L,Mc,0.45),sh,0,h*0.44,0,0,a0,0,w,h,w*(0.92+R()*0.1)));
   const nl=2+(R()*2|0);for(let i=0;i<nl;i++){const a=a0+i/nl*6.283+R()*0.6,r=w*0.3,ls=(0.5+R()*0.12)*w;
-    p.push(PG(SPH_LO,lerpHex(L,Mc,0.5),sh,Math.cos(a)*r,h*0.3,Math.sin(a)*r,0,a,0,ls,ls*0.85,ls));}
+    p.push(PG(SPH_XS,lerpHex(L,Mc,0.5),sh,Math.cos(a)*r,h*0.3,Math.sin(a)*r,0,a,0,ls,ls*0.85,ls));}
   // overlapping leaf blades shingled over the whole surface (broad, flat, pointing out and down like roof tiles),
   // dark and short near the ground, bright on top: the chevron-leaf texture of a hand-drawn shrub
-  const rows=[[0.16,11,-0.75,lerpHex(Mc,Dk,0.5),Dk,1],[0.42,11,-0.45,Mc,lerpHex(Mc,Dk,0.55),1],[0.68,9,-0.2,lerpHex(L,Mc,0.35),Mc,0.95],[0.88,5,0.15,L,lerpHex(L,Mc,0.5),0.85]];
+  const rows=[[0.16,10,-0.75,lerpHex(Mc,Dk,0.5),Dk,1.05],[0.42,10,-0.45,Mc,lerpHex(Mc,Dk,0.55),1.05],[0.68,8,-0.2,lerpHex(L,Mc,0.35),Mc,1],[0.88,5,0.15,L,lerpHex(L,Mc,0.5),0.9]];
   rows.forEach(([fy,n,dip,tip,base,k],ri)=>{const off=ri*0.41+a0;for(let i=0;i<n;i++){const a=off+(i+R()*0.3)/n*6.283,cy=h*(fy*0.9),rr=w*0.5*Math.sqrt(Math.max(0.1,1-Math.pow(fy*1.9-0.95,2)))*0.92;
     const dx=Math.cos(a),dz=Math.sin(a),dp=dip+(R()-0.5)*0.25,d=[dx*Math.cos(dp),Math.sin(dp),dz*Math.cos(dp)],tilt=Math.acos(clamp(d[1],-1,1)),ry=Math.atan2(d[0],d[2]);
-    const len=(0.2+R()*0.05)*s*k,wd=(0.19+R()*0.04)*s*k;p.push(PG(ICO,tip,base,dx*rr+d[0]*len*0.3,cy+d[1]*len*0.3,dz*rr+d[2]*len*0.3,tilt,ry,0,wd,len,wd*0.38));}});
+    const len=(0.2+R()*0.05)*s*k,wd=(0.19+R()*0.04)*s*k;p.push(PG(LEAF8,tip,base,dx*rr+d[0]*len*0.3,cy+d[1]*len*0.3,dz*rr+d[2]*len*0.3,tilt,ry,0,wd,len,wd*0.38));}});
   // a little crown of upright leaves on top
-  for(let i=0;i<3;i++){const a=a0+i*2.09;p.push(PG(ICO,L,lerpHex(L,Mc,0.5),Math.cos(a)*w*0.1,h*0.86,Math.sin(a)*w*0.1,0.45,a+1.57,0,0.17*s,0.24*s,0.07*s));}
+  for(let i=0;i<3;i++){const a=a0+i*2.09;p.push(PG(LEAF8,L,lerpHex(L,Mc,0.5),Math.cos(a)*w*0.1,h*0.86,Math.sin(a)*w*0.1,0.45,a+1.57,0,0.17*s,0.24*s,0.07*s));}
   return h*0.92;}
 // little flowers dotted over a crown or a bush (a disc of petals round a centre), all soft round shapes
 function dots(p,R,n,cx,cy,cz,rx,ry,cols,cc,sz=0.07){for(let i=0;i<n;i++){const a=R()*6.283,t=0.15+R()*0.75,x=cx+Math.cos(a)*rx*Math.sin(t*1.4),z=cz+Math.sin(a)*rx*Math.sin(t*1.4),y=cy+ry*Math.cos(t*1.4);
