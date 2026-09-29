@@ -60,6 +60,8 @@ function useFixed(x,z){
   const f=fixedAt(x,z);
   if(f==='bin'){walkTo(x,z);openSheet('bag');return true;}
   if(f==='house'){goTo(HOUSE_AT.x+0.5,HOUSE_AT.z+2.2,()=>enterHouse('home'));return true;}
+  if(isFire(x,z)){restByFire();return true;}
+  if(isTent(x,z)){walkTo(x+0.5,z+2);tentTap();return true;}
   if(f&&townTap(f,x,z))return true;
   const o=objAt(x,z);if(o){const B=BUILD[o.k];walkTo(x,z);toast(`<b>${B.name}</b> — ${B.desc}`);return true;}
   return false;}
@@ -70,7 +72,7 @@ function tillAt(x,z){if(!canTill(x,z))return false;S.tiles[K(x,z)]={w:S.rain?1:0
 function fillAt(x,z){const k=K(x,z),t=S.tiles[k];if(!t||t.crop)return false;delete S.tiles[k];rebuildSoil();noise(0.08,0.04,700);burst(x,0.5,z,0x6ab84a,8,1.0,0.06);return true;}
 function waterAt(x,z){const r=S.can?1:0;let n=0;for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const q=S.tiles[K(x+dx,z+dz)];if(q&&!q.w){q.w=1;n++;}}
   for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)for(let i=0;i<5;i++)emit(x+dx+(Math.random()-0.5)*0.5,1.2,z+dz+(Math.random()-0.5)*0.5,{vy:-1,life:0.5,max:0.5,size:0.06,color:0x8ac4ff,g:6});
-  SFX.water();if(!n)return false;rebuildSoil();
+  SFX.water();if(!n)return false;jrNote('water',n);rebuildSoil();
   if(S.tut===1){S.tut=1.5;setTimeout(()=>toast('Watered soil stays wet until the next dawn. Crops ripen while you explore.','',ICON.sprout),600);}return true;}
 function tendAt(x,z){const k=K(x,z),t=S.tiles[k];if(!t||!t.crop)return false;const c=t.crop,C=CROPS[c.t];
   if(c.p>=1){harvest(k,x,z);return true;}
@@ -83,7 +85,7 @@ function houseTap(){
   else toast(`Your ${HOUSES[S.house].toLowerCase()}.${S.house<3?' Upgrade it in Shop → Island.':' Home sweet villa.'}`);
 }
 function sleep(){clearAction();$('fade').classList.add('on');
-  setTimeout(()=>{const h=((6.02-S.hour+24)%24);S.toff=(S.toff||0)+h;const out=simulate(h*3600);afterSim(out,'While you slept');$('fade').classList.remove('on');},650);}
+  setTimeout(()=>showDiary(()=>{const h=((6.02-S.hour+24)%24);S.toff=(S.toff||0)+h;const out=simulate(h*3600);afterSim(out,'While you slept');$('fade').classList.remove('on');}),650);}
 function afterSim(out,label){rebuildSoil();syncAllCrops();syncLife();for(const isl of islands)if(isl.pgroup)syncPlants(isl);
   if(out.length){const rare=out.filter(c=>c.v!=='normal').length;toast(`${label}: ${out.length} crop${out.length>1?'s':''} ripened${rare?` — ${rare} rare!`:''}`,rare?'rare':'',ICON.sprout);}
   toast(`Day ${S.day}${S.rain?' — rain today':''}. The market wants <b>${CROPS[S.demand].name}</b>.`,'',seedIcon(S.demand));}

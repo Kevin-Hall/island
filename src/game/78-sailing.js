@@ -118,7 +118,7 @@ function updateFlotsam(dt,tt){
       if(f.k==='bottle'){const first=!S.alm['g:bottle'];S.alm['g:bottle']=(S.alm['g:bottle']||0)+1;if(first)setTimeout(()=>checkDex('g:bottle'),600);openBottle();}
       else{const r=Math.random();if(r<0.5){const n=40+Math.floor(Math.random()*120);S.shells+=n;floatText(f.x,0.8,f.z,'+'+n+' shells','gold');SFX.coin();}
         else if(r<0.8){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+2;floatText(f.x,0.8,f.z,'+2 '+CROPS[id].name+' seeds','gold');SFX.pop();}
-        else{const k=pickW(FINDS,k=>['glass','pearl','drift','fossil','amber'].includes(k));const first=gain('g:'+k);floatText(f.x,0.8,f.z,'+ '+FINDS[k].name,'gold');SFX.harvest();if(first)toast(`New in your Islandex: <b>${FINDS[k].name}</b>`,'',ICON['g:'+k]);}}}
+        else{const k=pickW(FINDS,k=>['glass','pearl','drift','fossil','amber'].includes(k));const first=gain('g:'+k);floatText(f.x,0.8,f.z,'+ '+FINDS[k].name,'gold');SFX.harvest();}}}
     else if(d>70){scene.remove(f.g);flots.splice(i,1);}}}
 function checkDiscovery(){const x=vil.x,z=vil.z;for(const isl of islands){if(S.disc[isl.id])continue;if(Math.hypot(x-isl.cx,z-isl.cz)<isl.r/0.7+16){S.disc[isl.id]=1;SFX.discover();
   toast(`Discovered <b>${isl.name}</b> — a ${BIOMES[isl.biome].name.toLowerCase()} island!`,'rare',ICON.chart);addXP(20);}}}

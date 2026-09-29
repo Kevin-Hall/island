@@ -117,7 +117,7 @@ function pullWeed(w){S.weeds=S.weeds.filter(q=>q!==w);syncLife();walkTo(w.x,w.z)
 function collectFind(f){S.finds=S.finds.filter(q=>q!==f);syncLife();walkTo(f.x,f.z);vil.hop=0.25;popHold(findGroup(f.k,f.x*31+f.z),f.x,f.z,1.3);
   if(f.k==='bottle'){const first=!S.alm['g:bottle'];S.alm['g:bottle']=(S.alm['g:bottle']||0)+1;if(first)setTimeout(()=>checkDex('g:bottle'),600);openBottle();return;}
   const I=FINDS[f.k],first=gain('g:'+f.k);if(f.k==='driftseed')driftseedFound(first);burst(f.x,0.5,f.z,0xfff6e2,8,1,0.06);floatText(f.x,0.9,f.z,'+ '+I.name,I.w<5?'gold':'');
-  if(I.w<5){SFX.rare();toast(`You found a <b>${I.name}</b>!${first?' <b>New!</b>':''}`,'rare',ICON['g:'+f.k]);}else{SFX.harvest();if(first)toast(`New in your Islandex: <b>${I.name}</b>`,'',ICON['g:'+f.k]);}addXP(2);}
+  if(I.w<5){SFX.rare();if(!first)toast(`You found a <b>${I.name}</b>!`,'rare',ICON['g:'+f.k]);}else SFX.harvest();addXP(2);}
 function openBottle(){SFX.rare();const lv=level(),r=Math.random();let msg;
   const un=CROP_IDS.filter(i=>CROPS[i].lvl<=lv);
   if(r<0.3){const n=60+lv*60+Math.floor(Math.random()*100);S.shells+=n;msg=`“Whoever finds this — buy yourself something nice.” Tucked inside: <b>${fmt(n)} shells</b>.`;}
@@ -172,7 +172,7 @@ function plantAt(x,z){const isl=islandAt(x,z);if(!isl||!isl.pgroup)return null;f
 function pickPlant(pl){const isl=islands[pl.isl],[x,z]=isl.spots[pl.i],Pd=PLANTS[pl.id];S.picked[pl.isl+':'+pl.i]=plantEpoch();syncPlants(isl);walkTo(x,z);vil.hop=0.3;
   const first=gain('p:'+pl.id);burst(x,0.6,z,parseInt(Pd.col.slice(1),16),10,1.2,0.07);floatText(x,1.1,z,'+ '+Pd.name,Pd.w<5?'gold':'');addXP(Math.round(Pd.price/15)+2);
   if(Pd.w<5){SFX.rare();for(let i=0;i<10;i++)sparkle(x,0.6,z,0xfff0a0);toast(`You found a <b>${Pd.name}</b>! (${rarity(Pd.w)})${first?' <b>New!</b>':''}`,'rare',ICON['p:'+pl.id]);}
-  else{SFX.harvest();if(first)toast(`New in your Islandex: <b>${Pd.name}</b>`,'',ICON['p:'+pl.id]);}}
+  else SFX.harvest();}
 
 /* =========================================================
    Bugs (not saved)
@@ -218,7 +218,7 @@ function updateBugs(dt,tt){for(let i=bugs.length-1;i>=0;i--){const b=bugs[i];b.t
     const f=Math.sin(tt*(b.g.userData.drag?30:16)+b.ph)*(b.g.userData.drag?0.4:0.9);b.g.userData.wl.rotation.z=f;b.g.userData.wr.rotation.z=-f;}}
 function catchBug(b){const B=BUGS[b.id];scene.remove(b.g);{const hg=bugGroup(B);popHold(hg,b.g.position.x,b.g.position.z,0.9,b.g.position.y);}bugs.splice(bugs.indexOf(b),1);walkTo(b.g.position.x,b.g.position.z);vil.hop=0.3;
   const first=gain('b:'+b.id);burst(b.g.position.x,b.g.position.y,b.g.position.z,0xfff6e2,10,1.2,0.06,1);floatText(b.g.position.x,b.g.position.y+0.4,b.g.position.z,'+ '+B.name,B.w<5?'gold':'');
-  addXP(Math.round(B.price/15)+1);if(B.w<5){SFX.rare();toast(`You caught a <b>${B.name}</b>! (${rarity(B.w)})${first?' <b>New!</b>':''}`,'rare',ICON['b:'+b.id]);}else if(first){SFX.catch();toast(`New in your Islandex: <b>${B.name}</b>`,'',ICON['b:'+b.id]);}else SFX.catch();}
+  addXP(Math.round(B.price/15)+1);if(B.w<5){SFX.rare();if(!first)toast(`You caught a <b>${B.name}</b>! (${rarity(B.w)})`,'rare',ICON['b:'+b.id]);}else SFX.catch();}
 
 /* =========================================================
    Crows (home only)

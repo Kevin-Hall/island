@@ -205,7 +205,7 @@ function showApps(on){$('apps').hidden=!on;$('bMenu').classList.toggle('on',on);
 $('bMenu').onclick=()=>{SFX.ui();showApps($('apps').hidden);};
 $('apps').addEventListener('click',()=>showApps(false));
 $('bBag').onclick=()=>openSheet('bag');
-$('nextUp').onclick=goalTap;
+$('nextUp').onclick=goalTap;$('jrChip').onclick=jrOpen;
 $('bShop').onclick=()=>openSheet('shop',sheet&&sheet.kind==='shop'?sheet.tab:'decor');
 $('bTask').onclick=()=>openSheet('orders');
 $('bChart').onclick=()=>openSheet('chart');

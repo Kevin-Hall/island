@@ -168,7 +168,7 @@ function npcLine(n){const P0=PERS[n.pers],h=S.hour;const ctx=[];
   const r=Math.random(),special=r<0.35?activityLine(n):r<0.65?memoryLine(n):r<0.8?neighbourLine(n):null;if(special)return special;
   const all=[...P0.lines,...ctx];const line=all[Math.floor(Math.random()*all.length)];return Math.random()<0.35?`${line} ${n.cp[0].toUpperCase()+n.cp.slice(1)}!`:line;}
 function talkTo(n){if(n.state==='home')return;if(n.act&&n.act.k==='chat'){const q=n.act.with;if(q&&q.act&&q.act.with===n)endActivity(q);}n.state='talk';n.t=0;n.path=null;walkTo(n.x,n.z);SFX.ui();const d=S.npc[n.i];
-  if(d.talk!==S.day){d.talk=S.day;d.f=Math.min(10,d.f+(buffOn('friend')?2:1));hearts(n.x,n.y+1,n.z);}
+  if(d.talk!==S.day){d.talk=S.day;jrNote('talk');d.f=Math.min(10,d.f+(buffOn('friend')?2:1));hearts(n.x,n.y+1,n.z);}
   setTimeout(()=>showTalk(n,npcLine(n)),0);}
 function showTalk(n,line){n.talkT=Math.min(2.4,0.6+line.length*0.025);const d=S.npc[n.i],w=npcWish(n),btns=[];
   let msg=`<b>${n.name}:</b> ${line}`;
