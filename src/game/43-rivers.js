@@ -29,7 +29,7 @@ function riverMat(col,deepK,shal,hi,speed){const m=toon({color:0xffffff});
       {vec2 fd=normalize(vFlow+vec2(0.0001,0.0));vec2 pp=vec2(-fd.y,fd.x);float u=dot(vRW.xz,fd),v=dot(vRW.xz,pp);
       float bank=texture2D(uRMask,(vRW.xz+${RMASK_O}.5)/${RMASK_N}.).r;
       vec3 deep=vec3(${col})*${deepK},shal=vec3(${shal});
-      vec3 c=mix(shal,deep,smoothstep(0.1,0.6,bank));
+      vec3 c=mix(shal,deep,smoothstep(0.08,0.5,bank));
       c*=0.95+0.05*sin(u*0.8+v*1.3-uTime*0.7);
       // streaks of current: long thin highlights drifting downstream, wobbling across the flow
       float wob=sin(v*4.1+sin(u*0.9+uTime*0.4)*1.4);
@@ -38,7 +38,7 @@ function riverMat(col,deepK,shal,hi,speed){const m=toon({color:0xffffff});
       c=mix(c,vec3(${hi}),clamp(streak,0.,1.)*0.5*smoothstep(0.1,0.35,bank));
       // foam lapping the banks, a lacy line that breathes with the water
       float lace=0.55+0.45*sin(u*5.3-uTime*2.2+v*1.7)*sin(u*2.1+uTime*1.1);
-      float foam=smoothstep(0.26,0.1,bank)*lace+smoothstep(0.16,0.06,bank)*0.7;
+      float foam=smoothstep(0.15,0.05,bank)*lace*0.8+smoothstep(0.08,0.02,bank)*0.6;/* a thin lacy edge, so even a narrow stream stays water */
       c=mix(c,vec3(0.86,0.92,0.94),clamp(foam,0.,1.)*0.75);
       // glints riding the current
       {vec2 g=floor(vec2(u-uTime*${speed}*0.8,v)*vec2(3.,4.));float h=fract(sin(dot(g,vec2(12.9898,78.233)))*43758.5453);c+=vec3(.9,.95,1.)*step(.975,h)*step(.4,sin(uTime*4.+h*40.))*.5*step(0.25,bank);}
