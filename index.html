@@ -5458,6 +5458,8 @@ function renderSheet(){
     h+=`<div class="setrow"><span>Season</span><span class="seg">${[['','Auto'],['spring','Spr'],['summer','Sum'],['autumn','Aut'],['winter','Win']].map(([v,l])=>`<button data-season="${v}" class="${(S.seasonOv||'')===v?'on':''}">${l}</button>`).join('')}</span></div>`;
     h+=`<div class="setrow"><span>Weather</span><span class="seg"><button data-wx="clear" class="${S.rain?'':'on'}">Clear</button><button data-wx="rain" class="${S.rain?'on':''}">Rain</button></span></div>`;
     h+=`<div class="setrow"><span>Night sky</span><span class="seg"><button data-dev="star">Shooting star</button><button data-dev="meteor" class="${S.meteor?'on':''}">Meteor shower</button></span></div>`;
+    h+=`<div class="setrow"><span>Island Heart · Lv ${level()}</span><span class="seg"><button data-dev="lvdown">−1</button><button data-dev="lvup">+1</button><button data-dev="lvboat">Boat (Lv 4)</button><button data-dev="lvmax">Max</button></span></div>`;
+    h+=`<div class="setrow"><span>Chart</span><span class="seg"><button data-dev="chartall">Reveal all islands</button><button data-dev="chart">Open chart</button></span></div>`;
     h+=`<div class="setrow"><span>Skip ahead</span><span class="seg"><button data-dev="morning">Next morning</button><button data-dev="shells">+1,000 shells</button></span></div>`;
     h+=`<div class="setrow"><span>Acornfield island</span><span class="seg"><button data-dev="acorn">Load</button></span></div>`;
     h+=`<div class="setrow"><span>Showcase farm</span><span class="seg"><button data-dev="showcase">${S.showcase?'Rebuild':'Load'}</button>${hasRealSave()?'<button data-dev="realsave">Restore my save</button>':''}</span></div>`;
@@ -5520,6 +5522,9 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.wx){if(d.wx==='rain'){S.rain=true;S.rainUntil=0;for(const k in S.tiles)S.tiles[k].w=1;rebuildSoil();}else if(S.rain)stopRain();renderSheet();return;}
   if(d.dev==='star'){if(nightF<0.5){setHour(22);applyTime();}spawnShootingStar();closeSheet();return;}
   if(d.dev==='meteor'){S.meteor=!S.meteor;if(S.meteor&&nightF<0.5){setHour(21.5);applyTime();}renderSheet();return;}
+  if(d.dev&&d.dev.startsWith('lv')){const cur=level(),to=d.dev==='lvup'?cur+1:d.dev==='lvdown'?cur-1:d.dev==='lvboat'?Math.max(cur,4):LV.length;devLevel(to);renderSheet();return;}
+  if(d.dev==='chartall'){for(const isl of islands)S.disc[isl.id]=1;SFX.discover();say('Every island is on your chart.');renderSheet();return;}
+  if(d.dev==='chart'){openSheet('chart');return;}
   if(d.dev==='morning'){closeSheet();sleep();return;}
   if(d.dev==='acorn'){if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Tap again to load';return;}loadAcornfield();return;}
   if(d.dev==='showcase'){if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Tap again to load';return;}loadShowcase();return;}
@@ -5545,6 +5550,9 @@ $('bChart').onclick=()=>openSheet('chart');
 $('bDex').onclick=()=>openSheet('dex',sheet&&sheet.kind==='dex'?sheet.tab:'fish');
 $('lvlChip').onclick=()=>openSheet('settings');
 
+// dev: jump the Island Heart to a level (going up plays the level-up, so kits, the boat and the rest unlock as they would)
+function devLevel(n){n=clamp(n,1,LV.length);const before=level();S.xp=LV[n-1]||0;const after=level();
+  if(after>before&&S.scratch)heartLevelUp(before,after);else{grantKits();rebuildHome();}updateHUD();SFX.level();}
 /* =========================================================
    Input: tap, drag-rotate, pinch-zoom (picking honours the world's curve)
    ========================================================= */
