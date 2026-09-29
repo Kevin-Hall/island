@@ -28,7 +28,15 @@ function setRod(){const mt=S.rod===2?goldMat:rodMats[S.rod];for(const j of rodSe
 const shadows=[];
 const shadowMat=new T.MeshBasicMaterial({color:0x0c1638,transparent:true,opacity:0.42,depthWrite:false});
 const SHADOW_GEO=new T.CircleGeometry(0.5,16).rotateX(-Math.PI/2);
+// a forked tail, pivoting at the root (shape y is backwards once laid flat)
+const TAIL_GEO=(()=>{const sh=new T.Shape();sh.moveTo(0,-0.15);sh.lineTo(-0.5,0.95);sh.quadraticCurveTo(0,0.62,0.5,0.95);sh.lineTo(0,-0.15);return new T.ShapeGeometry(sh).rotateX(-Math.PI/2);})();
+const PEC_GEO=new T.CircleGeometry(0.5,8).rotateX(-Math.PI/2);
 const FIN_GEO=merge([P(CONE4,0x4a5668,0,0.16,0,0,Math.PI/4,0,0.05,0.32,0.34)]);
+// how big a fish's shadow is, and its build: slim darting minnows, deep-bodied bream, long eels, wide rays
+function fishShape(F){const riv=F.hab==='river';let L=(0.38+F.size*0.25)*(riv?0.82:1),W=L*0.34,tail=1,wag=1,kick=1.5-F.size*0.08,every=0.9+F.size*0.18;
+  switch(F.spr){case'eel':W=L*0.13;L*=1.25;tail=0.4;wag=1.8;break;case'ray':W=L*0.95;L*=0.8;tail=0.5;wag=0.3;every*=1.4;break;
+    case'puffer':W=L*0.62;tail=0.8;kick*=0.7;break;case'jelly':case'octo':case'squid':W=L*0.5;tail=0.5;wag=0.4;every*=1.3;break;case'narwhal':W=L*0.3;L*=1.1;break;}
+  return{L,W,tail,wag,kick,every};}
 function spawnShadow(){
   if(shadows.filter(s=>!s.out).length>=5)return;
   let px,pz;
@@ -42,23 +50,40 @@ function spawnShadow(){
   const deep=landDist(px,pz)>2.8,region=regionAt(px,pz),gf=Math.random()<0.06?goldFish(region,deep,false):null;spawnShadowAt(px,pz,gf||chooseFish(region,deep),0,!!gf);
   if(gf&&Math.hypot(px-vil.x,pz-vil.z)<10)say('Something golden glints in the water…');}
 function spawnShadowAt(px,pz,fish,wy,gold){if(!fish)return;
-  const F=FISH[fish],g=new T.Group(),m=new T.Mesh(SHADOW_GEO,gold?goldShadowMat:shadowMat);m.frustumCulled=false;const sz=0.24+F.size*0.13;m.scale.set(sz,1,sz*2.1);g.add(m);
-  if(F.size>=5||F.fin){const fin=new T.Mesh(FIN_GEO,vcMat);fin.frustumCulled=false;fin.scale.setScalar(0.7+F.size*0.1);g.add(fin);}
-  g.position.set(px,0.015,pz);const h=Math.random()*6.28;g.rotation.y=h;scene.add(g);
-  shadows.push({g,fish,ax:px,az:pz,x:px,z:pz,t:0,life:45+Math.random()*40,out:0,hooked:false,heading:h,tx:px,tz:pz,wy,riv:wy>0,gold:!!gold});
+  const F=FISH[fish],sp=fishShape(F),mat=gold?goldShadowMat:shadowMat,g=new T.Group(),body=new T.Mesh(SHADOW_GEO,mat);body.frustumCulled=false;body.scale.set(sp.W,1,sp.L);g.add(body);
+  const tp=new T.Group();tp.position.z=-sp.L*0.42;g.add(tp);const tail=new T.Mesh(TAIL_GEO,mat);tail.frustumCulled=false;tail.scale.set(sp.W*1.15*sp.tail+0.06,1,sp.L*0.34*sp.tail+0.05);tp.add(tail);
+  for(const sd of [-1,1]){const pf=new T.Mesh(PEC_GEO,mat);pf.frustumCulled=false;pf.scale.set(sp.W*0.45,1,sp.W*0.28);pf.position.set(sd*sp.W*0.48,0,sp.L*0.12);pf.rotation.y=sd*0.6;g.add(pf);}
+  if(F.size>=5&&F.hab!=='river'&&F.spr!=='ray'){const fin=new T.Mesh(FIN_GEO,vcMat);fin.frustumCulled=false;fin.scale.setScalar(0.7+F.size*0.1);g.add(fin);}/* the big ones cut the surface */
+  g.position.set(px,0.015,pz);const h=Math.random()*6.28;g.rotation.y=h;g.scale.setScalar(0.01);scene.add(g);
+  shadows.push({g,tp,fish,sp,ax:px,az:pz,x:px,z:pz,t:0,life:45+Math.random()*40,out:0,hooked:false,heading:h,dir:h,v:0,kickT:Math.random(),ph:Math.random()*6,nd:0,tx:px+Math.sin(h)*1.2,tz:pz+Math.cos(h)*1.2,wy,riv:wy>0,gold:!!gold,len:sp.L});
 }
 function nearestShadow(x,z,r){let best=null,bd=r;for(const s of shadows){if(s.out||s.hooked)continue;const d=Math.hypot(s.x-x,s.z-z);if(d<bd){bd=d;best=s;}}return best;}
-function fleeShadow(s,fx,fz){if(!s)return;s.hooked=false;s.out=0.001;s.heading=Math.atan2(s.x-fx,s.z-fz);}
-function updateShadows(dt){
+function fleeShadow(s,fx,fz){if(!s)return;s.hooked=false;s.out=0.001;s.heading=s.dir=Math.atan2(s.x-fx,s.z-fz);s.v=3.2;}
+const wet=(s,x,z)=>s.riv?landMap.get(K(Math.round(x),Math.round(z)))==='river':!isLand(Math.round(x),Math.round(z));
+// swimming like a fish: turn toward where it wants to go at a limited rate, then a flick of the tail sends it off in a
+// burst that coasts to a stop (faster, more often, the further it has to go); the tail beats with the speed
+function fishSwim(s,dt,eager){const sp=s.sp;s.dir+=clamp(angDiff(s.dir,s.heading),-dt*(2.2+eager*2),dt*(2.2+eager*2));
+  s.kickT-=dt*(1+eager*1.5);if(s.kickT<=0){s.kickT=sp.every*(0.6+Math.random()*0.8);if(eager>=0)s.v=Math.max(s.v,sp.kick*(0.6+Math.random()*0.5)*(0.5+eager*0.7));}
+  s.v*=Math.exp(-dt*1.8);const nx=s.x+Math.sin(s.dir)*s.v*dt,nz=s.z+Math.cos(s.dir)*s.v*dt;
+  if(wet(s,nx,nz)){s.x=nx;s.z=nz;}else{s.heading=s.dir+Math.PI*(0.6+Math.random()*0.4);s.v*=0.2;}}
+function updateShadows(dt){const walking=Math.hypot(vil.tx-vil.x,vil.tz-vil.z)>0.05;
   for(let i=shadows.length-1;i>=0;i--){const s=shadows[i];s.t+=dt;
-    if(s.out){s.out+=dt;s.x+=Math.sin(s.heading)*dt*3.5;s.z+=Math.cos(s.heading)*dt*3.5;s.g.scale.setScalar(Math.max(0.01,1-s.out/1.2));
-      if(s.out>1.2){scene.remove(s.g);shadows.splice(i,1);continue;}}
+    if(s.out){s.out+=dt;s.v=Math.max(s.v*Math.exp(-dt*1.2),1.2);s.x+=Math.sin(s.dir)*s.v*dt;s.z+=Math.cos(s.dir)*s.v*dt;
+      if(s.out>1.4){scene.remove(s.g);shadows.splice(i,1);continue;}}
     else if(!s.hooked){
-      if(Math.random()<dt*0.5){const a=Math.random()*6.28;s.tx=s.ax+Math.cos(a)*1.8;s.tz=s.az+Math.sin(a)*1.8;}
+      // mill about home: pick a new spot now and then, and hang still between (fins barely moving)
       const dx=s.tx-s.x,dz=s.tz-s.z,d=Math.hypot(dx,dz);
-      if(d>0.05){const nx=s.x+dx/d*0.4*dt,nz=s.z+dz/d*0.4*dt;if(s.riv?landMap.get(K(Math.round(nx),Math.round(nz)))==='river':!isLand(Math.round(nx),Math.round(nz))){s.x=nx;s.z=nz;}s.heading=Math.atan2(dx,dz);}
-      if(s.t>s.life||Math.hypot(s.x-vil.x,s.z-vil.z)>24)s.out=0.001;}
-    s.g.position.set(s.x,0.015+(s.wy||0),s.z);s.g.rotation.y+=angDiff(s.g.rotation.y,s.heading)*Math.min(1,dt*4);}}
+      if(d<0.25&&Math.random()<dt*0.35||Math.random()<dt*0.08){const a=Math.random()*6.28,r=0.6+Math.random()*1.4;s.tx=s.ax+Math.cos(a)*r;s.tz=s.az+Math.sin(a)*r;}
+      if(d>0.25)s.heading=Math.atan2(dx,dz);fishSwim(s,dt,d>0.25?Math.min(1,d/2)*0.6:-1);
+      // startled by footsteps on the bank: a quick dart away, then it settles again
+      const pd=Math.hypot(s.x-vil.x,s.z-vil.z);if(walking&&pd<1.6+s.len*0.4&&s.v<1.5){s.heading=s.dir=Math.atan2(s.x-vil.x,s.z-vil.z);s.v=2.6;s.tx=s.x+Math.sin(s.dir)*2;s.tz=s.z+Math.cos(s.dir)*2;}
+      if(s.t>s.life||pd>24)s.out=0.001;}
+    // the tail beats with speed (a lazy scull when hovering), the body sways against it
+    s.ph+=dt*(2.2+s.v*11+(s.thrash||0)*20)*s.sp.wag;const amp=(0.18+Math.min(1,s.v)*0.45+(s.thrash||0)*0.5)*Math.min(1.4,s.sp.wag);
+    s.tp.rotation.y=Math.sin(s.ph)*amp;const sway=-Math.sin(s.ph)*amp*0.18;
+    s.nd*=Math.exp(-dt*6);const ox=Math.sin(s.dir)*s.nd,oz=Math.cos(s.dir)*s.nd;
+    s.g.position.set(s.x+ox,0.015+(s.wy||tideY),s.z+oz);s.g.rotation.y=s.dir+sway+(s.thrash?Math.sin(s.t*31)*0.35*s.thrash:0);
+    const grow=Math.min(1,s.t*1.5),fade=s.out?Math.max(0.01,1-s.out/1.4):1;s.g.scale.setScalar(Math.max(0.01,grow*fade));}}
 
 // ---- ripples ----
 const rings=[];const RING_GEO=new T.RingGeometry(0.28,0.36,24).rotateX(-Math.PI/2);
@@ -168,14 +193,17 @@ function updateFishing(dt,tt){updateShadows(dt);updateRings(dt);updateCaught(dt,
   if(f.state==='empty'){bobber.position.set(f.px,Math.sin(tt*2.2)*0.015,f.pz);
     if(f.t>2){const s=nearestShadow(f.px,f.pz,3.6);if(s){s.hooked=true;f.target=s;f.state='approach';f.t=0;f.win=fishWindow(FISH[s.fish])*(s.gold?0.55:1);}}
     if(f.t>6)endFishing("Nothing's biting here. Cast close to a fish shadow!");}
-  else if(f.state==='approach'){const s=f.target,dx=f.px-s.x,dz=f.pz-s.z,d=Math.hypot(dx,dz);s.heading=Math.atan2(dx,dz);
+  else if(f.state==='approach'){const s=f.target,dx=f.px-s.x,dz=f.pz-s.z,d=Math.hypot(dx,dz);
     bobber.position.set(f.px,Math.sin(tt*2.2)*0.015,f.pz);
-    const reach=0.2+s.g.children[0].scale.z*0.5;
-    if(d>reach){const sp=0.55+Math.random()*0.15;s.x+=dx/d*sp*dt;s.z+=dz/d*sp*dt;}
-    else{f.state='nibble';f.t=0;f.nibLeft=1+Math.floor(Math.random()*4);f.next=0.5+Math.random()*0.9;}}
+    const reach=0.12+s.len*0.5;
+    // it comes in in darts, and when it's close it stops to look, sometimes turning half away before it commits
+    if(f.look>0){f.look-=dt;s.heading=Math.atan2(dx,dz)+(f.lookOff||0);fishSwim(s,dt,0);s.v=Math.min(s.v,0.3);if(f.look<=0)f.lookOff=0;}
+    else if(d>reach){s.heading=Math.atan2(dx,dz)+Math.sin(f.t*1.3)*0.35*Math.min(1,d);fishSwim(s,dt,d<1.4?0.25:0.7);
+      if(d<1.4&&!f.looked){f.looked=1;f.look=0.7+Math.random()*1.1;s.v*=0.2;if(Math.random()<0.4)f.lookOff=(Math.random()<0.5?-1:1)*(0.8+Math.random()*0.6);}}
+    else{s.v=0;s.heading=Math.atan2(dx,dz);f.state='nibble';f.t=0;f.nibLeft=1+Math.floor(Math.random()*4);f.next=0.5+Math.random()*0.9;}}
   else if(f.state==='nibble'){let dip=0;
-    if(f.t>=f.next){if(f.nibLeft>0){f.nibLeft--;f.dipT=0.2;SFX.nibble();ripple(f.px,f.pz);f.next=f.t+0.8+Math.random()*1.0;}
-      else{f.state='bite';f.t=0;SFX.bite();ripple(f.px,f.pz,true);burst(f.px,0.05,f.pz,0xffffff,14,1.4,0.07,5);floatText(f.px,0.8,f.pz,'!','gold');}}
+    if(f.t>=f.next){if(f.nibLeft>0){f.nibLeft--;f.dipT=0.2;f.target.nd=0.12+f.target.len*0.06;f.target.ph+=2;SFX.nibble();ripple(f.px,f.pz);f.next=f.t+0.8+Math.random()*1.0;}
+      else{f.state='bite';f.t=0;f.target.thrash=1;f.target.nd=0.2;SFX.bite();ripple(f.px,f.pz,true);burst(f.px,0.05,f.pz,0xffffff,14,1.4,0.07,5);floatText(f.px,0.8,f.pz,'!','gold');}}
     if(f.dipT>0){f.dipT-=dt;dip=0.06;bend+=0.3*(f.dipT/0.2);taut=0.7;}/* each nibble tugs the tip */
     bobber.position.set(f.px,Math.sin(tt*2.2)*0.015-dip,f.pz);}
   else if(f.state==='bite'){bobber.position.set(f.px+Math.sin(tt*40)*0.02,-0.16,f.pz);/* hooked: the rod bows right over and shudders, and you lean back against it */
