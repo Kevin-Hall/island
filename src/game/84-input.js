@@ -47,8 +47,8 @@ function tapLife(cx,cy){
   if(crow&&crow.state!=='out'){const s=toScreen(crowG.position.x,crowG.position.y+0.15,crowG.position.z);if(Math.hypot(s[0]-cx,s[1]-cy)<50){shooCrow();return true;}}
   let best=null,bd=36;for(const b of bugs){if(b.out)continue;const s=toScreen(b.g.position.x,b.g.position.y,b.g.position.z);const d=Math.hypot(s[0]-cx,s[1]-cy);if(d<bd){bd=d;best=b;}}
   // a bug: grab the net, creep over and swoop (if it's still there when you arrive)
-  if(best){autoTool('net');const b=best,p=b.g.position;if(Math.hypot(p.x-vil.x,p.z-vil.z)<1.4){swingTool();catchBug(b);return true;}
-    const dx=p.x-vil.x,dz=p.z-vil.z,d=Math.hypot(dx,dz)||1;goTo(p.x-dx/d*0.9,p.z-dz/d*0.9,()=>{if(!bugs.includes(b))return;villager.rotation.y=Math.atan2(b.g.position.x-vil.x,b.g.position.z-vil.z);swingTool();catchBug(b);});return true;}return false;}
+  if(best){autoTool('net');const b=best,p=b.g.position;if(Math.hypot(p.x-vil.x,p.z-vil.z)<1.4){villager.rotation.y=Math.atan2(p.x-vil.x,p.z-vil.z);swingTool(()=>{if(bugs.includes(b))catchBug(b);});return true;}
+    const dx=p.x-vil.x,dz=p.z-vil.z,d=Math.hypot(dx,dz)||1;goTo(p.x-dx/d*0.9,p.z-dz/d*0.9,()=>{if(!bugs.includes(b))return;villager.rotation.y=Math.atan2(b.g.position.x-vil.x,b.g.position.z-vil.z);swingTool(()=>{if(bugs.includes(b))catchBug(b);});});return true;}return false;}
 const ptrs=new Map();let drag=null,pinch=null,paint=null,holdT=null;
 // long-press and drag repeats the equipped tool's action across tiles
 function paintMode(x,z){if(!onHome(x,z))return null;const tool=S.tool,d=debrisAt(x,z);

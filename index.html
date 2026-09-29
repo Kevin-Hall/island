@@ -934,11 +934,13 @@ function resize(){
 }
 const cam={yaw:Math.PI*0.27,pitch:0.5,dist:30,tx:0,tz:0.3};
 function fitZoom(){const a=window.innerWidth/window.innerHeight;cam.dist=clamp(25/Math.max(0.55,a),22,46);}
+let camShake=0;/* a little jolt for heavy blows (a tree hitting the ground); decays in updateTool */
 function applyCam(){
   // the view leads a little ahead of you, so you stand in the lower half of the screen with the island opening out beyond
   const hd=camD()*Math.cos(cam.pitch),lead=cam.dist*0.1,tx=cam.tx-Math.sin(cam.yaw)*lead,tz=cam.tz-Math.cos(cam.yaw)*lead;
   camera.position.set(tx+Math.sin(cam.yaw)*hd,Math.sin(cam.pitch)*camD(),tz+Math.cos(cam.yaw)*hd);
   camera.lookAt(tx,0.4-hd*hd*CURVE,tz);
+  if(camShake>0){const k=camShake*0.25;camera.position.x+=(Math.random()-0.5)*k;camera.position.y+=(Math.random()-0.5)*k;camera.position.z+=(Math.random()-0.5)*k;}
   camera.updateMatrixWorld();
 }
 const _pv=new T.Vector3();
@@ -3406,21 +3408,34 @@ const HELD_TILT={shovel:0.55,axe:0.35,can:0.1,seeds:0,net:0.45,rod:0.85};
 const toolHold=new T.Group();toolHold.position.set(0.3,0.22,0.08);toolHold.scale.setScalar(1.35);villager.add(toolHold);
 const heldMesh={};for(const k in HELD_PARTS){const m=M(HELD_PARTS[k]);m.castShadow=true;m.visible=false;toolHold.add(m);heldMesh[k]=m;}
 function showHeld(){for(const k in heldMesh)heldMesh[k].visible=S.tool===k;}
-let swingT=0;const SWING=0.38;
-function swingTool(){swingT=SWING;}
-function updateTool(dt){toolHold.visible=!S.sea&&!fishing;const base=HELD_TILT[S.tool]||0;let off=0;
-  if(swingT>0){swingT=Math.max(0,swingT-dt);const u=1-swingT/SWING;
-    off=S.tool==='can'||S.tool==='seeds'?Math.sin(u*Math.PI)*0.9:/* pour or scatter */u<0.35?-1.1*u/0.35:-1.1+2.3*Math.sin((u-0.35)/0.65*Math.PI/2);/* raise, then strike */
-    if(swingT===0)off=0;}
-  toolHold.rotation.x=base+off;}
+// every use of a tool is a little performance: a wind-up, the strike (the moment its effect happens, `hit`), and a
+// follow-through. Keys are [u, tool pitch, tool roll, tool lift, body lean]; the body leans back to wind up and into the blow.
+const TOOL_ANIM={
+  shovel:{d:0.62,hit:0.42,k:[[0,0,0,0,0],[0.3,-0.9,0,0.06,-0.16],[0.42,1.05,0,-0.1,0.38],[0.62,1.0,0,-0.12,0.34],[0.8,-0.35,0.25,0,-0.12],[1,0,0,0,0]]},/* stab in, then lever the dirt out */
+  axe:{d:0.62,hit:0.56,k:[[0,0,0,0,0],[0.45,-1.9,0.3,0.08,-0.22],[0.56,0.9,0,-0.04,0.34],[0.7,0.8,0,-0.04,0.3],[1,0,0,0,0]]},/* a slow wind-up over the shoulder, a fast chop */
+  net:{d:0.46,hit:0.5,k:[[0,0,0,0,0],[0.25,-0.4,-1.2,0.05,-0.08],[0.55,0.95,1.1,-0.05,0.28],[0.75,0.8,1.2,-0.05,0.22],[1,0,0,0,0]]},/* a big sideways swoop */
+  can:{d:0.75,hit:0.3,k:[[0,0,0,0,0],[0.25,0.95,0,0.04,0.12],[0.75,1.0,0.1,0.04,0.14],[1,0,0,0,0]]},/* tip and pour */
+  seeds:{d:0.42,hit:0.5,k:[[0,0,0,0,0],[0.35,-0.6,0,0.04,-0.06],[0.55,0.7,0,0.06,0.16],[1,0,0,0,0]]},/* a scattering toss */
+  rod:{d:0.4,hit:0.5,k:[[0,0,0,0,0],[0.5,0.5,0,0,0.12],[1,0,0,0,0]]},
+  hand:{d:0.4,hit:0.45,k:[[0,0,0,0,0],[0.45,0,0,0,0.3],[1,0,0,0,0]]}};/* reach out */
+let anim=null,poseLean=0,fishLean=0;
+function swingTool(onHit){if(anim&&anim.hit)fireHit(anim);anim={A:TOOL_ANIM[S.tool]||TOOL_ANIM.hand,t:0,t0:performance.now(),hit:onHit||null};}
+function fireHit(a){const h=a.hit;a.hit=null;if(h)h();}
+function animKey(K,u){let i=1;while(i<K.length-1&&K[i][0]<u)i++;const a=K[i-1],b=K[i],t=smooth(0,1,(u-a[0])/(b[0]-a[0]||1));return[lerp(a[1],b[1],t),lerp(a[2],b[2],t),lerp(a[3],b[3],t),lerp(a[4],b[4],t)];}
+function updateTool(dt){toolHold.visible=!S.sea&&!fishing&&!rodAfter;const base=HELD_TILT[S.tool]||0;let v=[0,0,0,0];
+  if(anim){const a=anim;a.t+=dt;/* frames or the clock, whichever is further on, so a slow frame never stalls a swing */
+    const u=Math.min(1,Math.max(a.t,(performance.now()-a.t0)/1000)/a.A.d);v=animKey(a.A.k,u);
+    if(a.hit&&u>=a.A.hit)fireHit(a);if(anim===a&&u>=1)anim=null;}
+  toolHold.rotation.set(base+v[0],0,v[1]);toolHold.position.y=0.22+v[2];poseLean=anim?v[3]:fishLean;
+  if(camShake>0)camShake=Math.max(0,camShake-dt*0.5);}
 
 /* ---- tapping the world ---- */
 // walk up to a tile, face it, swing, then do the action
-function actAt(x,z,fn){const run=()=>{villager.rotation.y=Math.atan2(x-vil.x,z-vil.z);swingTool();fn();updateHUD();};
+function actAt(x,z,fn){const run=()=>{villager.rotation.y=Math.atan2(x-vil.x,z-vil.z);swingTool(()=>{fn();updateHUD();});};
   if(Math.hypot(x-vil.x,z-vil.z)<1.1){vil.tx=vil.x;vil.tz=vil.z;vil.path=null;vil.cb=null;run();return;}
   walkTo(x,z);vil.cb=run;}
 function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
-  {const fd=findAt(x,z);if(fd&&(fd.k==='dig'||fd.k==='bubbles')){autoTool('shovel');actAt(x,z,()=>digSpot(fd));return;}if(fd){actAt(x,z,()=>collectFind(fd));return;}const pl=plantAt(x,z);if(pl){actAt(x,z,()=>pickPlant(pl));return;}}
+  {const fd=findAt(x,z);if(fd&&(fd.k==='dig'||fd.k==='bubbles')){autoTool('shovel');actAt(x,z,()=>{digStab(x,z,0.6);/* two stabs: the hole opens, then whatever's buried comes up */swingTool(()=>{digStab(x,z,1);digSpot(fd);});});return;}if(fd){actAt(x,z,()=>collectFind(fd));return;}const pl=plantAt(x,z);if(pl){actAt(x,z,()=>pickPlant(pl));return;}}
   if(isl&&!isl.home&&nearHeart(isl,x,z)){actAt(x,z,()=>heartTap(isl));return;}
   if(!isl||!isl.home){goTo(x,z);return;}
   // town trees and rocks: shake or chop a tree, break a rock with the shovel
@@ -3453,6 +3468,49 @@ function chopTree(x,z){const k=K(x,z),sh=S.shook[k]||{d:0,n:0,c:0};if(sh.d!==S.d
   tone(150,0.06,'triangle',0.07);noise(0.07,0.05,900);burst(x,y+0.5,z,0x9a6a3a,8,1.2,0.06);burst(x,y+1.5,z,0x6ab84a,6,1.0,0.07,3);
   if(sh.c>=3){toast('This tree has given all the wood it can today.');return;}sh.c++;
   const n=sh.c===3?2:1;gain('m:wood',n);floatText(x,y+1.2,z,'+'+n+' Wood','gold');SFX.pop();addXP(1);}
+/* =========================================================
+   What tools leave behind: holes you dig, flung earth, wood chips, and trees that topple when you fell them
+   ========================================================= */
+// ---- holes: a dark pit, a ring of turned earth and a little spoil heap to one side; they settle back in after a while ----
+function holeParts(sand){const pit=sand?0x6a5436:0x24160e,wall=sand?0xb89c6a:0x4a3220,cl=sand?[0xe0c890,0xcdb27a]:[0x6a4a30,0x7c5a3a],R=mulberry(7),p=[];
+  p.push(P(CYL12,wall,0,0.012,0,0,0,0,0.7,0.024,0.62),P(CYL12,pit,0,0.02,0,0,0,0,0.5,0.024,0.43));
+  for(let i=0;i<10;i++){const a=i/10*6.283+R()*0.3;p.push(P(SPH_XS,cl[i%2],Math.cos(a)*0.36,0.03,Math.sin(a)*0.31,0,a,0,0.13+R()*0.05,0.07,0.1));}
+  p.push(PG(SPH_LO,cl[1],cl[0],0.62,0.02,0.05,0,0.3,0,0.46,0.2,0.36));for(let i=0;i<4;i++)p.push(P(SPH_XS,cl[i%2],0.5+R()*0.3,0.1+R()*0.04,-0.1+R()*0.3,0,0,0,0.1,0.08,0.09));
+  return p;}
+const HOLE_GEO=[merge(holeParts(false)),merge(holeParts(true))];
+const holes=[];
+function holeAt(x,z,size){let h=holes.find(q=>q.x===x&&q.z===z);
+  if(!h){const sand=landMap.get(K(x,z))==='sand',m=new T.Mesh(HOLE_GEO[sand?1:0],vcMat);m.receiveShadow=true;m.castShadow=false;m.frustumCulled=false;
+    m.position.set(x,topY(x,z),z);m.rotation.y=Math.atan2(vil.x-x,vil.z-z)+1.9;/* the heap goes off to your side */m.scale.setScalar(0.01);scene.add(m);
+    h={x,z,m,s:0.01,to:0,t:0};holes.push(h);if(holes.length>10)holes[0].t=1e9;}
+  h.to=Math.max(h.to,size);h.t=0;return h;}
+function updateHoles(dt){for(let i=holes.length-1;i>=0;i--){const h=holes[i];h.t+=dt;const want=h.t>150?0:h.to;/* after a couple of minutes it fills back in */
+  h.s+=(want-h.s)*Math.min(1,dt*(want>h.s?12:0.8));h.m.scale.set(h.s,Math.min(1,h.s*1.2),h.s);if(want===0&&h.s<0.03){scene.remove(h.m);holes.splice(i,1);}}}
+// earth flung off the blade in an arc, off to one side
+function dirtFlick(x,z,n=10,sand){const y=topY(x,z),a0=Math.atan2(vil.x-x,vil.z-z)+1.9,cols=sand?[0xe0c890,0xcdb27a]:[0x6a4a30,0x8a6440,0x5a3c26];
+  for(let i=0;i<n;i++){const a=a0+(Math.random()-0.5)*0.9,sp=0.9+Math.random()*1.1;emit(x,y+0.12,z,{vx:Math.sin(a)*sp,vy:1.8+Math.random()*1.4,vz:Math.cos(a)*sp,life:0.8,max:0.8,size:0.05+Math.random()*0.04,color:pickR(cols),g:7});}}
+// one stab of the shovel into a dig spot: a hole opens a little more each time
+function digStab(x,z,size){const sand=landMap.get(K(x,z))==='sand';holeAt(x,z,size);dirtFlick(x,z,size<1?8:12,sand);noise(0.12,0.1,sand?900:380,0.8);vil.hop=Math.max(vil.hop,0.12);}
+// wood chips kicked out of a trunk towards you
+function chips(x,z,y){const a0=Math.atan2(vil.x-x,vil.z-z);for(let i=0;i<9;i++){const a=a0+(Math.random()-0.5)*1.6,sp=0.8+Math.random()*1.2;
+  emit(x+Math.sin(a0)*0.15,y,z+Math.cos(a0)*0.15,{vx:Math.sin(a)*sp,vy:1+Math.random()*1.4,vz:Math.cos(a)*sp,life:0.7,max:0.7,size:0.04+Math.random()*0.03,color:pickR([0xd8b080,0xb08050,0xe8c898]),g:6,spin:1});}}
+
+// ---- felling: the tree creaks, tips away from you, speeds up, hits the ground with a thump and a bounce, then is gone ----
+const falls=[];
+function fellTree(d){const hd=Math.atan2(d.x-vil.x,d.z-vil.z),sc=d.sc||1,g=new T.Group(),m=new T.Mesh(debrisGeo('tree',d.v,false),leafMat);
+  m.rotation.y=(d.r||0)-hd;m.scale.setScalar(sc);m.castShadow=true;m.frustumCulled=false;g.rotation.order='YXZ';g.rotation.y=hd;g.position.set(d.x,topY(d.x,d.z),d.z);g.add(m);scene.add(g);
+  falls.push({g,m,a:0.03,w:0.35,t:0,hit:0,gone:0,x:d.x,z:d.z,hd,sc});tone(95,0.55,'sawtooth',0.025,70);setTimeout(()=>tone(80,0.4,'sawtooth',0.02,60),260);floatText(d.x,1.9,d.z,'Timber!','gold');}
+function updateFalls(dt){for(let i=falls.length-1;i>=0;i--){const f=falls[i];f.t+=dt;
+  if(f.t<0.4){f.g.rotation.x=0.02+Math.sin(f.t*45)*0.015*(1-f.t/0.4);/* a shudder and a creak before it goes */continue;}
+  if(f.hit<2){f.w+=(Math.sin(f.a)*5.5+0.4)*dt;f.a+=f.w*dt;
+    if(f.a>=1.48){f.a=1.48;if(!f.hit){f.hit=1;f.w=-f.w*0.22;const s=season(),lc=s==='autumn'?[0xe8803a,0xf4a444]:s==='winter'?[0xffffff,0xdce8f2]:[0x6ab84a,0x4a9a3a],y=topY(f.x,f.z);
+        noise(0.4,0.14,180,0.7);tone(70,0.25,'sine',0.08,45);camShake=Math.max(camShake,0.7);
+        for(let k=1;k<=5;k++){const r=k*0.45*f.sc,px=f.x+Math.sin(f.hd)*r,pz=f.z+Math.cos(f.hd)*r;burst(px,y+0.3,pz,lc[k%2],k>2?10:5,1.6,0.08,3);burst(px,y+0.05,pz,0xc8b08a,5,1.2,0.07,4);}}
+      else{f.hit=2;f.gone=f.t;}}}
+  f.g.rotation.x=f.a;
+  if(f.hit===2&&f.t-f.gone>1.3){const u=(f.t-f.gone-1.3)/0.45;f.m.scale.setScalar(f.sc*Math.max(0.001,1-u));
+    if(u>=1){const y=topY(f.x,f.z);for(let k=1;k<=4;k++){const r=k*0.5*f.sc;burst(f.x+Math.sin(f.hd)*r,y+0.3,f.z+Math.cos(f.hd)*r,0xf6eedb,6,1,0.07,2);}scene.remove(f.g);falls.splice(i,1);}}}}
+function updateToolFx(dt){updateHoles(dt);if(falls.length)updateFalls(dt);}
 /* =========================================================
    Farming & island actions
    ========================================================= */
@@ -3522,7 +3580,7 @@ function useFixed(x,z){
   return false;}
 // the farming actions tools perform (71-tools decides which one a tap means)
 function canTill(x,z){const k=K(x,z);return !S.tiles[k]&&landMap.get(k)==='grass'&&!TOWN.path.has(k)&&freeTile(x,z)&&!fixedAt(x,z)&&!objAt(x,z)&&!debrisAt(x,z);}
-function tillAt(x,z){if(!canTill(x,z))return false;S.tiles[K(x,z)]={w:S.rain?1:0,crop:null};rebuildSoil();SFX.till();burst(x,0.6,z,0x8a5a3a,8,1.2,0.07);vil.hop=0.25;
+function tillAt(x,z){if(!canTill(x,z))return false;S.tiles[K(x,z)]={w:S.rain?1:0,crop:null};rebuildSoil();SFX.till();dirtFlick(x,z,7);vil.hop=0.25;
   if(!S.tipSeed){S.tipSeed=1;setTimeout(()=>toast('Nice soil! Pick <b>Seeds</b> from your tools and tap it to plant.','',seedIcon(S.seed)),600);}return true;}
 function fillAt(x,z){const k=K(x,z),t=S.tiles[k];if(!t||t.crop)return false;delete S.tiles[k];rebuildSoil();noise(0.08,0.04,700);burst(x,0.5,z,0x6ab84a,8,1.0,0.06);return true;}
 function waterAt(x,z){const r=S.can?1:0;let n=0;for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const q=S.tiles[K(x+dx,z+dz)];if(q&&!q.w){q.w=1;n++;}}
@@ -3614,7 +3672,7 @@ function startBlueprint(k){if(S.sea||inside){toast('Head back to your island fir
   for(let r=0;r<16&&!best;r++)for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;const x=px+dx,z=pz+dz-(sd?1:2);if(ok(x,z)){const d=dx*dx+dz*dz;if(d<bd){bd=d;best=[x,z];}}}
   if(!best){toast(sd?"There's no open, level grass nearby for your driftseed. Clear some ground (axe and shovel) or walk somewhere more open."
     :`There's no clear, level patch nearby for ${BP_NAME(k)}. Clear some ground (axe and shovel) or walk somewhere more open.`);return;}
-  placing={bp:k,kind:k,rot:0,x:best[0],z:best[1]};ghost=bpGhost(k);ghost.traverse(o=>{if(o.isMesh){o.material=ghostMat;o.castShadow=false;}});scene.add(ghost);bpMove(best[0],best[1]);}
+  placing={bp:k,kind:k,rot:0,x:best[0],z:best[1]};ghost=bpGhost(k);ghost.traverse(o=>{if(o.isMesh){if(o.material===firePoolMat)o.visible=false;o.material=ghostMat;o.castShadow=false;}});scene.add(ghost);bpMove(best[0],best[1]);}
 function bpMove(x,z){placing.x=x;placing.z=z;const sd=placing.bp==='seed',c=placing.bp==='tent',y=sd?topY(x,z):Math.min(topY(x,z),topY(x+1,z+1))||0.5;ghost.position.set(c?x+0.5:x,y,c?z+0.5:z);
   const ok=bpOk(x,z);ghostMat.color.set(ok?0xffffff:0xff6a5a);cursorAt(x,sd?z:z+2,ok?0xfff6e2:0xff6a5a);cursorT=1e9;
   setAction(sd?`<b>Plant your driftseed</b><br><small>${ok?'Tap the ground to choose the spot. It will grow into your Island Heart, right here.':'Needs open, level grass with a clear tile all round it.'}</small>`
@@ -3752,9 +3810,10 @@ function regrowDebris(){if(!S.farmInit)return;const c=islands[0].grass.filter(([
 function hitDebris(d){walkTo(d.x,d.z);vil.hop=0.2;d.hp--;const m=debMesh.get(K(d.x,d.z));if(m)m.shake=0.3;
   const wood=d.k==='stump'||d.k==='twig'||d.k==='bush'||d.k==='tree',stone=d.k==='rock'||d.k==='boulder',y=topY(d.x,d.z)+0.3;
   if(stone){tone(190,0.06,'square',0.05);noise(0.05,0.05,2600);}else if(wood){tone(140,0.07,'triangle',0.06);noise(0.06,0.04,900);}else noise(0.1,0.04,1600);
-  burst(d.x,y,d.z,stone?0xa4a4b4:wood?0x9a6a3a:0x6a9a3a,6,1.1,0.06);
+  if(wood&&d.k!=='bush')chips(d.x,d.z,y+(d.k==='tree'?0.15:0));else burst(d.x,y,d.z,stone?0xa4a4b4:wood?0x9a6a3a:0x6a9a3a,6,1.1,0.06);
+  if(d.k==='tree'&&d.hp>0){const s=season();for(let i=0;i<4;i++)emit(d.x+(Math.random()-0.5)*1.2,y+1.3+Math.random()*0.6,d.z+(Math.random()-0.5)*1.2,{vx:(Math.random()-0.5)*0.5,vy:-0.3,vz:(Math.random()-0.5)*0.5,life:1.6,max:1.6,size:0.06,color:s==='autumn'?0xe8803a:0x6ab84a,g:0.5,sw:0.8,ph:Math.random()*6,spin:1});}
   if(d.hp>0)return;
-  S.debris=S.debris.filter(q=>q!==d);if(d.k==='tree'){const s=newDebris(d.x,d.z,'stump');s.r=d.r;S.debris.push(s);burst(d.x,y+1.2,d.z,0x6ab84a,24,2.2,0.09,3);noise(0.35,0.05,500);}syncDebris();const got=[];const add=(k,n)=>{if(n>0){gain('m:'+k,n);got.push('+'+n+' '+MATS[k].name);}};const c=()=>Math.random()<0.5?1:0;
+  S.debris=S.debris.filter(q=>q!==d);if(d.k==='tree'){fellTree(d);const s=newDebris(d.x,d.z,'stump');s.r=d.r;S.debris.push(s);}syncDebris();const got=[];const add=(k,n)=>{if(n>0){gain('m:'+k,n);got.push('+'+n+' '+MATS[k].name);}};const c=()=>Math.random()<0.5?1:0;
   switch(d.k){case'weed':add('fiber',1+c());break;case'twig':add('wood',1);break;case'bush':add('fiber',1);add('wood',1+c());break;
     case'rock':add('stone',1+c());break;case'stump':add('wood',3+c());break;case'tree':add('wood',3+c()+c());if(Math.random()<0.25){S.free.turnip=(S.free.turnip||0)+1;got.push('+1 seed from the branches');}break;case'boulder':add('stone',4+c());break;}
   if(Math.random()<(d.k==='boulder'?0.3:d.k==='rock'?0.06:0)){const n=40+Math.floor(Math.random()*(d.k==='boulder'?160:60));S.shells+=n;got.push('+'+n+' shells (an old coin!)');}
@@ -4057,16 +4116,25 @@ function updateCritters(dt,tt){
 let fishing=null;
 const bobber=M([P(ICO,0xf4f0ea,0,0.03,0,0,0,0,0.16,0.12,0.16),P(ICO,0xd8453a,0,0.1,0,0,0,0,0.14,0.1,0.14),P(BOX,0x2b1e2e,0,0.18,0,0,0,0,0.02,0.08,0.02)]);
 bobber.castShadow=false;bobber.visible=false;scene.add(bobber);
-const lineGeo=new T.BufferGeometry();lineGeo.setAttribute('position',new T.BufferAttribute(new Float32Array(6),3));
-const fishLine=new T.Line(lineGeo,new T.LineBasicMaterial({color:0xf4f0ea}));fishLine.frustumCulled=false;fishLine.visible=false;scene.add(fishLine);
-const rod=M([P(BOX,0xffffff,0,0.5,0,0,0,0,0.035,1.0,0.035)]);rod.castShadow=false;rod.position.set(0.2,0.22,0.08);rod.rotation.x=0.95;rod.visible=false;villager.add(rod);
+// the line is a chain of thin segments (real geometry, so it shows through the pixel pass and gets outlined like everything else)
+const LINE_N=18,linePts=new Float32Array(LINE_N*3),_la=new T.Vector3(),_lb=new T.Vector3(),UP=new T.Vector3(0,1,0);
+const fishLine=new T.InstancedMesh(BOX,new T.MeshBasicMaterial({color:0xfaf6ec}),LINE_N-1);fishLine.frustumCulled=false;fishLine.castShadow=false;fishLine.visible=false;scene.add(fishLine);
+// the rod is four jointed segments, thinner towards the tip, so it can flex: back on the cast, and hard over when a fish pulls
+const rod=new T.Group();rod.position.set(0.2,0.22,0.08);rod.rotation.x=0.95;rod.visible=false;villager.add(rod);
+const rodSegs=[],ROD_SEG=0.27,rodTip=new T.Object3D();
+{let par=rod;for(let i=0;i<4;i++){const j=new T.Group();j.position.y=i?ROD_SEG:0;const m=new T.Mesh(BOX,null);m.scale.set(0.04-i*0.006,ROD_SEG,0.04-i*0.006);m.position.y=ROD_SEG/2;j.add(m);par.add(j);rodSegs.push(j);par=j;}
+  rodTip.position.y=ROD_SEG;par.add(rodTip);rod.add(M([P(CYL12,0x5a5a6a,0,0.1,0.04,0,0,1.57,0.07,0.035,0.07),P(BOX,0x3a3440,0,0.05,0,0,0,0,0.05,0.12,0.05)]));}
+function bendRod(b){for(let i=0;i<4;i++)rodSegs[i].rotation.x=b*(0.1+i*0.12);}
 const ROD_COL=[0x9a7a4a,0x6a4a8a,0xf5c542];
 const TIP=new T.Vector3();
+// what happens after a cast ends: a yank (you caught it) or the line reeling back in; the rod stays out until it's done
+let rodAfter=null;
 function fishWindow(F){return(F.w>=15?1.0:F.w>=6?0.82:F.w>=2.5?0.66:0.55)*(1+S.rod*0.22);}
 function chooseFish(region,deep,river){const night=isNight();
   return pickW(FISH,k=>{const F=FISH[k];if(F.hab==='river'?!river:(river&&!F.junk))return false;if(!(F.bio.includes('any')||F.bio.includes(region)))return false;if(F.time==='day'&&night)return false;if(F.time==='night'&&!night)return false;if(F.rain&&!S.rain)return false;if(!river&&F.hab==='deep'&&!deep)return false;if(!river&&F.hab==='shore'&&deep)return false;return true;},
     (k,F)=>F.junk?F.w*(1-S.rod*0.35):F.w<6?F.w*(1+S.rod*0.6):F.w);}
-function setRod(){rod.material=S.rod===2?goldMat:new T.MeshBasicMaterial({color:ROD_COL[S.rod]});}
+const rodMats=ROD_COL.map(c=>new T.MeshBasicMaterial({color:c}));
+function setRod(){const mt=S.rod===2?goldMat:rodMats[S.rod];for(const j of rodSegs)j.children[0].material=mt;}
 
 // ---- fish shadows swimming in the water, like Animal Crossing ----
 const shadows=[];
@@ -4152,9 +4220,11 @@ function startBoatFishing(){if(!S.sea||fishing)return;sail=null;const b=S.boat;
   if(sh){b.r=Math.atan2(sh.x-b.x,sh.z-b.z);const d=Math.hypot(sh.x-b.x,sh.z-b.z);const cd=Math.max(1.4,d-1.1);px=b.x+Math.sin(b.r)*cd;pz=b.z+Math.cos(b.r)*cd;}
   else{px=b.x+Math.sin(b.r)*2.8;pz=b.z+Math.cos(b.r)*2.8;}
   if(isLand(Math.round(px),Math.round(pz))){toast('Turn your boat toward open water to cast.');return;}
-  fishing={px,pz,state:'cast',t:0,fromBoat:true};rod.visible=true;setRod();SFX.cast();fishingBar();}
+  fishing={px,pz,state:'cast',t:0,fromBoat:true};rodAfter=null;rod.visible=true;setRod();fishingBar();}
 function endFishing(msg){if(!fishing)return;const f=fishing;if(f.target&&!f.caughtIt)fleeShadow(f.target,f.px,f.pz);
-  bobber.visible=fishLine.visible=rod.visible=false;rod.rotation.x=0.95;fishing=null;clearAction();if(msg)toast(msg);}
+  if(rod.visible&&f.state!=='walk')rodAfter={t:0,kind:f.caughtIt?'yank':'reel',bx:bobber.position.x,by:bobber.position.y,bz:bobber.position.z,r0:rod.rotation.x};
+  else{bobber.visible=fishLine.visible=rod.visible=false;rod.rotation.x=0.95;bendRod(0);}
+  fishLean=0;fishing=null;clearAction();if(msg)toast(msg);}
 function reel(){const f=fishing;if(!f)return;
   if(f.state==='bite'){catchFish();return;}
   if(f.state==='nibble'||f.state==='approach'){SFX.no();endFishing('Too soon! The fish got spooked.');return;}
@@ -4169,20 +4239,42 @@ function catchFish(){const f=fishing,id=f.target.fish,F=FISH[id],key='f:'+id;con
   const msg=`I caught ${art} <b>${F.name.toLowerCase()}</b>! ${QUIPS[id]||'What a catch!'}${F.junk?'':` <small>${kg} kg${rec&&!first?' · record!':''}${F.w<6?' · '+rarity(F.w):''}</small>`}`;
   if(F.w<6&&!F.junk){SFX.rare();for(let i=0;i<12;i++)sparkle(vil.x,1.4,vil.z,0xfff0a0);}else SFX.catch();
   endFishing();caught.msg=msg+(first&&!F.junk?'<br><b style="color:#1c9a8c">New to your Islandex!</b>':'');}
+// the line: from the rod tip to the bobber, sagging onto the water when slack and pulled straight when taut
+function drawLine(bx,by,bz,taut,wy){const pa=linePts,sag=(1-taut)*0.55*Math.min(1,Math.hypot(bx-TIP.x,bz-TIP.z)/2);
+  for(let i=0;i<LINE_N;i++){const s=i/(LINE_N-1);let y=lerp(TIP.y,by,s)-sag*4*s*(1-s)*(1-s*0.35);if(s>0.3)y=Math.max(y,wy+0.012);pa[i*3]=lerp(TIP.x,bx,s);pa[i*3+1]=y;pa[i*3+2]=lerp(TIP.z,bz,s);}
+  for(let i=0;i<LINE_N-1;i++){_la.fromArray(pa,i*3);_lb.fromArray(pa,i*3+3);const len=_la.distanceTo(_lb)||1e-4;_v.addVectors(_la,_lb).multiplyScalar(0.5);
+    _lb.sub(_la).divideScalar(len);_q.setFromUnitVectors(UP,_lb);_m.compose(_v,_q,_s.set(0.018,len,0.018));fishLine.setMatrixAt(i,_m);}
+  fishLine.instanceMatrix.needsUpdate=true;}
+function updateRodAfter(dt){const r=rodAfter;r.t+=dt;villager.updateMatrixWorld(true);rodTip.getWorldPosition(TIP);
+  if(r.kind==='yank'){/* snap the rod up and back, the tip whipping, the line following the fish out of the water */const u=Math.min(1,r.t/0.6);
+    rod.rotation.x=u<0.25?lerp(r.r0,-0.35,u/0.25):lerp(-0.35,0.95,smooth(0.25,1,u));bendRod(u<0.25?-0.5:-0.5*Math.exp(-(u-0.25)*9)*Math.cos((u-0.25)*30));fishLean=u<0.5?-0.18:0;
+    if(caught&&caught.t<0.55){fishLine.visible=true;bobber.visible=false;const p=caught.g.position;drawLine(p.x,p.y,p.z,1,-9);}else fishLine.visible=false;
+    if(u>=1)rodAfter=null;}
+  else{/* reel in: the bobber skips back across the water to the tip */const u=Math.min(1,r.t/0.45);rod.rotation.x=lerp(r.r0,0.55,smooth(0,0.4,u));bendRod(0.25*Math.sin(u*Math.PI));
+    const x=lerp(r.bx,TIP.x,u),z=lerp(r.bz,TIP.z,u),y=u<0.7?r.by+Math.abs(Math.sin(u*14))*0.08:lerp(r.by,TIP.y,(u-0.7)/0.3);bobber.position.set(x,y,z);drawLine(x,y+0.18,z,0.9,-9);
+    if(u>0.1&&u<0.7&&Math.random()<dt*14)emit(x,r.by+0.02,z,{vy:0.4,life:0.3,max:0.3,size:0.04,color:0xe8f4ff,g:3});if(u>=1)rodAfter=null;}
+  if(!rodAfter){bobber.visible=fishLine.visible=rod.visible=false;rod.rotation.x=0.95;bendRod(0);fishLean=0;}}
 function updateFishing(dt,tt){updateShadows(dt);updateRings(dt);updateCaught(dt,tt);
-  const f=fishing;if(!f)return;f.t+=dt;
-  if(f.state==='walk'){if(Math.hypot(vil.x-f.sx,vil.z-f.sz)<0.06){f.state='cast';f.t=0;rod.visible=true;villager.rotation.y=Math.atan2(f.px-f.sx,f.pz-f.sz);SFX.cast();}
+  const f=fishing;if(!f){if(rodAfter)updateRodAfter(dt);return;}f.t+=dt;
+  if(f.state==='walk'){if(Math.hypot(vil.x-f.sx,vil.z-f.sz)<0.06){f.state='cast';f.t=0;rodAfter=null;rod.visible=true;villager.rotation.y=Math.atan2(f.px-f.sx,f.pz-f.sz);}
     else if(f.t>14)endFishing();return;}
   if(f.fromBoat)villager.rotation.y=S.boat.r;
-  villager.updateMatrixWorld(true);TIP.set(0,1,0);rod.localToWorld(TIP);
-  if(f.state==='cast'){const u=Math.min(1,f.t/0.55);rod.rotation.x=u<0.35?lerp(0.95,-0.7,u/0.35):lerp(-0.7,0.95,(u-0.35)/0.65);bobber.visible=fishLine.visible=true;
-    bobber.position.set(lerp(TIP.x,f.px,u),lerp(TIP.y,0,u)+Math.sin(u*Math.PI)*1.2,lerp(TIP.z,f.pz,u));
+  villager.updateMatrixWorld(true);rodTip.getWorldPosition(TIP);
+  const CAST=0.95,REL=0.42;/* the cast: a wind-up over the shoulder, a whip forward (the tip lagging, then flicking), the bobber flying out in an arc */
+  if(f.state==='cast'){const u=Math.min(1,f.t/CAST);
+    if(u<0.32){const k=smooth(0,0.32,u);rod.rotation.x=lerp(0.95,-0.95,k);bendRod(0.25*k);fishLean=-0.16*k;}
+    else if(u<0.46){const k=(u-0.32)/0.14;rod.rotation.x=lerp(-0.95,1.35,k*k);bendRod(lerp(0.25,-0.7,k));fishLean=lerp(-0.16,0.28,k);if(!f.whoosh){f.whoosh=1;SFX.cast();}}
+    else{const k=(u-0.46)/0.54;rod.rotation.x=lerp(1.35,0.72,smooth(0,1,k));bendRod(0.45*Math.exp(-k*4)*Math.cos(k*16));fishLean=lerp(0.28,0.06,k);}
+    fishLine.visible=true;bobber.visible=true;
+    if(u<REL){bobber.position.copy(TIP);bobber.position.y-=0.18;drawLine(TIP.x,TIP.y-0.02,TIP.z,1,-9);}
+    else{const q=(u-REL)/(1-REL),bx=lerp(TIP.x,f.px,q),bz=lerp(TIP.z,f.pz,q),by=lerp(TIP.y,f.wy||tideY,q)+Math.sin(q*Math.PI)*1.3;bobber.position.set(bx,by,bz);drawLine(bx,by+0.18,bz,0.75,-9);}
     if(u>=1){SFX.plop();ripple(f.px,f.pz);burst(f.px,0.05,f.pz,0xe8f4ff,6,0.8,0.05,4);f.t=0;
       let s=nearestShadow(f.px,f.pz,3.6);
       if(!s&&S.inv['x:bait']>0){const riv=f.wy>0,fish=riv?chooseFish((curIsl()||{}).biome,false,true):chooseFish(S.sea?regionAt(f.px,f.pz):regionAt(f.px,f.pz),landDist(f.px,f.pz)>2.8);
         if(fish){const a=Math.random()*6.28;spawnShadowAt(f.px+Math.cos(a)*(riv?0.5:1.6),f.pz+Math.sin(a)*(riv?0.5:1.6),fish,f.wy||0);s=shadows[shadows.length-1];takeOf('x:bait',1);floatText(f.px,0.8+(f.wy||0),f.pz,'bait!');}}
       if(s){s.hooked=true;f.target=s;f.state='approach';f.win=fishWindow(FISH[s.fish]);}else f.state='empty';}}
-  else if(f.state==='empty'){bobber.position.set(f.px,Math.sin(tt*2.2)*0.015,f.pz);
+  let bend=0.06+Math.sin(tt*1.3)*0.03,taut=0.15;if(f.state!=='cast'){rod.rotation.x=0.72+Math.sin(tt*1.1)*0.03;fishLean=0.05;}/* waiting: the rod rests, swaying a little */
+  if(f.state==='empty'){bobber.position.set(f.px,Math.sin(tt*2.2)*0.015,f.pz);
     if(f.t>2){const s=nearestShadow(f.px,f.pz,3.6);if(s){s.hooked=true;f.target=s;f.state='approach';f.t=0;f.win=fishWindow(FISH[s.fish]);}}
     if(f.t>6)endFishing("Nothing's biting here. Cast close to a fish shadow!");}
   else if(f.state==='approach'){const s=f.target,dx=f.px-s.x,dz=f.pz-s.z,d=Math.hypot(dx,dz);s.heading=Math.atan2(dx,dz);
@@ -4193,13 +4285,13 @@ function updateFishing(dt,tt){updateShadows(dt);updateRings(dt);updateCaught(dt,
   else if(f.state==='nibble'){let dip=0;
     if(f.t>=f.next){if(f.nibLeft>0){f.nibLeft--;f.dipT=0.2;SFX.nibble();ripple(f.px,f.pz);f.next=f.t+0.8+Math.random()*1.0;}
       else{f.state='bite';f.t=0;SFX.bite();ripple(f.px,f.pz,true);burst(f.px,0.05,f.pz,0xffffff,14,1.4,0.07,5);floatText(f.px,0.8,f.pz,'!','gold');}}
-    if(f.dipT>0){f.dipT-=dt;dip=0.06;}
+    if(f.dipT>0){f.dipT-=dt;dip=0.06;bend+=0.3*(f.dipT/0.2);taut=0.7;}/* each nibble tugs the tip */
     bobber.position.set(f.px,Math.sin(tt*2.2)*0.015-dip,f.pz);}
-  else if(f.state==='bite'){bobber.position.set(f.px+Math.sin(tt*40)*0.02,-0.16,f.pz);
+  else if(f.state==='bite'){bobber.position.set(f.px+Math.sin(tt*40)*0.02,-0.16,f.pz);/* hooked: the rod bows right over and shudders, and you lean back against it */
+    bend=0.95+Math.sin(tt*38)*0.1;taut=1;rod.rotation.x=1.0+Math.sin(tt*23)*0.05;fishLean=-0.12;if(Math.random()<dt*10)emit(f.px,(f.wy||0)+0.03,f.pz,{vx:(Math.random()-0.5),vy:0.8,vz:(Math.random()-0.5),life:0.4,max:0.4,size:0.05,color:0xe8f4ff,g:5});
     if(f.t>f.win){endFishing('It got away…');return;}}
   if(!fishing)return;
-  if(f.wy)bobber.position.y+=f.wy;
-  const pa=lineGeo.attributes.position.array;pa[0]=TIP.x;pa[1]=TIP.y;pa[2]=TIP.z;pa[3]=bobber.position.x;pa[4]=bobber.position.y+0.18;pa[5]=bobber.position.z;lineGeo.attributes.position.needsUpdate=true;}
+  if(f.state!=='cast'){bendRod(bend);bobber.position.y+=f.wy||tideY;/* a river's surface, or the sea at today's tide */drawLine(bobber.position.x,bobber.position.y+0.18,bobber.position.z,taut,f.wy||tideY);}}
 
 /* =========================================================
    Foraging: the island is full of little things to find. Every morning (and now and then through the day) the land
@@ -4294,7 +4386,7 @@ function digSpot(f){S.finds=S.finds.filter(q=>q!==f);syncLife();jrNote('dig');co
   else k=r<0.26?'fossil':r<0.46?'geode':r<0.58?'oldcoin':r<0.66?'truffle':r<0.82?'clay':'seeds';
   if(k==='seeds'){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+2;floatText(x,y+0.9,z,'+2 '+CROPS[id].name+' seeds','gold');SFX.pop();return;}
   if(k==='clay'){gain('m:stone');floatText(x,y+0.9,z,'+1 Stone');SFX.pop();return;}
-  const I=FINDS[k],first=gain('g:'+k);popHold(findGroup(k,x*7+z),x,z,1.4);floatText(x,y+0.9,z,'+ '+I.name,I.price>=200?'gold':'');
+  const I=FINDS[k],first=gain('g:'+k);popHold(findGroup(k,x*7+z),x,z,1.4,y-0.12);/* up out of the hole */floatText(x,y+0.9,z,'+ '+I.name,I.price>=200?'gold':'');
   if(I.price>=200){SFX.rare();if(!first)toast(`You dug up ${/^[aeiou]/i.test(I.name)?'an':'a'} <b>${I.name}</b>!`,'rare',ICON['g:'+k]);}else SFX.harvest();}
 let leafT=0;
 function driftLeaves(dt){leafT-=dt;if(leafT>0)return;leafT=0.35+Math.random()*0.5;const s=season();if(s==='winter')return;
@@ -4944,8 +5036,8 @@ function tapLife(cx,cy){
   if(crow&&crow.state!=='out'){const s=toScreen(crowG.position.x,crowG.position.y+0.15,crowG.position.z);if(Math.hypot(s[0]-cx,s[1]-cy)<50){shooCrow();return true;}}
   let best=null,bd=36;for(const b of bugs){if(b.out)continue;const s=toScreen(b.g.position.x,b.g.position.y,b.g.position.z);const d=Math.hypot(s[0]-cx,s[1]-cy);if(d<bd){bd=d;best=b;}}
   // a bug: grab the net, creep over and swoop (if it's still there when you arrive)
-  if(best){autoTool('net');const b=best,p=b.g.position;if(Math.hypot(p.x-vil.x,p.z-vil.z)<1.4){swingTool();catchBug(b);return true;}
-    const dx=p.x-vil.x,dz=p.z-vil.z,d=Math.hypot(dx,dz)||1;goTo(p.x-dx/d*0.9,p.z-dz/d*0.9,()=>{if(!bugs.includes(b))return;villager.rotation.y=Math.atan2(b.g.position.x-vil.x,b.g.position.z-vil.z);swingTool();catchBug(b);});return true;}return false;}
+  if(best){autoTool('net');const b=best,p=b.g.position;if(Math.hypot(p.x-vil.x,p.z-vil.z)<1.4){villager.rotation.y=Math.atan2(p.x-vil.x,p.z-vil.z);swingTool(()=>{if(bugs.includes(b))catchBug(b);});return true;}
+    const dx=p.x-vil.x,dz=p.z-vil.z,d=Math.hypot(dx,dz)||1;goTo(p.x-dx/d*0.9,p.z-dz/d*0.9,()=>{if(!bugs.includes(b))return;villager.rotation.y=Math.atan2(b.g.position.x-vil.x,b.g.position.z-vil.z);swingTool(()=>{if(bugs.includes(b))catchBug(b);});});return true;}return false;}
 const ptrs=new Map();let drag=null,pinch=null,paint=null,holdT=null;
 // long-press and drag repeats the equipped tool's action across tiles
 function paintMode(x,z){if(!onHome(x,z))return null;const tool=S.tool,d=debrisAt(x,z);
@@ -5395,7 +5487,7 @@ function frame(now){
       if(playerLimbs)swingLimbs(playerLimbs,tt*11,d>0.04?0.7:0);
       villager.position.set(vil.x,vil.y+(d>0.04?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.4*Math.PI)*0.3*(vil.hop>0),vil.z);
       {const body=villager.children[0],walk=d>0.04,st=walk?1+Math.sin(tt*28)*0.035:1+Math.sin(tt*2.4)*0.022,land=vil.hop>0&&vil.hop<0.08?0.88:1;
-        if(body){body.scale.set(2-st*land,st*land,2-st*land);body.rotation.x=lerp(body.rotation.x,walk?0.1:0,Math.min(1,dt*8));}}}
+        if(body){body.scale.set(2-st*land,st*land,2-st*land);body.rotation.x=lerp(body.rotation.x,walk?0.1:poseLean,Math.min(1,dt*(walk?8:16)));}}}
   }
   wearPaths();
   updateBoat(dt,tt);
@@ -5406,7 +5498,7 @@ function frame(now){
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
   scene.fog.near=camD()+45-fogBoost*30;scene.fog.far=camD()+300-fogBoost*200;/* a light haze: neighbouring islands stay green on the horizon */
   flushCrops();for(const {g} of cropMeshes.values())if(g.children.length)g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;
-  updatePops(dt);updateFires(dt,tt);updateJournal(dt,tt);updatePitch(dt);
+  updatePops(dt);updateFires(dt,tt);updateJournal(dt,tt);updatePitch(dt);updateToolFx(dt);
   // ripe crops twinkle now and then, so you can see what's ready
   for(const [k,{g,v,s}] of cropMeshes)if(s===3&&(!v||v==='normal')&&Math.random()<dt*0.12)sparkle(g.position.x,topY(Math.round(g.position.x),Math.round(g.position.z))+0.5,g.position.z,0xfffbe0);
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
@@ -5492,7 +5584,7 @@ if(/[?&]debug\b/.test(location.search)){
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
       islands:islands.length,town:TOWN.name,buildings:TOWN.bld.filter(b=>!b.locked).map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
     hour:h=>{setHour(h);applyTime();},
-    jr:()=>S.jr,pitch:()=>pitch&&{t:pitch.t,sy:pitch.sy,step:pitch.step,end:pitch.end},gain:(k,n=1)=>gain(k,n),campfire:()=>campfire(),tent:()=>S.home&&S.home.tent,resting:()=>!!rest,
+    jr:()=>S.jr,falls:()=>falls.map(f=>[+f.a.toFixed(2),f.hit]),fell:()=>{const d=S.debris.filter(q=>q.k==='tree').sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];d.hp=1;S.tool='axe';showHeld();villager.rotation.y=Math.atan2(d.x-vil.x,d.z-vil.z);swingTool(()=>hitDebris(d));return[d.x,d.z];},digHere:()=>{const x=Math.round(vil.x),z=Math.round(vil.z)-1;S.tool='shovel';showHeld();villager.rotation.y=Math.PI;swingTool(()=>{digStab(x,z,0.6);swingTool(()=>digStab(x,z,1));});return[x,z];},pitch:()=>pitch&&{t:pitch.t,sy:pitch.sy,step:pitch.step,end:pitch.end},gain:(k,n=1)=>gain(k,n),campfire:()=>campfire(),tent:()=>S.home&&S.home.tent,resting:()=>!!rest,
     tp:(x,z)=>{S.sea=false;vil.x=vil.tx=x;vil.z=vil.tz=z;vil.path=null;cam.tx=x;cam.tz=z;},
     visit:id=>{const i=islands[id];S.disc[id]=1;const sp=(i.spots&&i.spots[1])||i.grass[0];DS.tp(sp[0]+0.6,sp[1]+0.6);},
     islands:()=>islands.map(i=>({id:i.id,biome:i.biome,name:i.name,x:i.cx,z:i.cz,r:Math.round(islR(i)),grand:!!i.grand,river:(i.rtiles||[]).length})),
@@ -5545,6 +5637,8 @@ if(/[?&]debug\b/.test(location.search)){
     cropGallery:(stage=3,size=160)=>CROP_IDS.map((id,i)=>{const c=cropParts(id,stage,i*97+5),g=new T.Group();if(c.leaf.length)g.add(M(c.leaf));if(c.fruit.length)g.add(M(c.fruit));g.scale.setScalar(0.95);
       const w=new T.Group();w.add(g);w.add(M([P(BOX,0x5e3c2a,0,-0.03,0,0,0,0,1,0.06,1)]));const box=new T.Mesh(new T.BoxGeometry(1.1,1.5,1.1));box.position.y=0.7;box.visible=false;w.add(box);return [id,snapThumb(w,size)];}),
     ripen:()=>{for(const k in S.tiles){const t=S.tiles[k];if(t.crop)t.crop.p=1;}syncAllCrops();},
+    line:()=>({vis:fishLine.visible,p:[...linePts].slice(0,6).concat([...linePts].slice(-3)).map(v=>+v.toFixed(2)),bob:bobber.position.toArray().map(v=>+v.toFixed(2)),st:fishing&&fishing.state}),
+    fishShore:()=>{const isl=curIsl();for(const [x,z] of isl.sand)for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){let ok=true;for(let r=1;r<=4;r++)if(isLand(x+dx*r,z+dz*r))ok=false;if(!ok)continue;DS.tp(x,z);startFishing(x+dx*3,z+dz*3);return[x,z,dx,dz];}return null;},
     fish:()=>{const isl=curIsl();if(!isl)return false;const [x,z]=isl.sand[0];DS.tp(x,z);startFishing(x+3,z+3);return !!fishing;},
     fastTravel:id=>fastTravel(islands[id]),
     npcRouteOnLand:()=>{updateNpcBoat(0,0);const R=npcRoute;if(!R.pts)return -1;let n=0;for(let d=0;d<R.total;d+=0.25){R.d=d;updateNpcBoat(0,0);if(seaBlocked(Math.round(npcBoat.position.x),Math.round(npcBoat.position.z)))n++;}return n;},

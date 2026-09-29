@@ -82,11 +82,13 @@ function resize(){
 }
 const cam={yaw:Math.PI*0.27,pitch:0.5,dist:30,tx:0,tz:0.3};
 function fitZoom(){const a=window.innerWidth/window.innerHeight;cam.dist=clamp(25/Math.max(0.55,a),22,46);}
+let camShake=0;/* a little jolt for heavy blows (a tree hitting the ground); decays in updateTool */
 function applyCam(){
   // the view leads a little ahead of you, so you stand in the lower half of the screen with the island opening out beyond
   const hd=camD()*Math.cos(cam.pitch),lead=cam.dist*0.1,tx=cam.tx-Math.sin(cam.yaw)*lead,tz=cam.tz-Math.cos(cam.yaw)*lead;
   camera.position.set(tx+Math.sin(cam.yaw)*hd,Math.sin(cam.pitch)*camD(),tz+Math.cos(cam.yaw)*hd);
   camera.lookAt(tx,0.4-hd*hd*CURVE,tz);
+  if(camShake>0){const k=camShake*0.25;camera.position.x+=(Math.random()-0.5)*k;camera.position.y+=(Math.random()-0.5)*k;camera.position.z+=(Math.random()-0.5)*k;}
   camera.updateMatrixWorld();
 }
 const _pv=new T.Vector3();

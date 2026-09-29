@@ -23,7 +23,7 @@ function startBlueprint(k){if(S.sea||inside){toast('Head back to your island fir
   for(let r=0;r<16&&!best;r++)for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;const x=px+dx,z=pz+dz-(sd?1:2);if(ok(x,z)){const d=dx*dx+dz*dz;if(d<bd){bd=d;best=[x,z];}}}
   if(!best){toast(sd?"There's no open, level grass nearby for your driftseed. Clear some ground (axe and shovel) or walk somewhere more open."
     :`There's no clear, level patch nearby for ${BP_NAME(k)}. Clear some ground (axe and shovel) or walk somewhere more open.`);return;}
-  placing={bp:k,kind:k,rot:0,x:best[0],z:best[1]};ghost=bpGhost(k);ghost.traverse(o=>{if(o.isMesh){o.material=ghostMat;o.castShadow=false;}});scene.add(ghost);bpMove(best[0],best[1]);}
+  placing={bp:k,kind:k,rot:0,x:best[0],z:best[1]};ghost=bpGhost(k);ghost.traverse(o=>{if(o.isMesh){if(o.material===firePoolMat)o.visible=false;o.material=ghostMat;o.castShadow=false;}});scene.add(ghost);bpMove(best[0],best[1]);}
 function bpMove(x,z){placing.x=x;placing.z=z;const sd=placing.bp==='seed',c=placing.bp==='tent',y=sd?topY(x,z):Math.min(topY(x,z),topY(x+1,z+1))||0.5;ghost.position.set(c?x+0.5:x,y,c?z+0.5:z);
   const ok=bpOk(x,z);ghostMat.color.set(ok?0xffffff:0xff6a5a);cursorAt(x,sd?z:z+2,ok?0xfff6e2:0xff6a5a);cursorT=1e9;
   setAction(sd?`<b>Plant your driftseed</b><br><small>${ok?'Tap the ground to choose the spot. It will grow into your Island Heart, right here.':'Needs open, level grass with a clear tile all round it.'}</small>`

@@ -85,9 +85,10 @@ function regrowDebris(){if(!S.farmInit)return;const c=islands[0].grass.filter(([
 function hitDebris(d){walkTo(d.x,d.z);vil.hop=0.2;d.hp--;const m=debMesh.get(K(d.x,d.z));if(m)m.shake=0.3;
   const wood=d.k==='stump'||d.k==='twig'||d.k==='bush'||d.k==='tree',stone=d.k==='rock'||d.k==='boulder',y=topY(d.x,d.z)+0.3;
   if(stone){tone(190,0.06,'square',0.05);noise(0.05,0.05,2600);}else if(wood){tone(140,0.07,'triangle',0.06);noise(0.06,0.04,900);}else noise(0.1,0.04,1600);
-  burst(d.x,y,d.z,stone?0xa4a4b4:wood?0x9a6a3a:0x6a9a3a,6,1.1,0.06);
+  if(wood&&d.k!=='bush')chips(d.x,d.z,y+(d.k==='tree'?0.15:0));else burst(d.x,y,d.z,stone?0xa4a4b4:wood?0x9a6a3a:0x6a9a3a,6,1.1,0.06);
+  if(d.k==='tree'&&d.hp>0){const s=season();for(let i=0;i<4;i++)emit(d.x+(Math.random()-0.5)*1.2,y+1.3+Math.random()*0.6,d.z+(Math.random()-0.5)*1.2,{vx:(Math.random()-0.5)*0.5,vy:-0.3,vz:(Math.random()-0.5)*0.5,life:1.6,max:1.6,size:0.06,color:s==='autumn'?0xe8803a:0x6ab84a,g:0.5,sw:0.8,ph:Math.random()*6,spin:1});}
   if(d.hp>0)return;
-  S.debris=S.debris.filter(q=>q!==d);if(d.k==='tree'){const s=newDebris(d.x,d.z,'stump');s.r=d.r;S.debris.push(s);burst(d.x,y+1.2,d.z,0x6ab84a,24,2.2,0.09,3);noise(0.35,0.05,500);}syncDebris();const got=[];const add=(k,n)=>{if(n>0){gain('m:'+k,n);got.push('+'+n+' '+MATS[k].name);}};const c=()=>Math.random()<0.5?1:0;
+  S.debris=S.debris.filter(q=>q!==d);if(d.k==='tree'){fellTree(d);const s=newDebris(d.x,d.z,'stump');s.r=d.r;S.debris.push(s);}syncDebris();const got=[];const add=(k,n)=>{if(n>0){gain('m:'+k,n);got.push('+'+n+' '+MATS[k].name);}};const c=()=>Math.random()<0.5?1:0;
   switch(d.k){case'weed':add('fiber',1+c());break;case'twig':add('wood',1);break;case'bush':add('fiber',1);add('wood',1+c());break;
     case'rock':add('stone',1+c());break;case'stump':add('wood',3+c());break;case'tree':add('wood',3+c()+c());if(Math.random()<0.25){S.free.turnip=(S.free.turnip||0)+1;got.push('+1 seed from the branches');}break;case'boulder':add('stone',4+c());break;}
   if(Math.random()<(d.k==='boulder'?0.3:d.k==='rock'?0.06:0)){const n=40+Math.floor(Math.random()*(d.k==='boulder'?160:60));S.shells+=n;got.push('+'+n+' shells (an old coin!)');}
