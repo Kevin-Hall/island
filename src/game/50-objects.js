@@ -54,10 +54,12 @@ function objGroup(kind,seed=1,rot=0){
       g.add(M(p));g.add(M([P(BOX,0x404a60,0,1.35,0.39,0,0,0,0.16,0.18,0.04)],glowMat));
       const bl=[P(BOX,0x6a4a30,0,0,0,0,0,0,0.16,0.16,0.12)];for(let k=0;k<4;k++){const a=k*Math.PI/2;bl.push(P(BOX,0xe8dcc0,-Math.sin(a)*0.58,Math.cos(a)*0.58,0,0,0,a,0.2,0.95,0.03),P(BOX,0x7a5a3a,-Math.sin(a)*0.5,Math.cos(a)*0.5,0.02,0,0,a,0.04,1.05,0.03));}
       const blades=M(bl);blades.position.set(0,1.95,0.5);g.add(blades);g.userData.anim=(t,dt)=>{blades.rotation.z-=dt*1.1;};break;}
+    default:furnParts(kind,g,R,seed);
   }
   g.rotation.y=rot;return g;
 }
-const OBJ_H={pine:1.6,oak:1.1,palm:1.4,windmill:1.4,lantern:0.9,scarecrow:0.9,beehive:0.6,bench:0.4,well:1.0,birdhouse:1.1,signpost:0.9,gnome:0.5,hedge:0.5,chime:1.0,planter:0.4,flowerpot:0.4,haybale:0.5};
+const OBJ_H={pine:1.6,oak:1.1,palm:1.4,windmill:1.4,lantern:0.9,scarecrow:0.9,beehive:0.6,bench:0.4,well:1.0,birdhouse:1.1,signpost:0.9,gnome:0.5,hedge:0.5,chime:1.0,planter:0.4,flowerpot:0.4,haybale:0.5,
+  mailbox:1.0,parasol:1.5,birdbath:0.7,lamppost:1.9,picnic:0.5,sundial:0.8,hammock:0.9,arbor:1.7,stall:1.3,swing:1.4,fountain:0.8,picket:0.5,chair:0.6,topiary:1.3,urn:0.6};
 function roof(p,col,gable,W,Hr,D,y,x=0,z=0){const sx=W/1.732,sy=Hr/1.5;
   p.push(P(PRISM,col,x,y+0.5*sy,z,0,0,0,(W+0.28)/1.732,sy*1.04,D+0.12));
   if(gable)p.push(P(PRISM,gable,x,y+0.5*sy*0.94,z,0,0,0,sx*0.96,sy*0.94,D+0.16));

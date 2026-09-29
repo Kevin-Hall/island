@@ -159,19 +159,24 @@ const cropMeshes=new Map();
 const cropBatchMat=toon({vertexColors:true});
 cropBatchMat.onBeforeCompile=sh=>{sh.uniforms.uTime=grassU.uTime;sh.vertexShader='uniform float uTime;attribute vec3 aSway;\n'+sh.vertexShader.replace('#include <begin_vertex>',
   '#include <begin_vertex>\n  transformed.x+=(transformed.y-aSway.y)*sin(uTime*1.6+aSway.z)*0.035;');};
-let cropBatch=null,cropDirty=false;
+let cropBatch={},cropDirty=false;
+// the batch materials for rare fruit: the variant's own look, swaying with the rest (colours shared, so the prismatic
+// shimmer and the moonlit glow still animate)
+const VBM={};for(const v in VMAT){const m=VMAT[v].clone();m.color=VMAT[v].color;m.emissive=VMAT[v].emissive;m.onBeforeCompile=cropBatchMat.onBeforeCompile;VBM[v]=m;}
 function flushCrops(){if(!cropDirty)return;cropDirty=false;
-  if(cropBatch){cropRoot.remove(cropBatch);cropBatch.geometry.dispose();cropBatch=null;}
-  let n=0;for(const e of cropMeshes.values())if(e.bake)n+=e.bake.n;if(!n)return;
-  const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3),sw=new Float32Array(n*3);let o=0;
-  for(const e of cropMeshes.values()){const B=e.bake;if(!B)continue;pos.set(B.pos,o*3);nor.set(B.nor,o*3);col.set(B.col,o*3);for(let i=0;i<B.n;i++){sw[(o+i)*3]=B.px;sw[(o+i)*3+1]=B.py;sw[(o+i)*3+2]=B.ph;}o+=B.n;}
-  const bg=new T.BufferGeometry();bg.setAttribute('position',new T.BufferAttribute(pos,3));bg.setAttribute('normal',new T.BufferAttribute(nor,3));bg.setAttribute('color',new T.BufferAttribute(col,3));bg.setAttribute('aSway',new T.BufferAttribute(sw,3));
-  cropBatch=new T.Mesh(bg,cropBatchMat);cropBatch.castShadow=cropBatch.receiveShadow=true;cropBatch.frustumCulled=false;cropRoot.add(cropBatch);}
+  for(const k in cropBatch){cropRoot.remove(cropBatch[k]);cropBatch[k].geometry.dispose();}cropBatch={};
+  for(const key of ['base',...Object.keys(VMAT)]){let n=0;for(const e of cropMeshes.values())if(e.bake&&e.bake[key])n+=e.bake[key].n;if(!n)continue;
+    const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3),sw=new Float32Array(n*3);let o=0;
+    for(const e of cropMeshes.values()){const B=e.bake&&e.bake[key];if(!B)continue;pos.set(B.pos,o*3);nor.set(B.nor,o*3);col.set(B.col,o*3);for(let i=0;i<B.n;i++){sw[(o+i)*3]=B.px;sw[(o+i)*3+1]=B.py;sw[(o+i)*3+2]=B.ph;}o+=B.n;}
+    const bg=new T.BufferGeometry();bg.setAttribute('position',new T.BufferAttribute(pos,3));bg.setAttribute('normal',new T.BufferAttribute(nor,3));bg.setAttribute('color',new T.BufferAttribute(col,3));bg.setAttribute('aSway',new T.BufferAttribute(sw,3));
+    const m=new T.Mesh(bg,key==='base'?cropBatchMat:VBM[key]);m.castShadow=m.receiveShadow=true;m.frustumCulled=false;cropRoot.add(m);cropBatch[key]=m;}}
 // move a crop group's plain meshes into its bake (world-space arrays) for the batch
-function bakeCrop(e){const g=e.g;g.updateMatrixWorld(true);const parts=g.children.filter(c=>c.isMesh&&c.material===vcMat&&!c.geometry.index&&c.geometry.attributes.color);if(!parts.length)return;
-  let n=0;for(const c of parts)n+=c.geometry.attributes.position.count;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3);let o=0;
-  for(const c of parts){const G=c.geometry,g2=G.clone();g2.applyMatrix4(c.matrixWorld);pos.set(g2.attributes.position.array,o*3);nor.set(g2.attributes.normal.array,o*3);col.set(G.attributes.color.array,o*3);o+=G.attributes.position.count;g2.dispose();G.dispose();g.remove(c);}
-  e.bake={n,pos,nor,col,px:g.position.x,py:g.position.y,ph:g.userData.ph};}
+function bakeCrop(e){const g=e.g;g.updateMatrixWorld(true);e.bake={};
+  // plain parts go in the main batch; a rare harvest's fruit (golden, crystal…) goes in its variant's batch
+  for(const key of ['base',...Object.keys(VMAT)]){const mat=key==='base'?vcMat:VMAT[key];const parts=g.children.filter(c=>c.isMesh&&c.material===mat&&!c.geometry.index);if(!parts.length)continue;
+    let n=0;for(const c of parts)n+=c.geometry.attributes.position.count;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3);let o=0;
+    for(const c of parts){const G=c.geometry,g2=G.clone();g2.applyMatrix4(c.matrixWorld);pos.set(g2.attributes.position.array,o*3);nor.set(g2.attributes.normal.array,o*3);if(G.attributes.color)col.set(G.attributes.color.array,o*3);else col.fill(1,o*3,(o+G.attributes.position.count)*3);o+=G.attributes.position.count;g2.dispose();G.dispose();g.remove(c);}
+    e.bake[key]={n,pos,nor,col,px:g.position.x,py:g.position.y,ph:g.userData.ph};}}
 function syncCrop(k){
   const old=cropMeshes.get(k);if(old){cropRoot.remove(old.g);old.g.traverse(o=>{if(o.geometry)o.geometry.dispose();});cropMeshes.delete(k);cropDirty=true;}
   const t=S.tiles[k];if(!t||!t.crop)return;const c=t.crop;

@@ -611,6 +611,25 @@ const BUILD={
   planter:  {name:'Tulip Planter',cost:0,lvl:4,multi:true,craft:true,rot:true,desc:'A long wooden box of tulips.'},
   well:     {name:'Stone Well',cost:0,lvl:4,craft:true,desc:'A wishing well. Toss in a shell for luck.'},
   windmill: {name:'Windmill',    cost:3000, lvl:6, rot:true, desc:'Every crop on the island grows 15% faster.'},
+  // furniture and garden pieces (models in 50b-furniture)
+  mailbox:  {name:'Mailbox',      cost:200,  lvl:1, rot:true, desc:'Every home needs one. The flag is always up.'},
+  rug:      {name:'Outdoor Rug',  cost:250,  lvl:2, multi:true, rot:true, desc:'A woven rug for a patio or a picnic spot.'},
+  parasol:  {name:'Garden Parasol',cost:400, lvl:2, desc:'A striped parasol for lazy afternoons.'},
+  birdbath: {name:'Bird Bath',    cost:450,  lvl:3, desc:'Small birds stop by for a splash.'},
+  lamppost: {name:'Street Lamp',  cost:500,  lvl:3, multi:true, desc:'A tall iron lamp that lights a whole corner at night.'},
+  picnic:   {name:'Picnic Table', cost:600,  lvl:3, rot:true, desc:'Gingham cloth, lunch included.'},
+  sundial:  {name:'Sundial',      cost:700,  lvl:4, desc:'Tells the time, when the sun is out.'},
+  hammock:  {name:'Hammock',      cost:900,  lvl:4, rot:true, desc:'Strung between two posts. Perfect for a nap.'},
+  arbor:    {name:'Rose Arbor',   cost:1100, lvl:4, rot:true, desc:'A white arch smothered in climbing roses.'},
+  stall:    {name:'Market Stall', cost:1200, lvl:4, rot:true, desc:'A striped stall to show off your harvest.'},
+  swing:    {name:'Garden Swing', cost:1500, lvl:5, rot:true, desc:'A seat that rocks gently in the breeze.'},
+  fountain: {name:'Fountain',     cost:2500, lvl:5, desc:'A bubbling stone fountain. The heart of any plaza.'},
+  picket:   {name:'Picket Fence', cost:0, lvl:1, multi:true, craft:true, rot:true, desc:'A white picket fence for neat garden edges.'},
+  deck:     {name:'Decking',      cost:0, lvl:2, multi:true, craft:true, rot:true, desc:'Wooden boards for a patio or a jetty-style floor.'},
+  brick:    {name:'Brick Paving', cost:0, lvl:2, multi:true, craft:true, desc:'Warm red bricks. Lay a few together for a plaza.'},
+  chair:    {name:'Garden Chair', cost:0, lvl:2, multi:true, craft:true, rot:true, desc:'A painted slatted chair with wide arms.'},
+  topiary:  {name:'Topiary',      cost:0, lvl:3, multi:true, craft:true, desc:'Three clipped balls in a white planter.'},
+  urn:      {name:'Stone Urn',    cost:0, lvl:3, multi:true, craft:true, desc:'A stone urn spilling over with flowers.'},
 };
 const BIOMES={
   home:   {name:'Home',     cliff:0x9a7050,grass:[0x6aa843,0x74b24a,0x629e3e],sand:[0xd2ad74,0xc9a36c]},
@@ -2269,19 +2288,24 @@ const cropMeshes=new Map();
 const cropBatchMat=toon({vertexColors:true});
 cropBatchMat.onBeforeCompile=sh=>{sh.uniforms.uTime=grassU.uTime;sh.vertexShader='uniform float uTime;attribute vec3 aSway;\n'+sh.vertexShader.replace('#include <begin_vertex>',
   '#include <begin_vertex>\n  transformed.x+=(transformed.y-aSway.y)*sin(uTime*1.6+aSway.z)*0.035;');};
-let cropBatch=null,cropDirty=false;
+let cropBatch={},cropDirty=false;
+// the batch materials for rare fruit: the variant's own look, swaying with the rest (colours shared, so the prismatic
+// shimmer and the moonlit glow still animate)
+const VBM={};for(const v in VMAT){const m=VMAT[v].clone();m.color=VMAT[v].color;m.emissive=VMAT[v].emissive;m.onBeforeCompile=cropBatchMat.onBeforeCompile;VBM[v]=m;}
 function flushCrops(){if(!cropDirty)return;cropDirty=false;
-  if(cropBatch){cropRoot.remove(cropBatch);cropBatch.geometry.dispose();cropBatch=null;}
-  let n=0;for(const e of cropMeshes.values())if(e.bake)n+=e.bake.n;if(!n)return;
-  const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3),sw=new Float32Array(n*3);let o=0;
-  for(const e of cropMeshes.values()){const B=e.bake;if(!B)continue;pos.set(B.pos,o*3);nor.set(B.nor,o*3);col.set(B.col,o*3);for(let i=0;i<B.n;i++){sw[(o+i)*3]=B.px;sw[(o+i)*3+1]=B.py;sw[(o+i)*3+2]=B.ph;}o+=B.n;}
-  const bg=new T.BufferGeometry();bg.setAttribute('position',new T.BufferAttribute(pos,3));bg.setAttribute('normal',new T.BufferAttribute(nor,3));bg.setAttribute('color',new T.BufferAttribute(col,3));bg.setAttribute('aSway',new T.BufferAttribute(sw,3));
-  cropBatch=new T.Mesh(bg,cropBatchMat);cropBatch.castShadow=cropBatch.receiveShadow=true;cropBatch.frustumCulled=false;cropRoot.add(cropBatch);}
+  for(const k in cropBatch){cropRoot.remove(cropBatch[k]);cropBatch[k].geometry.dispose();}cropBatch={};
+  for(const key of ['base',...Object.keys(VMAT)]){let n=0;for(const e of cropMeshes.values())if(e.bake&&e.bake[key])n+=e.bake[key].n;if(!n)continue;
+    const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3),sw=new Float32Array(n*3);let o=0;
+    for(const e of cropMeshes.values()){const B=e.bake&&e.bake[key];if(!B)continue;pos.set(B.pos,o*3);nor.set(B.nor,o*3);col.set(B.col,o*3);for(let i=0;i<B.n;i++){sw[(o+i)*3]=B.px;sw[(o+i)*3+1]=B.py;sw[(o+i)*3+2]=B.ph;}o+=B.n;}
+    const bg=new T.BufferGeometry();bg.setAttribute('position',new T.BufferAttribute(pos,3));bg.setAttribute('normal',new T.BufferAttribute(nor,3));bg.setAttribute('color',new T.BufferAttribute(col,3));bg.setAttribute('aSway',new T.BufferAttribute(sw,3));
+    const m=new T.Mesh(bg,key==='base'?cropBatchMat:VBM[key]);m.castShadow=m.receiveShadow=true;m.frustumCulled=false;cropRoot.add(m);cropBatch[key]=m;}}
 // move a crop group's plain meshes into its bake (world-space arrays) for the batch
-function bakeCrop(e){const g=e.g;g.updateMatrixWorld(true);const parts=g.children.filter(c=>c.isMesh&&c.material===vcMat&&!c.geometry.index&&c.geometry.attributes.color);if(!parts.length)return;
-  let n=0;for(const c of parts)n+=c.geometry.attributes.position.count;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3);let o=0;
-  for(const c of parts){const G=c.geometry,g2=G.clone();g2.applyMatrix4(c.matrixWorld);pos.set(g2.attributes.position.array,o*3);nor.set(g2.attributes.normal.array,o*3);col.set(G.attributes.color.array,o*3);o+=G.attributes.position.count;g2.dispose();G.dispose();g.remove(c);}
-  e.bake={n,pos,nor,col,px:g.position.x,py:g.position.y,ph:g.userData.ph};}
+function bakeCrop(e){const g=e.g;g.updateMatrixWorld(true);e.bake={};
+  // plain parts go in the main batch; a rare harvest's fruit (golden, crystal…) goes in its variant's batch
+  for(const key of ['base',...Object.keys(VMAT)]){const mat=key==='base'?vcMat:VMAT[key];const parts=g.children.filter(c=>c.isMesh&&c.material===mat&&!c.geometry.index);if(!parts.length)continue;
+    let n=0;for(const c of parts)n+=c.geometry.attributes.position.count;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3);let o=0;
+    for(const c of parts){const G=c.geometry,g2=G.clone();g2.applyMatrix4(c.matrixWorld);pos.set(g2.attributes.position.array,o*3);nor.set(g2.attributes.normal.array,o*3);if(G.attributes.color)col.set(G.attributes.color.array,o*3);else col.fill(1,o*3,(o+G.attributes.position.count)*3);o+=G.attributes.position.count;g2.dispose();G.dispose();g.remove(c);}
+    e.bake[key]={n,pos,nor,col,px:g.position.x,py:g.position.y,ph:g.userData.ph};}}
 function syncCrop(k){
   const old=cropMeshes.get(k);if(old){cropRoot.remove(old.g);old.g.traverse(o=>{if(o.geometry)o.geometry.dispose();});cropMeshes.delete(k);cropDirty=true;}
   const t=S.tiles[k];if(!t||!t.crop)return;const c=t.crop;
@@ -2352,10 +2376,12 @@ function objGroup(kind,seed=1,rot=0){
       g.add(M(p));g.add(M([P(BOX,0x404a60,0,1.35,0.39,0,0,0,0.16,0.18,0.04)],glowMat));
       const bl=[P(BOX,0x6a4a30,0,0,0,0,0,0,0.16,0.16,0.12)];for(let k=0;k<4;k++){const a=k*Math.PI/2;bl.push(P(BOX,0xe8dcc0,-Math.sin(a)*0.58,Math.cos(a)*0.58,0,0,0,a,0.2,0.95,0.03),P(BOX,0x7a5a3a,-Math.sin(a)*0.5,Math.cos(a)*0.5,0.02,0,0,a,0.04,1.05,0.03));}
       const blades=M(bl);blades.position.set(0,1.95,0.5);g.add(blades);g.userData.anim=(t,dt)=>{blades.rotation.z-=dt*1.1;};break;}
+    default:furnParts(kind,g,R,seed);
   }
   g.rotation.y=rot;return g;
 }
-const OBJ_H={pine:1.6,oak:1.1,palm:1.4,windmill:1.4,lantern:0.9,scarecrow:0.9,beehive:0.6,bench:0.4,well:1.0,birdhouse:1.1,signpost:0.9,gnome:0.5,hedge:0.5,chime:1.0,planter:0.4,flowerpot:0.4,haybale:0.5};
+const OBJ_H={pine:1.6,oak:1.1,palm:1.4,windmill:1.4,lantern:0.9,scarecrow:0.9,beehive:0.6,bench:0.4,well:1.0,birdhouse:1.1,signpost:0.9,gnome:0.5,hedge:0.5,chime:1.0,planter:0.4,flowerpot:0.4,haybale:0.5,
+  mailbox:1.0,parasol:1.5,birdbath:0.7,lamppost:1.9,picnic:0.5,sundial:0.8,hammock:0.9,arbor:1.7,stall:1.3,swing:1.4,fountain:0.8,picket:0.5,chair:0.6,topiary:1.3,urn:0.6};
 function roof(p,col,gable,W,Hr,D,y,x=0,z=0){const sx=W/1.732,sy=Hr/1.5;
   p.push(P(PRISM,col,x,y+0.5*sy,z,0,0,0,(W+0.28)/1.732,sy*1.04,D+0.12));
   if(gable)p.push(P(PRISM,gable,x,y+0.5*sy*0.94,z,0,0,0,sx*0.96,sy*0.94,D+0.16));
@@ -2406,6 +2432,105 @@ function houseGroup(lv){
 }
 function binGroup(){const g=new T.Group();g.add(M([P(BOX,0x8a5a36,0,0.22,0,0,0,0,0.7,0.44,0.55),P(BOX,0x5a3a26,0,0.1,0,0,0,0,0.72,0.05,0.57),P(BOX,0x5a3a26,0,0.34,0,0,0,0,0.72,0.05,0.57),P(BOX,0x6e4428,0,0.48,-0.02,0,0,0,0.76,0.07,0.6),P(BOX,0xf6d04a,0,0.3,0.28,0,0,0,0.16,0.1,0.02)]));return g;}
 
+/* =========================================================
+   Furniture and garden pieces for making the land your own: seating, shade, lamps, water features, floors and
+   borders. Each is one tile, faces +z (turnable where BUILD says rot), and is built from plain parts so the decor
+   batch in syncObjs (58-crafting) merges it with everything else. Painted pieces pick a colour from their id, so a
+   row of chairs or a set of rugs comes out gently mixed.
+   ========================================================= */
+const PAINT=[0x7ac0d8,0xf2c35a,0xe88a8a,0xf4f0e6,0x8ac48a,0xb8a0e0];
+const FW=0xb88452,FW_D=0x7a5230,FWHITE=0xf4efe6,FST=0xb4b0a6,FST_D=0x96928a,FIRON=0x2e3838;
+// one tile's worth of parts for a furniture piece; returns false for a kind it doesn't know
+function furnParts(kind,g,R,seed){let p=[];const paint=PAINT[seed%PAINT.length];
+  switch(kind){
+    case'picnic':{// a trestle table with benches either side, a gingham cloth and a little lunch
+      p.push(P(BOX,FW,0,0.44,0,0,0,0,0.92,0.06,0.5));
+      for(const sx of [-0.34,0.34])for(const sz of [-1,1])p.push(P(BOX,FW_D,sx,0.22,sz*0.14,sz*0.5,0,0,0.06,0.46,0.06));
+      for(const sz of [-0.4,0.4])p.push(P(BOX,FW,0,0.24,sz,0,0,0,0.9,0.05,0.18),P(BOX,FW_D,-0.34,0.11,sz,0,0,0,0.05,0.22,0.12),P(BOX,FW_D,0.34,0.11,sz,0,0,0,0.05,0.22,0.12));
+      p.push(P(BOX,0xe0584a,0,0.475,0,0,0.12,0,0.5,0.01,0.4));for(let i=-1;i<=1;i++)p.push(P(BOX,0xf8f0e8,i*0.13,0.482,0,0,0.12,0,0.04,0.01,0.4),P(BOX,0xf8f0e8,0,0.483,i*0.1,0,0.12,0,0.5,0.01,0.03));
+      p.push(P(CYL12,0xc89858,-0.12,0.53,0.02,0,0,0,0.16,0.1,0.12),P(ICO2,0xe84a3a,-0.14,0.6,0.02,0,0,0,0.06,0.06,0.06),P(ICO2,0xf6d04a,-0.08,0.6,0.04,0,0,0,0.06,0.06,0.06),
+        P(CYL12,0xf0e8e0,0.2,0.48,-0.02,0,0,0,0.18,0.02,0.18),P(CYL12,0xd88a4a,0.2,0.51,-0.02,0,0,0,0.13,0.05,0.13),P(CYL8,0x8ac8e8,0.28,0.53,0.14,0,0,0,0.06,0.12,0.06));break;}
+    case'parasol':{// a striped garden parasol on a heavy base
+      const c1=[0xf2a64a,0x6ab0d8,0xe86a7a,0x7ac47a][seed%4];
+      p.push(P(CYL12,FST_D,0,0.04,0,0,0,0,0.4,0.08,0.4),P(CYL8,FWHITE,0,0.8,0,0,0,0,0.05,1.6,0.05));
+      p.push(P(CONE12,c1,0,1.5,0,0,0,0,1.25,0.32,1.25));for(let i=0;i<8;i++){const a=i/8*6.283;p.push(P(BOX,FWHITE,Math.cos(a)*0.31,1.52,Math.sin(a)*0.31,0,-a,-0.47,0.66,0.02,0.07));}
+      p.push(P(ICO2,FWHITE,0,1.72,0,0,0,0,0.06,0.06,0.06));
+      for(let i=0;i<8;i++){const a=(i+0.5)/8*6.283;p.push(P(ICO2,i%2?c1:FWHITE,Math.cos(a)*0.6,1.34,Math.sin(a)*0.58,0,0,0,0.07,0.05,0.07));}break;}
+    case'chair':{// a slatted garden chair with wide arms
+      p.push(P(BOX,paint,0,0.26,0.02,-0.08,0,0,0.5,0.05,0.44));
+      for(let i=-2;i<=2;i++)p.push(P(BOX,paint,i*0.1,0.56,-0.24,-0.28,0,0,0.08,0.62,0.04));
+      p.push(P(BOX,paint,0,0.78,-0.3,-0.28,0,0,0.5,0.06,0.04));
+      for(const sx of [-0.28,0.28])p.push(P(BOX,paint,sx,0.42,0.02,0,0,0,0.1,0.04,0.5),P(BOX,paint,sx,0.2,0.2,0,0,0,0.05,0.42,0.05),P(BOX,paint,sx,0.16,-0.16,0,0,0,0.05,0.34,0.05));
+      p.push(P(BOX,0xf8f0e0,0,0.3,0.04,-0.08,0,0,0.42,0.05,0.36));break;}
+    case'arbor':{// a white arch with climbing roses
+      for(const sx of [-0.44,0.44])for(const sz of [-0.14,0.14])p.push(P(BOX,FWHITE,sx,0.8,sz,0,0,0,0.06,1.6,0.06));
+      for(const sx of [-0.44,0.44])for(let i=0;i<5;i++)p.push(P(BOX,FWHITE,sx,0.25+i*0.28,0,0,0,0,0.03,0.03,0.3));
+      for(let i=0;i<9;i++){const a=i/8*Math.PI,x=-Math.cos(a)*0.44,y=1.6+Math.sin(a)*0.22;p.push(P(BOX,FWHITE,x,y,0,0,0,-Math.atan2(0.44*Math.sin(a),0.22*Math.cos(a)),0.05,0.2,0.34));}
+      const rose=[0xf28aa8,0xe85a7a,0xfbd0dc,0xf6f0f0][seed%4];
+      for(let i=0;i<56;i++){const t=R(),side=R()<0.5?-1:1,top=t>0.62,a=top?(t-0.62)/0.38*Math.PI:0,x=top?-Math.cos(a)*0.44:side*0.44,y=top?1.6+Math.sin(a)*0.22:0.15+t*1.5,z=(R()-0.5)*0.36;
+        lf(p,GREENS[i%4],x+(R()-0.5)*0.14,y,z,R()*6.28,0.4,0.2,0.13);if(i%3<2)bloom(p,rose,0xf6d04a,x+(R()-0.5)*0.12,y+0.04,z+(R()<0.5?-0.13:0.13),0.08);}break;}
+    case'lamppost':{// a tall street lamp: iron post, four-pane lamp, a little crown
+      p.push(P(CYL8,FIRON,0,0.06,0,0,0,0,0.26,0.12,0.26),P(CYL8,FIRON,0,0.18,0,0,0,0,0.16,0.14,0.16),P(CYL8,FIRON,0,0.9,0,0,0,0,0.07,1.5,0.07),P(CYL8,FIRON,0,1.64,0,0,0,0,0.14,0.04,0.14),
+        P(CONE4,FIRON,0,2.06,0,0,Math.PI/4,0,0.36,0.2,0.36),P(ICO2,0xd8b050,0,2.2,0,0,0,0,0.06,0.08,0.06));
+      for(const [x,z] of [[-0.12,-0.12],[0.12,-0.12],[-0.12,0.12],[0.12,0.12]])p.push(P(BOX,FIRON,x,1.83,z,0,0,0,0.025,0.34,0.025));
+      g.add(M(p));const lamp=M([P(BOX,0xfff0b8,0,1.83,0,0,0,0,0.22,0.3,0.22)],glowMat);lamp.castShadow=false;g.add(lamp);g.add(pool(0.04,1.25));return true;}
+    case'fountain':{// a round stone fountain: basin, pedestal, a bowl, and a jet that bubbles and falls back
+      for(let i=0;i<14;i++){const a=i/14*6.283;p.push(P(BOX,i%2?FST:FST_D,Math.cos(a)*0.47,0.16,Math.sin(a)*0.47,0,-a,0,0.12,0.32,0.23));}
+      p.push(P(CYL12,FST_D,0,0.04,0,0,0,0,0.96,0.08,0.96),P(CYL12,0x5aa8d0,0,0.25,0,0,0,0,0.86,0.02,0.86),P(CYL8,FST,0,0.46,0,0,0,0,0.14,0.5,0.14),
+        P(CYL12,FST,0,0.72,0,0,0,0,0.46,0.06,0.46),P(CYL12,FST_D,0,0.67,0,0,0,0,0.3,0.06,0.3),P(CYL12,0x7ac8e8,0,0.755,0,0,0,0,0.4,0.02,0.4),P(CYL8,FST,0,0.82,0,0,0,0,0.08,0.14,0.08));
+      g.add(M(p));const jet=M([P(CONE8,0xd8f2fc,0,0.13,0,0,0,0,0.1,0.26,0.1),P(ICO2,0xeaf8ff,0,0.26,0,0,0,0,0.12,0.08,0.12)],lumMat);jet.castShadow=false;jet.position.y=0.86;g.add(jet);
+      const drops=M([0,1,2,3,4,5].map(i=>{const a=i/6*6.283;return P(ICO2,0xd8f2fc,Math.cos(a)*0.22,0,Math.sin(a)*0.22,0,0,0,0.05,0.07,0.05);}),lumMat);drops.castShadow=false;g.add(drops);
+      g.userData.anim=t=>{jet.scale.y=0.85+Math.sin(t*6+seed)*0.15;const u=(t*0.9)%1;drops.position.y=0.95-u*u*0.2;drops.scale.setScalar(0.6+u*0.7);drops.rotation.y=t*0.4;};return true;}
+    case'deck':{// wooden decking: five boards, end to end with the neighbours
+      p.push(P(BOX,FW_D,0,0.03,0,0,0,0,1.0,0.04,1.0));for(let i=0;i<5;i++)p.push(P(BOX,[0xc8945e,0xb88452,0xc08c58][(i+seed)%3],-0.4+i*0.2,0.065,0,0,0,0,0.185,0.04,1.0));break;}
+    case'rug':{// a woven outdoor rug with a border and a pattern down the middle
+      const c=[[0xd86a5a,0xf4e6c8,0x3a7a8a],[0x5a8ac8,0xf4ecd8,0xe8a84a],[0x7aa85a,0xf8f0dc,0xd86a7a],[0xe8b04a,0xfaf2e0,0x9a6ac0]][seed%4];
+      p.push(P(BOX,c[0],0,0.015,0,0,0,0,0.94,0.02,0.94),P(BOX,c[1],0,0.022,0,0,0,0,0.78,0.02,0.78),P(BOX,c[0],0,0.028,0,0,0,0,0.6,0.02,0.6),P(BOX,c[2],0,0.034,0,0,Math.PI/4,0,0.3,0.02,0.3));
+      for(const sz of [-1,1])for(let i=0;i<6;i++)p.push(P(BOX,c[1],-0.4+i*0.16,0.012,sz*0.5,0,0,0,0.03,0.01,0.08));break;}
+    case'brick':{// herringbone-ish brick paving that joins up with its neighbours into one smooth square
+      p.push(P(BOX,0xd4c4aa,0,0.02,0,0,0,0,1.0,0.03,1.0));const bc=[0xc0694a,0xb05c40,0xca7858];
+      for(let r=0;r<4;r++){const z=-0.375+r*0.25,row=r%2?[[-0.385,0.21],[0,0.46],[0.385,0.21]]:[[-0.25,0.46],[0.25,0.46]];row.forEach(([x,w],c)=>p.push(P(BOX,bc[(r+c+seed)%3],x,0.04,z,0,0,0,w,0.03,0.22)));}break;}
+    case'hammock':{// a striped hammock slung between two posts
+      const c1=[0xe86a5a,0x5aa0d0,0xf2b84a][seed%3];
+      for(const sx of [-0.5,0.5])p.push(P(CYL8,FW_D,sx,0.5,0,0,0,0,0.09,1.0,0.09),P(CYL8,FW,sx,1.02,0,0,0,0,0.11,0.04,0.11));
+      const N=7;for(let i=0;i<N;i++){const u=(i+0.5)/N,x=-0.4+u*0.8,y=0.4+(2*u-1)**2*0.3,sl=Math.atan(1.5*(2*u-1));
+        p.push(P(BOX,i%2?FWHITE:c1,x,y,0,0,0,sl,0.8/N+0.01,0.03,0.46));}
+      for(const sx of [-1,1])p.push(P(BOX,0xe8dcc0,sx*0.45,0.8,0,0,0,sx*0.9,0.02,0.24,0.02));
+      p.push(P(BOX,0xf8f0e0,-0.24,0.5,0,0,0,0.25,0.18,0.08,0.28));break;}
+    case'mailbox':{// a mailbox on a post with its little red flag up
+      p.push(P(BOX,FW_D,0,0.4,0,0,0,0,0.08,0.8,0.08),P(BOX,paint,0,0.86,0,0,0,0,0.24,0.18,0.36),P(CYL12,paint,0,0.95,0,Math.PI/2,0,0,0.24,0.36,0.14),
+        P(BOX,0x2e2a2a,0,0.86,0.182,0,0,0,0.18,0.12,0.01),P(BOX,0xd8453a,0.13,1.0,-0.06,0,0,0,0.02,0.2,0.04),P(BOX,0xd8453a,0.13,1.08,0.0,0,0,0,0.02,0.08,0.12));break;}
+    case'stall':{// a market stall: a counter of crates under a striped awning
+      const c1=[0xe86a5a,0x5aa0d0,0x7ab85a][seed%3];
+      p.push(P(BOX,FW,0,0.3,0.1,0,0,0,0.96,0.6,0.4),P(BOX,0xa87848,0,0.62,0.1,0,0,0,1.0,0.04,0.46));
+      for(const sx of [-0.46,0.46])for(const sz of [-0.3,0.3])p.push(P(BOX,FW_D,sx,0.72,sz,0,0,0,0.06,1.44,0.06));
+      for(let i=0;i<6;i++)p.push(P(BOX,i%2?FWHITE:c1,-0.42+i*0.168,1.42,0.02,0.3,0,0,0.17,0.03,0.8));
+      for(let i=0;i<6;i++)p.push(P(PRISM,i%2?FWHITE:c1,-0.42+i*0.168,1.26,0.44,0,0,Math.PI,0.085,0.08,0.02));
+      const fr=[0xe84a3a,0xf6a830,0x8ac850,0xf6d04a,0x9a5ac0];for(let c=0;c<3;c++){const cx=-0.3+c*0.3;p.push(P(BOX,0xc89858,cx,0.7,0.14,0,0,0,0.26,0.1,0.26));
+        for(let k=0;k<5;k++)p.push(P(ICO2,fr[(c*2+seed)%5],cx+(k%3-1)*0.07,0.78+Math.floor(k/3)*0.04,0.14+(k%2?0.05:-0.05),0,0,0,0.08,0.08,0.08));}
+      p.push(P(BOX,0xf4ead0,0,0.44,0.31,0,0,0,0.5,0.18,0.01));break;}
+    case'topiary':{// a clipped three-ball topiary in a square planter
+      p.push(P(BOX,FWHITE,0,0.16,0,0,0,0,0.44,0.32,0.44),P(BOX,0xe8e0d0,0,0.33,0,0,0,0,0.5,0.04,0.5),P(BOX,0x5a3a2a,0,0.34,0,0,0,0,0.4,0.02,0.4),P(CYL6,FW_D,0,0.8,0,0,0,0,0.04,0.9,0.04));
+      for(const [y,s] of [[0.58,0.36],[0.95,0.3],[1.26,0.24]])p.push(PG(SPH_LO,0x5aa840,0x3a7a30,0,y,0,0,R()*3,0,s,s*0.95,s));break;}
+    case'birdbath':{// a stone bird bath with a bird on the rim
+      p.push(P(CYL8,FST_D,0,0.04,0,0,0,0,0.34,0.08,0.34),P(TOWER,FST,0,0.32,0,0,0,0,0.14,0.52,0.14),P(CYL12,FST,0,0.6,0,0,0,0,0.6,0.08,0.6),P(CYL12,FST_D,0,0.54,0,0,0,0,0.36,0.06,0.36),P(CYL12,0x7ac8e8,0,0.645,0,0,0,0,0.5,0.01,0.5));
+      const bc=[0x5a8ae0,0xe86a4a,0xf6d04a][seed%3];p.push(P(ICO2,bc,0.26,0.72,0,0,0,0,0.1,0.08,0.14),P(ICO2,bc,0.26,0.78,0.05,0,0,0,0.07,0.07,0.07),P(CONE4,0xf6a830,0.26,0.78,0.1,Math.PI/2,0,0,0.03,0.05,0.03),P(BOX,bc,0.26,0.74,-0.09,0.4,0,0,0.05,0.02,0.08));break;}
+    case'urn':{// a stone urn spilling over with flowers
+      p.push(P(CYL12,FST_D,0,0.05,0,0,0,0,0.3,0.1,0.3),P(TOWER,FST,0,0.18,0,Math.PI,0,0,0.22,0.18,0.22),P(TOWER,FST,0,0.36,0,0,0,0,0.44,0.22,0.44),P(CYL12,FST_D,0,0.48,0,0,0,0,0.48,0.04,0.48));
+      const fl=[];wildflowers(fl,R,[0xf28aa8,0xffffff,0xb8a8f2,0xf6d04a,0xe86a5a],8,0.16);p.push(...shift(fl,0,0.48,0));for(let i=0;i<8;i++){const a=i/8*6.283;lf(p,GREENS[i%4],Math.cos(a)*0.2,0.46,Math.sin(a)*0.2,a+Math.PI/2,-0.5,0.2,0.08);}break;}
+    case'picket':{// a white picket fence panel
+      for(let i=0;i<5;i++){const x=-0.4+i*0.2;p.push(P(BOX,FWHITE,x,0.27,0,0,0,0,0.1,0.54,0.035),P(CONE4,FWHITE,x,0.58,0,0,Math.PI/4,0,0.1,0.08,0.05));}
+      p.push(P(BOX,0xe8e2d6,0,0.4,-0.03,0,0,0,1.0,0.06,0.03),P(BOX,0xe8e2d6,0,0.16,-0.03,0,0,0,1.0,0.06,0.03));break;}
+    case'sundial':{// a sundial on a carved pedestal
+      p.push(P(BOX,FST_D,0,0.05,0,0,0,0,0.4,0.1,0.4),P(CYL8,FST,0,0.38,0,0,0,0,0.2,0.56,0.2),P(BOX,FST_D,0,0.68,0,0,0,0,0.34,0.06,0.34),P(CYL12,0xc89a48,0,0.73,0,0,0,0,0.4,0.03,0.4));
+      for(let i=0;i<12;i++){const a=i/12*6.283;p.push(P(BOX,0x6a4a20,Math.cos(a)*0.16,0.748,Math.sin(a)*0.16,0,-a,0,0.04,0.005,0.01));}p.push(P(PRISM,0xb88a38,0,0.79,0,0,Math.PI/2,0,0.12,0.08,0.02));break;}
+    case'swing':{// a garden swing seat under an A-frame, gently rocking
+      for(const sx of [-0.5,0.5])for(const sz of [-1,1])p.push(P(BOX,FW_D,sx,0.72,sz*0.2,sz*-0.28,0,0,0.07,1.5,0.07));
+      p.push(P(BOX,FW,0,1.44,0,0,0,0,1.1,0.08,0.1));g.add(M(p));
+      const seat=M([P(BOX,0xe8dcc0,-0.34,-0.46,0,0,0,0,0.02,0.92,0.02),P(BOX,0xe8dcc0,0.34,-0.46,0,0,0,0,0.02,0.92,0.02),P(BOX,paint,0,-0.92,0,0,0,0,0.76,0.05,0.3),P(BOX,paint,0,-0.74,-0.14,-0.2,0,0,0.76,0.32,0.04),
+        P(BOX,0xf8f0e0,-0.18,-0.86,0,0,0,0,0.22,0.08,0.22)]);seat.position.y=1.4;g.add(seat);g.userData.anim=t=>{seat.rotation.x=Math.sin(t*1.3+seed)*0.12;};return true;}
+    default:return false;}
+  g.add(M(p));return true;}
 /* =========================================================
    The wild island. A game started by arriving at sea (S.scratch) begins on untouched land: forests, thickets, rocky
    ground under the cliffs and open meadows, laid out by noise from the world seed and the island's style. Nothing is
@@ -3315,7 +3440,9 @@ const RECIPES=[
   {out:['b','hedge',2],in:{'m:fiber':4,'m:wood':1},lvl:2},{out:['b','chime',1],in:{'g:shell':3,'m:fiber':2,'m:wood':1},lvl:2},{out:['b','scarecrow',1],in:{'m:wood':3,'m:fiber':4},lvl:2},
   {out:['b','lantern',1],in:{'m:stone':3,'m:wood':2,'b:firefly':1},lvl:2},{out:['b','gnome',1],in:{'m:stone':5,'m:fiber':1},lvl:3},
   {out:['b','sprinkler',1],in:{'m:stone':4,'m:wood':2,'g:glass':1},lvl:3},{out:['b','planter',1],in:{'m:wood':3,'c:tulip':2},lvl:4},
-  {out:['b','well',1],in:{'m:stone':8,'m:wood':4},lvl:4},{out:['b','beehive',1],in:{'m:wood':6,'p:honeyclover':2},lvl:4}];
+  {out:['b','well',1],in:{'m:stone':8,'m:wood':4},lvl:4},{out:['b','beehive',1],in:{'m:wood':6,'p:honeyclover':2},lvl:4},
+  {out:['b','picket',4],in:{'m:wood':2,'m:fiber':1},lvl:1},{out:['b','deck',4],in:{'m:wood':4},lvl:2},{out:['b','brick',4],in:{'m:stone':4},lvl:2},
+  {out:['b','chair',1],in:{'m:wood':4},lvl:2},{out:['b','topiary',1],in:{'m:fiber':4,'m:wood':1,'m:stone':2},lvl:3},{out:['b','urn',1],in:{'m:stone':5,'m:fiber':2},lvl:3}];
 function haveOf(k){if(k.startsWith('c:')){const id=k.slice(2);let n=0;for(const q in S.inv)if(q.split('|')[0]===id)n+=S.inv[q];return n;}return S.inv[k]||0;}
 function takeOf(k,n){if(k.startsWith('c:')){const id=k.slice(2);const ks=Object.keys(S.inv).filter(q=>q.split('|')[0]===id).sort((a,b)=>priceOf(a)-priceOf(b));for(const q of ks){const t=Math.min(n,S.inv[q]);S.inv[q]-=t;n-=t;if(!S.inv[q])delete S.inv[q];if(!n)break;}return;}
   S.inv[k]-=n;if(!S.inv[k])delete S.inv[k];}
@@ -3614,7 +3741,7 @@ function applyTime(){
   const az=lerp(-1.25,1.25,tt)+0.6,el=0.28+Math.sin(tt*Math.PI)*0.62; // the sun never climbs too high, so shadows stay long and soft
   sun.position.set(cam.tx+Math.cos(el)*Math.sin(az)*32,Math.sin(el)*32,cam.tz+Math.cos(el)*Math.cos(az)*32);sun.target.position.set(cam.tx,0,cam.tz);
   glowMat.emissiveIntensity=nightF*1.3+rm*0.2;poolMat.opacity=nightF*0.55;lumMat.emissiveIntensity=0.6+nightF*0.8;
-  moonMat.emissiveIntensity=0.35+nightF*0.9;waterU.uSunD.value.copy(sun.position).sub(sun.target.position).normalize();waterU.uGl.value=(1-nightF*0.85)*(1-rm);postMat.uniforms.gw.value=(1-nightF*0.75)*(1-rm*0.6);ffMat.opacity=nightF*0.95;starMat.uniforms.op.value=nightF*(1-rm);
+  moonMat.emissiveIntensity=0.35+nightF*0.9;VBM.moonlit.emissiveIntensity=moonMat.emissiveIntensity;waterU.uSunD.value.copy(sun.position).sub(sun.target.position).normalize();waterU.uGl.value=(1-nightF*0.85)*(1-rm);postMat.uniforms.gw.value=(1-nightF*0.75)*(1-rm*0.6);ffMat.opacity=nightF*0.95;starMat.uniforms.op.value=nightF*(1-rm);
 }
 function timeName(h){if(h<5)return'night';if(h<7)return'dawn';if(h<11)return'morning';if(h<14)return'midday';if(h<17)return'afternoon';if(h<19.3)return'dusk';if(h<22)return'evening';return'night';}
 function clockStr(h){let hh=Math.floor(h),mm=Math.floor((h-hh)*6)*10;const ap=hh<12?'am':'pm';hh=hh%12||12;return hh+':'+String(mm).padStart(2,'0')+' '+ap;}
@@ -6282,30 +6409,133 @@ function layAcornfield(){const occ=new Set(),K2=(x,z)=>K(x,z),grass=(x,z)=>landM
     if(!kd)continue;const d=newDebris(x,z,kd);d.r=R()*6.28;
     if(kd==='tree'){d.v=(z<-24||lv)&&R()<0.62||R()<0.14?1:[0,2,3][Math.floor(R()*3)];d.sc=0.85+R()*0.3;}else d.v=Math.floor(R()*3);S.debris.push(d);}
   rebuildHome();}
-if(S.acornNew&&S.dreamNew){delete S.acornNew;delete S.dreamNew;setTimeout(()=>toast('Welcome to your <b>Dream Island</b>: everything unlocked and every page filled. "Restore my save" in Settings brings your own island back.','rare',ICON.star),1800);}
-else if(S.acornNew){delete S.acornNew;setTimeout(()=>toast('Welcome to <b>Acornfield</b>: the village square, Cottage Lane, the farm, the flower gardens, the harbour and the north woods. Your own save is kept safe: open Settings and tap <b>Restore my save</b> to go back.','rare',ICON.sprout),1600);}
+if(S.acornNew){delete S.acornNew;setTimeout(()=>toast('Welcome to <b>Acornfield</b>: the village square, Cottage Lane, the farm, the flower gardens, the harbour and the north woods. Your own save is kept safe: open Settings and tap <b>Restore my save</b> to go back.','rare',ICON.sprout),1600);}
+/* =========================================================
+   Dev: the Dream Island. A usual-sized home island as a player who has put in the hours would have it: every level,
+   the whole Islandex, every island charted and restored, the best rod and can, and the land laid out by hand, lined
+   up on the grid the way people do in cosy island games:
+     - the villa under the northern cliff, a brick patio out front (picnic table, parasol, chairs) and a walled
+       home garden of rare flowers with a rose arbor, a swing, a sundial and a bird bath
+     - a brick plaza round the grown Island Heart, lamps at the corners and benches facing the tree
+     - Main Street: the shop, café, museum and hall in a row on a brick road, planters between them
+     - Cottage Row: six neighbours' cottages facing the sea, each with a picket-fenced garden of rare flowers
+     - the orchard (peach, starfruit, dragon fruit) and a tea garden on decking by the pond
+     - the farm across the river: two fenced fields, a row per crop, every one a legendary harvest (prismatic,
+       crystal, golden, moonlit, giant), sprinklers down the paths, beehives, a windmill and a market stall
+     - a boardwalk on the lake, a beach lounge with parasols and a bonfire, and a lookout on the cliff top
+   Temporary like Acornfield: your save is backed up first and "Restore my save" in Settings brings it back.
+   ========================================================= */
+const DREAM={seed:4242,scale:1.4,shape:[0.05,0.03,0.02,1,2,3,3.6],coves:[[1.2,0.2,0.25],[4.4,0.18,0.2]],cliff:[0.44,0],wild:0.4,dockX:-8,
+  home:[-7,-8],heart:[-7,4],fire:[12,18],
+  civic:[['shop',-25,8],['cafe',-21,8],['museum',-17,8],['hall',-13,8]],
+  cottages:[[-25,13,0x4f9a4a],[-21,13,0x8a6ad0],[-17,13,0x4a6ad0],[-13,13,0x3aa8a0],[-9,13,0xe0913a],[-5,13,0xd87a9a]]};
+function loadDream(){
+  try{if(!S.showcase)localStorage.setItem(REAL_KEY,JSON.stringify(S));}catch(e){toast('Could not back up your save, so the Dream Island was not loaded.');return;}
+  const D=DREAM;S.showcase=1;S.worldSeed=D.seed;
+  S.home={style:'meadow',shape:D.shape,coves:D.coves,cliff:D.cliff,wild:D.wild,scale:D.scale,dockX:D.dockX,fire:D.fire};
+  S.scratch=1;S.wild=1;S.islandName='Driftseed Haven';S.homeAt={x:D.home[0],z:D.home[1]};S.house=3;
+  S.heartAt={x:D.heart[0],z:D.heart[1]};S.heart={planted:1,revived:1};
+  S.builds=[...D.civic.map(([t,x,z])=>({t,x,z,day:0,done:1})),...D.cottages.map(([x,z,roof],n)=>({t:'vh',n,x,z,roof,day:0,done:1}))];
+  S.moved={};D.cottages.forEach((c,n)=>S.moved[n]=1);S.kits={};
+  S.debris=[];S.weeds=[];S.finds=[];S.objs=[];S.tiles={};S.paths={};S.farmInit=0;S.tidy=1;S.day=Math.max(S.day||1,2);
+  S.boat=null;S.sea=false;S.tut=2;S.tipTools=1;S.tipSeed=1;S.tipPaint=1;S.boatTip=1;S.rain=false;
+  vil.x=vil.tx=-6.5;vil.z=vil.tz=9.5;S.dreamLay=1;S.dreamNew=1;
+  save();resetting=true;location.reload();}
 
-/* ---- Dev: the Dream Island. Acornfield as a player who has put in the hours would have it: every level, the whole
-   Islandex and museum, every island charted and restored, the best rod and can, a fat purse, and rare harvests
-   (golden, crystal, moonlit, rainbow) growing through the fields and gardens. Temporary like Acornfield: your save is
-   backed up first and "Restore my save" brings it back. ---- */
-function loadDream(){S.dreamLay=1;S.dreamNew=1;loadAcornfield();}
-function layDream(){const R=mulberry(777);
+// everything a long-time player has: levels, shells, the whole book, the best tools
+function dreamProgress(){
   S.xp=Math.max(S.xp,LV[LV.length-1]);S.shells=Math.max(S.shells,250000);S.earned=Math.max(S.earned||0,1500000);S.harvested=Math.max(S.harvested||0,5200);S.day=Math.max(S.day,140);
-  S.rod=RODS.length-1;S.can=CANS.length-1;S.house=3;S.metMarlo=1;S.tipFish=1;S.boat=null;
+  S.rod=RODS.length-1;S.can=CANS.length-1;S.metMarlo=1;S.tipFish=1;
   for(const isl of islands)if(!isl.home){S.disc[isl.id]=1;S.restore[isl.id]=RESTORE_N;}
   for(const [,,pre,tab] of DEX_CATS)for(const k in tab)S.alm[pre+k]=Math.max(S.alm[pre+k]||0,1);
   for(const id of CROP_IDS){for(const v of VARIANTS)S.alm[id+'|'+v.id]=1;S.almR[id]=1;}
   for(const k of ['m:wood','m:stone','m:fiber'])S.inv[k]=(S.inv[k]||0)+60;
-  // the fields at every stage of growth, with the odd prize crop among them
-  const VR=['golden','crystal','moonlit','rainbow','giant'];
-  for(const k in S.tiles){const t=S.tiles[k];if(!t.crop)continue;const r=R();t.crop.p=r<0.7?1:0.35+R()*0.6;if(t.crop.p>=1&&R()<0.16)t.crop.v=VR[Math.floor(R()*VR.length)];}
-  // a few extra touches: pots and birdhouses by the cottages, a gnome by the pond, a scarecrow keeping watch
-  const free=(x,z)=>landMap.get(K(x,z))==='grass'&&!objAt(x,z)&&!S.tiles[K(x,z)]&&!TOWN.path.has(K(x,z))&&!S.paths[K(x,z)]&&!fixedAt(x,z)&&!debrisAt(x,z);
-  let id=S.nextId||1;const put=(k,x,z,r=0)=>{if(!free(x,z))return false;S.objs.push({id:id++,k,x,z,r});return true;};
-  for(const [x,z] of ACORN.cottages){put('flowerpot',x-1,z+2);put('flowerpot',x+2,z+2);put('birdhouse',x+2,z-1);}
-  put('gnome',ACORN.home[0]-2,ACORN.home[1]+3);put('chime',ACORN.home[0]+2,ACORN.home[1]-1);
-  S.nextId=id;grantKits();}/* (the rest of boot draws it all) */
+  // a few of each new piece in storage, to try placing
+  for(const k of ['picnic','parasol','chair','lamppost','rug','brick','deck','picket','topiary','urn','arbor','hammock','swing','fountain','birdbath','sundial','stall','mailbox'])S.store[k]=(S.store[k]||0)+(BUILD[k].multi?6:2);}
+
+// lay the island out on the real land (after boot has built it and grown the wild)
+function layDream(){dreamProgress();const D=DREAM,R=mulberry(D.seed^0x7e1),occ=new Set();let id=S.nextId||1;
+  const k2=K,T0=(x,z)=>landMap.get(K(x,z)),grass=(x,z)=>T0(x,z)==='grass'&&islMap.get(K(x,z))===0,land=(x,z)=>grass(x,z)||T0(x,z)==='sand'&&islMap.get(K(x,z))===0;
+  const bld=[D.home,...D.civic.map(c=>[c[1],c[2]]),...D.cottages];const inBld=(x,z)=>bld.some(([bx,bz])=>x>=bx&&x<=bx+1&&z>=bz&&z<=bz+1);
+  for(const [x,z] of bld)for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++)occ.add(k2(x+dx,z+dz));occ.add(k2(...D.heart));occ.add(k2(...D.fire));
+  occ.add(k2(D.home[0]+2,D.home[1]+1));occ.add(k2(D.home[0]-1,D.home[1]+1));/* the crate/bin spots by the villa */
+  let hi=false;const obj=(k,x,z,r=0,onSand)=>{if(!(onSand?land(x,z):grass(x,z))||occ.has(k2(x,z))||!hi&&(lvlMap.get(k2(x,z))||0)>0)return false;S.objs.push({id:id++,k,x,z,r});occ.add(k2(x,z));return true;};
+  const pave=(k,x0,z0,x1,z1,r=0)=>{for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++)obj(k,x,z,r);};
+  const swap=(k,x,z,r=0)=>{const i=S.objs.findIndex(o=>o.x===x&&o.z===z);if(i>=0){S.objs.splice(i,1);occ.delete(k2(x,z));}return obj(k,x,z,r);}; // a piece standing on the paving
+  const EX=['rainbow','crystal','golden','moonlit','giant'];
+  const crop=(t,x,z,v)=>{if(!grass(x,z)||occ.has(k2(x,z)))return;S.tiles[k2(x,z)]={w:1,crop:{t,p:1,v:v||EX[Math.floor(R()*EX.length)],m:0}};occ.add(k2(x,z));};
+  const dirt=(x,z)=>{if(grass(x,z)&&!occ.has(k2(x,z))){S.paths[k2(x,z)]=PATH_WEAR;occ.add(k2(x,z));}};
+  const fenceRect=(k,x0,z0,x1,z1,gates=[])=>{const g=(x,z)=>gates.some(([a,b])=>a===x&&b===z);
+    for(let x=x0;x<=x1;x++)for(const z of [z0,z1])if(!g(x,z))obj(k,x,z,0);for(let z=z0+1;z<z1;z++)for(const x of [x0,x1])if(!g(x,z))obj(k,x,z,Math.PI/2);};
+  const lane=(a,b)=>{const p=landPath(a[0],a[1],b[0],b[1],{four:true,max:20000,block:(x,z)=>inBld(x,z)||occ.has(k2(x,z))&&!S.paths[k2(x,z)]&&!(x===b[0]&&z===b[1]),cost:(x,z)=>S.paths[k2(x,z)]?0.4:1});
+    if(p)for(const [x,z] of p)dirt(x,z);};
+  const [hx,hz]=D.home,[cx,cz]=D.heart;
+
+  // ---- the villa: a brick patio across the front and the walk down to the plaza; a hammock corner to the west
+  pave('brick',hx-4,hz+2,hx+3,hz+4);pave('brick',cx-1,hz+5,cx+1,cz-4);
+  swap('parasol',hx-4,hz+2);swap('picnic',hx-3,hz+3,0);swap('urn',hx-4,hz+4);swap('topiary',hx-2,hz+2);swap('topiary',hx+2,hz+2);
+  swap('urn',hx+3,hz+2);swap('chair',hx+3,hz+3,-Math.PI/2);swap('rug',hx+2,hz+4);swap('chair',hx+3,hz+4,-Math.PI/2);
+  obj('mailbox',cx+2,hz+5);obj('lamppost',cx-2,hz+5);obj('swing',hx-6,hz+3,Math.PI/2);
+  obj('hammock',hx-4,hz,0);obj('topiary',hx-6,hz);obj('topiary',hx-2,hz);obj('birdhouse',hx-3,hz-1);obj('flowerpot',hx-5,hz-1);obj('flowerpot',hx-1,hz-1);
+  // ---- the home garden between the villa and the river: beds of every flower in its rarest forms, behind a rose arbor
+  {const x0=hx+5,x1=hx+7,z0=hz-1,z1=hz+5;fenceRect('picket',x0-1,z0-1,x1+1,z1+1,[[x0+1,z1+1]]);obj('arbor',x0+1,z1+1,0);
+    const fl=['tulip','lavender','moonflower','sunflower'];
+    for(let z=z0;z<=z1;z++)for(let x=x0;x<=x1;x++){if(x===x0+1){obj(z===z0+2?'sundial':z===z1-1?'birdbath':'stonepath',x,z);continue;}crop(fl[(z<z0+3?0:2)+(x<x0+1?0:1)],x,z,EX[(x+z+8)&3]);}}
+  // ---- the plaza: brick round the Island Heart, wildflowers at its feet, benches facing it, lamps at the corners
+  for(let x=cx-3;x<=cx+3;x++)for(let z=cz-3;z<=cz+5;z++){if(Math.abs(x-cx)<=1&&Math.abs(z-cz)<=1){if(x!==cx||z!==cz)obj('flowers',x,z);continue;}obj('brick',x,z);}
+  for(const [dx,dz,r] of [[-3,-1,Math.PI/2],[-3,1,Math.PI/2],[3,-1,-Math.PI/2],[3,1,-Math.PI/2],[-1,3,Math.PI],[1,3,Math.PI]])swap('bench',cx+dx,cz+dz,r);
+  for(const [dx,dz] of [[-3,-3],[3,-3],[-3,3],[3,3]])swap('lamppost',cx+dx,cz+dz);
+  for(const [dx,dz] of [[-2,-3],[2,-3]])swap('urn',cx+dx,cz+dz);
+  // ---- Main Street: a brick road in front of the shop, café, museum and hall; planters and lamps between them
+  pave('brick',-26,10,cx+3,11);
+  for(const x of [-23,-19,-15]){obj('planter',x,9,0);obj('lamppost',x+1,9);obj('topiary',x,8);obj('topiary',x+1,8);}
+  obj('lamppost',-11,9);obj('planter',-11,8,Math.PI/2);obj('signpost',-27,10,Math.PI/2);
+  // the café's terrace at the west end of the street
+  obj('parasol',-27,8);obj('chair',-27,9,Math.PI*0.5);
+  // ---- Cottage Row: each cottage gets a picket-fenced front garden of rare flowers and a mailbox by its gate
+  const cfl=['tulip','sunflower','lavender','moonflower','tulip','lavender'];
+  D.cottages.forEach(([x,z],i)=>{obj('hedge',x-1,z-1);obj('hedge',x+2,z-1);if(i%2===0)obj('lamppost',x+3,z-1);else obj('topiary',x+3,z-1);
+    for(let gz=z+2;gz<=z+3;gz++){obj('stonepath',x,gz);crop(cfl[i],x-1,gz,EX[(i+gz)%4]);crop(cfl[i],x+1,gz,EX[(i+gz+1)%4]);crop(cfl[(i+2)%6],x+2,gz,EX[(i+gz+2)%4]);}
+    obj('picket',x-1,z+4);obj('stonepath',x,z+4);obj('mailbox',x+1,z+4);obj('picket',x+2,z+4);
+    obj(i%2?'birdbath':'flowerpot',x+2,z+1);obj('flowerpot',x-1,z+1);});
+  // ---- the orchard (fenced, in rows) and the tea garden on decking by the pond
+  {fenceRect('fence',-27,-9,-15,-1,[[-21,-1]]);const tr=['peach','starfruit','peach','dragonfruit'];
+    for(let z=-8;z<=-2;z+=2)for(let x=-26;x<=-16;x+=2)crop(tr[((z+8)/2)|0],x,z,EX[(x/2+z/2+40)%5|0]);
+    for(let z=-8;z<=-2;z++)obj('stonepath',-21,z);obj('beehive',-26,-7+6);obj('scarecrow',-16,-2);}
+  pave('deck',-24,2,-17,6);
+  for(const [x,z] of [[-23,3],[-19,3]]){swap('picnic',x,z,0);swap('parasol',x-1,z);}
+  swap('stall',-18,5,0);swap('rug',-22,5);swap('rug',-21,5);swap('chair',-24,6,0);swap('chair',-23,6,0);swap('lamppost',-17,2);swap('lamppost',-24,2);
+  for(const x of [-16,-15])for(const z of [2,6])obj('cattail',x,z);obj('cattail',-10,3);obj('cattail',-10,5);
+  // ---- the farm across the river: two fenced fields, a row per crop (each its own legendary form), paths between
+  const X0=10,X1=22,Z0=-3,Z1=13,MID=16;
+  {const veg=['turnip','radish','carrot','lettuce','onion','potato','cabbage','strawberry','wheat','peas','pepper','tomato','corn','eggplant','blueberry','pumpkin','watermelon','grape',
+      'sunflower','tulip','lavender','moonflower','strawberry','wheat','pumpkin','corn','watermelon','blueberry'];
+    fenceRect('fence',X0-1,Z0-1,X1+1,Z1+1,[[X0-1,4],[MID,Z1+1],[MID,Z0-1]]);obj('stonepath',X0-1,4);obj('stonepath',MID,Z1+1);obj('stonepath',MID,Z0-1);let row=0;
+    for(let z=Z0;z<=Z1;z++){const path=(z-Z0)%4===3;
+      for(let x=X0;x<=X1;x++){if(x===MID){obj('stonepath',x,z);continue;}if(!path)continue;
+        if(x===X0&&z===8||x===X1&&z===0)obj('scarecrow',x,z);else if((x-X0)%3===1)obj('sprinkler',x,z);else dirt(x,z);}
+      if(path)continue;for(const [a,b] of [[X0,MID-1],[MID+1,X1]]){const t=veg[row%veg.length],v=EX[row%EX.length];row++;for(let x=a;x<=b;x++)crop(t,x,z,v);}}
+    for(let z=Z0;z<=Z1;z+=3)obj('beehive',X1+3,z);
+    obj('stall',MID-2,Z1+2,0);obj('stall',MID+2,Z1+2,0);obj('lamppost',MID-1,Z1+2);obj('lamppost',MID+1,Z1+2);obj('haybale',MID+4,Z1+2);obj('haybale',MID-4,Z1+2);
+    if(obj('windmill',20,-8,Math.PI*0.2)){occ.add(k2(21,-8));occ.add(k2(20,-7));}for(const [x,z] of [[22,-7],[18,-7],[23,-9],[22,-10]])obj('haybale',x,z);
+    // the lake boardwalk: decking along the shore with chairs looking out over the water
+    pave('deck',11,-6,15,-5,Math.PI/2);swap('chair',12,-6,Math.PI);swap('chair',14,-6,Math.PI);swap('parasol',13,-5);obj('lamppost',10,-6);obj('lamppost',16,-6);dirt(16,-5);}
+  // ---- the beach: a lounge of parasols, chairs and rugs round the bonfire, palms along the top of the sand
+  {const [fx,fz]=D.fire;for(const [dx,dz,r] of [[-2,0,Math.PI/2],[2,0,-Math.PI/2],[0,-2,0]])obj('bench',fx+dx,fz+dz,r,true);
+    for(const [x,z] of [[fx-6,fz],[fx+6,fz]]){obj('parasol',x,z,0,true);obj('chair',x-1,z+1,0,true);obj('chair',x+1,z+1,0,true);obj('rug',x,z+1,0,true);}
+    for(let x=-24;x<=22;x+=5){for(let z=15;z<=22;z++)if(T0(x,z)==='sand'&&!occ.has(k2(x,z))&&T0(x,z-1)!=='sand'){obj('palm',x,z,R()*6,true);break;}}}
+  // ---- the lookout on the cliff top, over the river's source
+  {hi=true;let lx=-6,lz=-14;pave('deck',lx-1,lz,lx+1,lz+1);swap('chair',lx-1,lz+1,0);swap('chair',lx+1,lz+1,0);swap('parasol',lx,lz);obj('lamppost',lx+2,lz);obj('signpost',lx-2,lz+1,0);hi=false;}
+  // ---- lanes: the street to the river bridges and the farm gates, the dock up through Cottage Row, round the pond
+  lane([cx+4,11],[X0-2,4]);lane([cx+4,11],[MID,Z1+2]);lane([hx+6,hz+7],[cx+4,cz-2]);lane([-9,18],[DOCK.x,DOCK.z-1]);lane([MID,Z0-2],[MID,-5]);
+  S.nextId=id;
+  // ---- clear the wild off everything that's been made, and off the lowland meadows round the town and farm
+  const kept=(x,z)=>(lvlMap.get(k2(x,z))||0)>0||x>=24||z>=15&&x>=-2||x<=-27;
+  const near=(x,z)=>{for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)if(occ.has(k2(x+a,z+b))||inBld(x+a,z+b))return true;return false;};
+  S.debris=S.debris.filter(d=>!near(d.x,d.z)&&(kept(d.x,d.z)||d.k==='tree'&&R()<0.5&&d.x>-3&&d.x<9));
+  S.weeds=[];S.finds=S.finds.filter(f=>!near(f.x,f.z));
+  rebuildHome();}
+if(S.dreamNew){delete S.dreamNew;setTimeout(()=>toast('Welcome to <b>Driftseed Haven</b>, a dream island: every level, every page, and the whole island laid out by hand. Your own save is safe: open Settings and tap <b>Restore my save</b> to go back.','rare',ICON.star),1800);}
 /* =========================================================
    Main loop
    ========================================================= */
@@ -6344,7 +6574,8 @@ function frame(now){
   updatePops(dt);updateFires(dt,tt);updateJournal(dt,tt);updatePitch(dt);updateTrader(dt,tt);updateSeaGuide(dt,tt);updateToolFx(dt);
   // ripe crops twinkle now and then, so you can see what's ready
   for(const [k,{g,v,s}] of cropMeshes)if(s===3&&(!v||v==='normal')&&Math.random()<dt*0.12)sparkle(g.position.x,topY(Math.round(g.position.x),Math.round(g.position.z))+0.5,g.position.z,0xfffbe0);
-  for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
+  {let nr=0;for(const e of cropMeshes.values())if(e.s===3&&e.v&&e.v!=='normal')nr++;const pr=dt*1.6*Math.min(1,24/Math.max(1,nr)); // a field of rare crops glitters, but never more than a couple of dozen at once
+  for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<pr)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);}
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);
   for(const a of anims)a(tt,dt);
   {let t0=performance.now();const lap=k=>{const t=performance.now();FRAME_STAT[k]=(FRAME_STAT[k]||0)*0.9+(t-t0)*0.1;t0=t;};/* smoothed per-system timings, read by DS.perf() */
@@ -6430,6 +6661,9 @@ if(/[?&]debug\b/.test(location.search)){
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
       islands:islands.length,town:TOWN.name,buildings:TOWN.bld.filter(b=>!b.locked).map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
     hour:h=>{setHour(h);applyTime();},
+    map:(r=40)=>{const rows=[];for(let z=-r;z<=r;z++){let l='';for(let x=-r;x<=r;x++){const k=K(x,z),t=landMap.get(k),lv=lvlMap.get(k)||0,d=S.debris.find(q=>q.x===x&&q.z===z);
+      l+=t==='bridge'?'=':riverSurf.has(k)?'~':!t?' ':t==='sand'?'.':t==='bridge'?'=':x===DOCK.x&&z===DOCK.z?'D':d&&d.k==='tree'?'T':t!=='grass'?t[0]:lv?String(lv):islMap.get(k)===0?',':'?';}rows.push(String(z).padStart(4)+' '+l.replace(/\s+$/,''));}return rows.join('\n');},
+    cand:c=>{buildCandidate(c);return DS.map();},thumbs:(ks,sz=160)=>ks.map(k=>snapThumb(objGroup(k,ks.indexOf(k)+3,0.5),sz)),
     jr:()=>S.jr,loadDream:()=>setTimeout(loadDream,50),loadAcorn:()=>setTimeout(loadAcornfield,50),basics:()=>{const m=new Map();scene.children.forEach(o=>{if(o.isMesh&&o.material.type==='MeshBasicMaterial'&&o.visible){const k=(o.geometry.type||'')+':'+(o.geometry.attributes.position.count);m.set(k,(m.get(k)||0)+1);}});return[...m];},islMeshes:id=>{const out=[];islands[id].group.traverse(o=>{if(!(o.isMesh||o.isInstancedMesh))return;const g=o.geometry,t=(g.index?g.index.count:g.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);out.push([o.isInstancedMesh?'I'+o.count:'M',o.material.type,Math.round(t),o.visible?1:0,o.castShadow?1:0,o.userData.tag||'']);});return out;},tillPatch:(w,h,water)=>{const r=DS.freeRow(w);if(!r)return null;let n=0;for(let j=0;j<h;j++)for(let i=0;i<w;i++){const x=r[0]+i,z=r[1]+j;if(canTill(x,z)){S.tiles[K(x,z)]={w:water&&i<w/2?1:0,crop:null};n++;}}rebuildSoil();DS.tp(r[0]+w/2,r[1]-1.5);return[r,n];},fishRow:(list,dx,dz)=>{list.forEach((k,i)=>spawnShadowAt(vil.x+dx*(2+i*0)+(-dz)*(i-list.length/2)*1.3,vil.z+dz*(2.5)+dx*(i-list.length/2)*1.3,k,0));return shadows.length;},shadowInfo:()=>shadows.map(s=>[s.fish,+s.v.toFixed(2),+s.x.toFixed(2),+s.z.toFixed(2)]),trader:()=>({shown:trader.shown,come:trader.come,x:trader.x,z:trader.z,stock:traderStock().map(q=>stockInfo(q).name+' '+q.price)}),traderOpen:()=>{traderHello();openSheet('trader','buy');},crateOpen:()=>openSheet('bag','all','crate'),crate:()=>S.crate,campCheck:()=>{const {x,z}=S.homeAt,ts=campTiles(x,z);return{home:[x,z],heart:S.heartAt&&[S.heartAt.x,S.heartAt.z],clash:ts.filter(([a,b])=>debrisAt(a,b)).length,treesNear:S.debris.filter(d=>d.k==='tree'&&ts.some(([a,b])=>Math.abs(a-d.x)<=1&&Math.abs(b-d.z)<=1)).length,heartInCamp:!!S.heartAt&&ts.some(([a,b])=>Math.abs(a-S.heartAt.x)<=1&&Math.abs(b-S.heartAt.z)<=1)};},breakCamp:()=>{const {x,z}=S.homeAt;S.heartAt={x:x-1,z:z+2};S.debris.push({x:x+2,z:z+1,k:'tree',v:0,r:0,hp:5});save();},tideTurn:low=>tideTurn(low,low?curIsl():null,false),sleep:()=>sleep(),tideInfo:()=>({next:tideNext(),today:lowTimes(0),tmw:lowTimes(1)}),rays:()=>({k:rayK,on:rays.filter(r=>r.a>0.05).map(r=>[+r.x.toFixed(1),+r.z.toFixed(1),+r.a.toFixed(2)]),cam:[cam.tx,cam.tz]}),falls:()=>falls.map(f=>[+f.a.toFixed(2),f.hit]),fell:()=>{const d=S.debris.filter(q=>q.k==='tree').sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];d.hp=1;S.tool='axe';showHeld();villager.rotation.y=Math.atan2(d.x-vil.x,d.z-vil.z);swingTool(()=>hitDebris(d));return[d.x,d.z];},digHere:()=>{const x=Math.round(vil.x),z=Math.round(vil.z)-1;S.tool='shovel';showHeld();villager.rotation.y=Math.PI;swingTool(()=>{digStab(x,z,0.6);swingTool(()=>digStab(x,z,1));});return[x,z];},pitch:()=>pitch&&{t:pitch.t,sy:pitch.sy,step:pitch.step,end:pitch.end},gain:(k,n=1)=>gain(k,n),campfire:()=>campfire(),tent:()=>S.home&&S.home.tent,resting:()=>!!rest,
     tp:(x,z)=>{S.sea=false;vil.x=vil.tx=x;vil.z=vil.tz=z;vil.path=null;cam.tx=x;cam.tz=z;},
     visit:id=>{const i=islands[id];S.disc[id]=1;const sp=(i.spots&&i.spots[1])||i.grass[0];DS.tp(sp[0]+0.6,sp[1]+0.6);},

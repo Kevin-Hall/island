@@ -6,7 +6,9 @@ const RECIPES=[
   {out:['b','hedge',2],in:{'m:fiber':4,'m:wood':1},lvl:2},{out:['b','chime',1],in:{'g:shell':3,'m:fiber':2,'m:wood':1},lvl:2},{out:['b','scarecrow',1],in:{'m:wood':3,'m:fiber':4},lvl:2},
   {out:['b','lantern',1],in:{'m:stone':3,'m:wood':2,'b:firefly':1},lvl:2},{out:['b','gnome',1],in:{'m:stone':5,'m:fiber':1},lvl:3},
   {out:['b','sprinkler',1],in:{'m:stone':4,'m:wood':2,'g:glass':1},lvl:3},{out:['b','planter',1],in:{'m:wood':3,'c:tulip':2},lvl:4},
-  {out:['b','well',1],in:{'m:stone':8,'m:wood':4},lvl:4},{out:['b','beehive',1],in:{'m:wood':6,'p:honeyclover':2},lvl:4}];
+  {out:['b','well',1],in:{'m:stone':8,'m:wood':4},lvl:4},{out:['b','beehive',1],in:{'m:wood':6,'p:honeyclover':2},lvl:4},
+  {out:['b','picket',4],in:{'m:wood':2,'m:fiber':1},lvl:1},{out:['b','deck',4],in:{'m:wood':4},lvl:2},{out:['b','brick',4],in:{'m:stone':4},lvl:2},
+  {out:['b','chair',1],in:{'m:wood':4},lvl:2},{out:['b','topiary',1],in:{'m:fiber':4,'m:wood':1,'m:stone':2},lvl:3},{out:['b','urn',1],in:{'m:stone':5,'m:fiber':2},lvl:3}];
 function haveOf(k){if(k.startsWith('c:')){const id=k.slice(2);let n=0;for(const q in S.inv)if(q.split('|')[0]===id)n+=S.inv[q];return n;}return S.inv[k]||0;}
 function takeOf(k,n){if(k.startsWith('c:')){const id=k.slice(2);const ks=Object.keys(S.inv).filter(q=>q.split('|')[0]===id).sort((a,b)=>priceOf(a)-priceOf(b));for(const q of ks){const t=Math.min(n,S.inv[q]);S.inv[q]-=t;n-=t;if(!S.inv[q])delete S.inv[q];if(!n)break;}return;}
   S.inv[k]-=n;if(!S.inv[k])delete S.inv[k];}

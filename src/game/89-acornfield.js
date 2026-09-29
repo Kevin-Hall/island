@@ -97,27 +97,4 @@ function layAcornfield(){const occ=new Set(),K2=(x,z)=>K(x,z),grass=(x,z)=>landM
     if(!kd)continue;const d=newDebris(x,z,kd);d.r=R()*6.28;
     if(kd==='tree'){d.v=(z<-24||lv)&&R()<0.62||R()<0.14?1:[0,2,3][Math.floor(R()*3)];d.sc=0.85+R()*0.3;}else d.v=Math.floor(R()*3);S.debris.push(d);}
   rebuildHome();}
-if(S.acornNew&&S.dreamNew){delete S.acornNew;delete S.dreamNew;setTimeout(()=>toast('Welcome to your <b>Dream Island</b>: everything unlocked and every page filled. "Restore my save" in Settings brings your own island back.','rare',ICON.star),1800);}
-else if(S.acornNew){delete S.acornNew;setTimeout(()=>toast('Welcome to <b>Acornfield</b>: the village square, Cottage Lane, the farm, the flower gardens, the harbour and the north woods. Your own save is kept safe: open Settings and tap <b>Restore my save</b> to go back.','rare',ICON.sprout),1600);}
-
-/* ---- Dev: the Dream Island. Acornfield as a player who has put in the hours would have it: every level, the whole
-   Islandex and museum, every island charted and restored, the best rod and can, a fat purse, and rare harvests
-   (golden, crystal, moonlit, rainbow) growing through the fields and gardens. Temporary like Acornfield: your save is
-   backed up first and "Restore my save" brings it back. ---- */
-function loadDream(){S.dreamLay=1;S.dreamNew=1;loadAcornfield();}
-function layDream(){const R=mulberry(777);
-  S.xp=Math.max(S.xp,LV[LV.length-1]);S.shells=Math.max(S.shells,250000);S.earned=Math.max(S.earned||0,1500000);S.harvested=Math.max(S.harvested||0,5200);S.day=Math.max(S.day,140);
-  S.rod=RODS.length-1;S.can=CANS.length-1;S.house=3;S.metMarlo=1;S.tipFish=1;S.boat=null;
-  for(const isl of islands)if(!isl.home){S.disc[isl.id]=1;S.restore[isl.id]=RESTORE_N;}
-  for(const [,,pre,tab] of DEX_CATS)for(const k in tab)S.alm[pre+k]=Math.max(S.alm[pre+k]||0,1);
-  for(const id of CROP_IDS){for(const v of VARIANTS)S.alm[id+'|'+v.id]=1;S.almR[id]=1;}
-  for(const k of ['m:wood','m:stone','m:fiber'])S.inv[k]=(S.inv[k]||0)+60;
-  // the fields at every stage of growth, with the odd prize crop among them
-  const VR=['golden','crystal','moonlit','rainbow','giant'];
-  for(const k in S.tiles){const t=S.tiles[k];if(!t.crop)continue;const r=R();t.crop.p=r<0.7?1:0.35+R()*0.6;if(t.crop.p>=1&&R()<0.16)t.crop.v=VR[Math.floor(R()*VR.length)];}
-  // a few extra touches: pots and birdhouses by the cottages, a gnome by the pond, a scarecrow keeping watch
-  const free=(x,z)=>landMap.get(K(x,z))==='grass'&&!objAt(x,z)&&!S.tiles[K(x,z)]&&!TOWN.path.has(K(x,z))&&!S.paths[K(x,z)]&&!fixedAt(x,z)&&!debrisAt(x,z);
-  let id=S.nextId||1;const put=(k,x,z,r=0)=>{if(!free(x,z))return false;S.objs.push({id:id++,k,x,z,r});return true;};
-  for(const [x,z] of ACORN.cottages){put('flowerpot',x-1,z+2);put('flowerpot',x+2,z+2);put('birdhouse',x+2,z-1);}
-  put('gnome',ACORN.home[0]-2,ACORN.home[1]+3);put('chime',ACORN.home[0]+2,ACORN.home[1]-1);
-  S.nextId=id;grantKits();}/* (the rest of boot draws it all) */
+if(S.acornNew){delete S.acornNew;setTimeout(()=>toast('Welcome to <b>Acornfield</b>: the village square, Cottage Lane, the farm, the flower gardens, the harbour and the north woods. Your own save is kept safe: open Settings and tap <b>Restore my save</b> to go back.','rare',ICON.sprout),1600);}

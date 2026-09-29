@@ -36,7 +36,8 @@ function frame(now){
   updatePops(dt);updateFires(dt,tt);updateJournal(dt,tt);updatePitch(dt);updateTrader(dt,tt);updateSeaGuide(dt,tt);updateToolFx(dt);
   // ripe crops twinkle now and then, so you can see what's ready
   for(const [k,{g,v,s}] of cropMeshes)if(s===3&&(!v||v==='normal')&&Math.random()<dt*0.12)sparkle(g.position.x,topY(Math.round(g.position.x),Math.round(g.position.z))+0.5,g.position.z,0xfffbe0);
-  for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
+  {let nr=0;for(const e of cropMeshes.values())if(e.s===3&&e.v&&e.v!=='normal')nr++;const pr=dt*1.6*Math.min(1,24/Math.max(1,nr)); // a field of rare crops glitters, but never more than a couple of dozen at once
+  for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<pr)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);}
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);
   for(const a of anims)a(tt,dt);
   {let t0=performance.now();const lap=k=>{const t=performance.now();FRAME_STAT[k]=(FRAME_STAT[k]||0)*0.9+(t-t0)*0.1;t0=t;};/* smoothed per-system timings, read by DS.perf() */
