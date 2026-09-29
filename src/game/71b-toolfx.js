@@ -40,4 +40,19 @@ function updateFalls(dt){for(let i=falls.length-1;i>=0;i--){const f=falls[i];f.t
   f.g.rotation.x=f.a;
   if(f.hit===2&&f.t-f.gone>1.3){const u=(f.t-f.gone-1.3)/0.45;f.m.scale.setScalar(f.sc*Math.max(0.001,1-u));
     if(u>=1){const y=topY(f.x,f.z);for(let k=1;k<=4;k++){const r=k*0.5*f.sc;burst(f.x+Math.sin(f.hd)*r,y+0.3,f.z+Math.cos(f.hd)*r,0xf6eedb,6,1,0.07,2);}scene.remove(f.g);falls.splice(i,1);}}}}
-function updateToolFx(dt){updateHoles(dt);if(falls.length)updateFalls(dt);}
+function updateToolFx(dt){updateHoles(dt);updateTills(dt);if(falls.length)updateFalls(dt);}
+
+// tilling: the blade bites in, grass tufts and clods of earth fly up and tumble back, a puff of dust, and the new soil
+// swells up out of the grass with its furrows
+const tills=[];
+function tillFx(x,z){const y=topY(x,z),a0=Math.atan2(vil.x-x,vil.z-z);
+  for(let i=0;i<9;i++){const a=a0+(Math.random()-0.5)*1.8,sp=0.6+Math.random()*1.2;emit(x+(Math.random()-0.5)*0.5,y+0.08,z+(Math.random()-0.5)*0.5,{vx:Math.sin(a)*sp,vy:1.4+Math.random()*1.6,vz:Math.cos(a)*sp,life:0.9,max:0.9,size:0.06+Math.random()*0.05,color:pickR([0x6a4a30,0x8a6440,0x5a3c26]),g:7});}
+  for(let i=0;i<7;i++){const a=Math.random()*6.28;emit(x+(Math.random()-0.5)*0.6,y+0.1,z+(Math.random()-0.5)*0.6,{vx:Math.cos(a)*0.7,vy:1.2+Math.random(),vz:Math.sin(a)*0.7,life:1.1,max:1.1,size:0.05,color:pickR([0x6ab84a,0x8ad05a,0x4a9a3a]),g:4,spin:1});}
+  for(let i=0;i<6;i++){const a=i/6*6.28;emit(x+Math.cos(a)*0.3,y+0.06,z+Math.sin(a)*0.3,{vx:Math.cos(a)*0.5,vy:0.25,vz:Math.sin(a)*0.5,life:0.8,max:0.8,size:0.12,color:0xc8b08a,g:0.2});}
+  vil.hop=Math.max(vil.hop,0.1);const k=K(x,z);tills.push({k,t:0});}
+// fresh soil rises from flat to its full height, overshooting a touch, in the soil batch (45-crops)
+function updateTills(dt){if(!tills.length||!soilIM)return;let ch=false;const keys=Object.keys(S.tiles);
+  for(let i=tills.length-1;i>=0;i--){const q=tills[i];q.t+=dt;const j=keys.indexOf(q.k);if(j<0){tills.splice(i,1);continue;}
+    const u=Math.min(1,q.t/0.45),s=u<1?Math.max(0.05,Math.sin(u*Math.PI*0.72)/Math.sin(Math.PI*0.72)*(1+0.25*Math.sin(u*Math.PI))):1;
+    soilIM.getMatrixAt(j,_m);_m.decompose(_v,_q,_s);_s.y=s;_m.compose(_v,_q,_s);soilIM.setMatrixAt(j,_m);ch=true;if(u>=1)tills.splice(i,1);}
+  if(ch)soilIM.instanceMatrix.needsUpdate=true;}

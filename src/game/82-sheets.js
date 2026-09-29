@@ -113,7 +113,10 @@ function renderSheet(){
       h+='</div>';}}
   else if(sheet.kind==='chart'){$('sheetTitle').textContent='Sea Chart';tabs([]);
     const disc=islands.filter(i=>S.disc[i.id]);
-    h+=`<canvas id="chart" width="320" height="320"></canvas><p class="note">Tap an island you've found to travel there instantly. To discover new ones, sail out and tap the sea. Question marks are rumours of islands you haven't found yet.</p><div class="isles">`;
+    h+=`<canvas id="chart" width="320" height="320"></canvas><p class="note">Tap an island you've found to travel there instantly. To discover new ones, sail out and tap the sea. Question marks are rumours of islands you haven't found yet: set sail for one and the markers at the edge of the screen will guide you.</p><div class="isles">`;
+    {const und=islands.filter(i=>!S.disc[i.id]).sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z)).slice(0,3),dirs=['north','north-east','east','south-east','south','south-west','west','north-west'];
+      for(const i of und){const d=Math.round(Math.hypot(i.cx-vil.x,i.cz-vil.z)),a=Math.atan2(i.cx-vil.x,-(i.cz-vil.z)),dir=dirs[((Math.round(a/(Math.PI/4))%8)+8)%8];
+        h+=`<button class="card rumour" data-rumour="${i.id}"><img class="px" src="${ICON.chart}" alt=""><span class="grow"><span class="nm">Uncharted island</span><br><span class="sub">A rumour · about ${Math.round(d/10)*10} leagues ${dir}</span></span><span class="price">${unlocked('boat')?'Set sail':'Lv 4'}</span></button>`;}}
     for(const isl of disc){const d=Math.round(Math.hypot(isl.cx-vil.x,isl.cz-vil.z));const bio=isl.biome;
       let got=0,tot=0;if(!isl.home){for(const k in PLANTS)if(PLANTS[k].bio.includes(bio)){tot++;if(S.alm['p:'+k])got++;}for(const k in BUGS)if(BUGS[k].bio.includes(bio)){tot++;if(S.alm['b:'+k])got++;}}
       h+=`<button class="card" data-isle="${isl.id}"><img class="px" src="${isl.home?ICON.sprout:ICON.chart}" alt=""><span class="grow"><span class="nm">${isl.name}</span><br><span class="sub">${isl.home?'Your island':BIOMES[bio].name+' island'} · ${d<4?'you are here':d+' leagues away'}${tot?` · ${got}/${tot} local plants & bugs`:''}</span></span></button>`;}
@@ -149,7 +152,7 @@ function renderSheet(){
 }
 function drawChart(){const cv=$('chart');if(!cv)return;const g=cv.getContext('2d'),N=320;g.imageSmoothingEnabled=false;
   const disc=islands.filter(i=>S.disc[i.id]);let E=40;for(const i of disc)E=Math.max(E,Math.hypot(i.cx,i.cz)+14);E=Math.max(E,Math.hypot(vil.x,vil.z)+14);
-  const und=islands.filter(i=>!S.disc[i.id]).sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z)).slice(0,2);
+  const und=islands.filter(i=>!S.disc[i.id]).sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z)).slice(0,3);
   for(const i of und)E=Math.max(E,Math.hypot(i.cx,i.cz)+14);
   const sc=(N/2-10)/E;const X=x=>N/2+x*sc,Y=z=>N/2+z*sc;
   g.fillStyle='#3565cc';g.fillRect(0,0,N,N);g.fillStyle='rgba(255,255,255,.12)';for(let x=0;x<N;x+=20)for(let y=0;y<N;y+=20)g.fillRect(x,y,2,2);
@@ -189,6 +192,7 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.buy){const k=d.buy;if(S.store[k]){startPlace(k,true);return;}if(S.shells<BUILD[k].cost){toast(`${BUILD[k].name} costs ${fmt(BUILD[k].cost)} shells.`);SFX.no();return;}startPlace(k,false);return;}
   if(d.edit){S.mode='edit';closeSheet();toast('Edit mode: tap decor to move or store it, tap empty soil to clear it.','',ICON.hammer);return;}
   if(d.isle){chartGo(islands[Number(d.isle)]);return;}
+  if(d.rumour){if(!unlocked('boat')){say('You need your boat for that (Island Heart level 4).');return;}closeSheet();sailToIsland(islands[Number(d.rumour)]);return;}
   if(d.deliver!==undefined){deliver(Number(d.deliver));renderSheet();updateHUD();return;}
   if(d.rod){const R=RODS[S.rod+1];if(!R||S.shells<R.cost)return;S.shells-=R.cost;S.rod++;setRod();SFX.level();toast(`You got the ${R.name}!`,'rare',ICON.rod);renderSheet();return;}
   if(d.can){const R=CANS[S.can+1];if(!R||S.shells<R.cost)return;S.shells-=R.cost;S.can++;SFX.level();toast(`You got the ${R.name}! It waters a 3×3 patch.`,'rare',ICON.can);renderSheet();return;}

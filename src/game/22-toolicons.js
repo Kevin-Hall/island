@@ -14,6 +14,10 @@ function tilted(fn){return paintIcon((g,N)=>{g.translate(N/2,N/2);g.rotate(Math.
 function shine(g,x0,y0,x1,y1,w=3){g.strokeStyle='rgba(255,255,255,.75)';g.lineWidth=w;g.beginPath();g.moveTo(x0,y0);g.lineTo(x1,y1);g.stroke();}
 
 const TOOL_ICONS={
+  hoe:tilted(g=>{
+    part(g,rrect(-4.5,-30,9,76,4),WOOD(g),WOOD_E);part(g,rrect(-7,-40,14,12,3),lgrad(g,-7,0,7,0,[[0,'#8a94a4'],[1,'#4a5262']]),STEEL_E);
+    const b=new Path2D();b.moveTo(-7,-44);b.lineTo(-30,-44);b.quadraticCurveTo(-34,-38,-30,-30);b.lineTo(-7,-32);b.closePath();part(g,b,STEEL(g,-32,-7),STEEL_E);
+    g.strokeStyle='#ffffff';g.lineWidth=3;g.beginPath();g.moveTo(-28,-41);g.lineTo(-11,-41);g.stroke();shine(g,-2,-24,-2,38,2);}),
   shovel:tilted(g=>{
     part(g,rrect(-13,-45,26,9,4),WOOD(g),WOOD_E);part(g,rrect(-4.5,-40,9,56,3),WOOD(g),WOOD_E);
     part(g,rrect(-7,10,14,10,2),lgrad(g,-7,0,7,0,[[0,'#8a94a4'],[1,'#4a5262']]),STEEL_E);

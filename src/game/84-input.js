@@ -54,13 +54,13 @@ const ptrs=new Map();let drag=null,pinch=null,paint=null,holdT=null;
 function paintMode(x,z){if(!onHome(x,z))return null;const tool=S.tool,d=debrisAt(x,z);
   if(d)return !DEBRIS_TOOL[d.k]||DEBRIS_TOOL[d.k]===tool?'clear':null;
   if(fixedAt(x,z)||objAt(x,z))return null;const t=S.tiles[K(x,z)];
-  switch(tool){case'shovel':return canTill(x,z)?'till':null;case'can':return t?'water':null;case'seeds':return t&&!t.crop?'plant':null;
+  switch(tool){case'hoe':case'shovel':return canTill(x,z)?'till':null;case'can':return t?'water':null;case'seeds':return t&&!t.crop?'plant':null;
     case'hand':return t&&t.crop?(t.crop.p>=1?'harvest':'tend'):null;}
   return null;}
 const PAINT_LBL={till:'Tilling',plant:'Planting',water:'Watering',harvest:'Harvesting',tend:'Tending',clear:'Clearing'};
 function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!onHome(x,z))return;paint.done.add(k);const t=S.tiles[k];let did=false;
   switch(paint.mode){
-    case'till':if(canTill(x,z)){S.tiles[k]={w:S.rain?1:0,crop:null};burst(x,0.6,z,0x8a5a3a,6,1.1,0.06);SFX.till();paint.soil=did=true;}break;
+    case'till':if(canTill(x,z)){S.tiles[k]={w:S.rain?1:0,crop:null};tillFx(x,z);SFX.till();paint.soil=did=true;}break;
     case'plant':if(t&&!t.crop){const sh=S.shells,fr=S.free[S.seed];plant(k,x,z);did=!!t.crop;if(!did)paint.stop=true;}break;
     case'water':if(t&&!t.w){t.w=1;for(let i=0;i<5;i++)emit(x+(Math.random()-0.5)*0.5,1.2,z+(Math.random()-0.5)*0.5,{vy:-1,life:0.5,max:0.5,size:0.06,color:0x8ac4ff,g:6});if(paint.n%3===0)SFX.water();paint.soil=did=true;}break;
     case'harvest':if(t&&t.crop&&t.crop.p>=1){harvest(k,x,z);did=true;}break;

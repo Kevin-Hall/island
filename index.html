@@ -437,6 +437,20 @@ body.titling .say,body.cine .say{display:none}
 .morning .mc .tab{width:70px;height:14px;margin-left:-35px;background:rgba(70,45,10,.28)}
 .jrcard .fn-list u{right:auto;left:52%}
 .jrcard .fn-list li.done .r{opacity:.5}
+/* ---------- sea markers ---------- */
+#seamarks{position:fixed;inset:0;z-index:4;pointer-events:none}
+.smark{position:absolute;left:0;top:0;pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:0;background:rgba(255,252,242,.94);color:var(--ink);border-radius:12px;padding:4px 10px 5px;
+  box-shadow:0 2px 0 rgba(107,79,47,.18),0 6px 14px rgba(20,40,80,.2);font:700 13px/1.1 'Fredoka',sans-serif;white-space:nowrap}
+.smark b{font-weight:700}.smark small{font-size:11px;font-weight:600;color:var(--ink2)}
+.smark i{position:absolute;width:0;height:0;border:7px solid transparent;border-left:11px solid #fff;left:50%;top:50%;margin:-7px 0 0 -5px;transform-origin:5px 7px;pointer-events:none;opacity:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+.smark.edge i{opacity:1;translate:0 0}
+.smark.edge{padding-right:12px}
+.smark.unk{background:#fff3c4;color:#8a5a10;box-shadow:0 0 0 2px #f0c040,0 6px 14px rgba(20,40,80,.2)}
+.smark.unk b{font-size:15px;letter-spacing:.1em}
+/* eight tools and the menu fit a phone */
+.bar{max-width:calc(100vw - 12px);box-sizing:border-box}
+@media (max-width:430px){.tools{gap:3px}.tool{width:36px;height:42px;border-radius:12px}.tool img{width:27px;height:27px}.bar{gap:5px;padding:5px 6px}}
+@media (max-width:374px){.tools{gap:2px}.tool{width:32px}.tool img{width:24px;height:24px}}
 </style>
 </head>
 <body>
@@ -451,6 +465,7 @@ body.titling .say,body.cine .say{display:none}
     <button class="jrchip" id="jrChip" hidden aria-label="Today's journal"></button></div>
 </div>
 <div id="toasts"></div>
+<div id="seamarks" hidden></div>
 <div id="ctx" class="ctx"></div>
 <div id="actionBar" class="actionbar" hidden><div class="tag" id="abTag"></div><div class="msg" id="abMsg"></div><div class="row" id="abRow"></div></div>
 
@@ -1103,6 +1118,10 @@ function tilted(fn){return paintIcon((g,N)=>{g.translate(N/2,N/2);g.rotate(Math.
 function shine(g,x0,y0,x1,y1,w=3){g.strokeStyle='rgba(255,255,255,.75)';g.lineWidth=w;g.beginPath();g.moveTo(x0,y0);g.lineTo(x1,y1);g.stroke();}
 
 const TOOL_ICONS={
+  hoe:tilted(g=>{
+    part(g,rrect(-4.5,-30,9,76,4),WOOD(g),WOOD_E);part(g,rrect(-7,-40,14,12,3),lgrad(g,-7,0,7,0,[[0,'#8a94a4'],[1,'#4a5262']]),STEEL_E);
+    const b=new Path2D();b.moveTo(-7,-44);b.lineTo(-30,-44);b.quadraticCurveTo(-34,-38,-30,-30);b.lineTo(-7,-32);b.closePath();part(g,b,STEEL(g,-32,-7),STEEL_E);
+    g.strokeStyle='#ffffff';g.lineWidth=3;g.beginPath();g.moveTo(-28,-41);g.lineTo(-11,-41);g.stroke();shine(g,-2,-24,-2,38,2);}),
   shovel:tilted(g=>{
     part(g,rrect(-13,-45,26,9,4),WOOD(g),WOOD_E);part(g,rrect(-4.5,-40,9,56,3),WOOD(g),WOOD_E);
     part(g,rrect(-7,10,14,10,2),lgrad(g,-7,0,7,0,[[0,'#8a94a4'],[1,'#4a5262']]),STEEL_E);
@@ -2056,7 +2075,8 @@ function bioLabel(b){return b==='any'?'anywhere':b==='home'?'your island':b==='w
 /* =========================================================
    Soil (tilled tiles)
    ========================================================= */
-const SOIL_GEO=merge([P(BOX,0xd8d8d8,0,0,0,0,0,0,0.9,0.06,0.9),P(BOX,0xffffff,0,0.04,-0.26,0,0,0,0.8,0.05,0.13),P(BOX,0xffffff,0,0.04,0,0,0,0,0.8,0.05,0.13),P(BOX,0xffffff,0,0.04,0.26,0,0,0,0.8,0.05,0.13)]);
+const SOIL_GEO=merge([P(BOX,0xd8d8d8,0,0,0,0,0,0,0.9,0.06,0.9),P(BOX,0xffffff,0,0.04,-0.26,0,0,0,0.8,0.05,0.13),P(BOX,0xffffff,0,0.04,0,0,0,0,0.8,0.05,0.13),P(BOX,0xffffff,0,0.04,0.26,0,0,0,0.8,0.05,0.13),
+  ...[[-0.28,-0.13],[0.1,-0.14],[0.3,0.13],[-0.12,0.14],[0.22,-0.38],[-0.33,0.37],[0.02,0.39]].map(([x,z],i)=>P(SPH_XS,i%2?0xc8c8c8:0xe8e8e8,x,0.05,z,0,i,0,0.09,0.05,0.08))]);/* the furrows, and clods between them */
 let soilIM=null;
 function rebuildSoil(){
   if(soilIM){scene.remove(soilIM);soilIM.dispose();}
@@ -3710,7 +3730,8 @@ function sell(key,n){const have=S.inv[key]||0;n=Math.min(n,have);if(!n)return 0;
    ========================================================= */
 const TOOLS=[
   {k:'hand',  name:'Hands',        tip:'Walk, pick up, harvest, tend crops and shake trees'},
-  {k:'shovel',name:'Shovel',       tip:'Dig grass into soil, fill soil back in and break rocks'},
+  {k:'hoe',   name:'Hoe',          tip:'Till grass into soil for planting'},
+  {k:'shovel',name:'Shovel',       tip:'Dig up glinting spots, break rocks, fill soil back in'},
   {k:'can',   name:'Watering Can', tip:'Water your soil'},
   {k:'seeds', name:'Seeds',        tip:'Plant in dug soil (tap again to choose a seed)'},
   {k:'axe',   name:'Axe',          tip:'Chop trees, stumps, bushes and twigs for wood'},
@@ -3733,19 +3754,21 @@ let hintAt=0;function toolHint(msg,k){const now=performance.now();if(now-hintAt<
 
 /* ---- the tool in the villager's hand (models point along +y from the grip; +z is forward) ---- */
 const HELD_PARTS={
+  hoe:[P(CYL6,0x9a6a3a,0,0.26,0,0,0,0,0.035,0.58,0.035),P(BOX,0x6a6e78,0,0.54,0.05,0,0,0,0.04,0.05,0.1),P(BOX,0xb8bcc8,0,0.5,0.13,0.25,0,0,0.15,0.1,0.025),P(BOX,0xe0e4ec,0,0.455,0.14,0.25,0,0,0.15,0.015,0.028)],
   shovel:[P(CYL6,0x9a6a3a,0,0.2,0,0,0,0,0.035,0.44,0.035),P(BOX,0x6a4a2a,0,0.0,0,0,0,0,0.1,0.03,0.03),P(BOX,0xb8bcc8,0,0.48,0,0,0,0,0.13,0.16,0.025),P(BOX,0x9a9ea8,0,0.4,0,0,0,0,0.13,0.02,0.03)],
   axe:[P(CYL6,0x9a6a3a,0,0.18,0,0,0,0,0.035,0.4,0.035),P(BOX,0x8e929c,0,0.34,0.06,0,0,0,0.035,0.11,0.13),P(BOX,0xd8dce4,0,0.34,0.13,0,0,0,0.037,0.12,0.025)],
   can:[P(CYL12,0xe0883a,0,0.02,0.1,0,0,0,0.17,0.15,0.15),P(CYL12,0xb8662a,0,0.1,0.1,0,0,0,0.12,0.02,0.1),P(CYL6,0xe0883a,0,0.06,0.23,1.0,0,0,0.03,0.18,0.03),P(BOX,0xb8662a,0,0.13,0.07,0,0,0,0.03,0.08,0.1)],
   seeds:[P(ICO2,0xd8b078,0,0.0,0.06,0,0,0,0.12,0.14,0.11),P(BOX,0x8a5a3a,0,0.07,0.06,0,0,0,0.07,0.02,0.07)],
   net:[P(CYL6,0x9a6a3a,0,0.26,0,0,0,0,0.03,0.56,0.03),P(CYL12,0x8a6a44,0,0.62,0,1.57,0,0,0.26,0.02,0.26),P(CYL12,0xf4f4ee,0,0.62,0.005,1.57,0,0,0.22,0.02,0.22)],
   rod:[P(CYL6,0x9a7a4a,0,0.45,0,0,0,0,0.025,0.95,0.025),P(CYL12,0x5a5a6a,0,0.08,0.03,0,0,1.57,0.06,0.03,0.06)]};
-const HELD_TILT={shovel:0.55,axe:0.35,can:0.1,seeds:0,net:0.45,rod:0.85};
+const HELD_TILT={hoe:0.5,shovel:0.55,axe:0.35,can:0.1,seeds:0,net:0.45,rod:0.85};
 const toolHold=new T.Group();toolHold.position.set(0.3,0.22,0.08);toolHold.scale.setScalar(1.35);villager.add(toolHold);
 const heldMesh={};for(const k in HELD_PARTS){const m=M(HELD_PARTS[k]);m.castShadow=true;m.visible=false;toolHold.add(m);heldMesh[k]=m;}
 function showHeld(){for(const k in heldMesh)heldMesh[k].visible=S.tool===k;}
 // every use of a tool is a little performance: a wind-up, the strike (the moment its effect happens, `hit`), and a
 // follow-through. Keys are [u, tool pitch, tool roll, tool lift, body lean]; the body leans back to wind up and into the blow.
 const TOOL_ANIM={
+  hoe:{d:0.52,hit:0.5,k:[[0,0,0,0,0],[0.38,-1.8,0,0.1,-0.24],[0.5,1.25,0,-0.08,0.4],[0.68,1.05,0,-0.1,0.36],[0.86,0.5,0,-0.04,0.12],[1,0,0,0,0]]},/* up over the head, down hard, drag it back through the earth */
   shovel:{d:0.5,hit:0.42,k:[[0,0,0,0,0],[0.3,-0.9,0,0.06,-0.16],[0.42,1.05,0,-0.1,0.38],[0.62,1.0,0,-0.12,0.34],[0.8,-0.35,0.25,0,-0.12],[1,0,0,0,0]]},/* stab in, then lever the dirt out */
   axe:{d:0.5,hit:0.56,k:[[0,0,0,0,0],[0.45,-1.9,0.3,0.08,-0.22],[0.56,0.9,0,-0.04,0.34],[0.7,0.8,0,-0.04,0.3],[1,0,0,0,0]]},/* a slow wind-up over the shoulder, a fast chop */
   net:{d:0.38,hit:0.5,k:[[0,0,0,0,0],[0.25,-0.4,-1.2,0.05,-0.08],[0.55,0.95,1.1,-0.05,0.28],[0.75,0.8,1.2,-0.05,0.22],[1,0,0,0,0]]},/* a big sideways swoop */
@@ -3791,10 +3814,11 @@ function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
     if(t.crop){autoTool('hand');actAt(x,z,()=>tendAt(x,z));return;}
     if(!t.crop){autoTool('seeds');actAt(x,z,()=>plant(k,x,z));return;}}
   switch(tool){
-    case'shovel':if(canTill(x,z)){actAt(x,z,()=>tillAt(x,z));return;}if(t&&!t.crop){actAt(x,z,()=>fillAt(x,z));return;}
+    case'hoe':if(canTill(x,z)){actAt(x,z,()=>tillAt(x,z));return;}if(t)toolHint(t.crop?'Something is growing there.':'That soil is already tilled.');else if(TOWN.path.has(k))toolHint('Better not till the path!');break;
+    case'shovel':if(t&&!t.crop){actAt(x,z,()=>fillAt(x,z));return;}if(canTill(x,z)){autoTool('hoe');actAt(x,z,()=>tillAt(x,z));return;}
       if(t)toolHint('Something is growing there.');else if(TOWN.path.has(k))toolHint('Better not dig up the town path!');break;
     case'can':actAt(x,z,()=>waterAt(x,z));return;
-    case'seeds':if(t&&!t.crop){actAt(x,z,()=>plant(k,x,z));return;}if(!t&&landMap.get(k)==='grass')toolHint('Dig the ground with the <b>shovel</b> first.','shovel');break;
+    case'seeds':if(t&&!t.crop){actAt(x,z,()=>plant(k,x,z));return;}if(!t&&landMap.get(k)==='grass')toolHint('Till the ground with the <b>hoe</b> first.','hoe');break;
     case'hand':if(t&&t.crop){actAt(x,z,()=>tendAt(x,z));return;}break;
     case'axe':case'net':actAt(x,z,()=>{});return;}
   goTo(x,z);}
@@ -3845,7 +3869,22 @@ function updateFalls(dt){for(let i=falls.length-1;i>=0;i--){const f=falls[i];f.t
   f.g.rotation.x=f.a;
   if(f.hit===2&&f.t-f.gone>1.3){const u=(f.t-f.gone-1.3)/0.45;f.m.scale.setScalar(f.sc*Math.max(0.001,1-u));
     if(u>=1){const y=topY(f.x,f.z);for(let k=1;k<=4;k++){const r=k*0.5*f.sc;burst(f.x+Math.sin(f.hd)*r,y+0.3,f.z+Math.cos(f.hd)*r,0xf6eedb,6,1,0.07,2);}scene.remove(f.g);falls.splice(i,1);}}}}
-function updateToolFx(dt){updateHoles(dt);if(falls.length)updateFalls(dt);}
+function updateToolFx(dt){updateHoles(dt);updateTills(dt);if(falls.length)updateFalls(dt);}
+
+// tilling: the blade bites in, grass tufts and clods of earth fly up and tumble back, a puff of dust, and the new soil
+// swells up out of the grass with its furrows
+const tills=[];
+function tillFx(x,z){const y=topY(x,z),a0=Math.atan2(vil.x-x,vil.z-z);
+  for(let i=0;i<9;i++){const a=a0+(Math.random()-0.5)*1.8,sp=0.6+Math.random()*1.2;emit(x+(Math.random()-0.5)*0.5,y+0.08,z+(Math.random()-0.5)*0.5,{vx:Math.sin(a)*sp,vy:1.4+Math.random()*1.6,vz:Math.cos(a)*sp,life:0.9,max:0.9,size:0.06+Math.random()*0.05,color:pickR([0x6a4a30,0x8a6440,0x5a3c26]),g:7});}
+  for(let i=0;i<7;i++){const a=Math.random()*6.28;emit(x+(Math.random()-0.5)*0.6,y+0.1,z+(Math.random()-0.5)*0.6,{vx:Math.cos(a)*0.7,vy:1.2+Math.random(),vz:Math.sin(a)*0.7,life:1.1,max:1.1,size:0.05,color:pickR([0x6ab84a,0x8ad05a,0x4a9a3a]),g:4,spin:1});}
+  for(let i=0;i<6;i++){const a=i/6*6.28;emit(x+Math.cos(a)*0.3,y+0.06,z+Math.sin(a)*0.3,{vx:Math.cos(a)*0.5,vy:0.25,vz:Math.sin(a)*0.5,life:0.8,max:0.8,size:0.12,color:0xc8b08a,g:0.2});}
+  vil.hop=Math.max(vil.hop,0.1);const k=K(x,z);tills.push({k,t:0});}
+// fresh soil rises from flat to its full height, overshooting a touch, in the soil batch (45-crops)
+function updateTills(dt){if(!tills.length||!soilIM)return;let ch=false;const keys=Object.keys(S.tiles);
+  for(let i=tills.length-1;i>=0;i--){const q=tills[i];q.t+=dt;const j=keys.indexOf(q.k);if(j<0){tills.splice(i,1);continue;}
+    const u=Math.min(1,q.t/0.45),s=u<1?Math.max(0.05,Math.sin(u*Math.PI*0.72)/Math.sin(Math.PI*0.72)*(1+0.25*Math.sin(u*Math.PI))):1;
+    soilIM.getMatrixAt(j,_m);_m.decompose(_v,_q,_s);_s.y=s;_m.compose(_v,_q,_s);soilIM.setMatrixAt(j,_m);ch=true;if(u>=1)tills.splice(i,1);}
+  if(ch)soilIM.instanceMatrix.needsUpdate=true;}
 /* =========================================================
    Farming & island actions
    ========================================================= */
@@ -3915,7 +3954,7 @@ function useFixed(x,z){
   return false;}
 // the farming actions tools perform (71-tools decides which one a tap means)
 function canTill(x,z){const k=K(x,z);return !S.tiles[k]&&landMap.get(k)==='grass'&&!TOWN.path.has(k)&&freeTile(x,z)&&!fixedAt(x,z)&&!objAt(x,z)&&!debrisAt(x,z);}
-function tillAt(x,z){if(!canTill(x,z))return false;S.tiles[K(x,z)]={w:S.rain?1:0,crop:null};rebuildSoil();SFX.till();dirtFlick(x,z,7);vil.hop=0.25;
+function tillAt(x,z){if(!canTill(x,z))return false;S.tiles[K(x,z)]={w:S.rain?1:0,crop:null};rebuildSoil();SFX.till();tillFx(x,z);vil.hop=0.25;
   if(!S.tipSeed){S.tipSeed=1;setTimeout(()=>toast('Nice soil! Pick <b>Seeds</b> from your tools and tap it to plant.','',seedIcon(S.seed)),600);}return true;}
 function fillAt(x,z){const k=K(x,z),t=S.tiles[k];if(!t||t.crop)return false;delete S.tiles[k];rebuildSoil();noise(0.08,0.04,700);burst(x,0.5,z,0x6ab84a,8,1.0,0.06);return true;}
 function waterAt(x,z){const r=S.can?1:0;let n=0;for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const q=S.tiles[K(x+dx,z+dz)];if(q&&!q.w){q.w=1;n++;}}
@@ -4908,7 +4947,7 @@ function updateBoat(dt,tt){
     sail.chk+=dt;if(sail.chk>2){const moved=Math.hypot(b.x-sail.lx,b.z-sail.lz);sail.chk=0;sail.lx=b.x;sail.lz=b.z;
       if(moved<0.5&&!nearLand){if(sail.replans++<3){const p=planPath(b.x,b.z,sail.dx,sail.dz);if(p){sail.path=p;sail.idx=0;}}else head=null;}}
     if((fin&&d<0.5)||head===null||nearLand){const tgt=sail.land;sail=null;ctxSig='';if(tgt!==null)disembark(tgt);updateCtx();}
-    else{b.r+=angDiff(b.r,head)*Math.min(1,dt*3.5);const top=buffOn('tail')?9.5:7.5,sp=fin?Math.min(top,1.5+d*1.5):top;
+    else{b.r+=angDiff(b.r,head)*Math.min(1,dt*3.5);const top=(buffOn('tail')?13:11)*(d>25?1.35:1)/* a following wind on the long stretches */,sp=fin?Math.min(top,1.5+d*1.5):top;
       const nx=b.x+Math.sin(b.r)*sp*dt,nz=b.z+Math.cos(b.r)*sp*dt;if(!blockedAt(nx,nz)&&!blockedAt(nx+Math.sin(b.r)*0.5,nz+Math.cos(b.r)*0.5)){b.x=nx;b.z=nz;}
       if(Math.random()<dt*14)emit(b.x-Math.sin(b.r)*0.7+(Math.random()-0.5)*0.3,0.03,b.z-Math.cos(b.r)*0.7+(Math.random()-0.5)*0.3,{life:1.6,max:1.6,size:0.13,color:0xe8f0ff});}
   }
@@ -4927,7 +4966,7 @@ function updateFlotsam(dt,tt){
         else if(r<0.8){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+2;floatText(f.x,0.8,f.z,'+2 '+CROPS[id].name+' seeds','gold');SFX.pop();}
         else{const k=pickW(FINDS,k=>['glass','pearl','drift','fossil','amber'].includes(k));const first=gain('g:'+k);floatText(f.x,0.8,f.z,'+ '+FINDS[k].name,'gold');SFX.harvest();}}}
     else if(d>70){scene.remove(f.g);flots.splice(i,1);}}}
-function checkDiscovery(){const x=vil.x,z=vil.z;for(const isl of islands){if(S.disc[isl.id])continue;if(Math.hypot(x-isl.cx,z-isl.cz)<isl.r/0.7+16){S.disc[isl.id]=1;SFX.discover();
+function checkDiscovery(){const x=vil.x,z=vil.z;for(const isl of islands){if(S.disc[isl.id])continue;if(Math.hypot(x-isl.cx,z-isl.cz)<isl.r/0.7+30){S.disc[isl.id]=1;SFX.discover();
   toast(`Discovered <b>${isl.name}</b> — a ${BIOMES[isl.biome].name.toLowerCase()} island!`,'rare',ICON.chart);addXP(20);}}}
 
 
@@ -4946,6 +4985,32 @@ function updateNpcBoat(dt,tt){if(!npcRoute.pts){buildNpcRoute();if(!npcRoute.pts
   const x=a[0]+(b[0]-a[0])*u,z=a[1]+(b[1]-a[1])*u,h=Math.atan2(b[0]-a[0],b[1]-a[1]);
   npcBoat.visible=true;npcBoat.position.set(x,Math.sin(tt*1.3)*0.03,z);npcBoat.rotation.y+=angDiff(npcBoat.rotation.y,h)*Math.min(1,dt*1.5);npcBoat.rotation.z=Math.sin(tt*0.9)*0.04;
   if(Math.random()<dt*9&&Math.hypot(x-cam.tx,z-cam.tz)<50)emit(x-Math.sin(npcBoat.rotation.y)*0.9+(Math.random()-0.5)*0.3,0.03,z-Math.cos(npcBoat.rotation.y)*0.9+(Math.random()-0.5)*0.3,{life:2.2,max:2.2,size:0.14,color:0xe8f0ff});}
+/* =========================================================
+   Finding your way at sea: markers at the edge of the screen for the islands around you (named once charted, a
+   question mark for rumours), each tappable to set course; gulls wheeling over the nearest uncharted island.
+   ========================================================= */
+let markT=0;const marks=new Map();
+function seaMarks(){const box=$('seamarks');if(!box)return;if(!S.sea||inside||sheet){box.hidden=true;return;}box.hidden=false;
+  const W=innerWidth,H=innerHeight,top=150,bot=H-175,pad=40;
+  // the nearest few islands, charted or not, within sight of a long voyage
+  const near=islands.filter(i=>!i.home||Math.hypot(i.cx-vil.x,i.cz-vil.z)>14).map(i=>[i,Math.hypot(i.cx-vil.x,i.cz-vil.z)]).filter(([,d])=>d<190).sort((a,b)=>a[1]-b[1]).slice(0,5);
+  const keep=new Set();
+  for(const [isl,d] of near){keep.add(isl.id);let el=marks.get(isl.id);
+    if(!el){el=document.createElement('button');el.className='smark';el.onclick=e=>{e.stopPropagation();SFX.ui();buzz(8);sailToIsland(isl);say(S.disc[isl.id]?`Setting course for <b>${isl.name}</b>.`:'Setting course for… somewhere new.');};box.appendChild(el);marks.set(isl.id,el);}
+    const known=!!S.disc[isl.id]||isl.home,label=known?(isl.home?'Home':isl.name):'???',lg=Math.round(d);
+    const h=`<i></i><b>${label}</b><small>${lg} lg</small>`;if(el.dataset.h!==h){el.innerHTML=h;el.dataset.h=h;}el.classList.toggle('unk',!known);
+    const [sx,sy,sz]=toScreen(isl.cx,1.5,isl.cz);let x=sx,y=sy,on=sz<1&&sx>pad&&sx<W-pad&&sy>top&&sy<bot;
+    if(!on){// clamp to the edge along the direction from the middle of the screen
+      let dx=sx-W/2,dy=sy-H/2;if(sz>=1){dx=-dx;dy=-dy;}const k=Math.min((W/2-pad)/Math.abs(dx||1e-6),((dy<0?H/2-top:bot-H/2))/Math.abs(dy||1e-6));x=W/2+dx*k;y=H/2+dy*k;}
+    const ang=Math.atan2(sy-y,sx-x);el.style.transform=`translate(${Math.round(x)}px,${Math.round(y)}px) translate(-50%,-50%)`;el.classList.toggle('edge',!on);
+    el.querySelector('i').style.transform=`rotate(${ang}rad) translateX(${Math.max(28,el.offsetWidth/2+6)}px)`;}
+  for(const [id,el] of marks)if(!keep.has(id)){el.remove();marks.delete(id);}}
+// seabirds circle over land long before you can see it
+let gullIsl=null;
+function updateSeaGuide(dt,tt){markT-=dt;if(markT<=0){markT=0.12;seaMarks();}
+  if(!S.sea){gullIsl=null;return;}
+  const und=islands.filter(i=>!S.disc[i.id]).map(i=>[i,Math.hypot(i.cx-vil.x,i.cz-vil.z)]).sort((a,b)=>a[1]-b[1])[0];
+  if(und&&und[1]<120&&gullIsl!==und[0]){gullIsl=und[0];if(und[1]>40)say('Gulls on the horizon… there must be land that way.');}}
 /* =========================================================
    The long voyage: driftseeds, island restoration, residents and trade, and the tides.
    - Driftseeds wash ashore at dawn (and now and then on wild shores).
@@ -5434,7 +5499,10 @@ function renderSheet(){
       h+='</div>';}}
   else if(sheet.kind==='chart'){$('sheetTitle').textContent='Sea Chart';tabs([]);
     const disc=islands.filter(i=>S.disc[i.id]);
-    h+=`<canvas id="chart" width="320" height="320"></canvas><p class="note">Tap an island you've found to travel there instantly. To discover new ones, sail out and tap the sea. Question marks are rumours of islands you haven't found yet.</p><div class="isles">`;
+    h+=`<canvas id="chart" width="320" height="320"></canvas><p class="note">Tap an island you've found to travel there instantly. To discover new ones, sail out and tap the sea. Question marks are rumours of islands you haven't found yet: set sail for one and the markers at the edge of the screen will guide you.</p><div class="isles">`;
+    {const und=islands.filter(i=>!S.disc[i.id]).sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z)).slice(0,3),dirs=['north','north-east','east','south-east','south','south-west','west','north-west'];
+      for(const i of und){const d=Math.round(Math.hypot(i.cx-vil.x,i.cz-vil.z)),a=Math.atan2(i.cx-vil.x,-(i.cz-vil.z)),dir=dirs[((Math.round(a/(Math.PI/4))%8)+8)%8];
+        h+=`<button class="card rumour" data-rumour="${i.id}"><img class="px" src="${ICON.chart}" alt=""><span class="grow"><span class="nm">Uncharted island</span><br><span class="sub">A rumour · about ${Math.round(d/10)*10} leagues ${dir}</span></span><span class="price">${unlocked('boat')?'Set sail':'Lv 4'}</span></button>`;}}
     for(const isl of disc){const d=Math.round(Math.hypot(isl.cx-vil.x,isl.cz-vil.z));const bio=isl.biome;
       let got=0,tot=0;if(!isl.home){for(const k in PLANTS)if(PLANTS[k].bio.includes(bio)){tot++;if(S.alm['p:'+k])got++;}for(const k in BUGS)if(BUGS[k].bio.includes(bio)){tot++;if(S.alm['b:'+k])got++;}}
       h+=`<button class="card" data-isle="${isl.id}"><img class="px" src="${isl.home?ICON.sprout:ICON.chart}" alt=""><span class="grow"><span class="nm">${isl.name}</span><br><span class="sub">${isl.home?'Your island':BIOMES[bio].name+' island'} · ${d<4?'you are here':d+' leagues away'}${tot?` · ${got}/${tot} local plants & bugs`:''}</span></span></button>`;}
@@ -5470,7 +5538,7 @@ function renderSheet(){
 }
 function drawChart(){const cv=$('chart');if(!cv)return;const g=cv.getContext('2d'),N=320;g.imageSmoothingEnabled=false;
   const disc=islands.filter(i=>S.disc[i.id]);let E=40;for(const i of disc)E=Math.max(E,Math.hypot(i.cx,i.cz)+14);E=Math.max(E,Math.hypot(vil.x,vil.z)+14);
-  const und=islands.filter(i=>!S.disc[i.id]).sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z)).slice(0,2);
+  const und=islands.filter(i=>!S.disc[i.id]).sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z)).slice(0,3);
   for(const i of und)E=Math.max(E,Math.hypot(i.cx,i.cz)+14);
   const sc=(N/2-10)/E;const X=x=>N/2+x*sc,Y=z=>N/2+z*sc;
   g.fillStyle='#3565cc';g.fillRect(0,0,N,N);g.fillStyle='rgba(255,255,255,.12)';for(let x=0;x<N;x+=20)for(let y=0;y<N;y+=20)g.fillRect(x,y,2,2);
@@ -5510,6 +5578,7 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.buy){const k=d.buy;if(S.store[k]){startPlace(k,true);return;}if(S.shells<BUILD[k].cost){toast(`${BUILD[k].name} costs ${fmt(BUILD[k].cost)} shells.`);SFX.no();return;}startPlace(k,false);return;}
   if(d.edit){S.mode='edit';closeSheet();toast('Edit mode: tap decor to move or store it, tap empty soil to clear it.','',ICON.hammer);return;}
   if(d.isle){chartGo(islands[Number(d.isle)]);return;}
+  if(d.rumour){if(!unlocked('boat')){say('You need your boat for that (Island Heart level 4).');return;}closeSheet();sailToIsland(islands[Number(d.rumour)]);return;}
   if(d.deliver!==undefined){deliver(Number(d.deliver));renderSheet();updateHUD();return;}
   if(d.rod){const R=RODS[S.rod+1];if(!R||S.shells<R.cost)return;S.shells-=R.cost;S.rod++;setRod();SFX.level();toast(`You got the ${R.name}!`,'rare',ICON.rod);renderSheet();return;}
   if(d.can){const R=CANS[S.can+1];if(!R||S.shells<R.cost)return;S.shells-=R.cost;S.can++;SFX.level();toast(`You got the ${R.name}! It waters a 3×3 patch.`,'rare',ICON.can);renderSheet();return;}
@@ -5609,13 +5678,13 @@ const ptrs=new Map();let drag=null,pinch=null,paint=null,holdT=null;
 function paintMode(x,z){if(!onHome(x,z))return null;const tool=S.tool,d=debrisAt(x,z);
   if(d)return !DEBRIS_TOOL[d.k]||DEBRIS_TOOL[d.k]===tool?'clear':null;
   if(fixedAt(x,z)||objAt(x,z))return null;const t=S.tiles[K(x,z)];
-  switch(tool){case'shovel':return canTill(x,z)?'till':null;case'can':return t?'water':null;case'seeds':return t&&!t.crop?'plant':null;
+  switch(tool){case'hoe':case'shovel':return canTill(x,z)?'till':null;case'can':return t?'water':null;case'seeds':return t&&!t.crop?'plant':null;
     case'hand':return t&&t.crop?(t.crop.p>=1?'harvest':'tend'):null;}
   return null;}
 const PAINT_LBL={till:'Tilling',plant:'Planting',water:'Watering',harvest:'Harvesting',tend:'Tending',clear:'Clearing'};
 function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!onHome(x,z))return;paint.done.add(k);const t=S.tiles[k];let did=false;
   switch(paint.mode){
-    case'till':if(canTill(x,z)){S.tiles[k]={w:S.rain?1:0,crop:null};burst(x,0.6,z,0x8a5a3a,6,1.1,0.06);SFX.till();paint.soil=did=true;}break;
+    case'till':if(canTill(x,z)){S.tiles[k]={w:S.rain?1:0,crop:null};tillFx(x,z);SFX.till();paint.soil=did=true;}break;
     case'plant':if(t&&!t.crop){const sh=S.shells,fr=S.free[S.seed];plant(k,x,z);did=!!t.crop;if(!did)paint.stop=true;}break;
     case'water':if(t&&!t.w){t.w=1;for(let i=0;i<5;i++)emit(x+(Math.random()-0.5)*0.5,1.2,z+(Math.random()-0.5)*0.5,{vy:-1,life:0.5,max:0.5,size:0.06,color:0x8ac4ff,g:6});if(paint.n%3===0)SFX.water();paint.soil=did=true;}break;
     case'harvest':if(t&&t.crop&&t.crop.p>=1){harvest(k,x,z);did=true;}break;
@@ -6186,7 +6255,7 @@ function frame(now){
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
   scene.fog.near=camD()+45-fogBoost*30;scene.fog.far=camD()+300-fogBoost*200;/* a light haze: neighbouring islands stay green on the horizon */
   flushCrops();for(const {g} of cropMeshes.values())if(g.children.length)g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;
-  updatePops(dt);updateFires(dt,tt);updateJournal(dt,tt);updatePitch(dt);updateTrader(dt,tt);updateToolFx(dt);
+  updatePops(dt);updateFires(dt,tt);updateJournal(dt,tt);updatePitch(dt);updateTrader(dt,tt);updateSeaGuide(dt,tt);updateToolFx(dt);
   // ripe crops twinkle now and then, so you can see what's ready
   for(const [k,{g,v,s}] of cropMeshes)if(s===3&&(!v||v==='normal')&&Math.random()<dt*0.12)sparkle(g.position.x,topY(Math.round(g.position.x),Math.round(g.position.z))+0.5,g.position.z,0xfffbe0);
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);

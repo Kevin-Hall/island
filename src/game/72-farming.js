@@ -67,7 +67,7 @@ function useFixed(x,z){
   return false;}
 // the farming actions tools perform (71-tools decides which one a tap means)
 function canTill(x,z){const k=K(x,z);return !S.tiles[k]&&landMap.get(k)==='grass'&&!TOWN.path.has(k)&&freeTile(x,z)&&!fixedAt(x,z)&&!objAt(x,z)&&!debrisAt(x,z);}
-function tillAt(x,z){if(!canTill(x,z))return false;S.tiles[K(x,z)]={w:S.rain?1:0,crop:null};rebuildSoil();SFX.till();dirtFlick(x,z,7);vil.hop=0.25;
+function tillAt(x,z){if(!canTill(x,z))return false;S.tiles[K(x,z)]={w:S.rain?1:0,crop:null};rebuildSoil();SFX.till();tillFx(x,z);vil.hop=0.25;
   if(!S.tipSeed){S.tipSeed=1;setTimeout(()=>toast('Nice soil! Pick <b>Seeds</b> from your tools and tap it to plant.','',seedIcon(S.seed)),600);}return true;}
 function fillAt(x,z){const k=K(x,z),t=S.tiles[k];if(!t||t.crop)return false;delete S.tiles[k];rebuildSoil();noise(0.08,0.04,700);burst(x,0.5,z,0x6ab84a,8,1.0,0.06);return true;}
 function waterAt(x,z){const r=S.can?1:0;let n=0;for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const q=S.tiles[K(x+dx,z+dz)];if(q&&!q.w){q.w=1;n++;}}

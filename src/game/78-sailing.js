@@ -101,7 +101,7 @@ function updateBoat(dt,tt){
     sail.chk+=dt;if(sail.chk>2){const moved=Math.hypot(b.x-sail.lx,b.z-sail.lz);sail.chk=0;sail.lx=b.x;sail.lz=b.z;
       if(moved<0.5&&!nearLand){if(sail.replans++<3){const p=planPath(b.x,b.z,sail.dx,sail.dz);if(p){sail.path=p;sail.idx=0;}}else head=null;}}
     if((fin&&d<0.5)||head===null||nearLand){const tgt=sail.land;sail=null;ctxSig='';if(tgt!==null)disembark(tgt);updateCtx();}
-    else{b.r+=angDiff(b.r,head)*Math.min(1,dt*3.5);const top=buffOn('tail')?9.5:7.5,sp=fin?Math.min(top,1.5+d*1.5):top;
+    else{b.r+=angDiff(b.r,head)*Math.min(1,dt*3.5);const top=(buffOn('tail')?13:11)*(d>25?1.35:1)/* a following wind on the long stretches */,sp=fin?Math.min(top,1.5+d*1.5):top;
       const nx=b.x+Math.sin(b.r)*sp*dt,nz=b.z+Math.cos(b.r)*sp*dt;if(!blockedAt(nx,nz)&&!blockedAt(nx+Math.sin(b.r)*0.5,nz+Math.cos(b.r)*0.5)){b.x=nx;b.z=nz;}
       if(Math.random()<dt*14)emit(b.x-Math.sin(b.r)*0.7+(Math.random()-0.5)*0.3,0.03,b.z-Math.cos(b.r)*0.7+(Math.random()-0.5)*0.3,{life:1.6,max:1.6,size:0.13,color:0xe8f0ff});}
   }
@@ -120,7 +120,7 @@ function updateFlotsam(dt,tt){
         else if(r<0.8){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+2;floatText(f.x,0.8,f.z,'+2 '+CROPS[id].name+' seeds','gold');SFX.pop();}
         else{const k=pickW(FINDS,k=>['glass','pearl','drift','fossil','amber'].includes(k));const first=gain('g:'+k);floatText(f.x,0.8,f.z,'+ '+FINDS[k].name,'gold');SFX.harvest();}}}
     else if(d>70){scene.remove(f.g);flots.splice(i,1);}}}
-function checkDiscovery(){const x=vil.x,z=vil.z;for(const isl of islands){if(S.disc[isl.id])continue;if(Math.hypot(x-isl.cx,z-isl.cz)<isl.r/0.7+16){S.disc[isl.id]=1;SFX.discover();
+function checkDiscovery(){const x=vil.x,z=vil.z;for(const isl of islands){if(S.disc[isl.id])continue;if(Math.hypot(x-isl.cx,z-isl.cz)<isl.r/0.7+30){S.disc[isl.id]=1;SFX.discover();
   toast(`Discovered <b>${isl.name}</b> — a ${BIOMES[isl.biome].name.toLowerCase()} island!`,'rare',ICON.chart);addXP(20);}}}
 
 

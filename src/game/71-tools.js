@@ -5,7 +5,8 @@
    ========================================================= */
 const TOOLS=[
   {k:'hand',  name:'Hands',        tip:'Walk, pick up, harvest, tend crops and shake trees'},
-  {k:'shovel',name:'Shovel',       tip:'Dig grass into soil, fill soil back in and break rocks'},
+  {k:'hoe',   name:'Hoe',          tip:'Till grass into soil for planting'},
+  {k:'shovel',name:'Shovel',       tip:'Dig up glinting spots, break rocks, fill soil back in'},
   {k:'can',   name:'Watering Can', tip:'Water your soil'},
   {k:'seeds', name:'Seeds',        tip:'Plant in dug soil (tap again to choose a seed)'},
   {k:'axe',   name:'Axe',          tip:'Chop trees, stumps, bushes and twigs for wood'},
@@ -28,19 +29,21 @@ let hintAt=0;function toolHint(msg,k){const now=performance.now();if(now-hintAt<
 
 /* ---- the tool in the villager's hand (models point along +y from the grip; +z is forward) ---- */
 const HELD_PARTS={
+  hoe:[P(CYL6,0x9a6a3a,0,0.26,0,0,0,0,0.035,0.58,0.035),P(BOX,0x6a6e78,0,0.54,0.05,0,0,0,0.04,0.05,0.1),P(BOX,0xb8bcc8,0,0.5,0.13,0.25,0,0,0.15,0.1,0.025),P(BOX,0xe0e4ec,0,0.455,0.14,0.25,0,0,0.15,0.015,0.028)],
   shovel:[P(CYL6,0x9a6a3a,0,0.2,0,0,0,0,0.035,0.44,0.035),P(BOX,0x6a4a2a,0,0.0,0,0,0,0,0.1,0.03,0.03),P(BOX,0xb8bcc8,0,0.48,0,0,0,0,0.13,0.16,0.025),P(BOX,0x9a9ea8,0,0.4,0,0,0,0,0.13,0.02,0.03)],
   axe:[P(CYL6,0x9a6a3a,0,0.18,0,0,0,0,0.035,0.4,0.035),P(BOX,0x8e929c,0,0.34,0.06,0,0,0,0.035,0.11,0.13),P(BOX,0xd8dce4,0,0.34,0.13,0,0,0,0.037,0.12,0.025)],
   can:[P(CYL12,0xe0883a,0,0.02,0.1,0,0,0,0.17,0.15,0.15),P(CYL12,0xb8662a,0,0.1,0.1,0,0,0,0.12,0.02,0.1),P(CYL6,0xe0883a,0,0.06,0.23,1.0,0,0,0.03,0.18,0.03),P(BOX,0xb8662a,0,0.13,0.07,0,0,0,0.03,0.08,0.1)],
   seeds:[P(ICO2,0xd8b078,0,0.0,0.06,0,0,0,0.12,0.14,0.11),P(BOX,0x8a5a3a,0,0.07,0.06,0,0,0,0.07,0.02,0.07)],
   net:[P(CYL6,0x9a6a3a,0,0.26,0,0,0,0,0.03,0.56,0.03),P(CYL12,0x8a6a44,0,0.62,0,1.57,0,0,0.26,0.02,0.26),P(CYL12,0xf4f4ee,0,0.62,0.005,1.57,0,0,0.22,0.02,0.22)],
   rod:[P(CYL6,0x9a7a4a,0,0.45,0,0,0,0,0.025,0.95,0.025),P(CYL12,0x5a5a6a,0,0.08,0.03,0,0,1.57,0.06,0.03,0.06)]};
-const HELD_TILT={shovel:0.55,axe:0.35,can:0.1,seeds:0,net:0.45,rod:0.85};
+const HELD_TILT={hoe:0.5,shovel:0.55,axe:0.35,can:0.1,seeds:0,net:0.45,rod:0.85};
 const toolHold=new T.Group();toolHold.position.set(0.3,0.22,0.08);toolHold.scale.setScalar(1.35);villager.add(toolHold);
 const heldMesh={};for(const k in HELD_PARTS){const m=M(HELD_PARTS[k]);m.castShadow=true;m.visible=false;toolHold.add(m);heldMesh[k]=m;}
 function showHeld(){for(const k in heldMesh)heldMesh[k].visible=S.tool===k;}
 // every use of a tool is a little performance: a wind-up, the strike (the moment its effect happens, `hit`), and a
 // follow-through. Keys are [u, tool pitch, tool roll, tool lift, body lean]; the body leans back to wind up and into the blow.
 const TOOL_ANIM={
+  hoe:{d:0.52,hit:0.5,k:[[0,0,0,0,0],[0.38,-1.8,0,0.1,-0.24],[0.5,1.25,0,-0.08,0.4],[0.68,1.05,0,-0.1,0.36],[0.86,0.5,0,-0.04,0.12],[1,0,0,0,0]]},/* up over the head, down hard, drag it back through the earth */
   shovel:{d:0.5,hit:0.42,k:[[0,0,0,0,0],[0.3,-0.9,0,0.06,-0.16],[0.42,1.05,0,-0.1,0.38],[0.62,1.0,0,-0.12,0.34],[0.8,-0.35,0.25,0,-0.12],[1,0,0,0,0]]},/* stab in, then lever the dirt out */
   axe:{d:0.5,hit:0.56,k:[[0,0,0,0,0],[0.45,-1.9,0.3,0.08,-0.22],[0.56,0.9,0,-0.04,0.34],[0.7,0.8,0,-0.04,0.3],[1,0,0,0,0]]},/* a slow wind-up over the shoulder, a fast chop */
   net:{d:0.38,hit:0.5,k:[[0,0,0,0,0],[0.25,-0.4,-1.2,0.05,-0.08],[0.55,0.95,1.1,-0.05,0.28],[0.75,0.8,1.2,-0.05,0.22],[1,0,0,0,0]]},/* a big sideways swoop */
@@ -86,10 +89,11 @@ function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
     if(t.crop){autoTool('hand');actAt(x,z,()=>tendAt(x,z));return;}
     if(!t.crop){autoTool('seeds');actAt(x,z,()=>plant(k,x,z));return;}}
   switch(tool){
-    case'shovel':if(canTill(x,z)){actAt(x,z,()=>tillAt(x,z));return;}if(t&&!t.crop){actAt(x,z,()=>fillAt(x,z));return;}
+    case'hoe':if(canTill(x,z)){actAt(x,z,()=>tillAt(x,z));return;}if(t)toolHint(t.crop?'Something is growing there.':'That soil is already tilled.');else if(TOWN.path.has(k))toolHint('Better not till the path!');break;
+    case'shovel':if(t&&!t.crop){actAt(x,z,()=>fillAt(x,z));return;}if(canTill(x,z)){autoTool('hoe');actAt(x,z,()=>tillAt(x,z));return;}
       if(t)toolHint('Something is growing there.');else if(TOWN.path.has(k))toolHint('Better not dig up the town path!');break;
     case'can':actAt(x,z,()=>waterAt(x,z));return;
-    case'seeds':if(t&&!t.crop){actAt(x,z,()=>plant(k,x,z));return;}if(!t&&landMap.get(k)==='grass')toolHint('Dig the ground with the <b>shovel</b> first.','shovel');break;
+    case'seeds':if(t&&!t.crop){actAt(x,z,()=>plant(k,x,z));return;}if(!t&&landMap.get(k)==='grass')toolHint('Till the ground with the <b>hoe</b> first.','hoe');break;
     case'hand':if(t&&t.crop){actAt(x,z,()=>tendAt(x,z));return;}break;
     case'axe':case'net':actAt(x,z,()=>{});return;}
   goTo(x,z);}
