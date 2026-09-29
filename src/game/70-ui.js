@@ -27,7 +27,7 @@ function updateHUD(){
     const wk=S.rain?'rain':nightF>0.5?'moon':'sun';if(wxKind!==wk){wxKind=wk;$('wxIco').innerHTML=WX_ICO[wk];}}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${S.rain?' · rain':''}`;tideHUD();$('locTxt').textContent=locName();
   refreshMuseumShow();$('bTask').classList.toggle('ready',ordersReady());$('bMenu').classList.toggle('ready',ordersReady());
   {const g=nextGoal(),el=$('nextUp');el.hidden=!g;if(g){const h=`<small>${g.tag}</small>${g.name}`;if(el.innerHTML!==h)el.innerHTML=h;}}
-  jrCheck();
+  jrCheck();$('bShop').hidden=!!S.scratch;/* on a wild island you buy from Marlo's boat and, later, your own store: not from a menu */
   const [g,t]=dexCount();$('dexTxt').textContent=`Dex ${Math.floor(g/t*100)}%`;$('locTxt').hidden=!$('locTxt').textContent;
   updateCtx();
 }

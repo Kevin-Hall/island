@@ -3481,7 +3481,7 @@ function clockStr(h){let hh=Math.floor(h),mm=Math.floor((h-hh)*6)*10;const ap=hh
    ========================================================= */
 let sprayT=0;
 function dawn(quiet){
-  S.day++;for(const k in S.tiles)S.tiles[k].w=0;regrowDebris();seasonCheck();morningMoveIn();seaGifts();/* the sea leaves something every night */
+  S.day++;for(const k in S.tiles)S.tiles[k].w=0;regrowDebris();seasonCheck();morningMoveIn();seaGifts();collectCrate();/* the sea leaves something every night */
   S.rain=Math.random()<0.18;S.rainUntil=S.rain&&Math.random()<0.6?11+Math.random()*5:0;S.meteor=false;
   const wishes=Math.min(4,S.wishes||0);S.wishes=0;for(let i=0;i<wishes;i++){const c=islands[0].sand.filter(([x,z])=>freeTile(x,z));if(c.length){const [x,z]=pickR(c);S.finds.push({k:'starfrag',x,z});}}
   if(wishes&&!quiet)setTimeout(()=>toast('Star fragments washed up on your beach overnight!','rare',ICON['g:starfrag']),1200);
@@ -3592,7 +3592,7 @@ function updateHUD(){
     const wk=S.rain?'rain':nightF>0.5?'moon':'sun';if(wxKind!==wk){wxKind=wk;$('wxIco').innerHTML=WX_ICO[wk];}}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${S.rain?' · rain':''}`;tideHUD();$('locTxt').textContent=locName();
   refreshMuseumShow();$('bTask').classList.toggle('ready',ordersReady());$('bMenu').classList.toggle('ready',ordersReady());
   {const g=nextGoal(),el=$('nextUp');el.hidden=!g;if(g){const h=`<small>${g.tag}</small>${g.name}`;if(el.innerHTML!==h)el.innerHTML=h;}}
-  jrCheck();
+  jrCheck();$('bShop').hidden=!!S.scratch;/* on a wild island you buy from Marlo's boat and, later, your own store: not from a menu */
   const [g,t]=dexCount();$('dexTxt').textContent=`Dex ${Math.floor(g/t*100)}%`;$('locTxt').hidden=!$('locTxt').textContent;
   updateCtx();
 }
@@ -3844,7 +3844,7 @@ function checkRow(type){if(S.almR[type])return;if(VARIANTS.every(v=>S.alm[type+'
 // buildings, the bin and placed decor respond to a tap whatever tool you hold; returns true if it handled the tap
 function useFixed(x,z){
   const f=fixedAt(x,z);
-  if(f==='bin'){walkTo(x,z);openSheet('bag');return true;}
+  if(f==='bin'){walkTo(x,z);openSheet('bag','all','trader');return true;}
   if(f==='house'){goTo(HOUSE_AT.x+0.5,HOUSE_AT.z+2.2,()=>enterHouse('home'));return true;}
   if(isFire(x,z)){restByFire();return true;}
   if(isTent(x,z)){walkTo(x+0.5,z+2);tentTap();return true;}
@@ -4696,7 +4696,8 @@ function rustleBush(d){const x=d.x,z=d.z,y=topY(x,z),m=debMesh.get(K(x,z));if(m)
 // what's under a dig spot or clam bubbles
 function digSpot(f){S.finds=S.finds.filter(q=>q!==f);syncLife();jrNote('dig');const x=f.x,z=f.z,y=topY(x,z);SFX.till();burst(x,y+0.2,z,f.k==='bubbles'?0xe8d4a8:0x6a4a30,10,1.2,0.07);
   let k;const r=Math.random();
-  if(f.k==='bubbles')k=r<0.05?'pearl':'clam';
+  if(f.map){k=pickR(['fossil','oldcoin','geode','arrowhead','sharktooth']);setTimeout(()=>stamp('Treasure!',`${FINDS[k].name} · the map was right`,true),600);}
+  else if(f.k==='bubbles')k=r<0.05?'pearl':'clam';
   else k=r<0.26?'fossil':r<0.46?'geode':r<0.58?'oldcoin':r<0.66?'truffle':r<0.82?'clay':'seeds';
   if(k==='seeds'){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+2;floatText(x,y+0.9,z,'+2 '+CROPS[id].name+' seeds','gold');SFX.pop();return;}
   if(k==='clay'){gain('m:stone');floatText(x,y+0.9,z,'+1 Stone');SFX.pop();return;}
@@ -4965,7 +4966,7 @@ function seaGifts(){const isl=islands[0];if(!isl||!S.scratch&&!S.wild)return 0;c
 function tomorrowLines(){const lt=lowTimes(1).map(h=>clockStr(h)),cr=Object.values(S.tiles).filter(t=>t.crop).length,out=[];
   if(lt.length)out.push(`Low tide at ${lt.join(' and ')}`);if(cr)out.push(`${cr} crop${cr>1?'s':''} growing in the dark`);out.push('Something may wash up on the beach');if(S.heartAt)out.push('The driftseed is stirring…');return out;}
 function morningCard(out,away){if(document.body.classList.contains('titling')){setTimeout(()=>morningCard(out,away),700);return;}const gifts=S.giftN||0;S.giftN=0;const lines=[];
-  if(out&&out.length)lines.push(`${out.length} crop${out.length>1?'s':''} ripened`);if(gifts)lines.push(`The sea left ${gifts} gift${gifts>1?'s':''} on the beach`);
+  if(out&&out.length)lines.push(`${out.length} crop${out.length>1?'s':''} ripened`);if(S.crateLast){lines.push(`${TRADER.name} collected your crate: +${fmt(S.crateLast)} shells`);S.crateLast=0;flyShells(8);}if(gifts)lines.push(`The sea left ${gifts} gift${gifts>1?'s':''} on the beach`);if(S.scratch&&!built('shop'))lines.push(`${TRADER.name}'s boat is at the dock 8am–6pm`);
   const lt=lowTimes(0).filter(h=>h>S.hour).map(h=>clockStr(h));if(lt.length)lines.push(`Low tide today at ${lt[0]}`);if(S.rain)lines.push('Rain today: the fish are biting');
   const wd=new Date(typeof gameNow==='function'?gameNow():Date.now()).toLocaleDateString(undefined,{weekday:'long'});
   const el=document.createElement('div');el.className='morning';el.innerHTML=`<div class="sun"></div><div class="mc"><small>${away?'While you were away':'Good morning'}</small><b>Day ${S.day} · ${wd}</b>${lines.map(l=>`<span>${l}</span>`).join('')}</div>`;
@@ -4974,8 +4975,8 @@ function morningCard(out,away){if(document.body.classList.contains('titling')){s
 // ---- chance rewards: gleaming finds and golden fish ----
 const goldShadowMat=new T.MeshBasicMaterial({color:0xffc83a,transparent:true,opacity:0.55,depthWrite:false,blending:T.AdditiveBlending});
 function shineLife(dt,tt){goldShadowMat.opacity=0.4+0.25*Math.sin(tt*5);
-  for(const f of S.finds){if(!(f.shiny||f.tide||f.gift))continue;if(Math.abs(f.x-vil.x)>12||Math.abs(f.z-vil.z)>12)continue;
-    if(Math.random()<dt*(f.shiny?2.2:0.5))sparkle(f.x,(topY(f.x,f.z)||0.2)+0.15,f.z,f.shiny?0xfff0a0:0xe8fbff);}
+  for(const f of S.finds){if(!(f.shiny||f.tide||f.gift||f.map))continue;if(Math.abs(f.x-vil.x)>12||Math.abs(f.z-vil.z)>12)continue;
+    if(Math.random()<dt*(f.map?4:f.shiny?2.2:0.5))sparkle(f.x,(topY(f.x,f.z)||0.2)+0.15,f.z,f.shiny||f.map?0xfff0a0:0xe8fbff);}
   for(const s of shadows)if(s.gold&&!s.out&&Math.random()<dt*3)sparkle(s.x,(s.wy||tideY)+0.05,s.z,0xffe27a);}
 // a golden shadow: a rare fish that shimmers, with a short bite window, worth a bonus
 function goldFish(region,deep,river){return pickW(FISH,k=>{const F=FISH[k];if(F.junk||F.w>=6||!dexOk(F,S.sea?null:curIsl()))return false;if(F.hab==='river'?!river:river)return false;return F.bio.includes('any')||F.bio.includes(region);},(k,F)=>F.w);}
@@ -5021,6 +5022,83 @@ function updateLife(dt,tt){
     if(i.vent&&Math.random()<dt*3&&Math.hypot(i.cx-cam.tx,i.cz-cam.tz)<50)emit(i.vent[0]+(Math.random()-0.5)*0.6,i.vent[1],i.vent[2]+(Math.random()-0.5)*0.6,{vy:0.9,vx:0.2,life:3,max:3,size:0.28,color:Math.random()<0.3?0xf06a2a:0x8a8490});}
   updateBugs(dt,tt);updateCritters(dt,tt);updateForage(dt);updateCrow(dt,tt);updateFishing(dt,tt);updateFlotsam(dt,tt);}
 
+/* =========================================================
+   Marlo's boat: a trader who sails in to your dock every day (8am to 6pm, on a wild island before your store is
+   built). You walk down and buy from the stall (a small stock that changes daily: seeds, bait, camp decor you then
+   place, gear, a treasure map, a curio for the Islandex) or sell what you carry. The crate by your tent is the other
+   way to sell: put things in, and Marlo collects it at dawn (the morning report says what it fetched).
+   ========================================================= */
+const TRADER={name:'Marlo',open:8,close:18};
+const traderOn=()=>S.scratch&&!S.sea&&!inside&&S.homeAt&&S.hour>=TRADER.open&&S.hour<TRADER.close;
+// the boat: a little hull with a striped awning over a counter, crates and a lantern, and Marlo the otter at the stall
+const traderBoat=(()=>{const g=new T.Group(),p=[],gl=[];
+  p.push(P(BOX,0x9a6a3a,0,0.12,0,0,0,0,0.9,0.24,1.7),P(BOX,0x7a4a2a,0,0.25,0,0,0,0,0.76,0.03,1.5),P(CONE4,0x9a6a3a,0,0.12,1.0,Math.PI/2,Math.PI/4,0,0.64,0.34,0.3),P(BOX,0x2a86a8,0,0.21,0,0,0,0,0.92,0.05,1.72));
+  for(const [x,z] of [[-0.38,-0.55],[0.38,-0.55],[-0.38,0.45],[0.38,0.45]])p.push(P(CYL6,0x6a4630,x,0.75,z,0,0,0,0.05,1.0,0.05));
+  for(let i=0;i<6;i++)p.push(P(BOX,i%2?0xf4efe6:0xe0503a,-0.4+i*0.16,1.28,-0.05,0,0,0.1,0.17,0.04,1.2));/* the striped awning */
+  p.push(P(BOX,0xb8804a,-0.42,0.52,-0.05,0,0,0,0.12,0.3,1.0),P(BOX,0xd8a870,-0.42,0.68,-0.05,0,0,0,0.18,0.04,1.06));/* the counter, on the dock side */
+  p.push(P(BOX,0xb07a44,0.2,0.38,0.5,0,0.3,0,0.3,0.26,0.3),P(BOX,0x8a5a30,0.2,0.52,0.5,0,0.3,0,0.32,0.03,0.32),P(CYL8,0x8a5a30,0.22,0.38,-0.6,0,0,0,0.26,0.3,0.26),P(CYL8,0x6a4630,0.22,0.5,-0.6,0,0,0,0.27,0.03,0.27));
+  p.push(P(ICO2,0xe84a3a,-0.42,0.75,0.25,0,0,0,0.1,0.1,0.1),P(ICO2,0xf6c83a,-0.42,0.75,0.05,0,0,0,0.09,0.09,0.09),P(ICO2,0x7ab84a,-0.42,0.75,-0.18,0,0,0,0.1,0.08,0.1),P(ICO2,0xf39ab0,-0.42,0.75,-0.38,0,0,0,0.08,0.08,0.08));/* wares on the counter */
+  p.push(P(CYL6,0x6a4630,0.36,1.45,0.55,0,0,0,0.03,0.4,0.03),P(BOX,0xf6d04a,0.36,1.62,0.65,0,0,0,0.02,0.18,0.22));/* a little flag */
+  gl.push(P(BOX,0xfff0b8,-0.38,1.12,0.45,0,0,0,0.1,0.13,0.1));
+  g.add(M(p));const lm=M(gl,glowMat);lm.castShadow=false;g.add(lm);
+  const mar=npcModel('otter',0x8a6a4a,0x2a86a8,null,'tee');mar.scale.setScalar(0.95);mar.position.set(0.02,0.27,-0.05);mar.rotation.y=-Math.PI/2;g.add(mar);g.userData.marlo=mar;
+  g.visible=false;scene.add(g);return g;})();
+let trader={x:0,z:0,y:0,a:0,shown:false,come:0,seen:false};
+function traderSpot(){const isl=islands[0];return{x:DOCK.x-1.3,z:(isl.dockZ||DOCK.z)+3.3};}
+function updateTrader(dt,tt){const want=traderOn()?1:0;
+  if(want&&!trader.shown){trader.shown=true;trader.come=0;const s=traderSpot();trader.x=s.x;trader.z=s.z;
+    if(Math.hypot(vil.x-s.x,vil.z-s.z)<30){SFX.horn();say(S.metMarlo?`${TRADER.name}'s boat is in!`:'A little boat is mooring at your dock…');}}
+  if(trader.shown){trader.come=clamp(trader.come+(want?dt:-dt)/3,0,1);if(!want&&trader.come<=0){trader.shown=false;traderBoat.visible=false;return;}
+    const u=smooth(0,1,trader.come),off=(1-u)*14;/* sails in from the south, and back out at closing */
+    traderBoat.visible=true;traderBoat.position.set(trader.x,tideY+Math.sin(tt*1.4)*0.03-0.02,trader.z+off);traderBoat.rotation.set(Math.sin(tt*1.1)*0.02,0.05,Math.sin(tt*0.9)*0.025);
+    const m=traderBoat.userData.marlo;if(m)m.rotation.y=-Math.PI/2+Math.sin(tt*0.7)*0.25;}}
+// a tap close to the boat on screen
+function traderTap(cx,cy){if(!trader.shown||trader.come<0.9)return false;const s=toScreen(trader.x,tideY+0.7,trader.z);if(Math.hypot(s[0]-cx,s[1]-cy)>Math.max(26,40*40/cam.dist))return false;
+  const isl=islands[0];let best=null,bd=1e9;for(const [x,z] of [...isl.sand,...isl.grass]){const d=(x-trader.x)**2+(z-trader.z)**2;if(d<bd){bd=d;best=[x,z];}}
+  clearAction();goTo(best[0],best[1],()=>{villager.rotation.y=Math.atan2(trader.x-vil.x,trader.z-vil.z);traderHello();openSheet('trader','buy');});return true;}
+const MARLO_HI=['Fresh off the tide today!','Ahoy! Have a look, have a look.','Mind the crates. What can I get you?','Found some lovely bits out on the reef.','Business is slow… on account of there being one customer.'];
+function traderHello(){const first=!S.metMarlo;S.metMarlo=1;say(first?`I'm ${TRADER.name}! I sail these islands trading bits and bobs. Leave things in your crate and I'll collect them at dawn.`:`${TRADER.name}: “${MARLO_HI[(S.day+Math.floor(S.hour))%MARLO_HI.length]}”`);}
+
+// ---- today's stock: a handful of things, the same all day, different tomorrow ----
+function traderStock(){if(S.tstock&&S.tstock.day===S.day)return S.tstock.items;const R=mulberry((S.worldSeed|0)+S.day*7919),lv=level(),items=[];
+  const crops=CROP_IDS.filter(id=>CROPS[id].lvl<=lv+1);for(let i=0;i<2&&crops.length;i++){const id=crops.splice(Math.floor(R()*crops.length),1)[0],C=CROPS[id];items.push({t:'seed',id,n:5,price:C.seed*5});}
+  items.push({t:'bait',n:5,price:CONSUM.bait.price*5});
+  const decor=Object.keys(BUILD).filter(k=>!BUILD[k].craft&&BUILD[k].lvl<=lv+1);for(let i=0;i<2&&decor.length;i++){const k=decor.splice(Math.floor(R()*decor.length),1)[0];items.push({t:'decor',id:k,price:BUILD[k].cost});}
+  if(RODS[S.rod+1]&&R()<0.5)items.push({t:'rod',price:RODS[S.rod+1].cost});else if(CANS[S.can+1])items.push({t:'can',price:CANS[S.can+1].cost});
+  items.push({t:'map',price:320});
+  const cur=Object.keys(FINDS).filter(k=>FINDS[k].w>0&&FINDS[k].w<6&&!S.alm['g:'+k]);if(cur.length){const k=cur[Math.floor(R()*cur.length)];items.push({t:'curio',id:k,price:Math.round(FINDS[k].price*2.2)});}
+  S.tstock={day:S.day,items:items.map((q,i)=>Object.assign(q,{i,sold:0}))};return S.tstock.items;}
+function stockInfo(q){switch(q.t){
+  case'seed':return{name:`${CROPS[q.id].name} seeds ×${q.n}`,icon:seedIcon(q.id),desc:'Plant them in tilled soil. These ones are free to plant.'};
+  case'bait':return{name:`Fish bait ×${q.n}`,icon:ICON['x:bait']||ICON.rod,desc:'Cast anywhere and something will come for it.'};
+  case'decor':return{name:BUILD[q.id].name,icon:THUMB[q.id]||ICON.star,desc:BUILD[q.id].desc+' You choose where it goes.'};
+  case'rod':return{name:RODS[S.rod+1].name,icon:ICON.rod,desc:'A longer bite window, rarer fish and fewer boots.'};
+  case'can':return{name:CANS[S.can+1].name,icon:ICON.can,desc:'Waters the eight tiles round the one you tap.'};
+  case'map':return{name:'Treasure map',icon:ICON['g:oldcoin']||ICON.star,desc:'Marks a spot on your island where something good is buried.'};
+  case'curio':return{name:FINDS[q.id].name,icon:ICON['g:'+q.id]||ICON.star,desc:'A curio from another shore, new to your Islandex.'};}}
+function buyStock(i){const q=traderStock()[i];if(!q||q.sold)return;if(S.shells<q.price){SFX.no();say(`${TRADER.name}: “That one's ${fmt(q.price)} shells, friend.”`);return;}
+  if(q.t==='decor'){closeSheet();startPlace(q.id,false);return;}/* placing it is when you pay (72-farming) */
+  S.shells-=q.price;q.sold=1;SFX.coin();buzz(12);
+  if(q.t==='seed')S.free[q.id]=(S.free[q.id]||0)+q.n;
+  else if(q.t==='bait')S.inv['x:bait']=(S.inv['x:bait']||0)+q.n;
+  else if(q.t==='rod'){S.rod++;setRod();}else if(q.t==='can')S.can++;
+  else if(q.t==='map')buryTreasure();
+  else if(q.t==='curio')gain('g:'+q.id);
+  say(`${TRADER.name}: “${['Pleasure doing business!','A fine choice.','You won\'t regret it.'][q.i%3]}”`);renderSheet();updateHUD();}
+// the map: a golden dig spot somewhere on your island with something rare underneath
+function buryTreasure(){const isl=islands[0],c=isl.grass.filter(([x,z])=>freeTile(x,z)&&Math.hypot(x-vil.x,z-vil.z)>8);if(!c.length)return;const [x,z]=pickR(c);
+  S.finds.push({k:'dig',x,z,map:1});syncLife();const dir=Math.abs(x-vil.x)>Math.abs(z-vil.z)?(x>vil.x?'east':'west'):(z>vil.z?'south':'north');
+  setTimeout(()=>say(`The map shows an X to the <b>${dir}</b> of here. Look for the golden glint!`),900);}
+
+// ---- the crate by your tent: sell by leaving things for Marlo ----
+function cratePos(){return{x:HOUSE_AT.x+1.75,z:HOUSE_AT.z-0.05};}
+function crateTap(cx,cy){if(!S.scratch||!S.homeAt||S.house)return false;const c=cratePos(),s=toScreen(c.x,topY(Math.round(c.x),Math.round(c.z))+0.3,c.z);
+  if(Math.hypot(s[0]-cx,s[1]-cy)>Math.max(18,22*40/cam.dist))return false;clearAction();goTo(c.x+0.4,c.z+0.9,()=>{villager.rotation.y=Math.atan2(c.x-vil.x,c.z-vil.z);openSheet('bag','all','crate');});return true;}
+function crateWorth(){return Object.entries(S.crate||{}).reduce((t,[k,n])=>t+priceOf(k)*n,0);}
+function toCrate(key,n){const have=S.inv[key]||0;n=Math.min(n,have);if(!n)return 0;S.crate=S.crate||{};S.crate[key]=(S.crate[key]||0)+n;S.inv[key]=have-n;if(!S.inv[key])delete S.inv[key];
+  noise(0.08,0.05,600);return n;}
+// at dawn Marlo empties it and leaves the shells
+function collectCrate(){const w=crateWorth();if(!w)return;S.shells+=w;S.earned=(S.earned||0)+w;S.crateLast=(S.crateLast||0)+w;S.crate={};}
 /* =========================================================
    Journal: today's little tasks, the discovery card, the bedtime diary, resting by the fire, and the title screen
    ========================================================= */
@@ -5168,7 +5246,7 @@ function makeThumbs(){const snap=g=>snapThumb(g,96);
    Sheets
    ========================================================= */
 let sheet=null;
-function openSheet(kind,tab){showApps(false);if(caught){scene.remove(caught.g);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab};renderSheet();$('sheet').hidden=false;updateCtx();}
+function openSheet(kind,tab,ctx){/* ctx: where you are ('crate', 'trader'): selling only happens there */showApps(false);if(caught){scene.remove(caught.g);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab,ctx};renderSheet();$('sheet').hidden=false;updateCtx();}
 function closeSheet(){$('sheet').hidden=true;sheet=null;updateCtx();}
 function tabs(list){$('sheetTabs').innerHTML=list.map(([id,l])=>`<button class="tab ${sheet.tab===id?'on':''}" data-tab="${id}">${l}</button>`).join('');}
 const sh=n=>`<span class="shl">${shellHTML}${fmt(n)}</span>`;
@@ -5197,15 +5275,22 @@ function renderSheet(){
     else{const cat=k=>k.startsWith('m:')||k.startsWith('x:')?'mats':k.startsWith('f:')||k.startsWith('b:')?'catch':k.startsWith('p:')||k.startsWith('g:')?'nature':'crops';
       const ks=Object.keys(S.inv).filter(k=>S.inv[k]>0&&(T0==='all'||cat(k)===T0)).sort((a,b)=>cat(a).localeCompare(cat(b))||priceOf(b)-priceOf(a));
       const sellable=Object.keys(S.inv).filter(k=>!k.startsWith('m:')&&!k.startsWith('x:')),total=sellable.reduce((t,k)=>t+priceOf(k)*S.inv[k],0);
-      h+=`<div class="invtop"><span class="tot">Worth <b>${fmt(total)}</b> shells · market wants <b>${CROPS[S.demand].name}</b></span><button class="pbtn go" data-sellall="1" ${total?'':'disabled'}>Sell all</button></div>`;
+      const ctx=sheet.ctx;
+      if(ctx==='trader')h+=`<div class="invtop"><span class="tot">Worth <b>${fmt(total)}</b> shells · market wants <b>${CROPS[S.demand].name}</b></span><button class="pbtn go" data-sellall="1" ${total?'':'disabled'}>Sell all</button></div>`;
+      else if(ctx==='crate'){const cn=Object.values(S.crate||{}).reduce((a,b)=>a+b,0);h+=`<div class="invtop"><span class="tot">In the crate: <b>${cn}</b> thing${cn===1?'':'s'}, worth ~<b>${fmt(crateWorth())}</b> · ${TRADER.name} collects at dawn</span><button class="pbtn go" data-crateall="1" ${total?'':'disabled'}>Put it all in</button></div>`;}
+      else if(S.scratch)h+=`<p class="note">To sell, leave things in the <b>crate by your tent</b> (collected at dawn), or take them to ${TRADER.name}'s boat at the dock (8am–6pm).</p>`;
       if(!ks.length)h+=`<p class="note">${T0==='all'?'Your pockets are empty. Harvest, fish, catch bugs, forage and gather to fill them.':'Nothing here yet.'}</p>`;
       else{const sel=ks.includes(sheet.sel)?sheet.sel:ks[0],I=itemInfo(sel),t=sel.split('|')[0],mat=sel.startsWith('m:')||sel.startsWith('x:');
         const inOrder=S.orders.some(o=>!o.done&&(o.k===sel||o.k==='c:'+t));const wish=npcs.find(n=>{const d=S.npc[n.i];return d&&d.wish&&!d.wish.done&&d.wish.day===S.day&&invFor(d.wish.k)===sel;});
         const desc=(I&&I.desc)||(sel.includes('|')?(VAR[varOf(sel)].name?`A rare ${VAR[varOf(sel)].name.toLowerCase()} harvest!`:'Fresh from your farm.'):I&&I.bio?'Found around '+I.bio.map(b=>bioLabel(b)).join(', ')+'.':'');
         h+=`<div class="detail"><img class="v-${varOf(sel)}" src="${iconOf(sel)}" alt=""><div class="grow"><div class="nm">${nameOf(sel)} ×${S.inv[sel]}</div><div class="sub">${desc}<br>${fmt(priceOf(sel))} shells each${S.demand===t?' · in demand today':''}${inOrder?' · wanted for an order':''}${wish?' · '+wish.name+' wants this!':''}</div>
-          <div class="acts">${sel.startsWith('x:')?`<button class="pbtn go" data-use="${sel}">Use</button>`:''}<button class="pbtn" data-sell="${sel}">Sell 1</button>${S.inv[sel]>1?`<button class="pbtn" data-sellk="${sel}">Sell all ×${S.inv[sel]}</button>`:''}</div></div></div><div class="inv">`;
+          <div class="acts">${sel.startsWith('x:')?`<button class="pbtn go" data-use="${sel}">Use</button>`:''}${sheet.ctx==='trader'||!S.scratch&&!sheet.ctx?`<button class="pbtn" data-sell="${sel}">Sell 1</button>${S.inv[sel]>1?`<button class="pbtn" data-sellk="${sel}">Sell all ×${S.inv[sel]}</button>`:''}`:sheet.ctx==='crate'&&!sel.startsWith('x:')?`<button class="pbtn" data-crate="${sel}">Put 1 in</button>${S.inv[sel]>1?`<button class="pbtn" data-cratek="${sel}">Put all ×${S.inv[sel]}</button>`:''}`:''}</div></div></div><div class="inv">`;
         for(const k of ks){const v=varOf(k);h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img class="v-${v}" src="${iconOf(k)}" alt="">${v!=='normal'?`<span class="dot" style="background:${{giant:'#6ab84a',moonlit:'#9ab8ff',golden:'#f5c542',crystal:'#7ad8f0',rainbow:'#f39ab0'}[v]}"></span>`:''}<span class="n">${S.inv[k]}</span></button>`;}
         const pad=Math.max(0,20-ks.length);for(let i=0;i<pad;i++)h+=`<div class="cell empty"></div>`;h+='</div>';}}}
+  else if(sheet.kind==='trader'){$('sheetTitle').textContent=`${TRADER.name}'s boat`;tabs([]);
+    h+=`<div class="sellall"><button class="pbtn go" data-tsell="1">Sell to ${TRADER.name}</button></div><p class="note">Today's stock. It changes every morning.</p><div class="grid">`;
+    for(const q of traderStock()){const I=stockInfo(q);h+=`<button class="card ${q.sold?'lock':''}" data-tbuy="${q.i}" ${q.sold?'disabled':''}><img class="px" src="${I.icon}" alt=""><span class="grow"><span class="nm">${I.name}</span><br><span class="sub">${q.sold?'Sold out today':I.desc}</span></span><span class="price">${q.sold?'':sh(q.price)}</span></button>`;}
+    h+='</div>';}
   else if(sheet.kind==='shop'){$('sheetTitle').textContent='Shop';tabs([['decor','Decor'],['island','Island']]);
     if(!built('shop'))h+=`<p class="note">${S.scratch?'You don\'t have a store yet. It comes as a kit when your Island Heart reaches <b>level 3</b>, and you choose where to build it.':'The general store opens when your Island Heart reaches <b>level 3</b>.'} Until then, sell at your shipping bin and buy seeds from the Seeds tool.</p>`;
     else if(sheet.tab==='decor'){h+=`<p class="note">Buy something, then tap where it should go on your home island.</p><div class="sellall"><button class="pbtn" data-edit="1">Move or store existing decor</button></div><div class="grid">`;
@@ -5311,6 +5396,11 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.craft!==undefined){craft(Number(d.craft));renderSheet();return;}
   if(d.place){startPlace(d.place,true);return;}
   if(d.use){useItem(d.use);renderSheet();return;}
+  if(d.tbuy!==undefined){buyStock(+d.tbuy);return;}
+  if(d.tsell){openSheet('bag','all','trader');return;}
+  if(d.crate){if(toCrate(d.crate,1))floatText(vil.x,1.2,vil.z,'into the crate');renderSheet();return;}
+  if(d.cratek){toCrate(d.cratek,S.inv[d.cratek]||0);renderSheet();return;}
+  if(d.crateall){let n=0;for(const k of Object.keys(S.inv))if(!k.startsWith('m:')&&!k.startsWith('x:'))n+=toCrate(k,S.inv[k]);if(n)say(`${n} things in the crate. ${TRADER.name} will collect them at dawn.`);renderSheet();return;}
   if(d.sellk){const g=sell(d.sellk,S.inv[d.sellk]||0);if(g){SFX.coin();toast(`Sold for ${fmt(g)} shells.`,'',ICON.shell);}renderSheet();return;}
   if(d.sell){const g=sell(d.sell,1);if(g){SFX.coin();floatText(vil.x,1.2,vil.z,'+'+fmt(g),'gold');}renderSheet();return;}
   if(d.sellall){let g=0;for(const k of Object.keys(S.inv))if(!k.startsWith('m:')&&!k.startsWith('x:'))g+=sell(k,S.inv[k]);if(g){SFX.coin();setTimeout(SFX.coin,120);toast(`Sold everything for ${fmt(g)} shells.`,'',ICON.shell);}renderSheet();return;}
@@ -5378,7 +5468,7 @@ function onTap(cx,cy){buzz(6);
   if(caught){dismissCatch();return;}
   if(fishing){reel();return;}
   if(!S.sea&&S.boat&&!placing){const s=toScreen(S.boat.x,0.4,S.boat.z);if(Math.hypot(s[0]-cx,s[1]-cy)<Math.max(20,26*40/cam.dist)){boardBoat();return;}/* close taps only, so the ground right by the boat stays tappable */}
-  if(!S.sea&&!placing&&fireTap(cx,cy))return;
+  if(!S.sea&&!placing&&(fireTap(cx,cy)||traderTap(cx,cy)||crateTap(cx,cy)))return;
   const hit=pick(cx,cy);
   if(placing){if(hit)moveGhost(hit.x,hit.z);return;}
   if(S.sea){clearAction();
@@ -5987,7 +6077,7 @@ function frame(now){
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
   scene.fog.near=camD()+45-fogBoost*30;scene.fog.far=camD()+300-fogBoost*200;/* a light haze: neighbouring islands stay green on the horizon */
   flushCrops();for(const {g} of cropMeshes.values())if(g.children.length)g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;
-  updatePops(dt);updateFires(dt,tt);updateJournal(dt,tt);updatePitch(dt);updateToolFx(dt);
+  updatePops(dt);updateFires(dt,tt);updateJournal(dt,tt);updatePitch(dt);updateTrader(dt,tt);updateToolFx(dt);
   // ripe crops twinkle now and then, so you can see what's ready
   for(const [k,{g,v,s}] of cropMeshes)if(s===3&&(!v||v==='normal')&&Math.random()<dt*0.12)sparkle(g.position.x,topY(Math.round(g.position.x),Math.round(g.position.z))+0.5,g.position.z,0xfffbe0);
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
@@ -6075,7 +6165,7 @@ if(/[?&]debug\b/.test(location.search)){
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
       islands:islands.length,town:TOWN.name,buildings:TOWN.bld.filter(b=>!b.locked).map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
     hour:h=>{setHour(h);applyTime();},
-    jr:()=>S.jr,campCheck:()=>{const {x,z}=S.homeAt,ts=campTiles(x,z);return{home:[x,z],heart:S.heartAt&&[S.heartAt.x,S.heartAt.z],clash:ts.filter(([a,b])=>debrisAt(a,b)).length,treesNear:S.debris.filter(d=>d.k==='tree'&&ts.some(([a,b])=>Math.abs(a-d.x)<=1&&Math.abs(b-d.z)<=1)).length,heartInCamp:!!S.heartAt&&ts.some(([a,b])=>Math.abs(a-S.heartAt.x)<=1&&Math.abs(b-S.heartAt.z)<=1)};},breakCamp:()=>{const {x,z}=S.homeAt;S.heartAt={x:x-1,z:z+2};S.debris.push({x:x+2,z:z+1,k:'tree',v:0,r:0,hp:5});save();},tideTurn:low=>tideTurn(low,low?curIsl():null,false),sleep:()=>sleep(),tideInfo:()=>({next:tideNext(),today:lowTimes(0),tmw:lowTimes(1)}),rays:()=>({k:rayK,on:rays.filter(r=>r.a>0.05).map(r=>[+r.x.toFixed(1),+r.z.toFixed(1),+r.a.toFixed(2)]),cam:[cam.tx,cam.tz]}),falls:()=>falls.map(f=>[+f.a.toFixed(2),f.hit]),fell:()=>{const d=S.debris.filter(q=>q.k==='tree').sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];d.hp=1;S.tool='axe';showHeld();villager.rotation.y=Math.atan2(d.x-vil.x,d.z-vil.z);swingTool(()=>hitDebris(d));return[d.x,d.z];},digHere:()=>{const x=Math.round(vil.x),z=Math.round(vil.z)-1;S.tool='shovel';showHeld();villager.rotation.y=Math.PI;swingTool(()=>{digStab(x,z,0.6);swingTool(()=>digStab(x,z,1));});return[x,z];},pitch:()=>pitch&&{t:pitch.t,sy:pitch.sy,step:pitch.step,end:pitch.end},gain:(k,n=1)=>gain(k,n),campfire:()=>campfire(),tent:()=>S.home&&S.home.tent,resting:()=>!!rest,
+    jr:()=>S.jr,trader:()=>({shown:trader.shown,come:trader.come,x:trader.x,z:trader.z,stock:traderStock().map(q=>stockInfo(q).name+' '+q.price)}),traderOpen:()=>{traderHello();openSheet('trader','buy');},crateOpen:()=>openSheet('bag','all','crate'),crate:()=>S.crate,campCheck:()=>{const {x,z}=S.homeAt,ts=campTiles(x,z);return{home:[x,z],heart:S.heartAt&&[S.heartAt.x,S.heartAt.z],clash:ts.filter(([a,b])=>debrisAt(a,b)).length,treesNear:S.debris.filter(d=>d.k==='tree'&&ts.some(([a,b])=>Math.abs(a-d.x)<=1&&Math.abs(b-d.z)<=1)).length,heartInCamp:!!S.heartAt&&ts.some(([a,b])=>Math.abs(a-S.heartAt.x)<=1&&Math.abs(b-S.heartAt.z)<=1)};},breakCamp:()=>{const {x,z}=S.homeAt;S.heartAt={x:x-1,z:z+2};S.debris.push({x:x+2,z:z+1,k:'tree',v:0,r:0,hp:5});save();},tideTurn:low=>tideTurn(low,low?curIsl():null,false),sleep:()=>sleep(),tideInfo:()=>({next:tideNext(),today:lowTimes(0),tmw:lowTimes(1)}),rays:()=>({k:rayK,on:rays.filter(r=>r.a>0.05).map(r=>[+r.x.toFixed(1),+r.z.toFixed(1),+r.a.toFixed(2)]),cam:[cam.tx,cam.tz]}),falls:()=>falls.map(f=>[+f.a.toFixed(2),f.hit]),fell:()=>{const d=S.debris.filter(q=>q.k==='tree').sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];d.hp=1;S.tool='axe';showHeld();villager.rotation.y=Math.atan2(d.x-vil.x,d.z-vil.z);swingTool(()=>hitDebris(d));return[d.x,d.z];},digHere:()=>{const x=Math.round(vil.x),z=Math.round(vil.z)-1;S.tool='shovel';showHeld();villager.rotation.y=Math.PI;swingTool(()=>{digStab(x,z,0.6);swingTool(()=>digStab(x,z,1));});return[x,z];},pitch:()=>pitch&&{t:pitch.t,sy:pitch.sy,step:pitch.step,end:pitch.end},gain:(k,n=1)=>gain(k,n),campfire:()=>campfire(),tent:()=>S.home&&S.home.tent,resting:()=>!!rest,
     tp:(x,z)=>{S.sea=false;vil.x=vil.tx=x;vil.z=vil.tz=z;vil.path=null;cam.tx=x;cam.tz=z;},
     visit:id=>{const i=islands[id];S.disc[id]=1;const sp=(i.spots&&i.spots[1])||i.grass[0];DS.tp(sp[0]+0.6,sp[1]+0.6);},
     islands:()=>islands.map(i=>({id:i.id,biome:i.biome,name:i.name,x:i.cx,z:i.cz,r:Math.round(islR(i)),grand:!!i.grand,river:(i.rtiles||[]).length})),

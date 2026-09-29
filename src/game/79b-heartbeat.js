@@ -36,7 +36,7 @@ function seaGifts(){const isl=islands[0];if(!isl||!S.scratch&&!S.wild)return 0;c
 function tomorrowLines(){const lt=lowTimes(1).map(h=>clockStr(h)),cr=Object.values(S.tiles).filter(t=>t.crop).length,out=[];
   if(lt.length)out.push(`Low tide at ${lt.join(' and ')}`);if(cr)out.push(`${cr} crop${cr>1?'s':''} growing in the dark`);out.push('Something may wash up on the beach');if(S.heartAt)out.push('The driftseed is stirring…');return out;}
 function morningCard(out,away){if(document.body.classList.contains('titling')){setTimeout(()=>morningCard(out,away),700);return;}const gifts=S.giftN||0;S.giftN=0;const lines=[];
-  if(out&&out.length)lines.push(`${out.length} crop${out.length>1?'s':''} ripened`);if(gifts)lines.push(`The sea left ${gifts} gift${gifts>1?'s':''} on the beach`);
+  if(out&&out.length)lines.push(`${out.length} crop${out.length>1?'s':''} ripened`);if(S.crateLast){lines.push(`${TRADER.name} collected your crate: +${fmt(S.crateLast)} shells`);S.crateLast=0;flyShells(8);}if(gifts)lines.push(`The sea left ${gifts} gift${gifts>1?'s':''} on the beach`);if(S.scratch&&!built('shop'))lines.push(`${TRADER.name}'s boat is at the dock 8am–6pm`);
   const lt=lowTimes(0).filter(h=>h>S.hour).map(h=>clockStr(h));if(lt.length)lines.push(`Low tide today at ${lt[0]}`);if(S.rain)lines.push('Rain today: the fish are biting');
   const wd=new Date(typeof gameNow==='function'?gameNow():Date.now()).toLocaleDateString(undefined,{weekday:'long'});
   const el=document.createElement('div');el.className='morning';el.innerHTML=`<div class="sun"></div><div class="mc"><small>${away?'While you were away':'Good morning'}</small><b>Day ${S.day} · ${wd}</b>${lines.map(l=>`<span>${l}</span>`).join('')}</div>`;
@@ -45,8 +45,8 @@ function morningCard(out,away){if(document.body.classList.contains('titling')){s
 // ---- chance rewards: gleaming finds and golden fish ----
 const goldShadowMat=new T.MeshBasicMaterial({color:0xffc83a,transparent:true,opacity:0.55,depthWrite:false,blending:T.AdditiveBlending});
 function shineLife(dt,tt){goldShadowMat.opacity=0.4+0.25*Math.sin(tt*5);
-  for(const f of S.finds){if(!(f.shiny||f.tide||f.gift))continue;if(Math.abs(f.x-vil.x)>12||Math.abs(f.z-vil.z)>12)continue;
-    if(Math.random()<dt*(f.shiny?2.2:0.5))sparkle(f.x,(topY(f.x,f.z)||0.2)+0.15,f.z,f.shiny?0xfff0a0:0xe8fbff);}
+  for(const f of S.finds){if(!(f.shiny||f.tide||f.gift||f.map))continue;if(Math.abs(f.x-vil.x)>12||Math.abs(f.z-vil.z)>12)continue;
+    if(Math.random()<dt*(f.map?4:f.shiny?2.2:0.5))sparkle(f.x,(topY(f.x,f.z)||0.2)+0.15,f.z,f.shiny||f.map?0xfff0a0:0xe8fbff);}
   for(const s of shadows)if(s.gold&&!s.out&&Math.random()<dt*3)sparkle(s.x,(s.wy||tideY)+0.05,s.z,0xffe27a);}
 // a golden shadow: a rare fish that shimmers, with a short bite window, worth a bonus
 function goldFish(region,deep,river){return pickW(FISH,k=>{const F=FISH[k];if(F.junk||F.w>=6||!dexOk(F,S.sea?null:curIsl()))return false;if(F.hab==='river'?!river:river)return false;return F.bio.includes('any')||F.bio.includes(region);},(k,F)=>F.w);}

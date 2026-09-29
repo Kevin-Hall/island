@@ -90,7 +90,8 @@ function rustleBush(d){const x=d.x,z=d.z,y=topY(x,z),m=debMesh.get(K(x,z));if(m)
 // what's under a dig spot or clam bubbles
 function digSpot(f){S.finds=S.finds.filter(q=>q!==f);syncLife();jrNote('dig');const x=f.x,z=f.z,y=topY(x,z);SFX.till();burst(x,y+0.2,z,f.k==='bubbles'?0xe8d4a8:0x6a4a30,10,1.2,0.07);
   let k;const r=Math.random();
-  if(f.k==='bubbles')k=r<0.05?'pearl':'clam';
+  if(f.map){k=pickR(['fossil','oldcoin','geode','arrowhead','sharktooth']);setTimeout(()=>stamp('Treasure!',`${FINDS[k].name} · the map was right`,true),600);}
+  else if(f.k==='bubbles')k=r<0.05?'pearl':'clam';
   else k=r<0.26?'fossil':r<0.46?'geode':r<0.58?'oldcoin':r<0.66?'truffle':r<0.82?'clay':'seeds';
   if(k==='seeds'){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+2;floatText(x,y+0.9,z,'+2 '+CROPS[id].name+' seeds','gold');SFX.pop();return;}
   if(k==='clay'){gain('m:stone');floatText(x,y+0.9,z,'+1 Stone');SFX.pop();return;}

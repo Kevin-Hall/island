@@ -22,7 +22,7 @@ function onTap(cx,cy){buzz(6);
   if(caught){dismissCatch();return;}
   if(fishing){reel();return;}
   if(!S.sea&&S.boat&&!placing){const s=toScreen(S.boat.x,0.4,S.boat.z);if(Math.hypot(s[0]-cx,s[1]-cy)<Math.max(20,26*40/cam.dist)){boardBoat();return;}/* close taps only, so the ground right by the boat stays tappable */}
-  if(!S.sea&&!placing&&fireTap(cx,cy))return;
+  if(!S.sea&&!placing&&(fireTap(cx,cy)||traderTap(cx,cy)||crateTap(cx,cy)))return;
   const hit=pick(cx,cy);
   if(placing){if(hit)moveGhost(hit.x,hit.z);return;}
   if(S.sea){clearAction();
