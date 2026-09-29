@@ -26,6 +26,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 | 00-core | three.js check, the long-lens camera (`LENS`) and curved-world vertex shader (the world drops away with distance from the camera by `CURVE`; JS mirrors are `curveDropFor`/`curveY`/`horizonA` in 30-render; materials with the `NO_CURVE` define stay unbent), tiny utilities (`clamp`, `hash`, `mulberry`, `K`) |
 | 10-data | **Data registries:** `CROPS`, `VARIANTS`, `BUILD`, `BIOMES`, `FISH`, `BUGS`, `PLANTS`, `FINDS`, `MATS`/`CONSUM`, rods, cans, house tiers, level curve |
 | 22-toolicons | Tool icons painted as shaded vector illustrations (`paintIcon`); they override the sprite versions in `ICON` |
+| 11-dex, 22b-dexart | More of the Islandex (~290 entries): extra fish, bugs, plants and finds added to the 10-data tables. Entries can be tied to `sea` (seasons, on your island), `hr` (hours), `rain`/`dry`; `dexOk(e,isl)` is checked wherever things spawn. Finds with `tpl` get a templated icon and model in their own colours (22b-dexart, `tplParts`); `forage` ones turn up at home via `FORAGE_EXTRA` in `forageSpawn` |
 | 20-state, 21-sprites | Save state (`S`, `freshState`, `load`, `save`); UI icons (`SPR`, `ICON`). Sprites are small character grids that `sprite()` upgrades when drawn: Scale2x smoothing, rim light and shade, a tinted outline, painted at 3× |
 | 30-render | Renderer, pixel post-pass, geometry helpers (`P`, `PG` gradient parts, `merge`, `M`; smooth-shaded shapes `SPH`, `SCONE`, `STRUNK`, `SCYL` keep their rounded normals, everything else is flat-shaded), shared materials, lights, sea, sky |
 | 31-ground | Painted ground textures (grass, path, sand, cliff) and `worldMat`, which maps them in world space so tiles join up without seams. Dirt paths are painted into the grass from a blurred mask (`setPathMask`), so their edges curve instead of following tiles |
@@ -78,7 +79,7 @@ index.html            GENERATED. It's committed so the game stays a single file 
 |---|---|
 | A crop | Entry in `CROPS` (10-data) → icon in `SPR` (21-sprites) → a `case` in `cropParts` (45-crops) |
 | A fish | Entry in `FISH`. Icons and Islandex are automatic. Use `hab:'river'` for river fish. Keys must be unique across the table. |
-| A bug or wild plant | Entry in `BUGS`/`PLANTS` (a model `kind` is already handled in `bugGroup`/`plantGroup`, 74-life) |
+| A bug or wild plant | Entry in `BUGS`/`PLANTS` (optionally with `sea`, `hr`, `rain`/`dry`; see 11-dex) (a model `kind` is already handled in `bugGroup`/`plantGroup`, 74-life) |
 | Decor | Entry in `BUILD` (add `craft:true` for craft-only) → `case` in `objGroup` + tap height in `OBJ_H` (50-objects). The thumbnail is generated automatically. |
 | A recipe | Push onto `RECIPES` (58-crafting). Inputs are item keys: `m:` material, `c:` crop (any variant), `f:`/`b:`/`p:`/`g:` catch and finds. |
 | A villager species | `SPECIES` (names, colours) + `BODY` (build, head, ears, snout, tail): the model is assembled from those (57-villagers) |

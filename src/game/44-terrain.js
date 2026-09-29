@@ -162,5 +162,5 @@ function curIsl(){if(S.sea)return null;return islandAt(vil.x,vil.z);}
 function nearestIsland(x,z){let best=null,bd=1e9;for(const isl of islands){const d=Math.hypot(x-isl.cx,z-isl.cz)-islR(isl)/0.75;if(d<bd){bd=d;best=isl;}}return[best,bd];}
 function regionAt(x,z){const [isl,d]=nearestIsland(x,z);return d<9?isl.biome:'open';}
 function landDist(x,z,isl){let bd=1e9;const tiles=isl?[...isl.grass,...isl.sand]:landList;for(const t of tiles){const d=(t[0]-x)**2+(t[1]-z)**2;if(d<bd)bd=d;}return Math.sqrt(bd);}
-function bioLabel(b){return b==='any'?'anywhere':b==='home'?'your island':b==='open'?'the open sea':BIOMES[b].name.toLowerCase()+' isles';}
+function bioLabel(b){return b==='any'?'anywhere':b==='home'?'your island':b==='wild'?'the woods and meadows at home':b==='open'?'the open sea':BIOMES[b]?BIOMES[b].name.toLowerCase()+' isles':b;}
 

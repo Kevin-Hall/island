@@ -32,7 +32,7 @@ function tabs(list){$('sheetTabs').innerHTML=list.map(([id,l])=>`<button class="
 const sh=n=>`<span class="shl">${shellHTML}${fmt(n)}</span>`;
 function whereStr(I,key){const bios=I.bio||[];let w=bios.map(bioLabel).filter((v,i,a)=>a.indexOf(v)===i).join(' / ');
   if(key.startsWith('f:'))w+=' · '+(I.hab==='deep'?'deep water':I.hab==='shore'?'near shore':'any water');
-  if(I.time)w+=' · '+I.time;if(I.rain)w+=' · rain only';if(key==='g:feather')w='shoo a crow at home';if(key==='g:starfrag')w='wish on a shooting star, then check your beach';return w;}
+  if(I.time)w+=' · '+I.time;if(I.rain)w+=' · rain only';if(I.dry)w+=' · clear skies';if(I.sea)w+=' · '+I.sea.join(' & ');if(I.hr)w+=' · '+clockStr(I.hr[0])+'–'+clockStr(I.hr[1]);if(I.tpl&&!I.forage&&I.w)w+=' · on beaches';if(key==='g:feather')w='shoo a crow at home';if(key==='g:starfrag')w='wish on a shooting star, then check your beach';return w;}
 function renderSheet(){
   if(!sheet)return;const body=$('sheetBody');const lv=level();let h='';
   if(sheet.kind==='seeds'){$('sheetTitle').textContent='Seeds';tabs([]);

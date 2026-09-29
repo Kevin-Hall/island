@@ -114,7 +114,7 @@ const freeTile=(x,z)=>!TOWN.path.has(K(x,z))&&!debrisAt(x,z)&&!objAt(x,z)&&!fixe
 function spawnFind(quiet,isl){if(!isl)return;const here=S.finds.filter(f=>islMap.get(K(f.x,f.z))===isl.id&&!forageOf(f));if(here.length>=5)return;
   if(S.finds.length>=70)S.finds.shift();
   const c=isl.sand.filter(([x,z])=>freeTile(x,z)&&!(isl.blocked&&isl.blocked.has(K(x,z))));if(!c.length)return;const [x,z]=pickR(c);
-  const k=pickW(FINDS,k=>FINDS[k].w>0&&(FINDS[k].bio.includes('any')||FINDS[k].bio.includes(isl.biome)));S.finds.push({k,x,z});
+  const k=pickW(FINDS,k=>FINDS[k].w>0&&!FINDS[k].forage&&(FINDS[k].bio.includes('any')||FINDS[k].bio.includes(isl.biome))&&dexOk(FINDS[k],isl));if(!k)return;S.finds.push({k,x,z});
   if(!quiet){syncLife();for(let i=0;i<5;i++)sparkle(x,0.4,z,0xe8f4ff);}}
 function spawnWeed(quiet){if(S.weeds.length>=7)return;const c=islands[0].grass.filter(([x,z])=>freeTile(x,z));if(!c.length)return;const [x,z]=pickR(c);
   S.weeds.push({x,z});if(!quiet){syncLife();burst(x,0.6,z,0x4f8a34,4,0.6,0.05);}}
@@ -170,7 +170,7 @@ function plantGroup(id,seed){const Pd=PLANTS[id],R=mulberry(seed),g=new T.Group(
   g.add(M(p));if(f.length){const m=M(f,Pd.glow?lumMat:vcMat);g.add(m);}return g;}
 function plantEpoch(){return S.day*2+(isNight()?1:0);}
 function spotPlant(isl,i){const ep=plantEpoch(),key=isl.id+':'+i;if(S.picked[key]===ep)return null;const R=mulberry(hi(isl.seed,i,ep));if(R()<0.22)return null;const night=isNight();
-  return pickW(PLANTS,k=>{const p=PLANTS[k];return p.bio.includes(isl.biome)&&(!p.time||(p.time==='night')===night);},undefined,R);}
+  return pickW(PLANTS,k=>{const p=PLANTS[k];return p.bio.includes(isl.biome)&&(!p.time||(p.time==='night')===night)&&dexOk(p,isl);},undefined,R);}
 function syncPlants(isl){
   if(isl.pgroup){scene.remove(isl.pgroup);isl.pgroup.traverse(o=>{if(o.geometry)o.geometry.dispose();});isl.pgroup=null;}
   if(isl.home||!isl.spots)return;const g=new T.Group();
@@ -210,7 +210,7 @@ function bugGroup(B){const g=new T.Group(),kind=B.kind||'fly',wm=B.glow?lumMat:v
 function spawnBug(){const isl=curIsl();if(!isl||!isl.grass.length)return;const night=isNight();if(S.rain&&!night)return;
   const near=bugs.filter(b=>b.isl===isl.id);if(near.length>=(night?4:7))return;
   const flowers=isl.home?S.objs.filter(o=>o.k==='flowers'):[];
-  const id=pickW(BUGS,k=>(BUGS[k].time==='night')===night&&BUGS[k].bio.includes(isl.biome),(k,v)=>v.w*(v.w<5?0.45:1)*(v.w<10?1+flowers.length*0.2:1));if(!id)return;
+  const id=pickW(BUGS,k=>(BUGS[k].time==='night')===night&&BUGS[k].bio.includes(isl.biome)&&dexOk(BUGS[k],isl),(k,v)=>v.w*(v.w<5?0.45:1)*(v.w<10?1+flowers.length*0.2:1));if(!id)return;
   let hx,hz;if(flowers.length&&Math.random()<0.6){const f=pickR(flowers);hx=f.x;hz=f.z;}else[hx,hz]=pickR(isl.grass);
   const g=bugGroup(BUGS[id]);g.scale.setScalar(BUG_SCALE);scene.add(g);g.position.set(hx,topY(hx,hz),hz);
   bugs.push({id,g,hx,hz,t:0,life:32+Math.random()*24,ph:Math.random()*6.28,out:0,isl:isl.id,crawl:BUGS[id].kind==='crawl'});}

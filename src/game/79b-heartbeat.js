@@ -49,4 +49,4 @@ function shineLife(dt,tt){goldShadowMat.opacity=0.4+0.25*Math.sin(tt*5);
     if(Math.random()<dt*(f.shiny?2.2:0.5))sparkle(f.x,(topY(f.x,f.z)||0.2)+0.15,f.z,f.shiny?0xfff0a0:0xe8fbff);}
   for(const s of shadows)if(s.gold&&!s.out&&Math.random()<dt*3)sparkle(s.x,(s.wy||tideY)+0.05,s.z,0xffe27a);}
 // a golden shadow: a rare fish that shimmers, with a short bite window, worth a bonus
-function goldFish(region,deep,river){return pickW(FISH,k=>{const F=FISH[k];if(F.junk||F.w>=6)return false;if(F.hab==='river'?!river:river)return false;return F.bio.includes('any')||F.bio.includes(region);},(k,F)=>F.w);}
+function goldFish(region,deep,river){return pickW(FISH,k=>{const F=FISH[k];if(F.junk||F.w>=6||!dexOk(F,S.sea?null:curIsl()))return false;if(F.hab==='river'?!river:river)return false;return F.bio.includes('any')||F.bio.includes(region);},(k,F)=>F.w);}
