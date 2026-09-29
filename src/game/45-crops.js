@@ -1,19 +1,39 @@
 /* =========================================================
    Soil (tilled tiles)
    ========================================================= */
-const SOIL_GEO=merge([P(BOX,0xd8d8d8,0,0,0,0,0,0,0.9,0.06,0.9),P(BOX,0xffffff,0,0.04,-0.26,0,0,0,0.8,0.05,0.13),P(BOX,0xffffff,0,0.04,0,0,0,0,0.8,0.05,0.13),P(BOX,0xffffff,0,0.04,0.26,0,0,0,0.8,0.05,0.13),
-  ...[[-0.28,-0.13],[0.1,-0.14],[0.3,0.13],[-0.12,0.14],[0.22,-0.38],[-0.33,0.37],[0.02,0.39]].map(([x,z],i)=>P(SPH_XS,i%2?0xc8c8c8:0xe8e8e8,x,0.05,z,0,i,0,0.09,0.05,0.08))]);/* the furrows, and clods between them */
+// tilled soil: one slab per tile (reaching out to meet tilled neighbours), painted with a soil texture laid in world
+// space, so a bed reads as one field of furrows: rounded ridges catching the light, shaded troughs, speckled earth and
+// the odd pebble. The instance colour tints it (dry: warm tan, watered: dark and rich).
+const SOIL_GEO=new T.BoxGeometry(0.9,0.06,0.9);
+const SOIL_TEX=(()=>{const N=64,c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d'),R=mulberry(4242),img=g.createImageData(N,N),d=img.data;
+  const ridge=y=>{const t=((y+0.5)/N*3)%1;/* three furrows a tile: 0 at a trough, up the lit face, over the crest, down the shaded face */
+    return t<0.12?0.62+t*1.5:t<0.55?0.8+Math.sin((t-0.12)/0.43*Math.PI/2)*0.28:t<0.7?1.08-(t-0.55)*1.6:0.84-(t-0.7)*0.7;};
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){let v=ridge(y)+(R()-0.5)*0.1;const w=Math.sin(x*0.35+y*0.05)*0.02;v+=w;/* a slight waviness along the rows */
+    if(R()<0.05)v-=0.12;if(R()<0.03)v+=0.1;/* speckles of darker and lighter earth */
+    const i=(y*N+x)*4;d[i]=Math.min(255,v*218);d[i+1]=Math.min(255,v*208);d[i+2]=Math.min(255,v*198);d[i+3]=255;}
+  g.putImageData(img,0,0);
+  for(let k=0;k<7;k++){const x=R()*N,y=R()*N,r=1+R()*1.6;g.fillStyle='rgba(60,40,30,.35)';g.beginPath();g.ellipse(x+0.8,y+1,r,r*0.8,0,0,7);g.fill();/* pebbles, and clods */
+    g.fillStyle=k%3?'rgba(255,246,232,.55)':'rgba(214,220,232,.9)';g.beginPath();g.ellipse(x,y,r,r*0.75,0,0,7);g.fill();}
+  const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=T.NearestFilter;t.minFilter=T.LinearMipmapLinearFilter;return t;})();
+const soilMat=toon({map:SOIL_TEX});
+soilMat.onBeforeCompile=sh=>{sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vSoil;').replace('#include <begin_vertex>',`#include <begin_vertex>
+  {vec4 sw=vec4(transformed,1.);
+  #ifdef USE_INSTANCING
+  sw=instanceMatrix*sw;
+  #endif
+  sw=modelMatrix*sw;vSoil=sw.xz+0.5;}`);
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vSoil;').replace('#include <map_fragment>','vec4 texelColor=mapTexelToLinear(texture2D(map,vSoil));diffuseColor*=texelColor;');};
 let soilIM=null;
 function rebuildSoil(){
   if(soilIM){scene.remove(soilIM);soilIM.dispose();}
   const keys=Object.keys(S.tiles);
-  soilIM=new T.InstancedMesh(SOIL_GEO,vcMat,Math.max(1,keys.length));soilIM.count=keys.length;soilIM.receiveShadow=true;soilIM.frustumCulled=false;
+  soilIM=new T.InstancedMesh(SOIL_GEO,soilMat,Math.max(1,keys.length));soilIM.count=keys.length;soilIM.receiveShadow=true;soilIM.frustumCulled=false;
   // each slab reaches out to meet tilled neighbours, so a plot reads as one bed of soil, not separate squares
   // (fruit trees keep just a small ring of dirt, so an orchard stays on grass)
   const tree=q=>{const c=S.tiles[q]&&S.tiles[q].crop;return !!c&&CROPS[c.t]&&CROPS[c.t].kind==='tree';};
   keys.forEach((k,i)=>{const [x,z]=k.split(',').map(Number),y=topY(x,z),tr=tree(k),n=(a,b)=>{const q=K(x+a,z+b);return !tr&&!!S.tiles[q]&&!tree(q)&&Math.abs(topY(x+a,z+b)-y)<0.05;};
     const e=tr?0.17:0.45,l=n(-1,0)?0.5:e,r=n(1,0)?0.5:e,f=n(0,-1)?0.5:e,b=n(0,1)?0.5:e;
-    _m.makeScale((l+r)/0.9,1,(f+b)/0.9);_m.setPosition(x+(r-l)/2,y+0.03,z+(b-f)/2);soilIM.setMatrixAt(i,_m);soilIM.setColorAt(i,_c.set(S.tiles[k].w?0x5e3c2a:0x9a6a44));});
+    _m.makeScale((l+r)/0.9,1,(f+b)/0.9);_m.setPosition(x+(r-l)/2,y+0.03,z+(b-f)/2);soilIM.setMatrixAt(i,_m);soilIM.setColorAt(i,_c.set(S.tiles[k].w?0x5e4a3e:0x9c8670));});
   if(!keys.length)soilIM.setColorAt(0,_c.set(0));
   scene.add(soilIM);refreshHomeGrass();
 }
