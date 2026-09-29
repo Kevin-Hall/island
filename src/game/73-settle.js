@@ -7,11 +7,26 @@
    ========================================================= */
 const BP_NAME=k=>k==='tent'?'your tent':k==='seed'?'your driftseed':((HEART_UNLOCKS.find(u=>u.k===k)||{}).name||k).toLowerCase();
 function bpFree(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&onHome(x,z)&&farmQ(x,z)>1.15&&!debrisAt(x,z)&&!objAt(x,z)&&!fixedAt(x,z)&&!S.tiles[k]&&!findAt(x,z)&&!weedAt(x,z);}
-function bpOk(x,z){if(placing&&placing.bp==='seed')return seedOk(x,z);const l=lvlMap.get(K(x,z))||0;for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++){if(!bpFree(x+dx,z+dz)||(lvlMap.get(K(x+dx,z+dz))||0)!==l)return false;}
+// everything a tent brings with it: the tent (2x2) and the ground at its door, and the camp at its front-left (the
+// bonfire, a bench on either side of it) and the crate at its back-right. See houseGroup(0) in 50-objects.
+function campTiles(x,z){const t=[];for(let dx=0;dx<2;dx++)for(let dz=0;dz<3;dz++)t.push([x+dx,z+dz]);t.push([x-1,z+1],[x-1,z+2],[x-1,z+3],[x-2,z+2],[x-2,z+3],[x+2,z]);return t;}
+// room for all of it: level open grass, nothing growing or lying there, well clear of the driftseed, and no tree close
+// enough for its crown to hang into the tent or the fire
+// (loose: ignore what's growing there, for when the tent is pitched for you and clears its own space; see clearCamp)
+function campOk(x,z,loose){const l=lvlMap.get(K(x,z))||0,ts=campTiles(x,z);
+  for(const [a,b] of ts){const k=K(a,b);if(loose?landMap.get(k)!=='grass'||!onHome(a,b)||farmQ(a,b)<=1.15||objAt(a,b)||fixedAt(a,b)||S.tiles[k]:(b===z+2&&a>=x&&a<=x+1)?!walkable(a,b)||debrisAt(a,b)||fixedAt(a,b):!bpFree(a,b))return false;
+    if((lvlMap.get(k)||0)!==l)return false;if(S.heartAt&&Math.abs(a-S.heartAt.x)<=2&&Math.abs(b-S.heartAt.z)<=2)return false;}
+  for(const [a,b] of [[x,z],[x+1,z],[x,z+1],[x+1,z+1],[x-1,z+2]])for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){if(TOWN.res.get(K(a+dx,b+dz))==='tree')return false;/* palms and the like can't be cleared */if(loose)continue;const d=debrisAt(a+dx,b+dz);if(d&&d.k==='tree')return false;}
+  return true;}
+// clear the camp's ground, and any tree close enough to hang into the tent or the fire
+function clearCamp(x,z){const ts=campTiles(x,z),core=[[x,z],[x+1,z],[x,z+1],[x+1,z+1],[x-1,z+2]],n0=S.debris.length;
+  S.debris=S.debris.filter(d=>!(ts.some(([c,e])=>c===d.x&&e===d.z)||d.k==='tree'&&core.some(([c,e])=>Math.abs(c-d.x)<=1&&Math.abs(e-d.z)<=1)));
+  S.finds=S.finds.filter(f=>!ts.some(([c,e])=>c===f.x&&e===f.z));return S.debris.length!==n0;}
+function bpOk(x,z){if(placing&&placing.bp==='seed')return seedOk(x,z);if(placing&&placing.bp==='tent')return campOk(x,z);const l=lvlMap.get(K(x,z))||0;for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++){if(!bpFree(x+dx,z+dz)||(lvlMap.get(K(x+dx,z+dz))||0)!==l)return false;}
   for(let dx=0;dx<2;dx++){const k=K(x+dx,z+2);if(!walkable(x+dx,z+2)||debrisAt(x+dx,z+2)||fixedAt(x+dx,z+2))return false;}return true;}
 // the driftseed needs a tile with open, level grass all round it (the tree will spread), clear of your tent
 function seedOk(x,z){const l=lvlMap.get(K(x,z))||0;for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){const a=x+dx,b=z+dz;
-    if(!bpFree(a,b)||(lvlMap.get(K(a,b))||0)!==l||(S.homeAt&&a>=HOUSE_AT.x-1&&a<=HOUSE_AT.x+2&&b>=HOUSE_AT.z-1&&b<=HOUSE_AT.z+2))return false;}return true;}
+    if(!bpFree(a,b)||(lvlMap.get(K(a,b))||0)!==l||(S.homeAt&&campTiles(S.homeAt.x,S.homeAt.z).some(([c,e])=>Math.abs(c-a)<=1&&Math.abs(e-b)<=1)))return false;}return true;}/* clear of the tent and its camp */
 function bpGhost(k){if(k==='tent'){const g=houseGroup(0);return g;}
   if(k==='seed'){const q=seedTreeParts(1),g=new T.Group();g.add(M([...q.p,...q.gl]));return g;}
   const t=k.startsWith('vh')?'vh':k,b={t,n:t==='vh'?+k.slice(2):0,x:0,z:0},g=new T.Group();
@@ -19,7 +34,7 @@ function bpGhost(k){if(k==='tent'){const g=houseGroup(0);return g;}
   const w=new T.Group();g.position.set(0.5,0,0.5);w.add(g);return w;}
 function startBlueprint(k){if(S.sea||inside){toast('Head back to your island first.');return;}closeSheet();clearAction();if(placing)endPlace();
   // start from the nearest good spot to where you're standing
-  const px=Math.round(vil.x),pz=Math.round(vil.z),sd=k==='seed',ok=sd?seedOk:bpOk;let best=null,bd=1e9;
+  const px=Math.round(vil.x),pz=Math.round(vil.z),sd=k==='seed',ok=sd?seedOk:k==='tent'?campOk:bpOk;let best=null,bd=1e9;
   for(let r=0;r<16&&!best;r++)for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;const x=px+dx,z=pz+dz-(sd?1:2);if(ok(x,z)){const d=dx*dx+dz*dz;if(d<bd){bd=d;best=[x,z];}}}
   if(!best){toast(sd?"There's no open, level grass nearby for your driftseed. Clear some ground (axe and shovel) or walk somewhere more open."
     :`There's no clear, level patch nearby for ${BP_NAME(k)}. Clear some ground (axe and shovel) or walk somewhere more open.`);return;}
@@ -39,7 +54,7 @@ function bpPlace(){const {bp:k,x,z}=placing;if(!bpOk(x,z))return;endPlace();SFX.
 // pitching your tent: the camera leans in, the bundle thumps down, three pegs knock in as the canvas rises and pops taut,
 // then the bonfire catches, and you name the island. Only one tap to place; the rest just happens.
 let pitch=null;
-function pitchTent(x,z){S.homeAt={x,z};rebuildHome();syncObjs();const tm=houseMesh&&houseMesh.userData.tent;
+function pitchTent(x,z){S.homeAt={x,z};clearCamp(x,z);rebuildHome();syncObjs();const tm=houseMesh&&houseMesh.userData.tent;
   const fl=[...fires].find(f=>f.parent===houseMesh);if(fl)fl.userData.hold=0;/* the fire stays dark until it's lit */
   const ic=introCam;introCam=null;/* the opening shot hands over to this one */
   pitch={x,z,t:0,t0:performance.now(),step:0,tm,fl,sy:0.02,vy:0,ty:0.02,lit:false,d0:ic?ic.d:cam.dist,p0:ic?ic.p:cam.pitch,end:-1};if(tm)tm.scale.set(0.8,0.02,0.8);
@@ -67,14 +82,22 @@ function nameIsland(){const el=document.createElement('div');el.id='heartUp';con
     setTimeout(()=>say(`<b>${S.islandName}</b>. It suits it.`),700);};/* the driftseed waits in the goal chip: no prompt pushed on you */
   el.querySelector('#huOk').onclick=done;el.querySelector('#pkName').onkeydown=e=>{if(e.key==='Enter')done();};}
 
+// a camp pitched before the camp had its footprint (the sprout in the fire, a tree through the tent): put it right
+function fixCamp(){if(!S.homeAt||!S.scratch||S.house)return false;/* (only a tent has the camp) */const {x,z}=S.homeAt,ts=campTiles(x,z);let ch=false;
+  const near=(a,b,r)=>ts.some(([c,e])=>Math.abs(c-a)<=r&&Math.abs(e-b)<=r);
+  if(clearCamp(x,z))ch=true;
+  if(S.heartAt&&near(S.heartAt.x,S.heartAt.z,1)){const hx=S.heartAt.x,hz=S.heartAt.z;S.heartAt=null;TOWN.fixed.delete(K(hx,hz));let best=null,bd=1e9;
+    for(let dx=-9;dx<=9;dx++)for(let dz=-9;dz<=9;dz++){const a=hx+dx,b=hz+dz;if(!seedOk(a,b))continue;const d=dx*dx+dz*dz;if(d<bd){bd=d;best=[a,b];}}
+    S.heartAt=best?{x:best[0],z:best[1]}:{x:hx,z:hz};ch=true;}
+  return ch;}
 // planting your driftseed: it takes root on the spot and becomes the Island Heart, growing with your level from now on
 function plantSeed(x,z){const y=topY(x,z);S.heartAt={x,z};S.heart=Object.assign(S.heart||{},{planted:S.day,revived:S.day});SFX.splash&&SFX.splash();
   for(let i=0;i<40;i++)sparkle(x+(Math.random()-0.5)*1.6,y+0.2+Math.random()*1.4,z+(Math.random()-0.5)*1.6,[0xc8fff0,0xfff0c0,0xa8ec84][i%3]);
   rebuildHome();syncObjs();updateHUD();save();buzz(20);
   setTimeout(()=>say('It took root. What will it grow into?'),600);
   // the first time: your tent goes up right beside the sprout
-  if(!S.homeAt){const t=tentBeside(x,z);if(t)setTimeout(()=>{if(!S.homeAt)pitchTent(t[0],t[1]);},2600);else setTimeout(()=>startBlueprint('tent'),2600);}
+  if(!S.homeAt){const t=tentBeside(x,z)||tentBeside(x,z,true);if(t)setTimeout(()=>{if(!S.homeAt)pitchTent(t[0],t[1]);},2600);else setTimeout(()=>startBlueprint('tent'),2600);}
   else if(level()>1)setTimeout(()=>heartLevelUp(1,level()),2200);}
 // a clear 2x2 spot for the tent a few steps from the sprout (outside its ring), nearest you
-function tentBeside(sx,sz){let best=null,bd=1e9;for(let dx=-6;dx<=5;dx++)for(let dz=-6;dz<=5;dz++){const x=sx+dx,z=sz+dz;
-    if(x+1>=sx-1&&x<=sx+1&&z+1>=sz-1&&z<=sz+1)continue;if(Math.hypot(x+0.5-sx,z+0.5-sz)<2.6||!bpOk(x,z))continue;const d=Math.hypot(x+0.5-sx,z+0.5-sz)*2+Math.hypot(x-vil.x,z-vil.z);if(d<bd){bd=d;best=[x,z];}}return best;}
+function tentBeside(sx,sz,loose){let best=null,bd=1e9;for(let dx=-8;dx<=7;dx++)for(let dz=-8;dz<=7;dz++){const x=sx+dx,z=sz+dz;
+    if(!campOk(x,z,loose))continue;/* (campOk keeps the whole camp clear of the sprout) */const d=Math.hypot(x+0.5-sx,z+0.5-sz)*2+Math.hypot(x-vil.x,z-vil.z)+(loose?S.debris.filter(q=>Math.abs(q.x-x-0.5)<2.5&&Math.abs(q.z-z-1)<2.5).length*3:0);/* (loose: the fewer things to clear the better) */if(d<bd){bd=d;best=[x,z];}}return best;}
