@@ -35,15 +35,15 @@ function jrCheck(){if(!S.jr||S.jr.day!==S.day)jrMake();for(const t of S.jr.tasks
 const BOOK_SVG='<svg viewBox="0 0 32 32"><path d="M4 7c4-2 8-2 12 1v18c-4-3-8-3-12-1z" fill="#f7e4c0" stroke="#b07a4a" stroke-width="1.6" stroke-linejoin="round"/><path d="M28 7c-4-2-8-2-12 1v18c4-3 8-3 12-1z" fill="#fff4dc" stroke="#b07a4a" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 11c2-.6 4-.5 6 .5M7 15c2-.6 4-.5 6 .5M19 11.5c2-1 4-1.1 6-.5" stroke="#d8b07a" stroke-width="1.3" stroke-linecap="round"/><path d="M22 4v9l2-1.6 2 1.6V4z" fill="#f08878"/></svg>';
 let jrSig='';
 function jrChip(bump){const el=$('jrChip');if(!el||!S.jr){return;}const d=S.jr.tasks.filter(q=>q.done).length,n=S.jr.tasks.length;
-  const sig=d+'/'+n;if(sig!==jrSig){jrSig=sig;el.innerHTML=`${BOOK_SVG}<span><small>Today</small>${d===n?'All done!':`${d} / ${n} tasks`}</span><i>${S.jr.tasks.map(q=>`<b class="${q.done?'on':''}"></b>`).join('')}</i>`;}
+  const sig=S.jr.day+':'+S.jr.tasks.map(q=>q.k+q.have).join(),changed=sig!==jrSig;if(changed){jrSig=sig;el.innerHTML=`${BOOK_SVG}<span><small>Today</small>${d===n?'All done!':`${d} / ${n} tasks`}</span><i>${S.jr.tasks.map(q=>`<b class="${q.done?'on':''}"></b>`).join('')}</i>`;}
   el.hidden=false;el.classList.toggle('done',d===n);if(bump){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}
-  if($('jrCard'))jrRender();}
-function jrOpen(){SFX.ui();let c=$('jrCard');if(c){c.remove();return;}c=document.createElement('div');c.id='jrCard';c.className='jrcard';document.body.appendChild(c);
+  if(changed&&$('jrCard'))jrRender();/* only when something changed: rebuilding it would replay its pop-in */}
+function jrOpen(){SFX.ui();let c=$('jrCard');if(c){c.remove();return;}c=document.createElement('div');c.id='jrCard';c.className='jrcard';c.innerHTML='<div class="page"></div>';document.body.appendChild(c);
   c.onclick=e=>{if(e.target===c||e.target.closest('.x')){SFX.ui();c.classList.add('out');setTimeout(()=>c.remove(),220);}};jrRender();}
 function jrRender(){const c=$('jrCard');if(!c||!S.jr)return;const s=season();
-  c.innerHTML=`<div class="page"><button class="x" aria-label="Close">×</button><div class="hd"><small>${s[0].toUpperCase()+s.slice(1)} · Day ${S.day}</small><h3>${TOWN.name||'The island'} journal</h3></div>
+  c.firstChild.innerHTML=`<button class="x" aria-label="Close">×</button><div class="hd"><small>${s[0].toUpperCase()+s.slice(1)} · Day ${S.day}</small><h3>${TOWN.name||'The island'} journal</h3></div>
   <ul>${S.jr.tasks.map(q=>{const T=JR_TASKS[q.k],ic=ICON[T.ico]||ICON.star;return`<li class="${q.done?'done':''}"><img class="px" src="${ic}" alt=""><span><b>${T.t(q.n)}</b><em>${q.done?'Done!':q.n>1?`${q.have} of ${q.n}`:'Not yet'}</em></span><i>+${T.pay+q.n*10}</i>${q.done?'<u>✓</u>':''}</li>`;}).join('')}</ul>
-  <p class="ft">${S.jr.all?'A perfect day. The island feels a little more like home.':'Finish them all for a bonus. New tasks every morning.'}</p></div>`;}
+  <p class="ft">${S.jr.all?'A perfect day. The island feels a little more like home.':'Finish them all for a bonus. New tasks every morning.'}</p>`;}
 // a big stamp across the top when a task is done
 function stamp(title,sub,big){const el=document.createElement('div');el.className='stamp'+(big?' big':'');el.innerHTML=`<i>✓</i><span><b>${title}</b><small>${sub}</small></span>`;document.body.appendChild(el);
   setTimeout(()=>el.classList.add('out'),big?3200:2400);setTimeout(()=>el.remove(),big?3700:2900);}
@@ -92,7 +92,7 @@ function isFire(x,z){const f=campfire();return !!f&&Math.abs(x-f[0])<=0.5&&Math.
 function isTent(x,z){const t=S.home&&S.home.tent;return !!t&&x>=t[0]&&x<=t[0]+1&&z>=t[1]&&z<=t[1]+1;}
 // a tap close to the flames on screen (the tent stands behind the fire, so the tile under your finger is often the tent's)
 function fireTap(cx,cy){const f=campfire();if(!f||rest)return false;const s=toScreen(f[0],topY(f[0],f[1])+0.25,f[1]);if(Math.hypot(s[0]-cx,s[1]-cy)>Math.max(18,24*40/cam.dist))return false;clearAction();restByFire();return true;}
-function restByFire(){const [fx,fz]=campfire();goTo(fx+0.05,fz+0.78,()=>{rest={fx,fz,t:0,d0:cam.dist};vil.idle=0;jrNote('fire');SFX.place();
+function restByFire(){const [fx,fz]=campfire();goTo(fx+0.05,fz+1.0,()=>{rest={fx,fz,t:0,d0:cam.dist};vil.idle=0;jrNote('fire');SFX.place();
   const night=S.hour>=19||S.hour<5;setAction(night?'The fire crackles and the stars come out. Sleep until morning?':'You sit down by the fire. Warm hands, a crackle, the sea somewhere below.',
     night?[{label:'Sleep',cls:'go',fn:()=>{standUp();sleep();}},{label:'Stay up',fn:standUp}]:[{label:S.hour<17?'Wait till sunset':'Wait till dark',cls:'go',fn:()=>waitFire(S.hour<17?18.2:20)},{label:'Get up',fn:standUp}],'Campfire');});}
 function standUp(){if(!rest)return;rest=null;clearAction();}

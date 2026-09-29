@@ -24,7 +24,7 @@ check(await ev(()=>!!window.DS),'boots and exposes the debug API');
 let st=await ev(()=>DS.state());const wild=await ev(()=>DS.wild());
 check(st.npcs.length===0&&st.buildings.length===0&&(wild.tree||0)>40,`lands on a wild island: no buildings or villagers, ${wild.tree} trees, ${wild.bush} bushes, ${wild.rock||0} rocks`);
 check(await ev(()=>DS.goal())==='Pitch your tent','the first goal is to pitch your tent');
-await pg.getByText('Place here').click();await wait(600);await pg.fill('#pkName','Testhaven');await pg.click('#huOk');await wait(600);
+await pg.getByText('Place here').click();await pg.waitForSelector('#pkName',{timeout:60000});/* after the pitching moment */await pg.fill('#pkName','Testhaven');await pg.click('#huOk');await wait(600);
 st=await ev(()=>DS.state());check(st.town==='Testhaven'&&st.buildings.includes('home'),'pitched the tent and named the island');
 check(await ev(()=>DS.goal())==='Plant your driftseed','next: plant your driftseed');
 check(!!(await ev(()=>DS.revive())),'planted the driftseed');await wait(1500);

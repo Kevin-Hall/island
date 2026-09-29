@@ -31,16 +31,39 @@ function bpMove(x,z){placing.x=x;placing.z=z;const sd=placing.bp==='seed',c=plac
     [{label:sd?'Plant here':'Place here',cls:'go',disabled:!ok,fn:bpPlace},{label:'Later',fn:endPlace}]);}
 function bpPlace(){const {bp:k,x,z}=placing;if(!bpOk(x,z))return;endPlace();SFX.place();
   if(k==='seed'){plantSeed(x,z);return;}
-  if(k==='tent'){S.homeAt={x,z};rebuildHome();syncObjs();burst(x+0.5,topY(x,z)+0.6,z+0.5,0xf6eedb,24,2,0.1);nameIsland();return;}
+  if(k==='tent'){pitchTent(x,z);return;}
   const t=k.startsWith('vh')?'vh':k;S.builds=S.builds||[];S.builds.push({t,n:t==='vh'?+k.slice(2):undefined,x,z,day:S.day});delete S.kits[k];
   rebuildHome();burst(x+1,topY(x,z)+0.6,z+1,0xf6eedb,20,2,0.1);updateHUD();
   toast(t==='vh'?'Plot marked out. Your new neighbour will arrive with their house tomorrow morning!':`Building work has started on the ${BP_NAME(k)}. It'll be finished tomorrow morning.`,'',ICON.hammer);}
 
+// pitching your tent: the camera leans in, the bundle thumps down, three pegs knock in as the canvas rises and pops taut,
+// then the bonfire catches, and you name the island. Only one tap to place; the rest just happens.
+let pitch=null;
+function pitchTent(x,z){S.homeAt={x,z};rebuildHome();syncObjs();const tm=houseMesh&&houseMesh.userData.tent;
+  const fl=[...fires].find(f=>f.parent===houseMesh);if(fl)fl.userData.hold=0;/* the fire stays dark until it's lit */
+  const ic=introCam;introCam=null;/* the opening shot hands over to this one */
+  pitch={x,z,t:0,t0:performance.now(),step:0,tm,fl,sy:0.02,vy:0,ty:0.02,lit:false,d0:ic?ic.d:cam.dist,p0:ic?ic.p:cam.pitch,end:-1};if(tm)tm.scale.set(0.8,0.02,0.8);
+  document.body.classList.add('cine');goTo(x+0.5,z+2.3,()=>{villager.rotation.y=Math.PI;});
+  const y=topY(x,z);noise(0.25,0.12,260,0.8);burst(x+0.5,y+0.1,z+0.5,0xc8b08a,16,1.4,0.09,4);}
+function updatePitch(dt){const p=pitch;if(!p)return;p.t=(performance.now()-p.t0)/1000;/* the clock, not frames, so a slow phone still gets there on time */const y=topY(p.x,p.z);
+  if(p.end<0){if(!drag&&!pinch){cam.dist=lerp(cam.dist,Math.max(11,p.d0*0.5),Math.min(1,dt*1.5));cam.pitch=lerp(cam.pitch,0.34,Math.min(1,dt*1.5));}}
+  else{if(!p.e0)p.e0=performance.now();const u=smooth(0,1,(performance.now()-p.e0)/1600);if(!drag&&!pinch){cam.dist=lerp(p.cd,p.d0,u);cam.pitch=lerp(p.cp,p.p0,u);}if(u>=1){pitch=null;return;}}
+  // the three pegs, one corner at a time, each raising the canvas a little
+  const pegs=[[0.55,p.x,p.z],[1.05,p.x+1,p.z+1],[1.55,p.x+1,p.z]];
+  if(p.step<3&&p.t>=pegs[p.step][0]){const [,px,pz]=pegs[p.step];p.step++;p.ty=0.2+p.step*0.2;vil.hop=0.18;
+    tone(250,0.05,'square',0.05);noise(0.05,0.07,1900,1.4);setTimeout(()=>tone(230,0.04,'square',0.04),90);burst(px,y+0.05,pz,0xa8906a,6,0.9,0.06,4);}
+  if(p.step===3&&p.t>=2.1){p.step=4;p.ty=1;p.vy=2.6;SFX.place();noise(0.35,0.05,900,0.6);burst(p.x+0.5,y+0.8,p.z+0.5,0xf6eedb,18,1.6,0.08,3);}
+  if(p.step===4&&p.t>=2.9){p.step=5;p.lit=true;if(p.fl)delete p.fl.userData.hold;}
+  if(p.step===5&&p.t>=4.0){p.step=6;SFX.discover();nameIsland();}
+  // a springy canvas: it overshoots and settles when it pops up
+  for(let i=0;i<4;i++){const h=Math.min(dt,0.1)/4;p.vy+=((p.ty-p.sy)*60-p.vy*9)*h;p.sy+=p.vy*h;}if(p.tm){const k=clamp(p.sy,0.02,1.3);p.tm.scale.set(0.8+0.2*Math.min(1,k),k,0.8+0.2*Math.min(1,k));}}
+function pitchDone(){if(!pitch)return;pitch.end=0;pitch.cd=cam.dist;pitch.cp=cam.pitch;pitch.lit=false;if(pitch.tm)pitch.tm.scale.set(1,1,1);document.body.classList.remove('cine');}
+
 // the moment you settle: name the place you've chosen
 function nameIsland(){const el=document.createElement('div');el.id='heartUp';const sug=S.islandName||TOWN_NAMES[0][Math.floor(Math.random()*TOWN_NAMES[0].length)]+TOWN_NAMES[1][Math.floor(Math.random()*TOWN_NAMES[1].length)];
-  el.innerHTML=`<div class="hu"><h2>Home, for now</h2><p class="husub">Your tent is up. Every island deserves a name. What will you call this one?</p>
+  el.innerHTML=`<div class="hu"><h2>Home, for now</h2><p class="husub">The tent's up and the fire is crackling. The sea hushes somewhere below. Every island deserves a name: what will you call this one?</p>
     <label class="pkname"><span>Island name</span><input id="pkName" maxlength="16" value="${sug}" autocomplete="off"></label><button class="pbtn go" id="huOk">That's the one</button></div>`;
-  document.body.appendChild(el);const done=()=>{S.islandName=(el.querySelector('#pkName').value||'').trim().slice(0,16)||sug;TOWN.name=S.islandName;el.remove();updateHUD();save();
+  document.body.appendChild(el);const done=()=>{S.islandName=(el.querySelector('#pkName').value||'').trim().slice(0,16)||sug;TOWN.name=S.islandName;el.remove();pitchDone();updateHUD();save();
     setTimeout(()=>toast(`Welcome to <b>${S.islandName}</b>. You still have the glowing <b>driftseed</b> that washed up with you: find it a spot to grow.`,'',ICON.sprout),500);
     setTimeout(()=>{if(!S.heartAt&&!placing&&!S.sea&&!inside)startBlueprint('seed');},3500);};
   el.querySelector('#huOk').onclick=done;el.querySelector('#pkName').onkeydown=e=>{if(e.key==='Enter')done();};}

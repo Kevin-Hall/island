@@ -8,7 +8,7 @@ if(/[?&]debug\b/.test(location.search)){
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
       islands:islands.length,town:TOWN.name,buildings:TOWN.bld.filter(b=>!b.locked).map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
     hour:h=>{setHour(h);applyTime();},
-    jr:()=>S.jr,gain:(k,n=1)=>gain(k,n),campfire:()=>campfire(),tent:()=>S.home&&S.home.tent,resting:()=>!!rest,
+    jr:()=>S.jr,pitch:()=>pitch&&{t:pitch.t,sy:pitch.sy,step:pitch.step,end:pitch.end},gain:(k,n=1)=>gain(k,n),campfire:()=>campfire(),tent:()=>S.home&&S.home.tent,resting:()=>!!rest,
     tp:(x,z)=>{S.sea=false;vil.x=vil.tx=x;vil.z=vil.tz=z;vil.path=null;cam.tx=x;cam.tz=z;},
     visit:id=>{const i=islands[id];S.disc[id]=1;const sp=(i.spots&&i.spots[1])||i.grass[0];DS.tp(sp[0]+0.6,sp[1]+0.6);},
     islands:()=>islands.map(i=>({id:i.id,biome:i.biome,name:i.name,x:i.cx,z:i.cz,r:Math.round(islR(i)),grand:!!i.grand,river:(i.rtiles||[]).length})),

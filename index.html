@@ -39,10 +39,10 @@ img.px{image-rendering:auto}
 .clockb .wx svg{width:100%;height:100%;display:block}
 .clockb .t{font-size:30px;font-weight:700;line-height:1;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--ink)}
 .clockb .t small{font-size:14px;font-weight:600;margin-left:4px;color:var(--ink2)}
-.clockb .d{font-size:13px;font-weight:600;color:var(--ink2);margin-top:3px;white-space:nowrap}
+.clockb .d{font-size:13px;font-weight:600;color:var(--ink2);margin-top:3px}
 .loc{display:inline-block;margin-top:8px;margin-left:6px;background:var(--teal);color:#fff;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;
   box-shadow:0 3px 0 var(--teal-d);white-space:nowrap;transform:rotate(-2deg)}
-.hud-r{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.hud-r{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .chip{pointer-events:auto;display:inline-flex;align-items:center;gap:7px;background:var(--paper);border-radius:999px;padding:5px 14px 5px 6px;
   box-shadow:var(--shadow);font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;color:var(--ink)}
 .chip img{width:26px;height:26px;background:#fde7ec;border-radius:50%;padding:3px}
@@ -334,6 +334,7 @@ body.arriving>:not(#arrive):not(#fade):not(#c){visibility:hidden}
 @media (prefers-reduced-motion:reduce){.reveal .rays,.reveal .rv img,#title .logo,#title p,.stamp,.bump{animation:none}}
 body.titling .hud,body.titling #bar,body.titling #toasts,body.titling #actionBar,body.titling #floats{opacity:0;pointer-events:none}
 .hud,#bar{transition:opacity .8s}
+body.cine .hud,body.cine #bar,body.cine #toasts{opacity:0;pointer-events:none}
 </style>
 </head>
 <body>
@@ -1951,14 +1952,19 @@ function roof(p,col,gable,W,Hr,D,y,x=0,z=0){const sx=W/1.732,sy=Hr/1.5;
   p.push(P(BOX,dk,x,y+Hr+0.015,z,0,0,0,0.14,0.06,D+0.18));}
 function houseGroup(lv){
   const g=new T.Group(),p=[],gl=[];
-  if(lv===0){const sx=1.5/1.732,sy=1.0/1.5;
-    p.push(P(PRISM,0xf2e8d2,0,0.5*sy,0,0,0,0,sx,sy,1.5),P(PRISM,0xd05a4a,0,0.5*sy*1.02,0,0,0,0,sx*1.03,sy*1.03,0.34),P(PRISM,0x3a2a30,0,0.5*sy*0.5,0.02,0,0,0,sx*0.42,sy*0.5,1.52));
-    // the bonfire in front of your tent, with a bench on either side and a crate of supplies
+  if(lv===0){const sx=1.5/1.732,sy=1.0/1.5,tp=[];
+    // the tent itself (its own mesh, so pitching it can raise it): canvas, a red stripe, the open door, a guy rope
+    // and peg out the back, and a lantern hanging by the door
+    tp.push(P(PRISM,0xf2e8d2,0,0.5*sy,0,0,0,0,sx,sy,1.5),P(PRISM,0xd05a4a,0,0.5*sy*1.02,0,0,0,0,sx*1.03,sy*1.03,0.34),P(PRISM,0x3a2a30,0,0.5*sy*0.5,0.02,0,0,0,sx*0.42,sy*0.5,1.52));
+    tp.push(P(BOX,0xe8dcc0,0,0.5,-1.0,0.4636,0,0,0.025,1.12,0.025),P(BOX,0x7a5230,0,0.05,-1.25,0,0,0,0.06,0.12,0.06),P(BOX,0x7a5230,0,1.02,0,0,0,0,0.05,0.05,1.62));
+    p.push(P(CYL6,0x6e4428,0.95,0.42,0.95,0,0,0,0.05,0.84,0.05),P(BOX,0x6e4428,0.86,0.82,0.95,0,0,0,0.2,0.04,0.04),P(BOX,0x3a3440,0.78,0.64,0.95,0,0,0,0.13,0.03,0.13));
+    gl.push(P(BOX,0xfff0b8,0.78,0.72,0.95,0,0,0,0.1,0.13,0.1));
+    // a big bonfire in front of your tent, with a bench on either side and a crate of supplies
     // (to the front-left, clear of the door: its tile is kept solid in layoutTown)
-    {const fx=-1.5,fz=1.5;const q=campfireParts(1.1);p.push(...shift(q.p,fx,0,fz,0));addFire(g,fx,0,fz,1.1);benchParts(p,fx,fz+0.72,0);benchParts(p,fx-0.72,fz,Math.PI/2);
+    {const fx=-1.5,fz=1.5;const q=campfireParts(1.45);p.push(...shift(q.p,fx,0,fz,0));addFire(g,fx,0,fz,1.45);benchParts(p,fx,fz+1.0,0);benchParts(p,fx-1.0,fz,Math.PI/2);
       p.push(P(BOX,0xb07a44,1.25,0.18,-0.55,0,0.3,0,0.36,0.34,0.34),P(BOX,0x7a5230,1.25,0.18,-0.55,0,0.3,0,0.38,0.05,0.36),P(BOX,0x7a5230,1.25,0.35,-0.55,0,0.3,0,0.38,0.03,0.36));}
     for(let i=0;i<4;i++)p.push(P(BOX,i%3?0xf4f0ea:0xd8453a,-0.72+(i%2)*0.3,0.02,0.62+Math.floor(i/2)*0.3,0,0,0,0.3,0.03,0.3));
-    g.add(pool(0.03,1.3).translateX(-1.5).translateZ(1.5));
+    const tm=M(tp);g.add(tm);g.userData.tent=tm;
   }else if(lv===1){
     p.push(P(BOX,0x9c6b40,0,0.5,0,0,0,0,1.5,1.0,1.3));for(let i=0;i<4;i++)p.push(P(BOX,0x7c5230,0,0.12+i*0.25,0,0,0,0,1.53,0.04,1.33));
     roof(p,0x5b3b3b,0x9c6b40,1.6,0.8,1.3,1.0);p.push(P(BOX,0x4a3024,-0.2,0.32,0.66,0,0,0,0.32,0.62,0.04),P(BOX,0x8a8a92,0.45,1.6,-0.2,0,0,0,0.2,0.5,0.2));
@@ -2315,7 +2321,7 @@ function layoutTown(isl){
   // palms along the town beach (shake or chop them like the other trees), clear of the dock and your boat
   if(!(S.home&&S.home.preset))for(const [x,z] of palmSpots(isl,R,8,(x,z)=>!taken(K(x,z))&&Math.hypot(x-DOCK.x,z-DOCK.z)>3.5&&!(S.boat&&Math.hypot(x-S.boat.x,z-S.boat.z)<2.5))){const k=K(x,z);
     tp.push(...shift(treeParts(PALMS[Math.floor(hash(x,z)*PALMS.length)],mulberry(hi(x,z,13)),0x9a9ea8),x,y0(x,z),z,hash(z,x)*6.28));TOWN.fixed.set(k,'decor');TOWN.res.set(k,'tree');}
-  if(S.home&&S.home.fire){const [x,z]=S.home.fire,y=y0(x,z),q=campfireParts(1.2);p.push(...shift(q.p,x,y,z,0));addFire(isl.group,x,y,z,1.2);TOWN.lamps.push([x,y,z]);}
+  if(S.home&&S.home.fire){const [x,z]=S.home.fire,y=y0(x,z),q=campfireParts(1.3);p.push(...shift(q.p,x,y,z,0));addFire(isl.group,x,y,z,1.3);}
   if(S.home&&S.home.tent){const [x,z]=S.home.tent,t=houseGroup(0);t.position.set(x+0.5,y0(x,z),z+0.5);t.rotation.y=-0.4;isl.group.add(t);}
   isl.group.add(M(p));addVeg(isl,isl.group,tp);if(gl.length){const m=M(gl,glowMat);m.castShadow=false;isl.group.add(m);}
   // flowers, clover and pebbles: instanced over the open grass (hidden again wherever you till or build)
@@ -2388,22 +2394,49 @@ function cottage(p,gl,roofCol){const wall=0xf3e6cc,base=0xb8ae9a;
   p.push(P(BOX,0x8a5a3a,0.38,0.38,0.72,0,0,0,0.42,0.08,0.1));for(let i=0;i<4;i++)p.push(P(SPH_XS,[0xf2a6c8,0xf6d04a,0xffffff,0xe86a5a][i],0.26+i*0.08,0.45,0.73,0,0,0,0.08,0.07,0.08));}
 // a campfire in a ring of stones, crossed logs and a flame
 function campfireParts(s=1){const p=[],gl=[];
-  for(let i=0;i<10;i++){const a=i/10*6.283;p.push(PG(SPH_LO,i%2?0x8e8a94:0x7a7682,0x4a4652,Math.cos(a)*0.34*s,0.07*s,Math.sin(a)*0.34*s,0,a,0,0.2*s,0.15*s,0.17*s));}
-  p.push(P(SPH_LO,0x2e2420,0,0.03*s,0,0,0,0,0.5*s,0.05*s,0.5*s));
-  for(let i=0;i<4;i++){const a=i*0.785+0.3;p.push(P(CYL6,i%2?0x7a4a2a:0x5e3820,Math.cos(a)*0.06*s,0.12*s,Math.sin(a)*0.06*s,Math.sin(a)*0.9,0,-Math.cos(a)*0.9,0.07*s,0.5*s,0.07*s));}
-  p.push(P(SPH_XS,0xff7a28,0,0.08*s,0,0,0,0,0.24*s,0.06*s,0.24*s)); // glowing embers under the logs
+  // a ring of chunky stones, a bed of ash and glowing embers, and a teepee of logs leaning in over it
+  for(let i=0;i<12;i++){const a=i/12*6.283+0.1,r=0.44*s*(0.94+hash(i,3)*0.12);p.push(PG(SPH_LO,i%3?0x8e8a94:0x7a7682,0x4a4652,Math.cos(a)*r,0.08*s,Math.sin(a)*r,0,a,0,(0.2+hash(i,7)*0.06)*s,(0.15+hash(i,5)*0.05)*s,0.17*s));}
+  p.push(P(SPH_LO,0x3a2e2a,0,0.03*s,0,0,0,0,0.72*s,0.06*s,0.72*s),P(SPH_XS,0xff7a28,0,0.07*s,0,0,0,0,0.42*s,0.07*s,0.42*s),P(SPH_XS,0xffb040,0.05*s,0.09*s,-0.04*s,0,0,0,0.2*s,0.05*s,0.2*s));
+  for(let i=0;i<6;i++){const a=i/6*6.283+0.4,lean=0.5;p.push(PG(CYL6,i%2?0x8a5a34:0x6e4428,0x3a2418,Math.cos(a)*0.2*s,0.27*s,Math.sin(a)*0.2*s,-Math.sin(a)*lean,0,Math.cos(a)*lean,0.075*s,0.62*s,0.075*s));}/* leaning in to meet over the fire */
+  // a couple of spare logs by the fire
+  p.push(P(CYL6,0x8a5a34,0.62*s,0.06*s,0.3*s,Math.PI/2,0.5,0,0.1*s,0.5*s,0.1*s),P(CYL6,0x6e4428,0.66*s,0.06*s,0.44*s,Math.PI/2,0.35,0,0.1*s,0.46*s,0.1*s),P(CYL6,0xd8b890,0.86*s,0.06*s,0.44*s,Math.PI/2,0.35,0,0.07*s,0.02*s,0.07*s));
   return{p,gl:flameParts(s)};}
-// the flame alone (flickered by updateFires), centred on the pit
-function flameParts(s=1){return[PG(SCONE,0xffd060,0xff6a24,0,0.34*s,0,0,0,0,0.42*s,0.62*s,0.42*s),PG(SCONE,0xfff2a0,0xffa030,0.02*s,0.3*s,0.02*s,0,0.6,0,0.24*s,0.46*s,0.24*s),
-  PG(SCONE,0xffb040,0xff5a20,-0.1*s,0.24*s,-0.04*s,0,1,0.25,0.18*s,0.34*s,0.18*s),PG(SCONE,0xffb040,0xff5a20,0.1*s,0.24*s,0.05*s,0,2,-0.25,0.16*s,0.3*s,0.16*s)];}
+// the flame alone: licking tongues round a bright core, white-gold at the root and red at the tips; flameMat makes them
+// sway and flicker in the shader, and updateFires grows it from a daytime flicker to a roaring bonfire at night
+function flameParts(s=1){const p=[PG(SCONE,0xff4a18,0xffc040,0,0.5*s,0,0,0,0,0.5*s,1.0*s,0.5*s),PG(SCONE,0xffa030,0xfff6c8,0,0.34*s,0,0,0.5,0,0.3*s,0.62*s,0.3*s)];
+  for(let i=0;i<7;i++){const a=i/7*6.283,r=0.16*s,h=(0.55+hash(i,11)*0.4)*s;p.push(PG(SCONE,i%2?0xe8401a:0xff6a24,0xffd060,Math.cos(a)*r,h*0.5,Math.sin(a)*r,Math.sin(a)*0.22,a,-Math.cos(a)*0.22,0.24*s,h,0.24*s));}
+  return p;}
 // a wooden bench (plank seat on two little legs)
 function benchParts(p,x,z,r){const q=[P(BOX,0x9a6438,0,0.2,0,0,0,0,0.9,0.07,0.3),P(BOX,0x7a4a2a,-0.34,0.09,0,0,0,0,0.08,0.18,0.24),P(BOX,0x7a4a2a,0.34,0.09,0,0,0,0,0.08,0.18,0.24)];p.push(...shift(q,x,0,z,r));}
-// every lit fire flickers, glows and sends up embers
-const fires=new Set();
-function addFire(parent,x,y,z,s=1){const f=M(flameParts(s),glowMat);f.castShadow=false;f.position.set(x,y,z);parent.add(f);fires.add(f);return f;}
-function updateFires(dt,tt){for(const f of fires){if(!f.parent){fires.delete(f);continue;}let o=f,vis=true,root=f;while(o){if(!o.visible){vis=false;break;}root=o;o=o.parent;}if(!vis||root!==scene)continue;/* (previews and thumbnails aren't in the world) */
-  const ph=f.id*1.7;f.scale.set(1+Math.sin(tt*11+ph)*0.07,1+Math.sin(tt*8.3+ph)*0.14+Math.sin(tt*17+ph)*0.05,1+Math.cos(tt*10+ph)*0.07);f.rotation.y+=dt*0.8;
-  if(Math.random()<dt*7){f.getWorldPosition(_v);if(Math.abs(_v.x-cam.tx)<24&&Math.abs(_v.z-cam.tz)<24)emit(_v.x+(Math.random()-0.5)*0.2,_v.y+0.45,_v.z+(Math.random()-0.5)*0.2,{vx:(Math.random()-0.5)*0.3,vy:0.9+Math.random()*0.6,vz:(Math.random()-0.5)*0.3,life:1.2,max:1.2,size:0.035,color:Math.random()<0.5?0xffb040:0xffe080,g:0,sw:0.6,ph:Math.random()*6});}}}
+// every fire: the flames sway in their shader, grow at dusk into a roaring bonfire that throws warm light and a glow on the
+// ground, and send up sparks (and a thread of smoke by day). One shared point light sits in the fire nearest the camera.
+const fires=new Set(),flameU={uT:{value:0}},_fv=new T.Vector3();
+const flameMat=new T.MeshBasicMaterial({vertexColors:true});
+flameMat.onBeforeCompile=sh=>{sh.uniforms.uT=flameU.uT;sh.vertexShader='uniform float uT;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+  float fh=max(transformed.y,0.0),fw=fh*fh*1.8;
+  transformed.x+=(sin(uT*8.0+fh*7.0+position.z*6.0)*0.08+sin(uT*15.0+fh*13.0+position.x*4.0)*0.03)*fw;
+  transformed.z+=(cos(uT*7.0+fh*6.0+position.x*6.0)*0.08+cos(uT*13.0+fh*11.0)*0.03)*fw;
+  transformed.y*=1.0+sin(uT*11.0+position.x*9.0+position.z*7.0)*0.14*fh;`);};
+const firePoolMat=new T.MeshBasicMaterial({map:glowTex,color:0xffb070,transparent:true,blending:T.AdditiveBlending,depthWrite:false,opacity:0});
+const fireLight=new T.PointLight(0xff9448,0,9,1.4);scene.add(fireLight);
+function addFire(parent,x,y,z,s=1){const f=M(flameParts(s),flameMat);f.castShadow=false;f.receiveShadow=false;f.position.set(x,y+0.04*s,z);f.userData.s=s;parent.add(f);fires.add(f);
+  const pm=new T.Mesh(POOL_GEO,firePoolMat);pm.position.set(x,y+0.04,z);pm.scale.setScalar(1.5*s);pm.userData.noThumb=true;pm.renderOrder=2;pm.frustumCulled=false;parent.add(pm);return f;}
+// how lit a fire wants to be: a small flame by day, a bonfire from dusk (and whenever you sit by it or have just lit it)
+function fireWant(x,z){const near=Math.hypot(x-vil.x,z-vil.z)<3.5,boost=near&&(rest||pitch&&pitch.lit);return boost?1:0.4+0.6*smooth(0.12,0.55,nightF);}
+function updateFires(dt,tt){flameU.uT.value=tt;let best=null,bd=26*26,bl=0;
+  for(const f of fires){if(!f.parent){fires.delete(f);continue;}let o=f.parent,vis=true,root=f;while(o){/* (from the parent: a fire that has died down hides itself) */if(!o.visible){vis=false;break;}root=o;o=o.parent;}if(!vis||root!==scene)continue;/* (previews and thumbnails aren't in the world) */
+    f.getWorldPosition(_v);const u=f.userData,s=u.s||1,want=u.hold!==undefined?u.hold:fireWant(_v.x,_v.z);if(u.lit===undefined)u.lit=want;
+    const was=u.lit;u.lit+=(want-u.lit)*Math.min(1,dt*(want>u.lit?1.6:0.5));
+    const near=Math.abs(_v.x-cam.tx)<24&&Math.abs(_v.z-cam.tz)<24;
+    // flaring up: a whoosh and a shower of sparks as it catches
+    if(was<0.7&&u.lit>=0.7&&near){if(Math.hypot(_v.x-vil.x,_v.z-vil.z)<8){noise(0.6,0.07,420,0.6);noise(0.3,0.04,1600,1);}for(let i=0;i<22;i++){const a=Math.random()*6.28;emit(_v.x,_v.y+0.4*s,_v.z,{vx:Math.cos(a)*0.8,vy:1.4+Math.random()*1.4,vz:Math.sin(a)*0.8,life:1.4,max:1.4,size:0.045,color:Math.random()<0.5?0xffb040:0xffe080,g:0.4,sw:0.6,ph:Math.random()*6});}}
+    const L=u.lit,ph=f.id*1.7,fl=1+Math.sin(tt*9+ph)*0.05+Math.sin(tt*23+ph)*0.03;f.scale.set(L*fl,L*(1+Math.sin(tt*6.3+ph)*0.08),L*fl);f.rotation.y+=dt*0.35;f.visible=L>0.02;
+    if(near){if(Math.random()<dt*(2+L*12))emit(_v.x+(Math.random()-0.5)*0.3*s,_v.y+(0.4+L*0.5)*s,_v.z+(Math.random()-0.5)*0.3*s,{vx:(Math.random()-0.5)*0.3,vy:0.8+Math.random()*0.9*L,vz:(Math.random()-0.5)*0.3,life:1.3,max:1.3,size:0.03+L*0.02,color:Math.random()<0.5?0xffb040:0xffe080,g:0,sw:0.7,ph:Math.random()*6});
+      if(nightF<0.35&&Math.random()<dt*1.4)emit(_v.x+(Math.random()-0.5)*0.15,_v.y+(0.6+L*0.4)*s,_v.z+(Math.random()-0.5)*0.15,{vx:0.12,vy:0.45,vz:0.04,life:3,max:3,size:0.09,color:0xd8d2cc,g:-0.05,sw:0.5,ph:Math.random()*6});}
+    const d=(_v.x-cam.tx)**2+(_v.z-cam.tz)**2;if(d<bd){bd=d;best=_fv.copy(_v);bl=L*s;}}
+  const fk=0.85+Math.sin(tt*13)*0.08+Math.sin(tt*29)*0.05+Math.sin(tt*5.3)*0.05;
+  if(best){fireLight.position.set(best.x,best.y+0.9,best.z);fireLight.intensity=Math.max(0,nightF*0.9+0.08)*bl*1.5*fk;}else fireLight.intensity=0;
+  firePoolMat.opacity=clamp(nightF*1.1+0.05,0,1)*clamp(bl,0,1)*fk;}
 /* ---- villager homes in coastal styles, one per personality (footprint ±1, door at the front centre, +z) ---- */
 function planks(p,c,x,y,z,w,h,d,axis='x'){const n=Math.max(2,Math.round((axis==='x'?w:d)/0.14));for(let i=0;i<n;i++){const t=(i+0.5)/n-0.5,sh=i%2?0.94:1.04;
   p.push(axis==='x'?P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x+t*w,y,z,0,0,0,w/n*0.96,h,d):P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x,y,z+t*d,0,0,0,w,h,d/n*0.96));}}
@@ -3589,16 +3622,39 @@ function bpMove(x,z){placing.x=x;placing.z=z;const sd=placing.bp==='seed',c=plac
     [{label:sd?'Plant here':'Place here',cls:'go',disabled:!ok,fn:bpPlace},{label:'Later',fn:endPlace}]);}
 function bpPlace(){const {bp:k,x,z}=placing;if(!bpOk(x,z))return;endPlace();SFX.place();
   if(k==='seed'){plantSeed(x,z);return;}
-  if(k==='tent'){S.homeAt={x,z};rebuildHome();syncObjs();burst(x+0.5,topY(x,z)+0.6,z+0.5,0xf6eedb,24,2,0.1);nameIsland();return;}
+  if(k==='tent'){pitchTent(x,z);return;}
   const t=k.startsWith('vh')?'vh':k;S.builds=S.builds||[];S.builds.push({t,n:t==='vh'?+k.slice(2):undefined,x,z,day:S.day});delete S.kits[k];
   rebuildHome();burst(x+1,topY(x,z)+0.6,z+1,0xf6eedb,20,2,0.1);updateHUD();
   toast(t==='vh'?'Plot marked out. Your new neighbour will arrive with their house tomorrow morning!':`Building work has started on the ${BP_NAME(k)}. It'll be finished tomorrow morning.`,'',ICON.hammer);}
 
+// pitching your tent: the camera leans in, the bundle thumps down, three pegs knock in as the canvas rises and pops taut,
+// then the bonfire catches, and you name the island. Only one tap to place; the rest just happens.
+let pitch=null;
+function pitchTent(x,z){S.homeAt={x,z};rebuildHome();syncObjs();const tm=houseMesh&&houseMesh.userData.tent;
+  const fl=[...fires].find(f=>f.parent===houseMesh);if(fl)fl.userData.hold=0;/* the fire stays dark until it's lit */
+  const ic=introCam;introCam=null;/* the opening shot hands over to this one */
+  pitch={x,z,t:0,t0:performance.now(),step:0,tm,fl,sy:0.02,vy:0,ty:0.02,lit:false,d0:ic?ic.d:cam.dist,p0:ic?ic.p:cam.pitch,end:-1};if(tm)tm.scale.set(0.8,0.02,0.8);
+  document.body.classList.add('cine');goTo(x+0.5,z+2.3,()=>{villager.rotation.y=Math.PI;});
+  const y=topY(x,z);noise(0.25,0.12,260,0.8);burst(x+0.5,y+0.1,z+0.5,0xc8b08a,16,1.4,0.09,4);}
+function updatePitch(dt){const p=pitch;if(!p)return;p.t=(performance.now()-p.t0)/1000;/* the clock, not frames, so a slow phone still gets there on time */const y=topY(p.x,p.z);
+  if(p.end<0){if(!drag&&!pinch){cam.dist=lerp(cam.dist,Math.max(11,p.d0*0.5),Math.min(1,dt*1.5));cam.pitch=lerp(cam.pitch,0.34,Math.min(1,dt*1.5));}}
+  else{if(!p.e0)p.e0=performance.now();const u=smooth(0,1,(performance.now()-p.e0)/1600);if(!drag&&!pinch){cam.dist=lerp(p.cd,p.d0,u);cam.pitch=lerp(p.cp,p.p0,u);}if(u>=1){pitch=null;return;}}
+  // the three pegs, one corner at a time, each raising the canvas a little
+  const pegs=[[0.55,p.x,p.z],[1.05,p.x+1,p.z+1],[1.55,p.x+1,p.z]];
+  if(p.step<3&&p.t>=pegs[p.step][0]){const [,px,pz]=pegs[p.step];p.step++;p.ty=0.2+p.step*0.2;vil.hop=0.18;
+    tone(250,0.05,'square',0.05);noise(0.05,0.07,1900,1.4);setTimeout(()=>tone(230,0.04,'square',0.04),90);burst(px,y+0.05,pz,0xa8906a,6,0.9,0.06,4);}
+  if(p.step===3&&p.t>=2.1){p.step=4;p.ty=1;p.vy=2.6;SFX.place();noise(0.35,0.05,900,0.6);burst(p.x+0.5,y+0.8,p.z+0.5,0xf6eedb,18,1.6,0.08,3);}
+  if(p.step===4&&p.t>=2.9){p.step=5;p.lit=true;if(p.fl)delete p.fl.userData.hold;}
+  if(p.step===5&&p.t>=4.0){p.step=6;SFX.discover();nameIsland();}
+  // a springy canvas: it overshoots and settles when it pops up
+  for(let i=0;i<4;i++){const h=Math.min(dt,0.1)/4;p.vy+=((p.ty-p.sy)*60-p.vy*9)*h;p.sy+=p.vy*h;}if(p.tm){const k=clamp(p.sy,0.02,1.3);p.tm.scale.set(0.8+0.2*Math.min(1,k),k,0.8+0.2*Math.min(1,k));}}
+function pitchDone(){if(!pitch)return;pitch.end=0;pitch.cd=cam.dist;pitch.cp=cam.pitch;pitch.lit=false;if(pitch.tm)pitch.tm.scale.set(1,1,1);document.body.classList.remove('cine');}
+
 // the moment you settle: name the place you've chosen
 function nameIsland(){const el=document.createElement('div');el.id='heartUp';const sug=S.islandName||TOWN_NAMES[0][Math.floor(Math.random()*TOWN_NAMES[0].length)]+TOWN_NAMES[1][Math.floor(Math.random()*TOWN_NAMES[1].length)];
-  el.innerHTML=`<div class="hu"><h2>Home, for now</h2><p class="husub">Your tent is up. Every island deserves a name. What will you call this one?</p>
+  el.innerHTML=`<div class="hu"><h2>Home, for now</h2><p class="husub">The tent's up and the fire is crackling. The sea hushes somewhere below. Every island deserves a name: what will you call this one?</p>
     <label class="pkname"><span>Island name</span><input id="pkName" maxlength="16" value="${sug}" autocomplete="off"></label><button class="pbtn go" id="huOk">That's the one</button></div>`;
-  document.body.appendChild(el);const done=()=>{S.islandName=(el.querySelector('#pkName').value||'').trim().slice(0,16)||sug;TOWN.name=S.islandName;el.remove();updateHUD();save();
+  document.body.appendChild(el);const done=()=>{S.islandName=(el.querySelector('#pkName').value||'').trim().slice(0,16)||sug;TOWN.name=S.islandName;el.remove();pitchDone();updateHUD();save();
     setTimeout(()=>toast(`Welcome to <b>${S.islandName}</b>. You still have the glowing <b>driftseed</b> that washed up with you: find it a spot to grow.`,'',ICON.sprout),500);
     setTimeout(()=>{if(!S.heartAt&&!placing&&!S.sea&&!inside)startBlueprint('seed');},3500);};
   el.querySelector('#huOk').onclick=done;el.querySelector('#pkName').onkeydown=e=>{if(e.key==='Enter')done();};}
@@ -4544,15 +4600,15 @@ function jrCheck(){if(!S.jr||S.jr.day!==S.day)jrMake();for(const t of S.jr.tasks
 const BOOK_SVG='<svg viewBox="0 0 32 32"><path d="M4 7c4-2 8-2 12 1v18c-4-3-8-3-12-1z" fill="#f7e4c0" stroke="#b07a4a" stroke-width="1.6" stroke-linejoin="round"/><path d="M28 7c-4-2-8-2-12 1v18c4-3 8-3 12-1z" fill="#fff4dc" stroke="#b07a4a" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 11c2-.6 4-.5 6 .5M7 15c2-.6 4-.5 6 .5M19 11.5c2-1 4-1.1 6-.5" stroke="#d8b07a" stroke-width="1.3" stroke-linecap="round"/><path d="M22 4v9l2-1.6 2 1.6V4z" fill="#f08878"/></svg>';
 let jrSig='';
 function jrChip(bump){const el=$('jrChip');if(!el||!S.jr){return;}const d=S.jr.tasks.filter(q=>q.done).length,n=S.jr.tasks.length;
-  const sig=d+'/'+n;if(sig!==jrSig){jrSig=sig;el.innerHTML=`${BOOK_SVG}<span><small>Today</small>${d===n?'All done!':`${d} / ${n} tasks`}</span><i>${S.jr.tasks.map(q=>`<b class="${q.done?'on':''}"></b>`).join('')}</i>`;}
+  const sig=S.jr.day+':'+S.jr.tasks.map(q=>q.k+q.have).join(),changed=sig!==jrSig;if(changed){jrSig=sig;el.innerHTML=`${BOOK_SVG}<span><small>Today</small>${d===n?'All done!':`${d} / ${n} tasks`}</span><i>${S.jr.tasks.map(q=>`<b class="${q.done?'on':''}"></b>`).join('')}</i>`;}
   el.hidden=false;el.classList.toggle('done',d===n);if(bump){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}
-  if($('jrCard'))jrRender();}
-function jrOpen(){SFX.ui();let c=$('jrCard');if(c){c.remove();return;}c=document.createElement('div');c.id='jrCard';c.className='jrcard';document.body.appendChild(c);
+  if(changed&&$('jrCard'))jrRender();/* only when something changed: rebuilding it would replay its pop-in */}
+function jrOpen(){SFX.ui();let c=$('jrCard');if(c){c.remove();return;}c=document.createElement('div');c.id='jrCard';c.className='jrcard';c.innerHTML='<div class="page"></div>';document.body.appendChild(c);
   c.onclick=e=>{if(e.target===c||e.target.closest('.x')){SFX.ui();c.classList.add('out');setTimeout(()=>c.remove(),220);}};jrRender();}
 function jrRender(){const c=$('jrCard');if(!c||!S.jr)return;const s=season();
-  c.innerHTML=`<div class="page"><button class="x" aria-label="Close">×</button><div class="hd"><small>${s[0].toUpperCase()+s.slice(1)} · Day ${S.day}</small><h3>${TOWN.name||'The island'} journal</h3></div>
+  c.firstChild.innerHTML=`<button class="x" aria-label="Close">×</button><div class="hd"><small>${s[0].toUpperCase()+s.slice(1)} · Day ${S.day}</small><h3>${TOWN.name||'The island'} journal</h3></div>
   <ul>${S.jr.tasks.map(q=>{const T=JR_TASKS[q.k],ic=ICON[T.ico]||ICON.star;return`<li class="${q.done?'done':''}"><img class="px" src="${ic}" alt=""><span><b>${T.t(q.n)}</b><em>${q.done?'Done!':q.n>1?`${q.have} of ${q.n}`:'Not yet'}</em></span><i>+${T.pay+q.n*10}</i>${q.done?'<u>✓</u>':''}</li>`;}).join('')}</ul>
-  <p class="ft">${S.jr.all?'A perfect day. The island feels a little more like home.':'Finish them all for a bonus. New tasks every morning.'}</p></div>`;}
+  <p class="ft">${S.jr.all?'A perfect day. The island feels a little more like home.':'Finish them all for a bonus. New tasks every morning.'}</p>`;}
 // a big stamp across the top when a task is done
 function stamp(title,sub,big){const el=document.createElement('div');el.className='stamp'+(big?' big':'');el.innerHTML=`<i>✓</i><span><b>${title}</b><small>${sub}</small></span>`;document.body.appendChild(el);
   setTimeout(()=>el.classList.add('out'),big?3200:2400);setTimeout(()=>el.remove(),big?3700:2900);}
@@ -4601,7 +4657,7 @@ function isFire(x,z){const f=campfire();return !!f&&Math.abs(x-f[0])<=0.5&&Math.
 function isTent(x,z){const t=S.home&&S.home.tent;return !!t&&x>=t[0]&&x<=t[0]+1&&z>=t[1]&&z<=t[1]+1;}
 // a tap close to the flames on screen (the tent stands behind the fire, so the tile under your finger is often the tent's)
 function fireTap(cx,cy){const f=campfire();if(!f||rest)return false;const s=toScreen(f[0],topY(f[0],f[1])+0.25,f[1]);if(Math.hypot(s[0]-cx,s[1]-cy)>Math.max(18,24*40/cam.dist))return false;clearAction();restByFire();return true;}
-function restByFire(){const [fx,fz]=campfire();goTo(fx+0.05,fz+0.78,()=>{rest={fx,fz,t:0,d0:cam.dist};vil.idle=0;jrNote('fire');SFX.place();
+function restByFire(){const [fx,fz]=campfire();goTo(fx+0.05,fz+1.0,()=>{rest={fx,fz,t:0,d0:cam.dist};vil.idle=0;jrNote('fire');SFX.place();
   const night=S.hour>=19||S.hour<5;setAction(night?'The fire crackles and the stars come out. Sleep until morning?':'You sit down by the fire. Warm hands, a crackle, the sea somewhere below.',
     night?[{label:'Sleep',cls:'go',fn:()=>{standUp();sleep();}},{label:'Stay up',fn:standUp}]:[{label:S.hour<17?'Wait till sunset':'Wait till dark',cls:'go',fn:()=>waitFire(S.hour<17?18.2:20)},{label:'Get up',fn:standUp}],'Campfire');});}
 function standUp(){if(!rest)return;rest=null;clearAction();}
@@ -5350,7 +5406,7 @@ function frame(now){
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
   scene.fog.near=camD()+45-fogBoost*30;scene.fog.far=camD()+300-fogBoost*200;/* a light haze: neighbouring islands stay green on the horizon */
   flushCrops();for(const {g} of cropMeshes.values())if(g.children.length)g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;
-  updatePops(dt);updateFires(dt,tt);updateJournal(dt,tt);
+  updatePops(dt);updateFires(dt,tt);updateJournal(dt,tt);updatePitch(dt);
   // ripe crops twinkle now and then, so you can see what's ready
   for(const [k,{g,v,s}] of cropMeshes)if(s===3&&(!v||v==='normal')&&Math.random()<dt*0.12)sparkle(g.position.x,topY(Math.round(g.position.x),Math.round(g.position.z))+0.5,g.position.z,0xfffbe0);
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<dt*1.6)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);
@@ -5436,7 +5492,7 @@ if(/[?&]debug\b/.test(location.search)){
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
       islands:islands.length,town:TOWN.name,buildings:TOWN.bld.filter(b=>!b.locked).map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
     hour:h=>{setHour(h);applyTime();},
-    jr:()=>S.jr,gain:(k,n=1)=>gain(k,n),campfire:()=>campfire(),tent:()=>S.home&&S.home.tent,resting:()=>!!rest,
+    jr:()=>S.jr,pitch:()=>pitch&&{t:pitch.t,sy:pitch.sy,step:pitch.step,end:pitch.end},gain:(k,n=1)=>gain(k,n),campfire:()=>campfire(),tent:()=>S.home&&S.home.tent,resting:()=>!!rest,
     tp:(x,z)=>{S.sea=false;vil.x=vil.tx=x;vil.z=vil.tz=z;vil.path=null;cam.tx=x;cam.tz=z;},
     visit:id=>{const i=islands[id];S.disc[id]=1;const sp=(i.spots&&i.spots[1])||i.grass[0];DS.tp(sp[0]+0.6,sp[1]+0.6);},
     islands:()=>islands.map(i=>({id:i.id,biome:i.biome,name:i.name,x:i.cx,z:i.cz,r:Math.round(islR(i)),grand:!!i.grand,river:(i.rtiles||[]).length})),

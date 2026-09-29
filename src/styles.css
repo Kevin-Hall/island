@@ -27,10 +27,10 @@ img.px{image-rendering:auto}
 .clockb .wx svg{width:100%;height:100%;display:block}
 .clockb .t{font-size:30px;font-weight:700;line-height:1;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--ink)}
 .clockb .t small{font-size:14px;font-weight:600;margin-left:4px;color:var(--ink2)}
-.clockb .d{font-size:13px;font-weight:600;color:var(--ink2);margin-top:3px;white-space:nowrap}
+.clockb .d{font-size:13px;font-weight:600;color:var(--ink2);margin-top:3px}
 .loc{display:inline-block;margin-top:8px;margin-left:6px;background:var(--teal);color:#fff;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;
   box-shadow:0 3px 0 var(--teal-d);white-space:nowrap;transform:rotate(-2deg)}
-.hud-r{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.hud-r{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .chip{pointer-events:auto;display:inline-flex;align-items:center;gap:7px;background:var(--paper);border-radius:999px;padding:5px 14px 5px 6px;
   box-shadow:var(--shadow);font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;color:var(--ink)}
 .chip img{width:26px;height:26px;background:#fde7ec;border-radius:50%;padding:3px}
@@ -322,3 +322,4 @@ body.arriving>:not(#arrive):not(#fade):not(#c){visibility:hidden}
 @media (prefers-reduced-motion:reduce){.reveal .rays,.reveal .rv img,#title .logo,#title p,.stamp,.bump{animation:none}}
 body.titling .hud,body.titling #bar,body.titling #toasts,body.titling #actionBar,body.titling #floats{opacity:0;pointer-events:none}
 .hud,#bar{transition:opacity .8s}
+body.cine .hud,body.cine #bar,body.cine #toasts{opacity:0;pointer-events:none}

@@ -67,14 +67,19 @@ function roof(p,col,gable,W,Hr,D,y,x=0,z=0){const sx=W/1.732,sy=Hr/1.5;
   p.push(P(BOX,dk,x,y+Hr+0.015,z,0,0,0,0.14,0.06,D+0.18));}
 function houseGroup(lv){
   const g=new T.Group(),p=[],gl=[];
-  if(lv===0){const sx=1.5/1.732,sy=1.0/1.5;
-    p.push(P(PRISM,0xf2e8d2,0,0.5*sy,0,0,0,0,sx,sy,1.5),P(PRISM,0xd05a4a,0,0.5*sy*1.02,0,0,0,0,sx*1.03,sy*1.03,0.34),P(PRISM,0x3a2a30,0,0.5*sy*0.5,0.02,0,0,0,sx*0.42,sy*0.5,1.52));
-    // the bonfire in front of your tent, with a bench on either side and a crate of supplies
+  if(lv===0){const sx=1.5/1.732,sy=1.0/1.5,tp=[];
+    // the tent itself (its own mesh, so pitching it can raise it): canvas, a red stripe, the open door, a guy rope
+    // and peg out the back, and a lantern hanging by the door
+    tp.push(P(PRISM,0xf2e8d2,0,0.5*sy,0,0,0,0,sx,sy,1.5),P(PRISM,0xd05a4a,0,0.5*sy*1.02,0,0,0,0,sx*1.03,sy*1.03,0.34),P(PRISM,0x3a2a30,0,0.5*sy*0.5,0.02,0,0,0,sx*0.42,sy*0.5,1.52));
+    tp.push(P(BOX,0xe8dcc0,0,0.5,-1.0,0.4636,0,0,0.025,1.12,0.025),P(BOX,0x7a5230,0,0.05,-1.25,0,0,0,0.06,0.12,0.06),P(BOX,0x7a5230,0,1.02,0,0,0,0,0.05,0.05,1.62));
+    p.push(P(CYL6,0x6e4428,0.95,0.42,0.95,0,0,0,0.05,0.84,0.05),P(BOX,0x6e4428,0.86,0.82,0.95,0,0,0,0.2,0.04,0.04),P(BOX,0x3a3440,0.78,0.64,0.95,0,0,0,0.13,0.03,0.13));
+    gl.push(P(BOX,0xfff0b8,0.78,0.72,0.95,0,0,0,0.1,0.13,0.1));
+    // a big bonfire in front of your tent, with a bench on either side and a crate of supplies
     // (to the front-left, clear of the door: its tile is kept solid in layoutTown)
-    {const fx=-1.5,fz=1.5;const q=campfireParts(1.1);p.push(...shift(q.p,fx,0,fz,0));addFire(g,fx,0,fz,1.1);benchParts(p,fx,fz+0.72,0);benchParts(p,fx-0.72,fz,Math.PI/2);
+    {const fx=-1.5,fz=1.5;const q=campfireParts(1.45);p.push(...shift(q.p,fx,0,fz,0));addFire(g,fx,0,fz,1.45);benchParts(p,fx,fz+1.0,0);benchParts(p,fx-1.0,fz,Math.PI/2);
       p.push(P(BOX,0xb07a44,1.25,0.18,-0.55,0,0.3,0,0.36,0.34,0.34),P(BOX,0x7a5230,1.25,0.18,-0.55,0,0.3,0,0.38,0.05,0.36),P(BOX,0x7a5230,1.25,0.35,-0.55,0,0.3,0,0.38,0.03,0.36));}
     for(let i=0;i<4;i++)p.push(P(BOX,i%3?0xf4f0ea:0xd8453a,-0.72+(i%2)*0.3,0.02,0.62+Math.floor(i/2)*0.3,0,0,0,0.3,0.03,0.3));
-    g.add(pool(0.03,1.3).translateX(-1.5).translateZ(1.5));
+    const tm=M(tp);g.add(tm);g.userData.tent=tm;
   }else if(lv===1){
     p.push(P(BOX,0x9c6b40,0,0.5,0,0,0,0,1.5,1.0,1.3));for(let i=0;i<4;i++)p.push(P(BOX,0x7c5230,0,0.12+i*0.25,0,0,0,0,1.53,0.04,1.33));
     roof(p,0x5b3b3b,0x9c6b40,1.6,0.8,1.3,1.0);p.push(P(BOX,0x4a3024,-0.2,0.32,0.66,0,0,0,0.32,0.62,0.04),P(BOX,0x8a8a92,0.45,1.6,-0.2,0,0,0,0.2,0.5,0.2));

@@ -126,7 +126,7 @@ function layoutTown(isl){
   // palms along the town beach (shake or chop them like the other trees), clear of the dock and your boat
   if(!(S.home&&S.home.preset))for(const [x,z] of palmSpots(isl,R,8,(x,z)=>!taken(K(x,z))&&Math.hypot(x-DOCK.x,z-DOCK.z)>3.5&&!(S.boat&&Math.hypot(x-S.boat.x,z-S.boat.z)<2.5))){const k=K(x,z);
     tp.push(...shift(treeParts(PALMS[Math.floor(hash(x,z)*PALMS.length)],mulberry(hi(x,z,13)),0x9a9ea8),x,y0(x,z),z,hash(z,x)*6.28));TOWN.fixed.set(k,'decor');TOWN.res.set(k,'tree');}
-  if(S.home&&S.home.fire){const [x,z]=S.home.fire,y=y0(x,z),q=campfireParts(1.2);p.push(...shift(q.p,x,y,z,0));addFire(isl.group,x,y,z,1.2);TOWN.lamps.push([x,y,z]);}
+  if(S.home&&S.home.fire){const [x,z]=S.home.fire,y=y0(x,z),q=campfireParts(1.3);p.push(...shift(q.p,x,y,z,0));addFire(isl.group,x,y,z,1.3);}
   if(S.home&&S.home.tent){const [x,z]=S.home.tent,t=houseGroup(0);t.position.set(x+0.5,y0(x,z),z+0.5);t.rotation.y=-0.4;isl.group.add(t);}
   isl.group.add(M(p));addVeg(isl,isl.group,tp);if(gl.length){const m=M(gl,glowMat);m.castShadow=false;isl.group.add(m);}
   // flowers, clover and pebbles: instanced over the open grass (hidden again wherever you till or build)
@@ -199,22 +199,49 @@ function cottage(p,gl,roofCol){const wall=0xf3e6cc,base=0xb8ae9a;
   p.push(P(BOX,0x8a5a3a,0.38,0.38,0.72,0,0,0,0.42,0.08,0.1));for(let i=0;i<4;i++)p.push(P(SPH_XS,[0xf2a6c8,0xf6d04a,0xffffff,0xe86a5a][i],0.26+i*0.08,0.45,0.73,0,0,0,0.08,0.07,0.08));}
 // a campfire in a ring of stones, crossed logs and a flame
 function campfireParts(s=1){const p=[],gl=[];
-  for(let i=0;i<10;i++){const a=i/10*6.283;p.push(PG(SPH_LO,i%2?0x8e8a94:0x7a7682,0x4a4652,Math.cos(a)*0.34*s,0.07*s,Math.sin(a)*0.34*s,0,a,0,0.2*s,0.15*s,0.17*s));}
-  p.push(P(SPH_LO,0x2e2420,0,0.03*s,0,0,0,0,0.5*s,0.05*s,0.5*s));
-  for(let i=0;i<4;i++){const a=i*0.785+0.3;p.push(P(CYL6,i%2?0x7a4a2a:0x5e3820,Math.cos(a)*0.06*s,0.12*s,Math.sin(a)*0.06*s,Math.sin(a)*0.9,0,-Math.cos(a)*0.9,0.07*s,0.5*s,0.07*s));}
-  p.push(P(SPH_XS,0xff7a28,0,0.08*s,0,0,0,0,0.24*s,0.06*s,0.24*s)); // glowing embers under the logs
+  // a ring of chunky stones, a bed of ash and glowing embers, and a teepee of logs leaning in over it
+  for(let i=0;i<12;i++){const a=i/12*6.283+0.1,r=0.44*s*(0.94+hash(i,3)*0.12);p.push(PG(SPH_LO,i%3?0x8e8a94:0x7a7682,0x4a4652,Math.cos(a)*r,0.08*s,Math.sin(a)*r,0,a,0,(0.2+hash(i,7)*0.06)*s,(0.15+hash(i,5)*0.05)*s,0.17*s));}
+  p.push(P(SPH_LO,0x3a2e2a,0,0.03*s,0,0,0,0,0.72*s,0.06*s,0.72*s),P(SPH_XS,0xff7a28,0,0.07*s,0,0,0,0,0.42*s,0.07*s,0.42*s),P(SPH_XS,0xffb040,0.05*s,0.09*s,-0.04*s,0,0,0,0.2*s,0.05*s,0.2*s));
+  for(let i=0;i<6;i++){const a=i/6*6.283+0.4,lean=0.5;p.push(PG(CYL6,i%2?0x8a5a34:0x6e4428,0x3a2418,Math.cos(a)*0.2*s,0.27*s,Math.sin(a)*0.2*s,-Math.sin(a)*lean,0,Math.cos(a)*lean,0.075*s,0.62*s,0.075*s));}/* leaning in to meet over the fire */
+  // a couple of spare logs by the fire
+  p.push(P(CYL6,0x8a5a34,0.62*s,0.06*s,0.3*s,Math.PI/2,0.5,0,0.1*s,0.5*s,0.1*s),P(CYL6,0x6e4428,0.66*s,0.06*s,0.44*s,Math.PI/2,0.35,0,0.1*s,0.46*s,0.1*s),P(CYL6,0xd8b890,0.86*s,0.06*s,0.44*s,Math.PI/2,0.35,0,0.07*s,0.02*s,0.07*s));
   return{p,gl:flameParts(s)};}
-// the flame alone (flickered by updateFires), centred on the pit
-function flameParts(s=1){return[PG(SCONE,0xffd060,0xff6a24,0,0.34*s,0,0,0,0,0.42*s,0.62*s,0.42*s),PG(SCONE,0xfff2a0,0xffa030,0.02*s,0.3*s,0.02*s,0,0.6,0,0.24*s,0.46*s,0.24*s),
-  PG(SCONE,0xffb040,0xff5a20,-0.1*s,0.24*s,-0.04*s,0,1,0.25,0.18*s,0.34*s,0.18*s),PG(SCONE,0xffb040,0xff5a20,0.1*s,0.24*s,0.05*s,0,2,-0.25,0.16*s,0.3*s,0.16*s)];}
+// the flame alone: licking tongues round a bright core, white-gold at the root and red at the tips; flameMat makes them
+// sway and flicker in the shader, and updateFires grows it from a daytime flicker to a roaring bonfire at night
+function flameParts(s=1){const p=[PG(SCONE,0xff4a18,0xffc040,0,0.5*s,0,0,0,0,0.5*s,1.0*s,0.5*s),PG(SCONE,0xffa030,0xfff6c8,0,0.34*s,0,0,0.5,0,0.3*s,0.62*s,0.3*s)];
+  for(let i=0;i<7;i++){const a=i/7*6.283,r=0.16*s,h=(0.55+hash(i,11)*0.4)*s;p.push(PG(SCONE,i%2?0xe8401a:0xff6a24,0xffd060,Math.cos(a)*r,h*0.5,Math.sin(a)*r,Math.sin(a)*0.22,a,-Math.cos(a)*0.22,0.24*s,h,0.24*s));}
+  return p;}
 // a wooden bench (plank seat on two little legs)
 function benchParts(p,x,z,r){const q=[P(BOX,0x9a6438,0,0.2,0,0,0,0,0.9,0.07,0.3),P(BOX,0x7a4a2a,-0.34,0.09,0,0,0,0,0.08,0.18,0.24),P(BOX,0x7a4a2a,0.34,0.09,0,0,0,0,0.08,0.18,0.24)];p.push(...shift(q,x,0,z,r));}
-// every lit fire flickers, glows and sends up embers
-const fires=new Set();
-function addFire(parent,x,y,z,s=1){const f=M(flameParts(s),glowMat);f.castShadow=false;f.position.set(x,y,z);parent.add(f);fires.add(f);return f;}
-function updateFires(dt,tt){for(const f of fires){if(!f.parent){fires.delete(f);continue;}let o=f,vis=true,root=f;while(o){if(!o.visible){vis=false;break;}root=o;o=o.parent;}if(!vis||root!==scene)continue;/* (previews and thumbnails aren't in the world) */
-  const ph=f.id*1.7;f.scale.set(1+Math.sin(tt*11+ph)*0.07,1+Math.sin(tt*8.3+ph)*0.14+Math.sin(tt*17+ph)*0.05,1+Math.cos(tt*10+ph)*0.07);f.rotation.y+=dt*0.8;
-  if(Math.random()<dt*7){f.getWorldPosition(_v);if(Math.abs(_v.x-cam.tx)<24&&Math.abs(_v.z-cam.tz)<24)emit(_v.x+(Math.random()-0.5)*0.2,_v.y+0.45,_v.z+(Math.random()-0.5)*0.2,{vx:(Math.random()-0.5)*0.3,vy:0.9+Math.random()*0.6,vz:(Math.random()-0.5)*0.3,life:1.2,max:1.2,size:0.035,color:Math.random()<0.5?0xffb040:0xffe080,g:0,sw:0.6,ph:Math.random()*6});}}}
+// every fire: the flames sway in their shader, grow at dusk into a roaring bonfire that throws warm light and a glow on the
+// ground, and send up sparks (and a thread of smoke by day). One shared point light sits in the fire nearest the camera.
+const fires=new Set(),flameU={uT:{value:0}},_fv=new T.Vector3();
+const flameMat=new T.MeshBasicMaterial({vertexColors:true});
+flameMat.onBeforeCompile=sh=>{sh.uniforms.uT=flameU.uT;sh.vertexShader='uniform float uT;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+  float fh=max(transformed.y,0.0),fw=fh*fh*1.8;
+  transformed.x+=(sin(uT*8.0+fh*7.0+position.z*6.0)*0.08+sin(uT*15.0+fh*13.0+position.x*4.0)*0.03)*fw;
+  transformed.z+=(cos(uT*7.0+fh*6.0+position.x*6.0)*0.08+cos(uT*13.0+fh*11.0)*0.03)*fw;
+  transformed.y*=1.0+sin(uT*11.0+position.x*9.0+position.z*7.0)*0.14*fh;`);};
+const firePoolMat=new T.MeshBasicMaterial({map:glowTex,color:0xffb070,transparent:true,blending:T.AdditiveBlending,depthWrite:false,opacity:0});
+const fireLight=new T.PointLight(0xff9448,0,9,1.4);scene.add(fireLight);
+function addFire(parent,x,y,z,s=1){const f=M(flameParts(s),flameMat);f.castShadow=false;f.receiveShadow=false;f.position.set(x,y+0.04*s,z);f.userData.s=s;parent.add(f);fires.add(f);
+  const pm=new T.Mesh(POOL_GEO,firePoolMat);pm.position.set(x,y+0.04,z);pm.scale.setScalar(1.5*s);pm.userData.noThumb=true;pm.renderOrder=2;pm.frustumCulled=false;parent.add(pm);return f;}
+// how lit a fire wants to be: a small flame by day, a bonfire from dusk (and whenever you sit by it or have just lit it)
+function fireWant(x,z){const near=Math.hypot(x-vil.x,z-vil.z)<3.5,boost=near&&(rest||pitch&&pitch.lit);return boost?1:0.4+0.6*smooth(0.12,0.55,nightF);}
+function updateFires(dt,tt){flameU.uT.value=tt;let best=null,bd=26*26,bl=0;
+  for(const f of fires){if(!f.parent){fires.delete(f);continue;}let o=f.parent,vis=true,root=f;while(o){/* (from the parent: a fire that has died down hides itself) */if(!o.visible){vis=false;break;}root=o;o=o.parent;}if(!vis||root!==scene)continue;/* (previews and thumbnails aren't in the world) */
+    f.getWorldPosition(_v);const u=f.userData,s=u.s||1,want=u.hold!==undefined?u.hold:fireWant(_v.x,_v.z);if(u.lit===undefined)u.lit=want;
+    const was=u.lit;u.lit+=(want-u.lit)*Math.min(1,dt*(want>u.lit?1.6:0.5));
+    const near=Math.abs(_v.x-cam.tx)<24&&Math.abs(_v.z-cam.tz)<24;
+    // flaring up: a whoosh and a shower of sparks as it catches
+    if(was<0.7&&u.lit>=0.7&&near){if(Math.hypot(_v.x-vil.x,_v.z-vil.z)<8){noise(0.6,0.07,420,0.6);noise(0.3,0.04,1600,1);}for(let i=0;i<22;i++){const a=Math.random()*6.28;emit(_v.x,_v.y+0.4*s,_v.z,{vx:Math.cos(a)*0.8,vy:1.4+Math.random()*1.4,vz:Math.sin(a)*0.8,life:1.4,max:1.4,size:0.045,color:Math.random()<0.5?0xffb040:0xffe080,g:0.4,sw:0.6,ph:Math.random()*6});}}
+    const L=u.lit,ph=f.id*1.7,fl=1+Math.sin(tt*9+ph)*0.05+Math.sin(tt*23+ph)*0.03;f.scale.set(L*fl,L*(1+Math.sin(tt*6.3+ph)*0.08),L*fl);f.rotation.y+=dt*0.35;f.visible=L>0.02;
+    if(near){if(Math.random()<dt*(2+L*12))emit(_v.x+(Math.random()-0.5)*0.3*s,_v.y+(0.4+L*0.5)*s,_v.z+(Math.random()-0.5)*0.3*s,{vx:(Math.random()-0.5)*0.3,vy:0.8+Math.random()*0.9*L,vz:(Math.random()-0.5)*0.3,life:1.3,max:1.3,size:0.03+L*0.02,color:Math.random()<0.5?0xffb040:0xffe080,g:0,sw:0.7,ph:Math.random()*6});
+      if(nightF<0.35&&Math.random()<dt*1.4)emit(_v.x+(Math.random()-0.5)*0.15,_v.y+(0.6+L*0.4)*s,_v.z+(Math.random()-0.5)*0.15,{vx:0.12,vy:0.45,vz:0.04,life:3,max:3,size:0.09,color:0xd8d2cc,g:-0.05,sw:0.5,ph:Math.random()*6});}
+    const d=(_v.x-cam.tx)**2+(_v.z-cam.tz)**2;if(d<bd){bd=d;best=_fv.copy(_v);bl=L*s;}}
+  const fk=0.85+Math.sin(tt*13)*0.08+Math.sin(tt*29)*0.05+Math.sin(tt*5.3)*0.05;
+  if(best){fireLight.position.set(best.x,best.y+0.9,best.z);fireLight.intensity=Math.max(0,nightF*0.9+0.08)*bl*1.5*fk;}else fireLight.intensity=0;
+  firePoolMat.opacity=clamp(nightF*1.1+0.05,0,1)*clamp(bl,0,1)*fk;}
 /* ---- villager homes in coastal styles, one per personality (footprint ±1, door at the front centre, +z) ---- */
 function planks(p,c,x,y,z,w,h,d,axis='x'){const n=Math.max(2,Math.round((axis==='x'?w:d)/0.14));for(let i=0;i<n;i++){const t=(i+0.5)/n-0.5,sh=i%2?0.94:1.04;
   p.push(axis==='x'?P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x+t*w,y,z,0,0,0,w/n*0.96,h,d):P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x,y,z+t*d,0,0,0,w,h,d/n*0.96));}}
