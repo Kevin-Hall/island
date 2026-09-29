@@ -19,7 +19,12 @@ function cullIslands(){const view=cam.dist+110;for(const isl of islands){const b
     // wild plants are small: only draw them when you're reasonably close (each one is its own mesh)
     if(isl.group)isl.group.visible=vis;if(isl.pgroup)isl.pgroup.visible=vis&&cam.dist+Math.max(0,d)<60;
     // level of detail for trees: light meshes when the island is far away or you're zoomed well out (with a little hysteresis)
-    const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>56:far>61;if(isl.veg&&low!==isl.lowOn){isl.lowOn=low;for(const [hi,lo] of [...isl.veg,...(isl.floraLod||[])]){hi.visible=!low;if(lo)lo.visible=low;}}
+    const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>56:far>61;if(isl.veg&&low!==isl.lowOn){isl.lowOn=low;for(const [hi,lo] of isl.veg){hi.visible=!low;if(lo)lo.visible=low;}for(const [hi,lo] of isl.floraLod||[]){hi.visible=!low&&!isl.farOn;if(lo)lo.visible=low&&!isl.farOn;}}
+    // far from you, an island is just its land, water and trees: the pebbles, reeds, flowers, grass tufts and the rest are
+    // too small to see from out there, so they aren't drawn until you come near
+    if(!isl.home&&isl.group){const far2=d>16;if(isl.farOn!==far2){isl.farOn=far2;
+      if(!isl.detail){const veg=new Set((isl.veg||[]).flat()),fl=new Set((isl.floraLod||[]).flat());isl.detail=isl.group.children.filter(o=>!o.userData.core&&!veg.has(o)&&!fl.has(o));}
+      for(const o of isl.detail)o.visible=!far2;for(const [hi,lo] of isl.floraLod||[]){hi.visible=!far2&&!isl.lowOn;if(lo)lo.visible=!far2&&!!isl.lowOn;}}}
     const sh=vis&&d<32;if(isl.group&&isl.shadowOn!==sh){isl.shadowOn=sh;if(!isl.casters){isl.casters=[];isl.group.traverse(o=>{if(o.castShadow)isl.casters.push(o);});}for(const o of isl.casters)o.castShadow=sh;}}}
 // terrain baker: collects tiles (a geometry scaled and placed without rotation, a colour, optional sand corner heights) into one mesh
 const _flatGeo=new Map();const flatGeo=g=>{let n=_flatGeo.get(g);if(!n){n=g.index?g.toNonIndexed():g;_flatGeo.set(g,n);}return n;};
@@ -87,13 +92,13 @@ function buildIsland(isl){
       topB.add(geo,x,ty-0.14,z,1,0.14,1,zoneGround(isl,x,z,groundCol(B.grass,x,z,isl.seed)),null,hid);}
     for(const {x,z} of sl)sandB.add(geo,x,-0.6,z,1,TOP.sand+0.6,1,sandCol(x,z),SAND_CH.get(K(x,z)),(dx,dz)=>{const t=landMap.get(K(x+dx,z+dz));return t==='sand'||t==='grass';});}
   for(const [x,z,ty,col,mat] of under)(mat===sandMat?underS:underG).add(BOX,x,(ty-0.6)/2,z,0.5,ty+0.6,0.5,col);
-  for(const [B0,mat,cast] of [[cliffB,cliffMat,true],[topB,grassTopMat,true],[sandB,sandMat,false],[underG,grassTopMat,false],[underS,sandMat,false]]){const m=B0.mesh(mat);if(m){m.castShadow=cast;g.add(m);}}
+  for(const [B0,mat,cast] of [[cliffB,cliffMat,true],[topB,grassTopMat,true],[sandB,sandMat,false],[underG,grassTopMat,false],[underS,sandMat,false]]){const m=B0.mesh(mat);if(m){m.castShadow=cast;m.userData.core=1;g.add(m);}}
   if(isl.grass.length)buildGrass(isl,g);
   // shallow-water bands, with rounded outer corners so the coast doesn't step in squares
   const shc=(x,z)=>{const t=landMap.get(K(x,z));return t==='s1'?1:t==='s2'?2:t?0:3;};
   const flat=(list,mat,y,lvl)=>{const groups=new Map();for(const [x,z] of list){let mask=0;CORNERS.forEach(([dx,dz],b)=>{if([shc(x+dx,z),shc(x,z+dz),shc(x+dx,z+dz)].every(v=>v>lvl))mask|=1<<b;});
       if(!groups.has(mask))groups.set(mask,[]);groups.get(mask).push([x,z]);}
-    const bk=makeBake();for(const [mask,l] of groups)for(const [x,z] of l)bk.add(rtileGeo(mask),x,y,z,1,0.002,1,0xffffff,null,()=>true);const m=bk.mesh(mat,false);if(m){m.receiveShadow=false;g.add(m);isl.flats.push(m);}};
+    const bk=makeBake();for(const [mask,l] of groups)for(const [x,z] of l)bk.add(rtileGeo(mask),x,y,z,1,0.002,1,0xffffff,null,()=>true);const m=bk.mesh(mat,false);if(m){m.receiveShadow=false;m.userData.core=1;g.add(m);isl.flats.push(m);}};
   // (the shallows are painted by the water itself now, from the distance to shore: see buildDepthTex)
   // dark, wave-worn rocks poking out of the shallows here and there
   const rockFoamMat=buildIsland.rfm||(buildIsland.rfm=new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.45,depthWrite:false}));

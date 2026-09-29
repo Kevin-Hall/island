@@ -66,7 +66,7 @@ function skyPos(theta,f,d,out,curved=false){const cp=camera.position,hc=cp.y,aT=
 function skySpan(d){const aT=cam.pitch-camera.fov/2*Math.PI/180,aH=horizonA();return d*(Math.tan(aH)-Math.tan(aT));}
 function updateSky(dt,tt){
   const cp=camera.position,sky=skyHz,night=nightF,fwd=cam.yaw+Math.PI;
-  for(const c of skyClouds){c.a+=dt*0.004*(0.5+wind);skyPos(c.a,c.f,c.d,c.m.position,true);c.m.scale.setScalar(c.s*c.d/140);c.m.lookAt(cp.x,c.m.position.y,cp.z);}
+  for(const c of skyClouds){c.a+=dt*0.004*(0.5+wind);c.m.visible=Math.abs(angDiff(fwd,c.a))<0.55+c.s*0.03;/* only those in view (the lens is narrow) */if(!c.m.visible)continue;skyPos(c.a,c.f,c.d,c.m.position,true);c.m.scale.setScalar(c.s*c.d/140);c.m.lookAt(cp.x,c.m.position.y,cp.z);}
   skyCloudMat.color.setRGB(1,1,1).lerp(sky,0.25+rainMix*0.35).lerp(skyGlow,skyGA*0.45).multiplyScalar(1-night*0.6);skyCloudMat.opacity=0.95;
   moon.visible=night>0.05;
   if(moon.visible){skyPos(fwd+0.28,0.55,150,moon.position);moon.scale.setScalar(0.8);moon.lookAt(cp);moon.traverse(o=>{if(o.material)o.material.opacity=(o.material.color.getHex()===0xfff4d6&&o.geometry.parameters.radius===9?0.12:1)*night*(1-rainMix);});}

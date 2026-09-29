@@ -94,7 +94,7 @@ function carveRivers(isl,g){const R=mulberry(isl.seed^0x71e5),B=BIOMES[isl.biome
     list.forEach((q,i)=>{const L=Math.hypot(q.fx||0,q.fz||0)||1;fl[i*2]=(q.fx||1)/L;fl[i*2+1]=(q.fz||0)/L;});wat.geometry.setAttribute('aFlow',new T.InstancedBufferAttribute(fl,2));}
   list.forEach((q,i)=>{const bt=q.surf-0.14,h=bt+0.6;_m.compose(_v.set(q.x,-0.6+h/2,q.z),_q.identity(),_s.set(1,h,1));bed.setMatrixAt(i,_m);bed.setColorAt(i,_c.set(lava?0x3a2a2a:B.cliff||0x9a7050).multiplyScalar(0.72));
     _m.makeTranslation(q.x,q.surf,q.z);wat.setMatrixAt(i,_m);});
-  for(const m of [bed,wat]){m.frustumCulled=false;m.receiveShadow=true;g.add(m);}
+  for(const m of [bed,wat]){m.frustumCulled=false;m.receiveShadow=true;m.userData.core=1;g.add(m);}
   // banks: a soft line of foam where the water meets the land, rounded pebbles along the edge, and tufts of reeds
   if(!lava){const fo=[],pb=[],Rb=mulberry(isl.seed^0xba2c);
     for(const q of list)for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const k2=K(q.x+dx,q.z+dz),t2=landMap.get(k2);if(riverSurf.has(k2)||t2==='bridge'||!isLandT(t2))continue;

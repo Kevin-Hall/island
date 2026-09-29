@@ -143,6 +143,7 @@ function renderSheet(){
     h+=`<div class="setrow"><span>Island Heart · Lv ${level()}</span><span class="seg"><button data-dev="lvdown">−1</button><button data-dev="lvup">+1</button><button data-dev="lvboat">Boat (Lv 4)</button><button data-dev="lvmax">Max</button></span></div>`;
     h+=`<div class="setrow"><span>Chart</span><span class="seg"><button data-dev="chartall">Reveal all islands</button><button data-dev="chart">Open chart</button></span></div>`;
     h+=`<div class="setrow"><span>Skip ahead</span><span class="seg"><button data-dev="morning">Next morning</button><button data-dev="shells">+1,000 shells</button></span></div>`;
+    h+=`<div class="setrow"><span>Dream island (max level)</span><span class="seg"><button data-dev="dream">Load</button></span></div>`;
     h+=`<div class="setrow"><span>Acornfield island</span><span class="seg"><button data-dev="acorn">Load</button></span></div>`;
     h+=`<div class="setrow"><span>Showcase farm</span><span class="seg"><button data-dev="showcase">${S.showcase?'Rebuild':'Load'}</button>${hasRealSave()?'<button data-dev="realsave">Restore my save</button>':''}</span></div>`;
     h+=`<div class="setrow"><span class="note" style="margin:0">Loads a fully built late-game farm: a big fenced field with sprinkler plots, an orchard, flower beds and a windmill, plus a Villa, max tools and every island restored. Your own save is backed up first.</span></div>`;
@@ -209,6 +210,7 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.dev==='chartall'){for(const isl of islands)S.disc[isl.id]=1;SFX.discover();say('Every island is on your chart.');renderSheet();return;}
   if(d.dev==='chart'){openSheet('chart');return;}
   if(d.dev==='morning'){closeSheet();sleep();return;}
+  if(d.dev==='dream'){if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Tap again to load';return;}loadDream();return;}
   if(d.dev==='acorn'){if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Tap again to load';return;}loadAcornfield();return;}
   if(d.dev==='showcase'){if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Tap again to load';return;}loadShowcase();return;}
   if(d.dev==='realsave'){restoreRealSave();return;}

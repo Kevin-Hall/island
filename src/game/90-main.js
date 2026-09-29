@@ -80,6 +80,7 @@ if(isNew)setupNew();
 grantKits();const farmNew=!S.farmInit;if(farmNew){genDebris();if(S.scratch)genWild();S.farmInit=1;S.tidy=1;}
 // wild islands from before the tidier woods: thin out most of the loose weeds and twigs
 if(S.acornLay){delete S.acornLay;layAcornfield();}
+if(S.dreamLay){delete S.dreamLay;layDream();}
 if(!isNew&&fixCamp())rebuildHome();/* an older camp with the sprout in the fire or a tree through the tent */
 if(S.wild&&S.finds.filter(forageOf).length<8)forageSpawn(true,18); // the wild island's forage, from the first day
 if(S.wild&&!S.tidy){S.tidy=1;S.debris=S.debris.filter(d=>!((d.k==='weed'||d.k==='twig')&&Math.random()<0.7));}

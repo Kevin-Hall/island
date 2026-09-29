@@ -202,7 +202,7 @@ function pool(y=0.03,s=1){const m=new T.Mesh(POOL_GEO,poolMat);m.position.y=y;m.
    ========================================================= */
 const hemi=new T.HemisphereLight(0xffffff,0x445544,.6);scene.add(hemi);
 const sun=new T.DirectionalLight(0xffffff,1);sun.castShadow=true;
-sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-28,right:28,top:28,bottom:-28,near:1,far:110});
+sun.shadow.mapSize.set(1024,1024);/* plenty at the game's pixel resolution */Object.assign(sun.shadow.camera,{left:-28,right:28,top:28,bottom:-28,near:1,far:110});
 sun.shadow.bias=-0.0015;sun.shadow.normalBias=0.02;scene.add(sun,sun.target);
 
 const waterMat=new T.MeshBasicMaterial({color:0x3565cc});

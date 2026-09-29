@@ -70,9 +70,9 @@ function debrisGeo(k,v,lo){const id=k+v+(k==='bush'?season():'')+(k==='tree'?wil
 // is drawn (the range widens as you zoom out), and wild trees come in two builds: full detail near you, lighter further off.
 // debLOD re-sorts the slots as you move; an entry out of range has i=-1.
 const debGroups=[];let lodAt=null,lodT=0;
-const lodR=tree=>tree?30+cam.dist*1.4:16+cam.dist*0.85;/* trees stand out on the horizon; bushes and rocks are specks by then */
+const lodR=tree=>tree?24+cam.dist*1.0:14+cam.dist*0.7;/* trees stand out on the horizon; bushes and rocks are specks by then */
 function debLOD(gr){const R2=lodR(!!gr.lo)**2;let a=0,b=0;for(const e of gr.es){const d2=(e.x-cam.tx)**2+(e.z-cam.tz)**2;if(d2>R2){e.i=-1;continue;}
-  e.im=gr.lo&&d2>121?gr.lo:gr.hi;e.i=e.im===gr.hi?a++:b++;setDebrisMatrix(e,0);}gr.hi.count=a;if(gr.lo)gr.lo.count=b;}
+  e.im=gr.lo&&d2>81?gr.lo:gr.hi;/* full detail within 9 tiles */e.i=e.im===gr.hi?a++:b++;setDebrisMatrix(e,0);}gr.hi.count=a;if(gr.lo)gr.lo.count=b;}
 function syncDebris(){while(debrisRoot.children.length){const c=debrisRoot.children[0];debrisRoot.remove(c);c.dispose();}debMesh.clear();debGroups.length=0;lodAt=null;
   const groups=new Map();for(const d of S.debris){const id=d.k+d.v;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(d);}
   for(const [,list] of groups){const k=list[0].k,tree=k==='tree';
