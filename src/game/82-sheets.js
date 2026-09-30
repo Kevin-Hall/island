@@ -132,6 +132,7 @@ function renderSheet(){
     h+=`<h3 class="sech">Sound & display</h3><div class="group">`;
     h+=`<div class="setrow"><span>Sound effects</span><button class="iswitch ${S.sound?'on':''}" data-snd="${S.sound?0:1}" aria-label="Sound"></button></div>`;
     h+=`<div class="setrow"><span>Music</span><button class="iswitch ${S.music!==false?'on':''}" data-mus="${S.music!==false?0:1}" aria-label="Music"></button></div>`;
+    h+=`<div class="setrow"><span>Scanlines</span><button class="iswitch ${fxNow().scan?'on':''}" data-scan="${fxNow().scan?0:1}" aria-label="Scanlines"></button></div>`;
     h+=`<div class="setrow"><span>Pixel size</span><span class="seg">${[[1,'Big'],[0,'Normal'],[-1,'Small']].map(([v,l])=>`<button data-px="${v}" class="${S.pxAdj===v?'on':''}">${l}</button>`).join('')}</span></div></div>`;
     h+=`<p class="note" style="margin:10px 6px 0">Drag to turn the camera, pinch to zoom. Your island saves on this device.</p>`;
     h+=`<h3 class="sech">Developer</h3><div class="group">`;
@@ -219,6 +220,7 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.dev==='realtime'){S.toff=0;devSpeed=1;S.hour=realHour();applyTime();updateHUD();renderSheet();return;}
   if(d.season!==undefined){S.seasonOv=d.season||null;seasonCheck(true);renderSheet();return;}
   if(d.dev==='shells'){S.shells+=1000;SFX.coin();return;}
+  if(d.scan!==undefined){S.scan=d.scan==='1';applyFx();save();SFX.ui();renderSheet();return;}
   if(d.fx!==undefined){setFx(d.fx);SFX.ui();renderSheet();return;}
   if(d.snd!==undefined){S.sound=d.snd==='1';setWaveVol();if(S.sound)startWaves();renderSheet();return;}
   if(d.px!==undefined){S.pxAdj=Number(d.px);resize();renderSheet();return;}

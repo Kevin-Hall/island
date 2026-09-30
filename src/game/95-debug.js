@@ -7,7 +7,7 @@ if(/[?&]debug\b/.test(location.search)){
   window.DS={
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
       islands:islands.length,town:TOWN.name,buildings:TOWN.bld.filter(b=>!b.locked).map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
-    hour:h=>{setHour(h);applyTime();},fx:k=>{setFx(k);if(S.rain)stopRain();return Object.keys(FXS);},
+    hour:h=>{setHour(h);applyTime();},scan:v=>{S.scan=v;applyFx();},fx:k=>{setFx(k);if(S.rain)stopRain();return Object.keys(FXS);},
     icons:(ks)=>{if(ks==='all')ks=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','shell'];return ks.map(k=>[k,ICON[k]]);},
     fillBag:(n=4)=>{const pick=(o,pre)=>Object.keys(o).slice(0,n).map(k=>pre+k);for(const k of [...pick(FISH,'f:'),...pick(BUGS,'b:'),...pick(PLANTS,'p:'),...pick(FINDS,'g:'),'m:wood','m:stone','m:fiber','x:bait','x:fert',...CROP_IDS.slice(0,n*2).map(k=>k+'|normal'),CROP_IDS[3]+'|golden',CROP_IDS[6]+'|rainbow'])S.inv[k]=(S.inv[k]||0)+3;for(const k of ['bench','lamppost','picnic','parasol','fountain','brick','topiary','swing'])S.store[k]=2;updateHUD();return Object.keys(S.inv).length;},
     floorTest:()=>{S.store.brick=3;S.store.chair=1;startPlace('brick',true);const [x,z]=[placing.x,placing.z];layFloorAt(x,z);const second=nearestValid(x,z,'brick');if(second)layFloorAt(...second);endPlace();

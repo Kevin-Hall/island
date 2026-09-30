@@ -7,6 +7,7 @@ const FX_BASE={sat:1,con:1,br:1,fade:0,tS:[1,1,1],tH:[1,1,1],edge:1,edgeC:[.36,.
 const FXS={
   island:   {name:'Driftseed',  desc:'The island as it is'},
   wildworld:{name:'Wild World', desc:'Chunky handheld pixels, soft flat colour',sat:1.18,con:.96,br:1.08,fade:.05,tS:[1.02,1.02,1.06],tH:[1.04,1.02,.94],edge:.35,edgeC:[.5,.44,.52],dith:0,levels:14,vig:0,bloom:.2,grade:.5,px:2,ramp:[140,200,245,255]},
+  wildsoft: {name:'Wild World Soft',desc:'A gentler Wild World: softer pixels and colour',sat:1.08,con:.98,br:1.04,fade:.03,tS:[1.01,1.01,1.03],tH:[1.02,1.01,.97],edge:.6,edgeC:[.44,.39,.49],dith:0,levels:18,vig:.06,bloom:.55,grade:.75,px:1,ramp:[112,178,232,255]},
   windwaker:{name:'Wind Waker', desc:'Bold two-tone cel shading and bright sea colours',sat:1.45,con:1.1,br:1.14,tS:[.9,.95,1.14],tH:[1.05,1.02,.95],edge:2.4,edgeC:[.1,.1,.2],dith:0,levels:64,vig:.05,bloom:2.4,px:-1,ramp:[120,120,255,255]},
   storybook:{name:'Storybook',  desc:'Soft watercolour on paper',sat:.8,con:.86,br:1.1,fade:.1,tS:[1.04,1,.94],tH:[1.05,1.02,.92],edge:.7,edgeC:[.58,.46,.4],dith:0,levels:48,grain:.015,vig:.1,bloom:1.4,grade:.7,paper:1,px:-.5,ramp:[140,185,225,250]},
   film:     {name:'35mm Film',  desc:'Grain, faded blacks, teal shadows, warm light',sat:.8,con:1.14,fade:.11,tS:[.8,1.02,1.14],tH:[1.13,1,.82],edge:.7,dith:0,levels:64,grain:.09,vig:.45,bloom:2,grade:.6,px:-.5},
@@ -17,7 +18,7 @@ const FXS={
   sepia:    {name:'Old Photo',  desc:'A faded sepia print',con:1.05,fade:.1,pal:3,edge:.9,edgeC:[.3,.24,.2],dith:0,levels:64,grain:.05,vig:.5,px:-.5},
   gameboy:  {name:'Game Boy',   desc:'Four shades of green',pal:1,edge:1.2,edgeC:[.2,.2,.2],levels:4,vig:0,bloom:0,grade:0,px:2},
 };
-function fxNow(){return Object.assign({},FX_BASE,FXS[S.fx]||FXS.island);}
+function fxNow(){const F=Object.assign({},FX_BASE,FXS[S.fx]||FXS.island);if(S.scan!==undefined)F.scan=S.scan?1:0;/* the Scanlines switch in Settings overrides the style */return F;}
 function fxPx(){try{return fxNow().px;}catch(e){return 0;}}
 function applyFx(){const F=fxNow(),u=postMat.uniforms;
   u.fxA.value.set(F.sat,F.con,F.br,F.fade);u.tS.value.set(...F.tS);u.tH.value.set(...F.tH);u.edgeK.value=F.edge;u.edgeC.value.set(...F.edgeC);u.dith.value=F.dith;u.levels.value=F.levels;
