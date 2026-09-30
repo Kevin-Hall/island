@@ -523,3 +523,15 @@ img.pix{image-rendering:crisp-edges;image-rendering:pixelated}
 .wheel.open .ring .tool{transform:rotate(var(--a)) translate(var(--r)) rotate(calc(-1 * var(--a))) scale(1)}
 .appcol .btn .ico img{width:30px;height:30px}
 .ring .tool span{display:none}
+
+/* swimming (76c-swim): hold Dive to go down, Up to rise; the breath meter over them */
+.swimui{position:fixed;z-index:5;right:calc(env(safe-area-inset-right,0px) + 92px);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.swimui .row{display:flex;gap:10px;pointer-events:auto}
+.swimb{width:62px;height:62px;border-radius:50%;border:none;background:var(--paper);box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:0;touch-action:none;user-select:none;-webkit-user-select:none}
+.swimb img{width:32px;height:32px}.swimb span{font-size:11px;font-weight:700;color:var(--ink2);line-height:1}
+.swimb:active{transform:translateY(1px) scale(.96)}.swimb.off{opacity:.45}
+.swimui .breath{width:134px;height:12px;border-radius:8px;background:rgba(255,252,242,.85);box-shadow:var(--shadow);overflow:hidden;padding:2px}
+.swimui .breath b{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#7ad8f0,#bff0ff);transition:width .15s linear}
+.swimui .breath.low b{background:linear-gradient(90deg,#f0a07a,#ffd0b0)}
+.swimui .dh{font-size:12px;font-weight:700;color:#fffcf2;text-shadow:0 1px 0 rgba(58,38,22,.7),0 0 6px rgba(58,38,22,.4)}
+.swimui .dh:empty{display:none}

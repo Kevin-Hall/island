@@ -29,8 +29,8 @@ function fishLoft(L,prof,color){const NZ=22,NR=16,pos=[],col=[],idx=[];const c=n
 // a flat fin from an outline in (z, y), standing in the fish's midline plane (or turned for side fins)
 function finGeo(pts,th=0.014){const sh=new T.Shape();sh.moveTo(-pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)sh.lineTo(-pts[i][0],pts[i][1]);sh.closePath();
   const g=new T.ExtrudeGeometry(sh,{depth:th,bevelEnabled:false,curveSegments:2});g.translate(0,0,-th/2);g.rotateY(Math.PI/2);return g;}
-function fishModel(F){const g=new T.Group();if(!FISH_ID)FISH_ID=new Map(Object.entries(FISH).map(([k,v])=>[v,k]));const id=FISH_ID.get(F)||'fish';
-  let c=FISH_GEO.get(id);if(!c){c=buildFish(id,F);FISH_GEO.set(id,c);}
+function fishModel(F,id0){const g=new T.Group();if(!FISH_ID)FISH_ID=new Map(Object.entries(FISH).map(([k,v])=>[v,k]));const id=id0||FISH_ID.get(F)||'fish';/* id0: a creature that isn't in FISH (the reef's sea life, 76d) */
+  let c=FISH_GEO.get(id);if(!c){c=buildFish(id.replace(/^sea:(crab_)?/,m=>m.includes('crab')?'crab':''),F);FISH_GEO.set(id,c);}
   for(const [geo,mat] of c){const m=new T.Mesh(geo,mat||vcMat);m.castShadow=true;m.receiveShadow=true;m.frustumCulled=false;g.add(m);}return g;}
 function buildFish(id,F){const out=[],kind=fishKind(id,F),s=0.32+F.size*0.1,L=s*2;
   const col=new T.Color(F.col||'#8a9ab0'),dk=new T.Color(F.dk||'#3a4a5a'),fin=new T.Color(F.fin||F.dk||'#5a3a2a').getHex(),belly=col.clone().lerp(new T.Color(0xffffff),0.45),back=col.clone().lerp(dk,0.6);

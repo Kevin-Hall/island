@@ -112,7 +112,7 @@ function updateCaught(dt,tt){if(camBack!==null&&!caught){cam.dist=lerp(cam.dist,
     if(!c.shown){c.shown=true;catchCard(c.card);}}}
 function catchCard(d){let el=$('catchCard');if(!el){el=document.createElement('div');el.id='catchCard';el.className='catchcard';document.body.appendChild(el);}
   if(!d){el.classList.remove('on');return;}
-  const tags=[d.junk?'':`${d.kg} kg`,d.junk?'':d.rar,d.rec?'Record!':'',d.gold?'Golden!':''].filter(Boolean);
+  const tags=[d.junk||d.sea?'':`${d.kg} kg`,d.junk?'':d.rar,d.rec?'Record!':'',d.gold?'Golden!':''].filter(Boolean);
   el.innerHTML=`<small>You caught</small><b>${d.art} ${d.name}</b>${tags.length?`<span>${tags.map(t=>`<em>${t}</em>`).join('')}</span>`:''}<p>${d.quip}</p>${d.first?'<i class="new">New to your Islandex!</i>':''}<i>Tap anywhere to put it away</i>`;
   el.classList.remove('on');void el.offsetWidth;el.classList.add('on');}
 function dismissCatch(){if(!caught||caught.t<0.6)return;scene.remove(caught.g);if(caught.d0!==undefined)camBack=caught.d0;catchCard(null);caught=null;}

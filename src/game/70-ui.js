@@ -70,7 +70,7 @@ $('ctx').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b
    Items & dex helpers
    ========================================================= */
 const rarity=w=>w>=15?'Common':w>=6?'Uncommon':w>=2.5?'Rare':'Legendary';
-function itemInfo(key){const pre=key.slice(0,2),id=key.slice(2);if(pre==='f:')return FISH[id];if(pre==='b:')return BUGS[id];if(pre==='g:')return FINDS[id];if(pre==='p:')return PLANTS[id];if(pre==='m:')return MATS[id];if(pre==='x:')return CONSUM[id];return null;}
+function itemInfo(key){const pre=key.slice(0,2),id=key.slice(2);if(pre==='f:')return FISH[id];if(pre==='b:')return BUGS[id];if(pre==='g:')return FINDS[id];if(pre==='p:')return PLANTS[id];if(pre==='m:')return MATS[id];if(pre==='x:')return CONSUM[id];if(pre==='s:')return SEA[id];return null;}
 function nameOf(key){const I=itemInfo(key);if(I)return I.name;if(key.startsWith('c:'))return CROPS[key.slice(2)].name;const [t,v]=key.split('|');return(VAR[v].name?VAR[v].name+' ':'')+CROPS[t].name;}
 function iconOf(key){if(key.startsWith('c:'))return seedIcon(key.slice(2));if(key.includes(':'))return ICON[key];return seedIcon(key.split('|')[0]);}
 function varOf(key){return key.includes(':')?'normal':key.split('|')[1];}

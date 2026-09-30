@@ -1,20 +1,23 @@
 /* =========================================================
    Audio (tiny synth)
    ========================================================= */
-let AC=null,waves=null;
+let AC=null,waves=null,masterLP=null;
+// everything plays through one low-pass filter, closed down under water so the world sounds muffled (76c-swim)
+function audioOut(a){if(!masterLP){masterLP=a.createBiquadFilter();masterLP.type='lowpass';masterLP.frequency.value=20000;masterLP.connect(a.destination);}return masterLP;}
+let muffled=false;function audioMuffle(on){if(on===muffled||!AC)return;muffled=on;const f=audioOut(AC).frequency;f.cancelScheduledValues(AC.currentTime);f.setTargetAtTime(on?520:20000,AC.currentTime,0.12);}
 function ac(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}}if(AC.state==='suspended')AC.resume();return AC;}
 function tone(f,d=0.12,type='square',v=0.04,f2){if(!S.sound)return;const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime;
   o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(0.0001,t+d);
-  o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+0.02);}
+  o.connect(g);g.connect(audioOut(a));o.start(t);o.stop(t+d+0.02);}
 let noiseBuf=null;
 function noise(d=0.15,v=0.05,freq=800,q=1){if(!S.sound)return;const a=ac();if(!a)return;
   if(!noiseBuf){noiseBuf=a.createBuffer(1,a.sampleRate*2,a.sampleRate);const ch=noiseBuf.getChannelData(0);for(let i=0;i<ch.length;i++)ch[i]=Math.random()*2-1;}
   const s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain(),t=a.currentTime;s.buffer=noiseBuf;f.type='bandpass';f.frequency.value=freq;f.Q.value=q;
-  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(0.0001,t+d);s.connect(f);f.connect(g);g.connect(a.destination);s.start(t,Math.random());s.stop(t+d+0.02);}
+  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(0.0001,t+d);s.connect(f);f.connect(g);g.connect(audioOut(a));s.start(t,Math.random());s.stop(t+d+0.02);}
 function startWaves(){const a=ac();if(!a||waves)return;noise(0.01,0.0001);if(!noiseBuf)return;
   const s=a.createBufferSource();s.buffer=noiseBuf;s.loop=true;const f=a.createBiquadFilter();f.type='lowpass';f.frequency.value=420;
   const g=a.createGain();g.gain.value=0;const lfo=a.createOscillator(),lg=a.createGain();lfo.frequency.value=0.12;lg.gain.value=0.012;lfo.connect(lg);lg.connect(g.gain);
-  s.connect(f);f.connect(g);g.connect(a.destination);s.start();lfo.start();waves={g,f};setWaveVol();}
+  s.connect(f);f.connect(g);g.connect(audioOut(a));s.start();lfo.start();waves={g,f};setWaveVol();}
 function setWaveVol(){if(waves)waves.g.gain.value=S.sound?0.018:0;}
 const SFX={
   cast:()=>noise(0.25,0.06,1800,0.7),plop:()=>{noise(0.12,0.1,700,1.2);tone(300,0.1,'sine',0.05,180);},
