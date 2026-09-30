@@ -51,19 +51,20 @@ function buildRoom(kind,n){if(kind==='museum')return buildMuseum();if(kind==='ho
     put(extra[0],L-0.2,0.9,-1.57,extra[0],st.rug);put(extra[1],0.2,B,0,extra[1],st.rug);}
   const g=new T.Group();g.add(M(p));if(gl.length){const m=M(gl,glowMat);m.castShadow=false;g.add(m);}g.add(win);return{g,props,RW,RD};}
 function enterHouse(kind,b,n){if(inside)return;$('fade').classList.add('on');SFX.ui();
-  setTimeout(()=>{const r=buildRoom(kind,n);roomScene.add(r.g);const pm=villager.children[0].clone();const me=new T.Group();me.add(pm);r.g.add(me);
+  setTimeout(()=>{if(kind==='home')roomInit();/* 56c */const r=buildRoom(kind,n);roomScene.add(r.g);const pm=villager.children[0].clone();const me=new T.Group();me.add(pm);r.g.add(me);
     let who=null;if(n&&(n.state==='home'||S.hour>=21||S.hour<6.5)){who=n.g.clone(true);who.visible=true;who.position.set(0.9,0,0.2);who.rotation.y=0.4;r.g.add(who);}
     inside={kind,b,n,room:r,me,who,wl:who?limbsOf(who):null,ml:null,x:0,y:0,lv:0,tlv:0,path:null,z:r.RD/2-0.8,tx:0,tz:r.RD/2-0.8,face:Math.PI,title:r.title||(kind==='home'?'Your '+HOUSES[S.house].toLowerCase():n.name+'’s house')};
+    if(kind==='home')syncRoomItems();
     ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');
     if(kind==='museum'&&!(S.log||[]).some(e=>e.t==='museum'&&e.day===S.day))logEvent('museum');
     if(kind==='museum')setTimeout(()=>toast(`Grandpa Tully: “Welcome to the ${TOWN.name} Museum! Tap an exhibit to learn about it, or come chat with an old turtle.”`,'',ICON.dex),350);
     else if(kind==='vh'&&!who)toast(`${n.name} is out. You peek around the cosy ${n.pers==='scholar'?'study':n.pers==='tinkerer'?'workshop':'room'}.`);
     else if(who)setTimeout(()=>showTalk(n,`Oh! Welcome to my home! Make yourself comfortable.`),350);},450);}
-function leaveHouse(){if(!inside)return;roomScene.background.setHex(0x2e2430);$('fade').classList.add('on');SFX.ui();clearAction();
+function leaveHouse(){if(!inside)return;if(deco)decoClose();roomScene.background.setHex(0x2e2430);$('fade').classList.add('on');SFX.ui();clearAction();
   setTimeout(()=>{roomScene.remove(inside.room.g);for(const c of inside.room.g.children)if(c.isMesh)c.geometry.dispose();inside=null;ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');},420);}
 function roomPoint(cx,cy,y0=0){ndc.set(cx/window.innerWidth*2-1,-(cy/window.innerHeight)*2+1);ray.setFromCamera(ndc,roomCam);let y=y0,pt=null;
   for(let i=0;i<5;i++){_plane.constant=-y;if(!ray.ray.intersectPlane(_plane,_hit))return null;pt=_hit.clone();y=y0-curveDropFor(roomCam,pt.x,pt.z);}return pt;}
-function roomTap(cx,cy){const I=inside;if(I.who&&I.n){_pv.set(I.who.position.x,0.5-curveDropFor(roomCam,I.who.position.x,I.who.position.z),I.who.position.z).project(roomCam);
+function roomTap(cx,cy){const I=inside;if(deco){decoTap(cx,cy);return;}if(I.who&&I.n){_pv.set(I.who.position.x,0.5-curveDropFor(roomCam,I.who.position.x,I.who.position.z),I.who.position.z).project(roomCam);
     const sx=(_pv.x+1)/2*window.innerWidth,sy=(1-_pv.y)/2*window.innerHeight;if(Math.hypot(sx-cx,sy-cy)<55){if(I.room.dio)dioRoute(I,0,I.who.position.x,I.who.position.z+0.7);else{I.tx=I.who.position.x;I.tz=I.who.position.z+0.7;}setTimeout(()=>showTalk(I.n,npcLine(I.n)),0);return;}}
   if(I.room.dio){const R=I.room,D=R.dio,pxu=window.innerHeight/(2*Math.tan(roomCam.fov*Math.PI/360)*roomCam.position.length());let pr=null,bd=1e9;
     for(const q of R.props){_pv.set(q.x,q.y-curveDropFor(roomCam,q.x,q.z),q.z).project(roomCam);const d=Math.hypot((_pv.x+1)/2*window.innerWidth-cx,(1-_pv.y)/2*window.innerHeight-cy);if(d<bd){bd=d;pr=q;}}
@@ -84,8 +85,13 @@ function roomUse(pr,I){{
     else if(pr.k==='bed'&&I.kind==='home'){if(S.hour>=19||S.hour<5)setTimeout(()=>setAction('Snuggle in and sleep until morning?',[{label:'Sleep',cls:'go',fn:sleep},{label:'Not yet',fn:clearAction}],'Bed'),0);else toast('Not sleepy yet. Come back after 7 pm.');}
     else{const T0={bed:'A cosy bed with a patchwork quilt.',table:'Tea for two, and a shiny red apple.',lamp:'It glows warmly.',plant:'Lovingly watered.',tv:'It’s showing a documentary about deep-sea lanternfish.',beanbag:'Squishy. Dangerously comfy.',
       armchair:'A well-worn favourite.',shelf:'Books, books and more books.',weights:'Heavy! Very heavy.',bag:'Thwump!',counter:'Something smells delicious.',piano:'You play a little tune. ♪',stereo:'An old sea shanty crackles from the speakers.',
-      vanity:'You look fabulous.',fireplace:'Crackle, crackle.',fishtank:'Two little fish wave hello.',dresser:'Full of neatly folded clothes.',chair:'A sturdy chair.'};
-      toast(T0[pr.k]||'Nice!');if(pr.k==='piano'){tone(523,0.2,'triangle',0.05);setTimeout(()=>tone(659,0.2,'triangle',0.05),180);setTimeout(()=>tone(784,0.3,'triangle',0.05),360);}}}}
+      vanity:'You look fabulous.',fireplace:'Crackle, crackle.',fishtank:'Two little fish wave hello.',dresser:'Full of neatly folded clothes.',chair:'A sturdy chair.',sofa:'You sink right in.',dresser:'Neatly folded jumpers.',fridge:'Leftover pumpkin pie. Tempting.',stove:'Something’s simmering.',bathtub:'Bubbles! A rubber duck bobs past.',
+      bookstack:'You were going to read these.',candles:'They smell of vanilla.',teddy:'Soft, and a little worn from hugs.',catbed:'The cat opens one eye, then purrs.',globe:'You spin it and point: there. One day.',
+      telescope:'You spot a far island… and a gull looking back.',easel:'A painting of your island, half finished.',guitar:'You strum a chord. ♪',clock:'Tick… tock…',lavalamp:'Blobs rise and fall. Mesmerising.',
+      drums:'Ba-dum-tss!',arcade:'You play a round of Coral Blaster. High score!',jukebox:'The jukebox drops a record: a sea shanty!',discoball:'Party time!',throne:'You feel very important.',lantern:'It glows softly.',gnome:'He’s guarding the room.',flowerpot:'Cheerful blooms.'};
+      toast(T0[pr.k]||'Nice!');if(pr.k==='piano'||pr.k==='guitar'||pr.k==='jukebox'||pr.k==='arcade'||pr.k==='discoball'){const nt=pr.k==='arcade'?[880,988,1175,1568]:pr.k==='discoball'?[523,659,784,1047,784,1047]:[523,659,784];nt.forEach((f,i)=>setTimeout(()=>tone(f,0.18,pr.k==='arcade'?'square':'triangle',0.04),i*170));}
+      if(pr.k==='drums'){tone(110,0.12,'sine',0.08);setTimeout(()=>tone(160,0.1,'sine',0.06),150);setTimeout(()=>tone(2400,0.25,'square',0.015),300);}
+      if(pr.k&&pr.k.startsWith('pot_'))toast(((RI[pr.k]||{}).n||'A plant')+'. Lovingly watered.');}}}
 function updateRoom(dt,tt){const I=inside;if(!I)return;let walking=false,climb=false;
   if(I.path){const w=I.path[0],dx=w[0]-I.x,dy=w[1]-I.y,dz=w[2]-I.z,d=Math.hypot(dx,dy,dz);climb=Math.abs(dy)>0.02;
     if(d<0.03){I.path.shift();I.lv=w[1]>0.1?1:0;if(!I.path.length){I.path=null;I.lv=I.tlv;}}
@@ -96,7 +102,7 @@ function updateRoom(dt,tt){const I=inside;if(!I)return;let walking=false,climb=f
   if(I.who){I.who.rotation.y+=angDiff(I.who.rotation.y,Math.atan2(I.x-I.who.position.x,I.z-I.who.position.z))*Math.min(1,dt*3);I.who.position.y=Math.sin(tt*2)*0.01;}
   roomCam.aspect=camera.aspect;if(I.room.follow){/* big rooms: the camera follows you, staying close so the world curve stays gentle */const cx=clamp(I.x,-I.room.RW/2+3,I.room.RW/2-3),cz=clamp(I.z,-I.room.RD/2+2.2,I.room.RD/2-2.2);I.cx=I.cx===undefined?cx:lerp(I.cx,cx,Math.min(1,dt*3));I.cz=I.cz===undefined?cz:lerp(I.cz,cz,Math.min(1,dt*3));const k=camera.aspect<0.8?1.55:1;/* stand further back on a tall phone */roomCam.position.set(I.cx,7.2*k,I.cz+6.8*k);roomCam.lookAt(I.cx,0.4,I.cz-0.9);}
   else if(I.room.dio){fitRoomCam(I.room.dio);roomScene.background.copy(skyZen).lerp(skyHz,0.45).lerp(_c.set(0x1a1830),nightF*0.55);}
-  else{roomCam.position.set(0,6.2,I.room.RD/2+4.6);roomCam.lookAt(0,0.4,-0.2);}roomCam.updateProjectionMatrix();if(I.room.tick)I.room.tick(dt,tt);
+  else{roomCam.position.set(0,6.2,I.room.RD/2+4.6);roomCam.lookAt(0,0.4,-0.2);}roomCam.updateProjectionMatrix();if(I.room.tick)I.room.tick(dt,tt);if(I.kind==='home')decoTick(dt,tt);
   roomWinMat.color.setHex(nightF>0.5?0x2a3a6a:S.rain?0x9aa8b8:S.hour<7||S.hour>18?0xf4b890:0x9fd4ff);roomLamp.intensity=0.25+nightF*0.5;}
 function townTap(f,x,z){const b=TOWN.bld.find(q=>x>=q.x&&x<=q.x+1&&z>=q.z&&z<=q.z+1);
   if(f==='shop'){walkTo(b.door[0]+0.5,b.door[1]);openSheet('shop','decor');return true;}

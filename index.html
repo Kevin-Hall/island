@@ -554,6 +554,46 @@ img.pix{image-rendering:crisp-edges;image-rendering:pixelated}
 .terraui .seg3{display:flex;background:var(--paper);border-radius:18px;box-shadow:var(--shadow);padding:4px;gap:2px}
 .terraui button{border:none;background:none;border-radius:14px;padding:8px 11px;font:inherit;font-size:13.5px;font-weight:700;color:var(--ink2)}
 .terraui button.on{background:#7cc46a;color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}
+
+/* ---------- decorating your home (56c) ---------- */
+.ctx .msg.cosy{color:#e0a020;letter-spacing:1px;font-size:15px}
+.decotray{position:fixed;z-index:7;left:0;right:0;bottom:0;background:var(--paper);border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(60,40,20,.18);
+  padding:10px 0 calc(env(safe-area-inset-bottom,0px) + 10px);max-height:44vh;display:flex;flex-direction:column;gap:6px}
+.decotray .dtop{display:flex;align-items:center;gap:8px;padding:0 12px}
+.decotray .stars{font-size:20px;color:#f0b020;letter-spacing:1px;white-space:nowrap;text-shadow:0 1px 0 #c8901a}
+.decotray .tip{flex:1;font-size:12.5px;line-height:1.25;color:var(--ink2);font-weight:600}
+.decotray .dtop .pbtn{padding:8px 16px;font-size:15px}
+.decotray .dtabs{display:flex;gap:6px;padding:0 12px;overflow-x:auto;scrollbar-width:none}
+.decotray .dtabs::-webkit-scrollbar{display:none}
+.decotray .dtabs button{border:none;background:var(--wash);color:var(--ink2);border-radius:999px;padding:7px 14px;font:inherit;font-size:13.5px;font-weight:700;white-space:nowrap}
+.decotray .dtabs button.on{background:var(--teal);color:#fff;box-shadow:0 2px 0 var(--teal-d)}
+.decotray .dtabs.sub button{padding:5px 12px;font-size:12.5px}
+.decotray .dtabs.sub button.on{background:var(--yellow);color:var(--ink);box-shadow:0 2px 0 var(--yellow-d)}
+.decotray .drow{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,auto);grid-auto-columns:86px;gap:8px;overflow-x:auto;padding:4px 12px 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.decotray .drow::-webkit-scrollbar{display:none}
+.dcard{position:relative;border:none;background:#fff;border-radius:14px;box-shadow:0 2px 0 var(--line),0 3px 8px rgba(60,40,20,.08);padding:6px 4px 5px;display:flex;flex-direction:column;align-items:center;gap:2px;font:inherit;color:var(--ink)}
+.dcard img{width:56px;height:56px;image-rendering:auto}
+.dcard span{font-size:11px;font-weight:700;line-height:1.1;text-align:center;min-height:24px;display:flex;align-items:center}
+.dcard b{font-size:11px;font-weight:700;color:var(--teal-d)}
+.dcard em{position:absolute;top:4px;right:6px;font-style:normal;font-size:10px;font-weight:700;background:var(--teal);color:#fff;border-radius:99px;padding:1px 6px}
+.dcard.lock{opacity:.55}.dcard.lock b{color:#e0a020}
+.dcard.on{box-shadow:0 0 0 3px var(--teal),0 3px 8px rgba(60,40,20,.08)}
+.dcard .sw{display:block;width:52px;height:52px;border-radius:12px;box-shadow:inset 0 0 0 2px rgba(0,0,0,.08);margin:2px 0}
+.dcard .sw.roof{background:linear-gradient(160deg,#f4e6c8,#d8b88a)}
+.dcard .sw.r-hull{background:repeating-linear-gradient(90deg,#8a5a3a 0 5px,#dce8f2 5px 12px)}
+.dcard .sw.r-dome{background:radial-gradient(circle at 60% 40%,#fff4c0 0 3px,transparent 4px),radial-gradient(circle at 30% 60%,#c8b8ff 0 2px,transparent 3px),#3a3464}
+.dcard .sw.r-pipes{background:repeating-linear-gradient(0deg,#c87a3a 0 5px,#e8dcc4 5px 12px)}
+.dcard .sw.r-thatch{background:repeating-linear-gradient(60deg,#d8b860 0 4px,#c8a450 4px 8px)}
+.dcard .sw.r-tent{background:repeating-conic-gradient(from 0deg at 50% 0,#d86a3a 0 15deg,#f6ecd8 15deg 30deg)}
+.dcard .sw.r-books{background:repeating-linear-gradient(90deg,#d8453a 0 4px,#5a8ae0 4px 8px,#6ab84a 8px 12px,#f6d04a 12px 16px)}
+.dcard .sw.r-tree{background:radial-gradient(circle at 50% 35%,#6cb04a 0 40%,transparent 41%),linear-gradient(90deg,transparent 42%,#8a5a36 42% 58%,transparent 58%),#cfe8f6}
+.dcard .sw.r-none{background:linear-gradient(#9fd4ff,#e8f4ff)}
+.decosel{position:fixed;z-index:8;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;background:var(--paper);border-radius:999px;box-shadow:var(--shadow);padding:5px;white-space:nowrap}
+.decosel .nm{font-size:13px;font-weight:700;color:var(--ink);padding:0 8px 0 10px}
+.decosel button{border:none;background:var(--wash);color:var(--ink);border-radius:999px;padding:7px 11px;font:inherit;font-size:13px;font-weight:700}
+.decosel button[data-da="done"]{background:var(--green);color:#fff}
+.decosel button[data-da="store"]{background:#fde0da;color:#b8503e}
+.dnote{grid-row:span 2;width:260px;font-size:13px;color:var(--ink2);margin:6px 0}
 </style>
 </head>
 <body>
@@ -572,6 +612,8 @@ img.pix{image-rendering:crisp-edges;image-rendering:pixelated}
 <div id="toasts"></div>
 <div id="seamarks" hidden></div>
 <div id="ctx" class="ctx"></div>
+<div class="decosel" id="decoSel" hidden></div>
+<div class="decotray" id="decoTray" hidden></div>
 <div id="actionBar" class="actionbar" hidden><div class="tag" id="abTag"></div><div class="msg" id="abMsg"></div><div class="row" id="abRow"></div></div>
 
 <!-- one bottom bar: your tools, plus a menu button that pops up the apps -->
@@ -4199,19 +4241,20 @@ function buildRoom(kind,n){if(kind==='museum')return buildMuseum();if(kind==='ho
     put(extra[0],L-0.2,0.9,-1.57,extra[0],st.rug);put(extra[1],0.2,B,0,extra[1],st.rug);}
   const g=new T.Group();g.add(M(p));if(gl.length){const m=M(gl,glowMat);m.castShadow=false;g.add(m);}g.add(win);return{g,props,RW,RD};}
 function enterHouse(kind,b,n){if(inside)return;$('fade').classList.add('on');SFX.ui();
-  setTimeout(()=>{const r=buildRoom(kind,n);roomScene.add(r.g);const pm=villager.children[0].clone();const me=new T.Group();me.add(pm);r.g.add(me);
+  setTimeout(()=>{if(kind==='home')roomInit();/* 56c */const r=buildRoom(kind,n);roomScene.add(r.g);const pm=villager.children[0].clone();const me=new T.Group();me.add(pm);r.g.add(me);
     let who=null;if(n&&(n.state==='home'||S.hour>=21||S.hour<6.5)){who=n.g.clone(true);who.visible=true;who.position.set(0.9,0,0.2);who.rotation.y=0.4;r.g.add(who);}
     inside={kind,b,n,room:r,me,who,wl:who?limbsOf(who):null,ml:null,x:0,y:0,lv:0,tlv:0,path:null,z:r.RD/2-0.8,tx:0,tz:r.RD/2-0.8,face:Math.PI,title:r.title||(kind==='home'?'Your '+HOUSES[S.house].toLowerCase():n.name+'’s house')};
+    if(kind==='home')syncRoomItems();
     ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');
     if(kind==='museum'&&!(S.log||[]).some(e=>e.t==='museum'&&e.day===S.day))logEvent('museum');
     if(kind==='museum')setTimeout(()=>toast(`Grandpa Tully: “Welcome to the ${TOWN.name} Museum! Tap an exhibit to learn about it, or come chat with an old turtle.”`,'',ICON.dex),350);
     else if(kind==='vh'&&!who)toast(`${n.name} is out. You peek around the cosy ${n.pers==='scholar'?'study':n.pers==='tinkerer'?'workshop':'room'}.`);
     else if(who)setTimeout(()=>showTalk(n,`Oh! Welcome to my home! Make yourself comfortable.`),350);},450);}
-function leaveHouse(){if(!inside)return;roomScene.background.setHex(0x2e2430);$('fade').classList.add('on');SFX.ui();clearAction();
+function leaveHouse(){if(!inside)return;if(deco)decoClose();roomScene.background.setHex(0x2e2430);$('fade').classList.add('on');SFX.ui();clearAction();
   setTimeout(()=>{roomScene.remove(inside.room.g);for(const c of inside.room.g.children)if(c.isMesh)c.geometry.dispose();inside=null;ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');},420);}
 function roomPoint(cx,cy,y0=0){ndc.set(cx/window.innerWidth*2-1,-(cy/window.innerHeight)*2+1);ray.setFromCamera(ndc,roomCam);let y=y0,pt=null;
   for(let i=0;i<5;i++){_plane.constant=-y;if(!ray.ray.intersectPlane(_plane,_hit))return null;pt=_hit.clone();y=y0-curveDropFor(roomCam,pt.x,pt.z);}return pt;}
-function roomTap(cx,cy){const I=inside;if(I.who&&I.n){_pv.set(I.who.position.x,0.5-curveDropFor(roomCam,I.who.position.x,I.who.position.z),I.who.position.z).project(roomCam);
+function roomTap(cx,cy){const I=inside;if(deco){decoTap(cx,cy);return;}if(I.who&&I.n){_pv.set(I.who.position.x,0.5-curveDropFor(roomCam,I.who.position.x,I.who.position.z),I.who.position.z).project(roomCam);
     const sx=(_pv.x+1)/2*window.innerWidth,sy=(1-_pv.y)/2*window.innerHeight;if(Math.hypot(sx-cx,sy-cy)<55){if(I.room.dio)dioRoute(I,0,I.who.position.x,I.who.position.z+0.7);else{I.tx=I.who.position.x;I.tz=I.who.position.z+0.7;}setTimeout(()=>showTalk(I.n,npcLine(I.n)),0);return;}}
   if(I.room.dio){const R=I.room,D=R.dio,pxu=window.innerHeight/(2*Math.tan(roomCam.fov*Math.PI/360)*roomCam.position.length());let pr=null,bd=1e9;
     for(const q of R.props){_pv.set(q.x,q.y-curveDropFor(roomCam,q.x,q.z),q.z).project(roomCam);const d=Math.hypot((_pv.x+1)/2*window.innerWidth-cx,(1-_pv.y)/2*window.innerHeight-cy);if(d<bd){bd=d;pr=q;}}
@@ -4232,8 +4275,13 @@ function roomUse(pr,I){{
     else if(pr.k==='bed'&&I.kind==='home'){if(S.hour>=19||S.hour<5)setTimeout(()=>setAction('Snuggle in and sleep until morning?',[{label:'Sleep',cls:'go',fn:sleep},{label:'Not yet',fn:clearAction}],'Bed'),0);else toast('Not sleepy yet. Come back after 7 pm.');}
     else{const T0={bed:'A cosy bed with a patchwork quilt.',table:'Tea for two, and a shiny red apple.',lamp:'It glows warmly.',plant:'Lovingly watered.',tv:'It’s showing a documentary about deep-sea lanternfish.',beanbag:'Squishy. Dangerously comfy.',
       armchair:'A well-worn favourite.',shelf:'Books, books and more books.',weights:'Heavy! Very heavy.',bag:'Thwump!',counter:'Something smells delicious.',piano:'You play a little tune. ♪',stereo:'An old sea shanty crackles from the speakers.',
-      vanity:'You look fabulous.',fireplace:'Crackle, crackle.',fishtank:'Two little fish wave hello.',dresser:'Full of neatly folded clothes.',chair:'A sturdy chair.'};
-      toast(T0[pr.k]||'Nice!');if(pr.k==='piano'){tone(523,0.2,'triangle',0.05);setTimeout(()=>tone(659,0.2,'triangle',0.05),180);setTimeout(()=>tone(784,0.3,'triangle',0.05),360);}}}}
+      vanity:'You look fabulous.',fireplace:'Crackle, crackle.',fishtank:'Two little fish wave hello.',dresser:'Full of neatly folded clothes.',chair:'A sturdy chair.',sofa:'You sink right in.',dresser:'Neatly folded jumpers.',fridge:'Leftover pumpkin pie. Tempting.',stove:'Something’s simmering.',bathtub:'Bubbles! A rubber duck bobs past.',
+      bookstack:'You were going to read these.',candles:'They smell of vanilla.',teddy:'Soft, and a little worn from hugs.',catbed:'The cat opens one eye, then purrs.',globe:'You spin it and point: there. One day.',
+      telescope:'You spot a far island… and a gull looking back.',easel:'A painting of your island, half finished.',guitar:'You strum a chord. ♪',clock:'Tick… tock…',lavalamp:'Blobs rise and fall. Mesmerising.',
+      drums:'Ba-dum-tss!',arcade:'You play a round of Coral Blaster. High score!',jukebox:'The jukebox drops a record: a sea shanty!',discoball:'Party time!',throne:'You feel very important.',lantern:'It glows softly.',gnome:'He’s guarding the room.',flowerpot:'Cheerful blooms.'};
+      toast(T0[pr.k]||'Nice!');if(pr.k==='piano'||pr.k==='guitar'||pr.k==='jukebox'||pr.k==='arcade'||pr.k==='discoball'){const nt=pr.k==='arcade'?[880,988,1175,1568]:pr.k==='discoball'?[523,659,784,1047,784,1047]:[523,659,784];nt.forEach((f,i)=>setTimeout(()=>tone(f,0.18,pr.k==='arcade'?'square':'triangle',0.04),i*170));}
+      if(pr.k==='drums'){tone(110,0.12,'sine',0.08);setTimeout(()=>tone(160,0.1,'sine',0.06),150);setTimeout(()=>tone(2400,0.25,'square',0.015),300);}
+      if(pr.k&&pr.k.startsWith('pot_'))toast(((RI[pr.k]||{}).n||'A plant')+'. Lovingly watered.');}}}
 function updateRoom(dt,tt){const I=inside;if(!I)return;let walking=false,climb=false;
   if(I.path){const w=I.path[0],dx=w[0]-I.x,dy=w[1]-I.y,dz=w[2]-I.z,d=Math.hypot(dx,dy,dz);climb=Math.abs(dy)>0.02;
     if(d<0.03){I.path.shift();I.lv=w[1]>0.1?1:0;if(!I.path.length){I.path=null;I.lv=I.tlv;}}
@@ -4244,7 +4292,7 @@ function updateRoom(dt,tt){const I=inside;if(!I)return;let walking=false,climb=f
   if(I.who){I.who.rotation.y+=angDiff(I.who.rotation.y,Math.atan2(I.x-I.who.position.x,I.z-I.who.position.z))*Math.min(1,dt*3);I.who.position.y=Math.sin(tt*2)*0.01;}
   roomCam.aspect=camera.aspect;if(I.room.follow){/* big rooms: the camera follows you, staying close so the world curve stays gentle */const cx=clamp(I.x,-I.room.RW/2+3,I.room.RW/2-3),cz=clamp(I.z,-I.room.RD/2+2.2,I.room.RD/2-2.2);I.cx=I.cx===undefined?cx:lerp(I.cx,cx,Math.min(1,dt*3));I.cz=I.cz===undefined?cz:lerp(I.cz,cz,Math.min(1,dt*3));const k=camera.aspect<0.8?1.55:1;/* stand further back on a tall phone */roomCam.position.set(I.cx,7.2*k,I.cz+6.8*k);roomCam.lookAt(I.cx,0.4,I.cz-0.9);}
   else if(I.room.dio){fitRoomCam(I.room.dio);roomScene.background.copy(skyZen).lerp(skyHz,0.45).lerp(_c.set(0x1a1830),nightF*0.55);}
-  else{roomCam.position.set(0,6.2,I.room.RD/2+4.6);roomCam.lookAt(0,0.4,-0.2);}roomCam.updateProjectionMatrix();if(I.room.tick)I.room.tick(dt,tt);
+  else{roomCam.position.set(0,6.2,I.room.RD/2+4.6);roomCam.lookAt(0,0.4,-0.2);}roomCam.updateProjectionMatrix();if(I.room.tick)I.room.tick(dt,tt);if(I.kind==='home')decoTick(dt,tt);
   roomWinMat.color.setHex(nightF>0.5?0x2a3a6a:S.rain?0x9aa8b8:S.hour<7||S.hour>18?0xf4b890:0x9fd4ff);roomLamp.intensity=0.25+nightF*0.5;}
 function townTap(f,x,z){const b=TOWN.bld.find(q=>x>=q.x&&x<=q.x+1&&z>=q.z&&z<=q.z+1);
   if(f==='shop'){walkTo(b.door[0]+0.5,b.door[1]);openSheet('shop','decor');return true;}
@@ -4295,10 +4343,13 @@ const DIO_STYLE={
   homebody:{wall:0xf6ecd8,trim:0xd8b088,floor:[0xd8b088,0xc8a078],rug:0x9ad0a0,rib:0xd8b860,grass:0x78b850,deco:'thatch',lights:0xffe0a0},
   explorer:{wall:0xdcecd8,trim:0x5a8a5a,floor:[0xc8a878,0xb89868],rug:0xd86a3a,rib:0xe8d8b0,grass:0x5aa048,deco:'tent',  lights:0xfff4d0},
   scholar: {wall:0xe8d8c8,trim:0x6a3a3a,floor:[0x7a5236,0x6a4428],rug:0x8a3a4a,rib:0x5a3a2a,grass:0x5a9a4a,deco:'books', lights:0xffe8b0}};
-function buildDiorama(kind,n){const home=kind==='home',st=DIO_STYLE[home?'home':n.pers]||DIO_STYLE.home,R=home?2.5+(S.house||0)*0.22:2.7,LY=DIO.LY,WH=LY+1.45;
+function buildDiorama(kind,n){const home=kind==='home',st=home?homeLookStyle():DIO_STYLE[n.pers]||DIO_STYLE.home,R=home?2.5+(S.house||0)*0.22:2.7,LY=DIO.LY,WH=LY+1.45;
   const p=[],gl=[],lum=[],sway=[],R0=mulberry(home?S.worldSeed|0:hi(n.i,7,11));const light=(c,t)=>lerpHex(c,0xffffff,t),dark=(c,t)=>lerpHex(c,0x1a1420,t);
   // floor: planks across a disc, on a slab with a trim edge
-  for(let x=-R+0.2;x<R;x+=0.4){const L=2*Math.sqrt(Math.max(0,R*R-x*x))-0.04;if(L>0.1)p.push(P(BOX,st.floor[Math.round((x+R)/0.4)%2],x,-0.05,0,0,0,0,0.39,0.1,L));}
+  const fc=st.floor,fN=fc.length;
+  if(st.floorPat==='tiles'){for(let x=-R+0.25;x<R;x+=0.5)for(let z=-R+0.25;z<R;z+=0.5){if(Math.hypot(x,z)>R-0.18)continue;p.push(P(BOX,fc[(Math.round((x+R)/0.5)+Math.round((z+R)/0.5))%fN],x,-0.05,z,0,0,0,0.49,0.1,0.49));}
+    p.push(P(CYL12,fc[0],0,-0.08,0,0,0,0,R*2-0.02,0.08,R*2-0.02));}
+  else for(let x=-R+0.2;x<R;x+=0.4){const L=2*Math.sqrt(Math.max(0,R*R-x*x))-0.04;if(L>0.1)p.push(P(BOX,fc[Math.round((x+R)/0.4)%fN],x,-0.05,0,0,0,0,0.39,0.1,L));}
   p.push(P(CYL12,st.trim,0,-0.2,0,0,0,0,R*2+0.14,0.22,R*2+0.14));
   // the island chunk underneath: a grass rim, then earth in bands narrowing to a rocky point, roots and stones in it
   p.push(P(CYL12,st.grass,0,-0.4,0,0,0,0,R*2+0.7,0.3,R*2+0.7),P(CYL12,dark(st.grass,0.25),0,-0.56,0,0,0,0,R*2+0.62,0.06,R*2+0.62));
@@ -4309,13 +4360,21 @@ function buildDiorama(kind,n){const home=kind==='home',st=DIO_STYLE[home?'home':
     for(let k=0;k<pts.length-1;k++)limb(p,0x6a4a30,...pts[k],...pts[k+1],0.07-k*0.012);}
   // grass tufts and flowers round the front of the rim
   for(let i=0;i<22;i++){const a=-0.4+R0()*(Math.PI+0.8),rr=R+0.12+R0()*0.2,x=Math.cos(a)*rr,z=Math.sin(a)*rr;if(z<-0.3&&Math.abs(x)<R*0.7)continue;
-    p.push(P(CONE5,light(st.grass,0.15),x,-0.2,z,0,R0()*3,0,0.12,0.22,0.12));if(R0()<0.45)p.push(P(ICO0,[0xf6d04a,0xf39ab0,0xffffff,0xb89aff][i%4],x,-0.08,z,0,0,0,0.1,0.08,0.1));}
+    p.push(P(CONE5,light(st.grass,0.15),x,-0.2,z,0,R0()*3,0,0.12,0.22,0.12));if(R0()<0.45)p.push(P(ICO0,(st.flowers||[0xf6d04a,0xf39ab0,0xffffff,0xb89aff])[i%(st.flowers?st.flowers.length:4)],x,-0.08,z,0,0,0,0.1,0.08,0.1));}
   // the curved wall round the back: tall behind the loft, sweeping down towards the open front
   const segs=26,a0=-0.28,a1=Math.PI+0.28,wallH=a=>{const s=Math.sin(clamp(a,0,Math.PI));return 0.7+(WH-0.7)*Math.pow(s,0.55);};
   p.push(P(arcWall(R,R+0.14,a0,a1,wallH,40),st.wall),P(arcWall(R-0.03,R+0.15,a0,a1,()=>0.9,40),dark(st.trim,0.1)),P(arcWall(R-0.04,R+0.2,a0,a1,a=>wallH(a)+0.08,40,wallH),st.trim));
   for(let i=0;i<segs;i++){const a=a0+(i+0.5)/segs*(a1-a0),h=wallH(a),x=Math.cos(a)*(R-0.02),z=-Math.sin(a)*(R-0.02);
-    if(i%2===0)lum.push(P(ICO0,st.lights,x,h-0.08,z,0,0,0,0.09,0.09,0.09));/* fairy lights along the top */
-    if(i%3===1)p.push(P(BOX,light(st.wall,0.18),x*0.998,(h+0.9)/2,z*0.998,0,Math.PI/2-a,0,0.05,h-0.9,0.02));/* a thin panel line */}
+    const lc=st.lights==='rainbow'?TINTS[i%8]:st.lights;if(i%2===0&&lc!=null)lum.push(P(ICO0,lc,x,h-0.08,z,0,0,0,0.09,0.09,0.09));/* fairy lights along the top */
+    if(i%3===1&&!st.wallPat)p.push(P(BOX,light(st.wall,0.18),x*0.998,(h+0.9)/2,z*0.998,0,Math.PI/2-a,0,0.05,h-0.9,0.02));/* a thin panel line */}
+  // wallpaper patterns
+  if(st.wallPat){const pat=st.wallPat,c2=st.wall2,ry=a=>Math.PI/2-a,at=(a,r,y)=>[Math.cos(a)*r,y,-Math.sin(a)*r];
+    if(pat==='stripe')for(let i=0;i<36;i+=2){const a=a0+(i+0.5)/36*(a1-a0),h=wallH(a);p.push(P(BOX,c2,...at(a,R-0.012,(h+0.9)/2),0,ry(a),0,R*(a1-a0)/36,h-0.9,0.02));}
+    if(pat==='planks')for(let y=1.1;y<WH;y+=0.3)p.push(P(arcWall(R-0.012,R-0.005,a0,a1,a=>Math.min(y+0.03,wallH(a)),40,a=>Math.min(y,wallH(a))),c2));
+    if(pat==='brick')for(let r=0,y=1.0;y<WH;y+=0.22,r++){p.push(P(arcWall(R-0.012,R-0.006,a0,a1,a=>Math.min(y+0.02,wallH(a)),40,a=>Math.min(y,wallH(a))),c2));
+      for(let a=a0+(r%2?0.06:0.12);a<a1;a+=0.12)if(wallH(a)>y+0.22)p.push(P(BOX,c2,...at(a,R-0.012,y+0.11),0,ry(a),0,0.02,0.2,0.02));}
+    if(pat==='dots'||pat==='stars')for(let i=0;i<70;i++){const a=a0+R0()*(a1-a0),h=wallH(a),y=1.0+R0()*(h-1.1);if(y>h-0.1)continue;
+      (pat==='stars'?lum:p).push(P(pat==='stars'?ICO0:CYL12,c2,...at(a,R-0.015,y),Math.PI/2,ry(a),0,pat==='stars'?0.06:0.14,0.02,pat==='stars'?0.06:0.14));}}
   // porthole windows, and the door you leave by
   const winP=[];for(const a of [0.62,Math.PI-0.62]){const x=Math.cos(a)*(R-0.01),z=-Math.sin(a)*(R-0.01),ry=Math.PI/2-a;
     p.push(P(CYL12,st.trim,x,1.35,z,Math.PI/2,ry,0,0.86,0.1,0.86));winP.push(P(CYL12,0xffffff,x*0.985,1.35,z*0.985,Math.PI/2,ry,0,0.66,0.02,0.66));
@@ -4350,22 +4409,23 @@ function buildDiorama(kind,n){const home=kind==='home',st=DIO_STYLE[home?'home':
     case'books':for(let i=0;i<9;i++){const a=0.35+i/8*(Math.PI-0.7),x=Math.cos(a)*(R-0.16),z=-Math.sin(a)*(R-0.16),ry=Math.PI/2-a;if(Math.abs(a-0.62)<0.3||Math.abs(a-(Math.PI-0.62))<0.3)continue;
         for(let r=0;r<4;r++){p.push(P(BOX,0x5a3a2a,x,0.55+r*0.52+(r>1?0.35:0),z,0,ry,0,0.7,0.04,0.28));for(let j=0;j<5;j++)p.push(P(BOX,[0xd8453a,0x5a8ae0,0x6ab84a,0xf6d04a,0x9a6ad0,0x8a3a4a][(i+j+r)%6],x+Math.cos(ry)*(-0.24+j*0.12),0.7+r*0.52+(r>1?0.35:0),z-Math.sin(ry)*(-0.24+j*0.12),0,ry,0,0.09,0.26,0.2));}}
       ribs(6,st.rib,0.1,0.9,0.7);break;
+    case'none':break;
     default:{/* your own home: the trunk of a great tree grows up through the middle of the back wall, branches spreading overhead */
       const tx=R*0.12,tz=-R+0.3;p.push(PG(STRUNK,0x8a5a36,0x6a4428,tx,WH/2+0.4,tz,0,0,0,0.9,WH+0.9,0.9));
       for(const [a,l] of [[0.5,1.6],[1.4,1.8],[2.4,1.5],[3.0,1.3]]){const x1=tx+Math.cos(a)*l,z1=tz+Math.abs(Math.sin(a))*l*0.9,y1=WH+0.6+R0()*0.5;limb(p,0x7a5030,tx,WH,tz,x1,y1,z1,0.18);
         for(let k=0;k<4;k++)sway.push(P(SPH,[0x6cb04a,0x5a9e3e,0x7cc05a][k%3],x1+(R0()-0.5)*0.9,y1+0.2+R0()*0.4,z1+(R0()-0.5)*0.7,0,0,0,0.9+R0()*0.4,0.6+R0()*0.3,0.8+R0()*0.3));}
       for(let i=0;i<10;i++){const a=0.4+i*0.25;lum.push(P(ICO0,st.lights,Math.cos(a)*R*0.6,WH+0.25-Math.sin(i*0.7)*0.12,-Math.sin(a)*R*0.5,0,0,0,0.09,0.09,0.09));}}}
   // a big round rug in the middle, and a hanging lamp over it
-  p.push(P(CYL12,st.rug,0,0.01,0.35,0,0,0,2.4,0.02,2.0),P(CYL12,light(st.rug,0.35),0,0.02,0.35,0,0,0,1.6,0.02,1.3),P(CYL12,st.rug,0,0.03,0.35,0,0,0,0.8,0.02,0.64));
+  if(st.rugPat==='rainbow')[0xf07a7a,0xf0b060,0xf0e070,0x7ad07a,0x7ab0f0,0xb08ae0].forEach((c,i)=>p.push(P(CYL12,c,0,0.01+i*0.004,0.35,0,0,0,2.4-i*0.36,0.02,2.0-i*0.3)));
+  else if(st.rug!=null)p.push(P(CYL12,st.rug,0,0.01,0.35,0,0,0,2.4,0.02,2.0),P(CYL12,light(st.rug,0.35),0,0.02,0.35,0,0,0,1.6,0.02,1.3),P(CYL12,st.rug,0,0.03,0.35,0,0,0,0.8,0.02,0.64));
   // furniture: the bed up in the loft, the rest round the floor
   const props=[],put=(k,x,z,ry,label,c,y=0,lv=0)=>{const f=furn(k,c||st.rug);p.push(...shift(f.p,x,y,z,ry));gl.push(...shift(f.gl,x,y,z,ry));props.push({x,y:y+0.45,z,w:1.0,d:1.0,label,k,lv});};
-  put('bed',-R*0.4,-R+0.66,Math.PI/2,'bed',home?0x5a8ae0:st.rug,LY,1);
-  if(!home)put('lamp',R*0.1,-R+0.45,0,'lamp',null,LY,1);
-  put('table',-0.55,0.55,0,'table');put('chair',-1.25,0.55,1.57,'chair',home?0xc8905a:st.trim);
+  if(!home){/* (your own home is furnished by you: 56c) */put('bed',-R*0.4,-R+0.66,Math.PI/2,'bed',st.rug,LY,1);
+  put('lamp',R*0.1,-R+0.45,0,'lamp',null,LY,1);
+  put('table',-0.55,0.55,0,'table');put('chair',-1.25,0.55,1.57,'chair',st.trim);
   put('plant',-R+0.55,0.9,0,'plant');put('lamp',R-0.55,1.15,0,'lamp');
-  if(home){put('workbench',-R+0.75,-0.35,1.2,'workbench');if(S.house>=1)put('fishtank',R-0.8,0.85,-1.3,'fish tank');if(S.house>=2)put('fireplace',-R*0.72,-R*0.42,0.75,'fireplace');}
-  else{const extra={sailor:['fishtank','armchair'],dreamer:['stereo','beanbag'],tinkerer:['workbench','shelf'],homebody:['counter','fireplace'],explorer:['bag','tv'],scholar:['shelf','piano']}[n.pers]||['armchair','plant'];
-    put(extra[0],R-0.8,0.85,-1.3,extra[0]);put(extra[1],-R+0.78,-0.4,1.1,extra[1]);}
+  {const extra={sailor:['fishtank','armchair'],dreamer:['stereo','beanbag'],tinkerer:['workbench','shelf'],homebody:['counter','fireplace'],explorer:['bag','tv'],scholar:['shelf','piano']}[n.pers]||['armchair','plant'];
+    put(extra[0],R-0.8,0.85,-1.3,extra[0]);put(extra[1],-R+0.78,-0.4,1.1,extra[1]);}}
   props.push({x:dx,y:0.62,z:dz,w:1,d:1,label:'exit',lv:0});
   const g=new T.Group();g.add(M(p));if(gl.length){const m=M(gl,glowMat);m.castShadow=false;g.add(m);}if(lum.length){const m=M(lum,lumMat);m.castShadow=false;g.add(m);}
   if(sway.length)g.add(M(sway,leafMat));g.add(new T.Mesh(merge(winP),roomWinMat));
@@ -4390,8 +4450,232 @@ function dioRoute(I,lv,x,z){const D=I.room.dio,[tx,tz]=dioClamp(D,lv,x,z),path=[
   if(lv!==I.lv){if(I.lv===0){path.push([D.LB[0],0,D.LB[1]],[D.LT[0],D.LY,D.LT[1]]);}else{path.push([D.LT[0],D.LY,D.LT[1]],[D.LB[0],0,D.LB[1]]);}}
   path.push([tx,lv?D.LY:0,tz]);I.path=path;I.tlv=lv;}
 // frame the whole diorama for the screen: as wide as the room on a tall phone, as tall as it on a wide screen
-function fitRoomCam(D){const asp=camera.aspect,tv=Math.tan(roomCam.fov*Math.PI/360),th=tv*asp,hw=D.R+0.6,hv=asp<0.8?3.9:4.4,d=Math.max(hw/th,hv/tv)*1.03,pitch=0.4,ty=asp<0.8?0.55:0.75;
+function fitRoomCam(D){const asp=camera.aspect,tv=Math.tan(roomCam.fov*Math.PI/360),th=tv*asp,hw=D.R+0.6,hv=asp<0.8?3.9:4.4,d=Math.max(hw/th,hv/(tv*(1-roomReserve/window.innerHeight)))*1.03,pitch=0.4,ty=asp<0.8?0.55:0.75;
   roomCam.position.set(0,ty+Math.sin(pitch)*d,Math.cos(pitch)*d);const drop=d*d*CURVE;roomCam.lookAt(0,ty-drop*0.9,0);}
+/* =========================================================
+   Your home, decorated
+   ========================================================= */
+// Inside your own home (56b's diorama) everything is yours to arrange. S.room holds each placed piece ({id,k,x,z,r,lv,c}:
+// kind, spot, turn, floor or loft, colour), S.rinv what you own but haven't put out, S.rlook the room itself (wallpaper,
+// floor, rug, roof style, fairy lights, island) and S.rown the looks you've bought. Decorate mode (deco) opens a tray at
+// the bottom: your things, the catalogue (RI, some pieces unlocked by cosiness stars), and the room's looks. Tap a piece
+// to pick it up, drag it (or tap where it should go), turn it, repaint it or put it away.
+// Cosiness (cosyScore) adds up what's out, variety, plants, lights, matching colours and a styled room. Sleeping at home
+// wakes you Well rested (S.rest: more XP all day, and a gift of shells), and each new star brings a present.
+const TINTS=[0xe85a5a,0xf0a040,0xf6d04a,0x6ab84a,0x3ab8a8,0x4a90d8,0x6a5ad8,0xa86ad8,0xf39ab0,0xf4f0ea,0x8a8a98,0x5a4a3a];
+// the catalogue: name, price, cosy points, takes a colour (tint), gives light, stars needed, is part of the house (fixed)
+const RI={
+  bed:{n:'Bed',cost:600,pts:6,tint:1,fixed:1},workbench:{n:'Workbench',cost:500,pts:3,fixed:1},
+  table:{n:'Round Table',cost:180,pts:4},chair:{n:'Chair',cost:90,pts:3,tint:1},lamp:{n:'Floor Lamp',cost:150,pts:3,light:1},
+  plant:{n:'House Plant',cost:80,pts:3,plant:1},shelf:{n:'Bookshelf',cost:320,pts:5},armchair:{n:'Armchair',cost:340,pts:5,tint:1},
+  beanbag:{n:'Beanbag',cost:160,pts:4,tint:1},sofa:{n:'Sofa',cost:480,pts:6,tint:1},dresser:{n:'Dresser',cost:300,pts:4,tint:1},
+  tv:{n:'Television',cost:420,pts:4},stereo:{n:'Stereo',cost:360,pts:4},counter:{n:'Kitchen Counter',cost:380,pts:4},
+  fridge:{n:'Fridge',cost:420,pts:4,tint:1},stove:{n:'Stove',cost:400,pts:4},vanity:{n:'Vanity',cost:340,pts:4},
+  fireplace:{n:'Fireplace',cost:900,pts:8,light:1},fishtank:{n:'Fish Tank',cost:700,pts:6},weights:{n:'Weights',cost:200,pts:3},
+  bag:{n:'Punching Bag',cost:260,pts:3},piano:{n:'Piano',cost:1200,pts:8},bathtub:{n:'Clawfoot Tub',cost:800,pts:6},
+  bookstack:{n:'Pile of Books',cost:60,pts:2},candles:{n:'Candles',cost:90,pts:3,light:1},teddy:{n:'Teddy Bear',cost:120,pts:3,tint:1},
+  catbed:{n:'Cat on a Cushion',cost:450,pts:6,tint:1},globe:{n:'Globe',cost:260,pts:4},telescope:{n:'Telescope',cost:520,pts:5},
+  easel:{n:'Easel',cost:280,pts:4},guitar:{n:'Guitar',cost:340,pts:4},clock:{n:'Grandfather Clock',cost:640,pts:6},
+  lavalamp:{n:'Lava Lamp',cost:220,pts:4,light:1,tint:1,star:1},drums:{n:'Drum Kit',cost:900,pts:6,star:2},
+  arcade:{n:'Arcade Cabinet',cost:1500,pts:8,light:1,tint:1,star:2},jukebox:{n:'Jukebox',cost:1800,pts:8,light:1,star:3},
+  discoball:{n:'Disco Ball',cost:2400,pts:9,light:1,star:4},throne:{n:'Shell Throne',cost:5000,pts:12,star:5},
+  lantern:{n:'Lantern',cost:160,pts:3,light:1},gnome:{n:'Garden Gnome',cost:140,pts:3},flowerpot:{n:'Flower Pot',cost:70,pts:2,plant:1}};
+const FURN_K=new Set(['bed','table','chair','lamp','plant','shelf','tv','beanbag','armchair','weights','bag','counter','piano','stereo','vanity','fireplace','fishtank','workbench']);
+const BUILD_K=new Set(['lantern','gnome','flowerpot']);
+// potted plants (50d) go in the catalogue too
+for(const [k,name,cost] of POT_PLANTS)RI['pot_'+k]={n:name,cost:Math.round(cost*0.8),pts:3,plant:1};
+// the room's looks: wallpaper, floor, rug, overhead style, fairy lights and the island it floats on
+const RLOOK={
+  wall:{cream:{n:'Cream',c:0xf4e6c8,cost:0},mint:{n:'Mint',c:0xcfeede,cost:200},sky:{n:'Sky Blue',c:0xcfe4f6,cost:200},lilac:{n:'Lilac',c:0xe2d6f4,cost:200},
+    peach:{n:'Peach',c:0xf8d8c0,cost:200},rose:{n:'Rose',c:0xf6cad4,cost:200},sage:{n:'Sage',c:0xc8d8b4,cost:200},navy:{n:'Midnight',c:0x2e3a5a,cost:400},
+    stripe:{n:'Candy Stripe',c:0xfbeef0,c2:0xf2a6bc,pat:'stripe',cost:500},sailor:{n:'Sailor Stripe',c:0xf4f4f0,c2:0x4a78b8,pat:'stripe',cost:500},
+    dots:{n:'Polka Dots',c:0xfff0c8,c2:0xe86a5a,pat:'dots',cost:600},wood:{n:'Log Cabin',c:0xb8834e,c2:0xa0703e,pat:'planks',cost:700},
+    brick:{n:'Red Brick',c:0xb85a44,c2:0xe8d8c8,pat:'brick',cost:800},stars:{n:'Starry Night',c:0x1e2448,c2:0xfff4c0,pat:'stars',cost:1200},
+    leaf:{n:'Jungle',c:0x3a7a48,c2:0x6ab85a,pat:'dots',cost:900}},
+  floor:{oak:{n:'Oak Planks',c:[0xc8905a,0xb8804a],cost:0},birch:{n:'Birch',c:[0xe8d0a8,0xdcc298],cost:250},walnut:{n:'Walnut',c:[0x7a5236,0x6a4428],cost:250},
+    check:{n:'Checkerboard',c:[0xf4f0ea,0x2e2a34],pat:'tiles',cost:500},mint:{n:'Mint Tiles',c:[0xd4f0e4,0xaadcc8],pat:'tiles',cost:450},
+    stone:{n:'Flagstone',c:[0xa8a4a0,0x8e8a88],pat:'tiles',cost:450},carpet:{n:'Blue Carpet',c:[0x6a8ad0,0x6484c8],pat:'tiles',cost:400},
+    pink:{n:'Pink Carpet',c:[0xf0a8c0,0xeaa0b8],pat:'tiles',cost:400},grass:{n:'Indoor Meadow',c:[0x7cc05a,0x70b450],pat:'tiles',cost:700},
+    rainbow:{n:'Rainbow Boards',c:[0xf07a7a,0xf0b060,0xf0e070,0x7ad07a,0x7ab0f0,0xb08ae0],cost:1500},cloud:{n:'Cloud Floor',c:[0xffffff,0xe0ecfa],pat:'tiles',cost:2000,star:3}},
+  rug:{green:{n:'Green Rug',c:0x5fae44,cost:0},none:{n:'Bare Floor',c:null,cost:0},red:{n:'Red Rug',c:0xd8453a,cost:150},blue:{n:'Blue Rug',c:0x3a6ab8,cost:150},
+    purple:{n:'Purple Rug',c:0x8a5ac8,cost:150},gold:{n:'Gold Rug',c:0xe0a830,cost:200},pink:{n:'Pink Rug',c:0xf28aa8,cost:150},rainbow:{n:'Rainbow Rug',c:0xf07a7a,pat:'rainbow',cost:800}},
+  style:{tree:{n:'Great Tree',cost:0},hull:{n:'Ship’s Hull',cost:800},dome:{n:'Star Dome',cost:1200},pipes:{n:'Workshop',cost:1000},
+    thatch:{n:'Thatch',cost:600},tent:{n:'Circus Tent',cost:900},books:{n:'Library',cost:1400},none:{n:'Open Sky',cost:0}},
+  lights:{warm:{n:'Warm',c:0xffd890,cost:0},white:{n:'Moonlight',c:0xf0f4ff,cost:100},pink:{n:'Pink',c:0xff9ac8,cost:150},blue:{n:'Blue',c:0x8ac8ff,cost:150},
+    green:{n:'Firefly',c:0xc8ff8a,cost:150},rainbow:{n:'Rainbow',c:'rainbow',cost:500},none:{n:'None',c:null,cost:0}},
+  base:{meadow:{n:'Meadow',c:0x6ab04a,cost:0},spring:{n:'Blossom',c:0x8ac860,fl:[0xf8b8d0,0xffffff],cost:300},autumn:{n:'Autumn',c:0xc88a3a,fl:[0xe86a3a,0xf6d04a],cost:300},
+    snow:{n:'Snowy',c:0xe8f0f6,fl:[0xc8e0ff,0xffffff],cost:400},sand:{n:'Beach',c:0xe8d098,fl:[0xf6f0e0,0xf0a080],cost:400},candy:{n:'Candy',c:0xf6a6c8,fl:[0xffffff,0xa8e8ff],cost:800},
+    moss:{n:'Mossy',c:0x4a7a3a,fl:[0xb8ff8a,0xf6d04a],cost:300}}};
+const RLOOK_TABS=[['wall','Walls'],['floor','Floor'],['rug','Rug'],['style','Roof'],['lights','Lights'],['base','Island']];
+function roomLook(){const L=S.rlook||(S.rlook={});for(const [t] of RLOOK_TABS)if(!RLOOK[t][L[t]])L[t]=Object.keys(RLOOK[t])[0];return L;}
+const lookOwned=(t,id)=>!RLOOK[t][id].cost||(S.rown||[]).includes(t+':'+id);
+// the home's style for the diorama, from its looks
+function homeLookStyle(){const L=roomLook(),w=RLOOK.wall[L.wall],f=RLOOK.floor[L.floor],r=RLOOK.rug[L.rug],li=RLOOK.lights[L.lights],b=RLOOK.base[L.base];
+  return Object.assign({},DIO_STYLE.home,{wall:w.c,wall2:w.c2,wallPat:w.pat,trim:w.pat==='stars'||L.wall==='navy'?0x8a7ac8:DIO_STYLE.home.trim,floor:f.c,floorPat:f.pat,rug:r.c,rugPat:r.pat,deco:L.style,lights:li.c,grass:b.c,flowers:b.fl});}
+
+/* ---- the new pieces ---- */
+function indoorParts(k,c){const p=[],gl=[],lum=[],L=t=>lerpHex(c,0xffffff,t),D=t=>lerpHex(c,0x1a1420,t);
+  switch(k){
+    case'sofa':p.push(P(BOX,c,0,0.24,0,0,0,0,1.5,0.3,0.66),P(BOX,c,0,0.55,-0.26,0,0,0,1.5,0.56,0.16));for(const s of [-1,1])p.push(P(BOX,D(0.1),s*0.7,0.42,0,0,0,0,0.14,0.36,0.66));
+      for(const s of [-1,1])p.push(P(BOX,L(0.25),s*0.31,0.43,0.04,0,0,0,0.6,0.1,0.52),P(BOX,L(0.2),s*0.31,0.66,-0.16,0.2,0,0,0.58,0.36,0.1));p.push(P(ICO2,0xf6d04a,-0.45,0.56,0.02,0.3,0.4,0,0.26,0.24,0.1));
+      for(const [x,z] of [[-0.66,-0.26],[0.66,-0.26],[-0.66,0.26],[0.66,0.26]])p.push(P(CYL8,0x5a3a2a,x,0.04,z,0,0,0,0.07,0.1,0.07));break;
+    case'dresser':p.push(P(BOX,c,0,0.45,0,0,0,0,1.0,0.9,0.46));for(let i=0;i<3;i++){p.push(P(BOX,L(0.2),0,0.2+i*0.27,0.235,0,0,0,0.9,0.22,0.02));for(const s of [-1,1])p.push(P(ICO2,0xe0b050,s*0.22,0.2+i*0.27,0.25,0,0,0,0.05,0.05,0.04));}
+      p.push(P(CYL12,0xf6f0e0,0.28,0.98,0,0,0,0,0.16,0.14,0.16),P(ICO2,0xf39ab0,0.28,1.08,0,0,0,0,0.14,0.1,0.14));break;
+    case'fridge':p.push(P(BOX,c,0,0.78,0,0,0,0,0.72,1.56,0.62),P(BOX,D(0.25),0,1.04,0.315,0,0,0,0.7,0.02,0.02),P(BOX,0xc8c8d0,0.28,1.25,0.33,0,0,0,0.04,0.3,0.04),P(BOX,0xc8c8d0,0.28,0.7,0.33,0,0,0,0.04,0.36,0.04));
+      for(let i=0;i<4;i++)p.push(P(BOX,TINTS[i*2],-0.2+(i%2)*0.14,1.3-Math.floor(i/2)*0.16,0.32,0,0,(i-1.5)*0.2,0.1,0.1,0.02));break;
+    case'stove':p.push(P(BOX,0xf4f0ea,0,0.4,0,0,0,0,0.8,0.8,0.62),P(BOX,0x2e2a34,0,0.81,0,0,0,0,0.8,0.02,0.62),P(BOX,0x2e2a34,0,0.36,0.315,0,0,0,0.56,0.34,0.02));
+      for(const [x,z] of [[-0.2,-0.14],[0.2,-0.14],[-0.2,0.14],[0.2,0.14]])p.push(P(CYL12,0x5a5a66,x,0.83,z,0,0,0,0.22,0.02,0.22));p.push(P(CYL12,0xd8453a,0.2,0.9,-0.14,0,0,0,0.26,0.14,0.26),P(BOX,0x3a3440,0.36,0.94,-0.14,0,0,0,0.2,0.03,0.04));
+      gl.push(P(CYL12,0xff7a3a,-0.2,0.835,0.14,0,0,0,0.18,0.01,0.18));break;
+    case'bathtub':p.push(P(CYL12,0xf8f6f2,0,0.36,0,0,0,0,1.4,0.5,0.72),P(CYL12,0xf8f6f2,0,0.62,0,0,0,0,1.5,0.06,0.8));lum.push(P(CYL12,0x9adcf0,0,0.6,0,0,0,0,1.3,0.02,0.62));
+      for(let i=0;i<9;i++)p.push(P(SPH_LO,0xffffff,-0.45+i*0.11,0.64+(i%3)*0.04,(i%2-0.5)*0.3,0,0,0,0.14+(i%3)*0.04,0.12,0.14));for(const [x,z] of [[-0.55,-0.22],[0.55,-0.22],[-0.55,0.22],[0.55,0.22]])p.push(P(SPH_LO,0xe0b050,x,0.08,z,0,0,0,0.1,0.16,0.1));
+      p.push(P(ICO2,0xf6d04a,0.35,0.7,0.1,0,0.6,0,0.14,0.12,0.18),P(ICO2,0xf08a2a,0.43,0.73,0.12,0,0,0,0.05,0.03,0.04));break;
+    case'bookstack':for(let i=0;i<5;i++)p.push(P(BOX,TINTS[(i*5)%TINTS.length],(i%2-0.5)*0.04,0.05+i*0.09,0,0,i*0.3,0,0.42,0.085,0.3));p.push(P(CYL12,0xf6f0e0,0.02,0.52,0,0,0,0,0.12,0.1,0.12));break;
+    case'candles':for(const [x,z,h] of [[-0.1,0,0.34],[0.08,0.06,0.24],[0.02,-0.1,0.16]]){p.push(P(CYL12,0xf6ecd0,x,h/2,z,0,0,0,0.1,h,0.1));lum.push(P(CONE8,0xffc860,x,h+0.05,z,0,0,0,0.06,0.1,0.06));}
+      p.push(P(CYL12,0xc8a050,0,0.01,0,0,0,0,0.44,0.02,0.44));break;
+    case'teddy':p.push(P(SPH,c,0,0.2,0,0,0,0,0.36,0.4,0.3),P(SPH,c,0,0.5,0.02,0,0,0,0.3,0.28,0.28),P(SPH_LO,L(0.35),0,0.47,0.14,0,0,0,0.12,0.09,0.08),P(SPH_XS,0x2a2020,0,0.5,0.18,0,0,0,0.04,0.03,0.03));
+      for(const s of [-1,1])p.push(P(SPH_LO,c,s*0.12,0.63,0,0,0,0,0.1,0.1,0.06),P(SPH_LO,c,s*0.2,0.25,0.08,0,0,s*0.5,0.1,0.2,0.1),P(SPH_LO,c,s*0.1,0.05,0.12,0,0,0,0.12,0.1,0.16),P(SPH_XS,0x2a2020,s*0.06,0.54,0.14,0,0,0,0.03,0.03,0.02));
+      p.push(P(BOX,0xd8453a,0,0.38,0.12,0,0,0.5,0.12,0.05,0.02));break;
+    case'catbed':p.push(P(CYL12,c,0,0.08,0,0,0,0,0.9,0.16,0.9),P(CYL12,L(0.3),0,0.15,0,0,0,0,0.72,0.06,0.72));
+      p.push(P(SPH,0xf0a050,0,0.28,0,0,0.5,0,0.5,0.24,0.4),P(SPH,0xf0a050,0.2,0.34,0.14,0,0,0,0.24,0.2,0.22),P(SPH_LO,0xf6e0c0,0.26,0.31,0.22,0,0,0,0.1,0.07,0.06));
+      for(const s of [-1,1])p.push(P(CONE5,0xf0a050,0.2+s*0.08,0.46,0.13,0,0,s*0.3,0.07,0.1,0.05));for(let i=0;i<3;i++)p.push(P(BOX,0xd07a30,-0.1+i*0.08,0.4,0,0,0.5,0,0.03,0.02,0.3));
+      p.push(P(CYL8,0xf0a050,-0.22,0.24,0.2,1.3,0,0.6,0.07,0.4,0.07));break;
+    case'globe':p.push(P(CYL12,0x6a4428,0,0.03,0,0,0,0,0.4,0.06,0.4),P(CYL8,0x6a4428,0,0.25,0,0,0,0,0.05,0.4,0.05),P(SPH,0x4a8ad8,0,0.68,0,0.4,0,0,0.5,0.5,0.5));
+      for(let i=0;i<7;i++){const a=i*0.9,b=0.3+(i%3)*0.4;p.push(P(SPH_LO,0x6ab84a,Math.cos(a)*Math.sin(b)*0.24,0.68+Math.cos(b)*0.22,Math.sin(a)*Math.sin(b)*0.24,0,0,0,0.14,0.08,0.12));}
+      for(let i=0;i<12;i++){const a=i/12*6.28;p.push(P(BOX,0xe0b050,Math.sin(a)*0.29,0.68+Math.cos(a)*0.29,0,0,0,-a,0.04,0.16,0.03));}break;
+    case'telescope':for(const a of [0,2.1,4.2])limb(p,0x6a4428,Math.sin(a)*0.3,0,Math.cos(a)*0.3,0,0.8,0,0.05);p.push(P(CYL12,0xe0b050,0,1.0,0.05,0.8,0,0,0.16,0.9,0.16),P(CYL12,0x3a3440,0,1.32,0.4,0.8,0,0,0.2,0.08,0.2),P(CYL8,0x3a3440,0,0.72,-0.3,0.8,0,0,0.08,0.14,0.08));break;
+    case'easel':limb(p,0x8a5a3a,-0.3,0,0.1,0,1.5,0,0.05);limb(p,0x8a5a3a,0.3,0,0.1,0,1.5,0,0.05);limb(p,0x8a5a3a,0,0,-0.35,0,1.4,-0.05,0.05);p.push(P(BOX,0x8a5a3a,0,0.62,0.1,0,0,0,0.7,0.04,0.12));
+      p.push(P(BOX,0xfbf8f0,0,0.98,0.12,-0.12,0,0,0.66,0.66,0.03));for(let i=0;i<6;i++)p.push(P(SPH_LO,TINTS[(i*3)%TINTS.length],-0.18+(i%3)*0.18,0.84+Math.floor(i/3)*0.26,0.15,0,0,0,0.16+(i%2)*0.06,0.12,0.02));break;
+    case'guitar':limb(p,0x5a3a2a,-0.2,0,0.1,0,0.5,-0.05,0.04);limb(p,0x5a3a2a,0.2,0,0.1,0,0.5,-0.05,0.04);
+      p.push(P(SPH,0xd88a3a,0,0.3,0.08,0,0,0,0.44,0.44,0.12),P(SPH,0xd88a3a,0,0.62,0.06,0,0,0,0.34,0.32,0.11),P(CYL12,0x2a2020,0,0.46,0.14,1.57,0,0,0.12,0.02,0.12),P(BOX,0x5a3a2a,0,1.0,0.04,0,0,0,0.07,0.6,0.04),P(BOX,0x3a2a20,0,1.36,0.03,0,0,0,0.12,0.16,0.04));break;
+    case'clock':p.push(P(BOX,0x7a4a2a,0,0.95,0,0,0,0,0.54,1.9,0.36),P(BOX,0x5a3420,0,1.95,0,0,0,0,0.62,0.12,0.42),P(CYL12,0xf8f4e8,0,1.55,0.19,1.57,0,0,0.38,0.02,0.38),P(BOX,0x2a2020,0,1.58,0.2,0,0,0.5,0.02,0.14,0.01),P(BOX,0x2a2020,0.03,1.55,0.2,0,0,-1.1,0.02,0.1,0.01));
+      p.push(P(BOX,0x3a2a20,0,0.8,0.185,0,0,0,0.3,0.8,0.01));gl.push(P(CYL12,0xe0b050,0,0.6,0.19,1.57,0,0,0.16,0.02,0.16));break;
+    case'lavalamp':p.push(P(CONE8,0x5a5a66,0,0.12,0,0,0,0,0.3,0.24,0.3),P(CONE8,0x5a5a66,0,0.82,0,Math.PI,0,0,0.2,0.14,0.2));lum.push(P(CYL12,L(0.3),0,0.48,0,0,0,0,0.22,0.5,0.22));
+      for(const [y,s] of [[0.36,0.12],[0.55,0.09],[0.66,0.07]])lum.push(P(SPH_LO,c,0,y,0,0,0,0,s,s*1.2,s));break;
+    case'drums':p.push(P(CYL12,0xd8453a,0,0.36,-0.1,1.57,0,0,0.66,0.34,0.66),P(CYL12,0xf6f0e0,0,0.36,0.08,1.57,0,0,0.58,0.01,0.58));
+      for(const [x,y,z,s] of [[-0.5,0.55,0.2,0.34],[0.2,0.78,-0.05,0.28],[-0.2,0.8,-0.05,0.28]])p.push(P(CYL12,0xd8453a,x,y,z,0.2,0,0,s,0.18,s),P(CYL12,0xf6f0e0,x,y+0.09,z,0.2,0,0,s*0.92,0.01,s*0.92));
+      for(const [x,z] of [[0.55,0.1],[-0.65,-0.25]]){limb(p,0x8a8e98,x,0,z,x,1.0,z,0.03);p.push(P(CYL12,0xe8c050,x,1.02,z,0.15,0,0,0.5,0.015,0.5));}p.push(P(CYL12,0x3a3440,0.1,0.28,0.55,0,0,0,0.34,0.08,0.34),P(CYL8,0x5a5a66,0.1,0.13,0.55,0,0,0,0.06,0.26,0.06));break;
+    case'arcade':p.push(P(BOX,c,0,0.75,0,0,0,0,0.66,1.5,0.6),P(BOX,D(0.35),0,0.86,0.29,-0.5,0,0,0.6,0.08,0.26),P(BOX,D(0.2),0,0.4,0.31,0,0,0,0.5,0.6,0.02));
+      lum.push(P(BOX,0x6af0ff,0,1.12,0.26,-0.18,0,0,0.5,0.38,0.02),P(BOX,0xff6ad0,0,1.42,0.28,0,0,0,0.6,0.14,0.04));for(let i=0;i<4;i++)lum.push(P(SPH_XS,TINTS[i*3],0.04+i*0.07,0.9,0.36,0,0,0,0.05,0.03,0.05));p.push(P(CYL8,0x2a2020,-0.16,0.94,0.34,0,0,0,0.02,0.12,0.02),P(SPH_XS,0xd8453a,-0.16,1.0,0.34,0,0,0,0.06,0.06,0.06));break;
+    case'jukebox':p.push(P(BOX,0x8a4a2a,0,0.5,0,0,0,0,0.8,1.0,0.46),P(BOX,0x3a2a20,0,0.3,0.24,0,0,0,0.52,0.36,0.02));
+      [0xff5a6a,0xffb03a,0xf6e04a,0x6ae08a,0x6ab0ff].forEach((cc,i)=>lum.push(P(CYL12,cc,0,1.0,0,Math.PI/2,0,0,0.8-i*0.12,0.46-i*0.02,0.8-i*0.12)));lum.push(P(BOX,0xfff4d0,0,0.7,0.235,0,0,0,0.5,0.18,0.02));break;
+    case'discoball':limb(p,0x8a8e98,0,0,0,0,1.8,0,0.04);p.push(P(CYL12,0x5a5a66,0,0.03,0,0,0,0,0.5,0.06,0.5));lum.push(P(ICO,0xdce4f4,0,2.05,0,0,0,0,0.52,0.52,0.52));
+      for(let i=0;i<10;i++){const a=i*0.63,r=0.6+(i%3)*0.3;lum.push(P(CYL8,TINTS[(i*2)%TINTS.length],Math.cos(a)*r,0.015,Math.sin(a)*r,0,0,0,0.26,0.01,0.26));}break;
+    case'throne':p.push(P(BOX,0xe0b050,0,0.3,0,0,0,0,0.9,0.5,0.8),P(BOX,0xd8453a,0,0.57,0.04,0,0,0,0.74,0.06,0.64));for(let i=0;i<7;i++){const a=-1.2+i*0.4;p.push(P(SPH,[0xf8c8d8,0xf6e0c0][i%2],Math.sin(a)*0.5,1.0+Math.cos(a)*0.55,-0.36,0.3,0,a,0.34,0.6,0.12));}
+      for(const s of [-1,1])p.push(P(BOX,0xe0b050,s*0.48,0.72,0,0,0,0,0.12,0.3,0.7),P(SPH_LO,0xf6f0e0,s*0.48,0.9,0.3,0,0,0,0.14,0.14,0.14));lum.push(P(ICO2,0x9af0ff,0,1.62,-0.34,0,0,0,0.16,0.16,0.1));break;}
+  return{p,gl,lum};}
+// one placed piece, as a group standing at its own origin
+function roomItemGroup(k,c,seed=1){if(BUILD_K.has(k)||k.startsWith('pot_'))return objGroup(k,seed,0);const g=new T.Group();
+  const {p,gl,lum}=FURN_K.has(k)?Object.assign({lum:[]},furn(k,c)):indoorParts(k,c);if(p.length)g.add(M(p));
+  if(gl&&gl.length){const m=M(gl,glowMat);m.castShadow=false;g.add(m);}if(lum.length){const m=M(lum,lumMat);m.castShadow=false;m.userData.lum=1;g.add(m);}return g;}
+const itemTint=it=>it.c??(RI[it.k]&&RI[it.k].tint?TINTS[(hash(it.id||1,3)*TINTS.length)|0]:0x9ad0a0);
+
+/* ---- your room's pieces ---- */
+// the first time: the furniture the house always had, laid out as before
+function roomInit(){if(S.room)return;const R=2.5+(S.house||0)*0.22;let id=1;const add=(k,x,z,r,lv,c)=>S.room.push({id:id++,k,x,z,r,lv,c});S.room=[];S.rinv=S.rinv||{};
+  add('bed',-R*0.4,-R+0.66,Math.PI/2,1,0x5a8ae0);add('table',-0.55,0.55,0,0);add('chair',-1.25,0.55,1.57,0,0xc8905a);add('plant',-R+0.55,0.9,0,0);add('lamp',R-0.55,1.15,0,0);
+  add('workbench',-R+0.75,-0.35,1.2,0);if(S.house>=1)add('fishtank',R-0.8,0.85,-1.3,0);if(S.house>=2)add('fireplace',-R*0.72,-R*0.42,0.75,0);S.roomId=id;}
+// (re)build the pieces in the room, and their tap targets
+function syncRoomItems(){const I=inside;if(!I||I.kind!=='home')return;const R=I.room,D=R.dio;
+  if(R.itemsG){R.g.remove(R.itemsG);R.itemsG.traverse(o=>{if(o.isMesh&&!o.geometry.userData.keep)o.geometry.dispose();});}
+  const G=new T.Group();R.itemsG=G;R.g.add(G);R.byId=new Map();R.props=R.props.filter(q=>q.label==='exit');
+  for(const it of S.room){[it.x,it.z]=dioClamp(D,it.lv,it.x,it.z);const g=roomItemGroup(it.k,itemTint(it),it.id);g.position.set(it.x,it.lv?D.LY:0,it.z);g.rotation.y=it.r||0;g.userData.it=it;G.add(g);R.byId.set(it.id,g);
+    R.props.push({x:it.x,y:(it.lv?D.LY:0)+0.45,z:it.z,w:1,d:1,label:it.k,k:it.k,lv:it.lv,id:it.id});}
+  if(deco&&deco.sel&&!R.byId.has(deco.sel))deco.sel=null;decoMark();}
+// cosiness: what's out, how varied, plants, lights, colours that go together, and a room with a style of its own
+function cosyScore(){const items=S.room||[],kinds=new Set(items.map(i=>i.k));let s=0,plants=0,lights=0;const cols={};
+  for(const it of items){const r=RI[it.k]||{pts:3};s+=r.pts||3;if(r.plant)plants++;if(r.light)lights++;if(r.tint){const c=itemTint(it);cols[c]=(cols[c]||0)+1;}}
+  s+=kinds.size*2+Math.min(plants,6)*2+Math.min(lights,5)*3;const match=Math.max(0,...Object.values(cols))>=3;if(match)s+=10;
+  const L=roomLook();let styled=0;for(const [t] of RLOOK_TABS)if(L[t]!==Object.keys(RLOOK[t])[0])styled++;s+=styled*4;
+  let crowd=0;for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++)if(items[i].lv===items[j].lv&&Math.hypot(items[i].x-items[j].x,items[i].z-items[j].z)<0.45)crowd++;s-=crowd*4;
+  const score=clamp(Math.round(s*0.62),0,100),stars=score>=90?5:score>=70?4:score>=50?3:score>=30?2:score>=12?1:0;
+  const tip=!lights?'A lamp or some candles would warm it up.':plants<2?'Plants make a home feel alive.':!match?'Three pieces in the same colour look great together.':styled<3?'Try new wallpaper, a floor or a roof style.':crowd?'A few pieces are squashed together.':kinds.size<10?'More different pieces, more cosy!':'It’s wonderful in here.';
+  return{score,stars,tip,match};}
+const starStr=n=>'★'.repeat(n)+'☆'.repeat(5-n);
+// a new star: a present and something new in the catalogue
+function cosyCheck(){const c=cosyScore();if(c.stars<=(S.cosyMax||0))return c;const prev=S.cosyMax||0;S.cosyMax=c.stars;
+  if(c.stars>prev){const gift=c.stars*150;S.shells+=gift;const neu=Object.keys(RI).filter(k=>RI[k].star&&RI[k].star>prev&&RI[k].star<=c.stars).map(k=>RI[k].n);
+    toast(`Your home is ${starStr(c.stars)} cosy! +${gift} shells${neu.length?`. New in the catalogue: <b>${neu.join(', ')}</b>`:''}`,'rare',ICON.star);SFX.level();updateHUD();}return c;}
+
+/* ---- decorate mode ---- */
+let deco=null;const decoThumbs={};
+function decoOpen(){if(!inside||inside.kind!=='home')return;inside.path=null;deco={sel:null,tab:'mine',sub:'wall'};$('decoTray').hidden=false;renderDeco();updateCtx();SFX.ui();}
+function decoClose(){if(!deco)return;deco=null;$('decoTray').hidden=true;$('decoSel').hidden=true;decoMark();roomView(0);save();ctxSig='';updateCtx();cosyCheck();}
+// the room slides up above the tray while you decorate
+let roomReserve=0;
+function roomView(px){roomReserve=px||0;if(!px){roomCam.clearViewOffset();return;}const W=window.innerWidth,H=window.innerHeight;roomCam.setViewOffset(W,H,0,px/2,W,H);}
+function decoMark(){const I=inside;if(!I||!I.room.itemsG)return;const R=I.room;if(R.mark){R.g.remove(R.mark);R.mark=null;}if(!deco||!deco.sel)return;const g=R.byId.get(deco.sel);if(!g)return;
+  const m=new T.Mesh(merge([P(CYL12,0xffe070,0,0.02,0,0,0,0,1.1,0.02,1.1)]),lumMat);m.userData.pulse=1;m.position.copy(g.position);R.g.add(m);R.mark=m;}
+function decoItemAt(cx,cy){const I=inside,R=I.room;let best=null,bd=1e9;
+  for(const g of R.itemsG.children){const it=g.userData.it;_pv.set(g.position.x,g.position.y+0.4-curveDropFor(roomCam,g.position.x,g.position.z),g.position.z).project(roomCam);
+    const d=Math.hypot((_pv.x+1)/2*window.innerWidth-cx,(1-_pv.y)/2*window.innerHeight-cy);if(d<bd){bd=d;best=it;}}
+  const pxu=window.innerHeight/(2*Math.tan(roomCam.fov*Math.PI/360)*roomCam.position.length());return best&&bd<Math.max(30,pxu*0.6)?best:null;}
+// the spot under your finger: the loft if you're pointing at it, otherwise the floor
+function decoSpotAt(cx,cy){const D=inside.room.dio,up=roomPoint(cx,cy,D.LY);if(up&&up.z<D.ZL&&Math.hypot(up.x,up.z)<D.R)return{lv:1,x:up.x,z:up.z};const pt=roomPoint(cx,cy,0);return pt?{lv:0,x:pt.x,z:pt.z}:null;}
+function decoMoveTo(it,s){const D=inside.room.dio;const [x,z]=dioClamp(D,s.lv,Math.round(s.x*10)/10,Math.round(s.z*10)/10);it.x=x;it.z=z;it.lv=s.lv;const g=inside.room.byId.get(it.id);
+  if(g){g.position.set(x,s.lv?D.LY:0,z);}const pr=inside.room.props.find(q=>q.id===it.id);if(pr){pr.x=x;pr.z=z;pr.lv=s.lv;pr.y=(s.lv?D.LY:0)+0.45;}if(inside.room.mark&&g)inside.room.mark.position.copy(g.position);}
+function decoTap(cx,cy){const it=decoItemAt(cx,cy);if(it&&deco.grabbed===it.id){deco.grabbed=null;return;}/* just picked up by the press */
+  if(it){deco.sel=deco.sel===it.id?null:it.id;decoMark();renderDecoSel();SFX.ui();return;}
+  if(deco.sel){const s=decoSpotAt(cx,cy),sel=S.room.find(i=>i.id===deco.sel);if(s&&sel){decoMoveTo(sel,s);SFX.pop();renderDeco();}}}
+// dragging a piece round the room
+function decoGrab(cx,cy){if(!deco)return false;const it=decoItemAt(cx,cy);if(!it)return false;const was=deco.sel===it.id;deco.sel=it.id;deco.grabbed=was?null:it.id;deco.drag=true;decoMark();renderDecoSel();return true;}
+function decoDrag(cx,cy){const sel=S.room.find(i=>i.id===deco.sel),s=decoSpotAt(cx,cy);if(sel&&s)decoMoveTo(sel,s);}
+function decoDrop(moved){if(!deco)return;deco.drag=false;if(moved){deco.grabbed=null;SFX.pop();renderDeco();}}
+// somewhere free to put a new piece: the middle of the floor if it's clear, otherwise the nearest clear spot
+function decoFreeSpot(){const D=inside.room.dio;for(let r=0;r<D.R-0.4;r+=0.35)for(let a=0;a<6.28;a+=0.5){const x=Math.cos(a)*r,z=0.4+Math.sin(a)*r*0.8,[cx,cz]=dioClamp(D,0,x,z);
+    if(!S.room.some(i=>i.lv===0&&Math.hypot(i.x-cx,i.z-cz)<0.7))return{x:cx,z:cz};if(!r)break;}return{x:0,z:0.4};}
+function decoPlace(k){if((S.rinv[k]||0)<1)return;S.rinv[k]--;if(!S.rinv[k])delete S.rinv[k];const s=decoFreeSpot(),id=S.roomId=(S.roomId||S.room.length+1)+1;
+  const it={id,k,x:s.x,z:s.z,r:0,lv:0,c:RI[k]&&RI[k].tint?TINTS[(Math.random()*TINTS.length)|0]:undefined};S.room.push(it);syncRoomItems();deco.sel=id;decoMark();
+  const g=inside.room.byId.get(id);if(g)burst(g.position.x,0.6,g.position.z,0xfff0c0,10,1.2,0.06);SFX.place();renderDeco();}
+function decoBuy(k){const r=RI[k];if(!r)return;if(r.star&&(S.cosyMax||0)<r.star){toast(`Make your home ${starStr(r.star)} cosy to unlock the ${r.n}.`);return;}
+  if(S.shells<r.cost){toast(`The ${r.n} costs ${r.cost} shells.`);SFX.no&&SFX.no();return;}S.shells-=r.cost;S.rinv[k]=(S.rinv[k]||0)+1;SFX.coin();updateHUD();decoPlace(k);}
+function decoAct(a){const it=S.room.find(i=>i.id===deco.sel);if(!it)return;const g=inside.room.byId.get(it.id);
+  if(a==='rot'){it.r=((it.r||0)+Math.PI/4)%(Math.PI*2);if(g)g.rotation.y=it.r;SFX.ui();}
+  if(a==='col'){const i=TINTS.indexOf(itemTint(it));it.c=TINTS[(i+1)%TINTS.length];syncRoomItems();deco.sel=it.id;decoMark();SFX.pop();}
+  if(a==='store'){if(RI[it.k]&&RI[it.k].fixed){toast(it.k==='bed'?'You need somewhere to sleep!':'Your workbench stays: it’s where you craft.');return;}
+    S.room.splice(S.room.indexOf(it),1);S.rinv[it.k]=(S.rinv[it.k]||0)+1;deco.sel=null;syncRoomItems();SFX.pop();}
+  if(a==='done'){deco.sel=null;decoMark();}
+  renderDeco();}
+function decoLook(t,id){const o=RLOOK[t][id];if(o.star&&(S.cosyMax||0)<o.star){toast(`Make your home ${starStr(o.star)} cosy to unlock ${o.n}.`);return;}
+  if(!lookOwned(t,id)){if(S.shells<o.cost){toast(`${o.n} costs ${o.cost} shells.`);return;}S.shells-=o.cost;(S.rown||(S.rown=[])).push(t+':'+id);SFX.coin();updateHUD();}
+  roomLook()[t]=id;rebuildHomeRoom();SFX.pop();renderDeco();}
+// rebuild the room's shell around you after a change of look, keeping you, your pieces and your place
+function rebuildHomeRoom(){const I=inside;if(!I||I.kind!=='home')return;const old=I.room;old.g.remove(I.me);roomScene.remove(old.g);old.g.traverse(o=>{if(o.isMesh&&!o.geometry.userData.keep)o.geometry.dispose();});
+  const r=buildRoom('home');roomScene.add(r.g);r.g.add(I.me);I.room=r;syncRoomItems();}
+function thumbOf(k){if(decoThumbs[k])return decoThumbs[k];try{decoThumbs[k]=snapThumb(roomItemGroup(k,RI[k]&&RI[k].tint?TINTS[(k.length*5)%TINTS.length]:0x9ad0a0,3),64);}catch(e){decoThumbs[k]='';}return decoThumbs[k];}
+const hexc=c=>'#'+(c>>>0).toString(16).padStart(6,'0');
+function swatch(t,o){if(t==='style')return`<i class="sw roof r-${Object.keys(RLOOK.style).find(k=>RLOOK.style[k]===o)}"></i>`;
+  if(t==='floor')return`<i class="sw" style="background:repeating-linear-gradient(90deg,${o.c.map((c,i)=>`${hexc(c)} ${i*10}px ${(i+1)*10}px`).join(',')})"></i>`;
+  if(t==='lights')return o.c==='rainbow'?'<i class="sw" style="background:conic-gradient(#f77,#fb6,#fe6,#7d7,#7bf,#b8f,#f77)"></i>':`<i class="sw" style="background:${o.c==null?'repeating-linear-gradient(45deg,#eee 0 6px,#ccc 6px 12px)':hexc(o.c)}"></i>`;
+  if(o.c==null)return'<i class="sw" style="background:repeating-linear-gradient(45deg,#eee 0 6px,#ccc 6px 12px)"></i>';
+  if(o.pat==='rainbow')return'<i class="sw" style="background:radial-gradient(circle,#b8f 0 20%,#7bf 20% 40%,#7d7 40% 60%,#fb6 60% 80%,#f77 80%)"></i>';
+  return`<i class="sw" style="background:${o.c2?`radial-gradient(circle at 30% 30%,${hexc(o.c2)} 0 22%,transparent 23%),linear-gradient(90deg,${hexc(o.c)} 50%,${hexc(o.c2)} 50%)`:hexc(o.c)}"></i>`;}
+function renderDeco(){if(!deco)return;const c=cosyCheck(),tabs=[['mine','My things'],['shop','Catalogue'],['look','Room']];
+  let h=`<div class="dtop"><span class="stars" title="Cosiness">${starStr(c.stars)}</span><span class="tip">${c.tip}</span><button class="pbtn go" data-d="close">Done</button></div>`;
+  h+=`<div class="dtabs">${tabs.map(([k,n])=>`<button class="${deco.tab===k?'on':''}" data-dt="${k}">${n}</button>`).join('')}</div>`;
+  if(deco.tab==='look')h+=`<div class="dtabs sub">${RLOOK_TABS.map(([k,n])=>`<button class="${deco.sub===k?'on':''}" data-ds="${k}">${n}</button>`).join('')}</div>`;
+  h+='<div class="drow">';
+  if(deco.tab==='mine'){const ks=Object.keys(S.rinv||{});if(!ks.length)h+=`<p class="dnote">Everything you own is out. Buy more in the Catalogue, or tap a piece in the room to move it.</p>`;
+    for(const k of ks)h+=`<button class="dcard" data-place="${k}"><img src="${thumbOf(k)}" alt=""><span>${RI[k]?RI[k].n:k}</span><b>×${S.rinv[k]}</b></button>`;}
+  else if(deco.tab==='shop'){for(const k of Object.keys(RI)){const r=RI[k],lock=r.star&&(S.cosyMax||0)<r.star,own=(S.rinv[k]||0)+S.room.filter(i=>i.k===k).length;
+      h+=`<button class="dcard${lock?' lock':''}" data-buy="${k}"><img src="${thumbOf(k)}" alt=""><span>${r.n}</span><b>${lock?starStr(r.star).replace(/☆/g,''):r.cost+' 🐚'}</b>${own?`<em>${own}</em>`:''}</button>`;}}
+  else{const t=deco.sub,L=roomLook();for(const id of Object.keys(RLOOK[t])){const o=RLOOK[t][id],own=lookOwned(t,id),lock=o.star&&(S.cosyMax||0)<o.star;
+      h+=`<button class="dcard look${L[t]===id?' on':''}${lock?' lock':''}" data-look="${t}:${id}">${swatch(t,o)}<span>${o.n}</span><b>${L[t]===id?'In use':own?'Owned':lock?starStr(o.star).replace(/☆/g,''):o.cost+' 🐚'}</b></button>`;}}
+  h+='</div>';$('decoTray').innerHTML=h;renderDecoSel();requestAnimationFrame(()=>roomView($('decoTray').offsetHeight));}
+function renderDecoSel(){const el=$('decoSel');const it=deco&&deco.sel&&S.room.find(i=>i.id===deco.sel);if(!it){el.hidden=true;return;}const r=RI[it.k]||{};
+  el.hidden=false;el.innerHTML=`<span class="nm">${r.n||it.k}</span><button data-da="rot">⟳ Turn</button>${r.tint?'<button data-da="col">🎨 Colour</button>':''}${r.fixed?'':'<button data-da="store">Put away</button>'}<button data-da="done">✓</button>`;
+  el.style.bottom=($('decoTray').offsetHeight+10)+'px';}
+$('decoTray').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!deco)return;const d=b.dataset;
+  if(d.d==='close'){decoClose();return;}if(d.dt){deco.tab=d.dt;SFX.ui();renderDeco();return;}if(d.ds){deco.sub=d.ds;SFX.ui();renderDeco();return;}
+  if(d.place){decoPlace(d.place);return;}if(d.buy){decoBuy(d.buy);return;}if(d.look){const [t,id]=d.look.split(':');decoLook(t,id);}});
+$('decoSel').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&deco)decoAct(b.dataset.da);});
+// the pieces that move: the disco ball turns, the lava lamp bubbles, the marker under what you've picked up pulses
+function decoTick(dt,tt){const R=inside&&inside.room;if(!R||!R.itemsG)return;if(R.mark)R.mark.scale.setScalar(1+Math.sin(tt*6)*0.08);
+  for(const g of R.itemsG.children){const k=g.userData.it.k;if(k==='discoball')g.children.forEach(m=>{if(m.userData.lum)m.rotation.y=tt*0.8;});
+    if(deco&&g.userData.it.id===deco.sel)g.position.y=(g.userData.it.lv?R.dio.LY:0)+0.06+Math.abs(Math.sin(tt*5))*0.05;else g.position.y=g.userData.it.lv?R.dio.LY:0;}}
+// sleeping at home: the cosier it is, the better you sleep
+function restAtHome(){const c=cosyScore();S.rest={d:S.day,n:c.stars};const gift=c.stars*40;S.shells+=gift;
+  setTimeout(()=>toast(c.stars?`Well rested ${starStr(c.stars)}: <b>+${c.stars*10}% XP</b> all today${gift?`, and ${gift} shells turned up under your pillow`:''}.`:'You slept… okay. A cosier home means a better night’s sleep.',c.stars?'rare':'',ICON.star),2600);}
+const restMul=()=>S.rest&&S.rest.d===S.day?1+0.1*S.rest.n:1;
 /* =========================================================
    Villager routines and memory.
    Each villager follows the clock: a morning stroll, their hobby (fishing from the shore, watering flowers, reading on a
@@ -5143,7 +5427,7 @@ function updateHUD(){
   updateCtx();
 }
 function tickShells(dt){if(shownShells!==S.shells){const d=S.shells-shownShells;shownShells+=Math.sign(d)*Math.max(1,Math.abs(d)*Math.min(1,dt*8));if(Math.abs(S.shells-shownShells)<1)shownShells=S.shells;$('shellTxt').textContent=fmt(shownShells);}}
-function addXP(n){const before=level();S.xp+=n;const after=level();if(after>before&&S.scratch){heartLevelUp(before,after);return;}if(after>before){SFX.level();
+function addXP(n){const before=level();if(n>0&&restMul()>1)n=Math.max(n,Math.round(n*restMul()));/* well rested (56c) */S.xp+=n;const after=level();if(after>before&&S.scratch){heartLevelUp(before,after);return;}if(after>before){SFX.level();
   const un=[...CROP_IDS.filter(id=>CROPS[id].lvl===after).map(id=>CROPS[id].name),...Object.keys(BUILD).filter(k=>BUILD[k].lvl===after).map(k=>BUILD[k].name)];
   if(after===MYSTERY.lvl)un.push('Mystery Seeds');
   toast(`Level ${after}!${un.length?' New: '+un.join(', '):''}`,'rare',ICON.star);}}
@@ -5155,9 +5439,11 @@ function updateCtx(){
   if(!sheet&&$('actionBar').hidden){
     if(inside)st='inside';else if(S.mode==='edit')st='edit';else if(fishing)st='';else if(S.sea)st=sail?'sailing':'sea';else if(boatNear()&&unlocked('boat'))st='board';}
   const farHome=S.sea&&Math.hypot(vil.x,vil.z)>14;
-  const sig=st+'|'+(sail&&sail.name||'')+'|'+farHome;
+  const sig=st+'|'+(sail&&sail.name||'')+'|'+farHome+'|'+(inside&&inside.kind)+'|'+!!deco+'|'+(inside&&inside.kind==='home'?cosyScore().stars:'');
   if(sig===ctxSig)return;ctxSig=sig;let h='';
-  if(st==='inside')h=`<button class="pbtn go" data-c="leave">Go outside</button>`;
+  if(st==='inside'&&deco)h='';
+  else if(st==='inside'&&inside.kind==='home'){const c=cosyScore();h=`<span class="msg cosy">${starStr(c.stars)}</span><button class="pbtn" data-c="deco">Decorate</button><button class="pbtn go" data-c="leave">Go outside</button>`;}
+  else if(st==='inside')h=`<button class="pbtn go" data-c="leave">Go outside</button>`;
   else if(st==='edit')h=`<span class="msg">Editing: tap decor to move or store it</span><button class="pbtn go" data-c="doneEdit">Done</button>`;
   else if(st==='sailing')h=`<span class="msg">Sailing${sail.name?' to '+sail.name:''}…</span><button class="pbtn" data-c="stop">Stop</button>`;
   else if(st==='sea')h=`<span class="msg">Tap the sea to steer · tap land to go ashore</span><button class="pbtn sea" data-c="cast">Cast line</button>${farHome?'<button class="pbtn" data-c="home">Sail home</button>':''}`;
@@ -5170,7 +5456,8 @@ $('ctx').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b
   if(c==='cast')startBoatFishing();
   if(c==='home'){SFX.horn();sailHome();}
   if(c==='board')boardBoat();
-  if(c==='leave')leaveHouse();});
+  if(c==='leave')leaveHouse();
+  if(c==='deco')decoOpen();});
 
 /* =========================================================
    Items & dex helpers
@@ -5457,8 +5744,8 @@ function houseTap(){
   if(S.hour>=19||S.hour<5){setAction(`It's getting late… sleep until morning in your ${HOUSES[S.house].toLowerCase()}?`,[{label:'Sleep',cls:'go',fn:sleep},{label:'Stay up',fn:clearAction}],'Home');}
   else toast(`Your ${HOUSES[S.house].toLowerCase()}.${S.house<3?' Upgrade it in Shop → Island.':' Home sweet villa.'}`);
 }
-function sleep(){clearAction();$('fade').classList.add('on');
-  setTimeout(()=>showDiary(()=>{const h=((6.02-S.hour+24)%24);S.toff=(S.toff||0)+h;const out=simulate(h*3600);afterSim(out,'');$('fade').classList.remove('on');setTimeout(()=>morningCard(out),350);}),650);}
+function sleep(){clearAction();$('fade').classList.add('on');const atHome=inside&&inside.kind==='home';
+  setTimeout(()=>showDiary(()=>{const h=((6.02-S.hour+24)%24);S.toff=(S.toff||0)+h;const out=simulate(h*3600);afterSim(out,'');if(atHome)restAtHome();$('fade').classList.remove('on');setTimeout(()=>morningCard(out),350);}),650);}
 function afterSim(out,label){rebuildSoil();syncAllCrops();syncLife();for(const isl of islands)if(isl.pgroup)syncPlants(isl);if(!label)return;/* (sleep shows its own morning card) */
   if(out.length){const rare=out.filter(c=>c.v!=='normal').length;toast(`${label}: ${out.length} crop${out.length>1?'s':''} ripened${rare?` — ${rare} rare!`:''}`,rare?'rare':'',ICON.sprout);}
   toast(`Day ${S.day}${S.rain?' — rain today':''}. The market wants <b>${CROPS[S.demand].name}</b>.`,'',seedIcon(S.demand));}
@@ -7927,6 +8214,7 @@ function endPaint(){if(!paint)return;const n=paint.n,m=paint.mode,tl=paint.terra
 function pinchDist(){const [a,b]=[...ptrs.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1;}
 canvas.addEventListener('pointerdown',e=>{if(wheelOpen())showApps(false);canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===1){drag={sx:e.clientX,sy:e.clientY,lx:e.clientX,ly:e.clientY,moved:false};clearTimeout(holdT);
+    if(inside&&deco&&decoGrab(e.clientX,e.clientY))drag.item=true;/* decorating: press on a piece to drag it (56c) */
     if(!inside&&!S.sea&&!placing&&!fishing&&!caught&&S.mode!=='edit'){const x0=e.clientX,y0=e.clientY;
       holdT=setTimeout(()=>{if(!drag||drag.moved||ptrs.size!==1)return;const hit=pick(x0,y0);if(!hit)return;const mode=paintMode(hit.x,hit.z);if(!mode)return;
         paint={mode,done:new Set(),n:0};drag.moved=true;drag.paint=true;SFX.ui();setAction(`<b>${PAINT_LBL[mode]}…</b> keep your finger down and drag across tiles`,[],'Farming');paintAt(hit.x,hit.z);},300);}
@@ -7935,12 +8223,13 @@ canvas.addEventListener('pointerdown',e=>{if(wheelOpen())showApps(false);canvas.
   if(!AC||!waves){ac();if(S.sound)startWaves();}});
 canvas.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===2&&pinch){cam.dist=clamp(pinch.z0*pinch.d0/pinchDist(),8,60);return;}
+  if(drag&&drag.item&&ptrs.size===1){if(!drag.moved&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>7)drag.moved=true;if(drag.moved)decoDrag(e.clientX,e.clientY);return;}
   if(paint&&ptrs.size===1){const hit=pick(e.clientX,e.clientY);if(hit)paintAt(hit.x,hit.z);return;}
   if(drag&&drag.lay&&ptrs.size===1){const hit=pick(e.clientX,e.clientY);if(hit&&placing&&(hit.x!==placing.x||hit.z!==placing.z))layFloorAt(hit.x,hit.z);return;} // hold and drag to lay a path
   if(ptrs.size===1&&drag){const dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;
     if(!drag.moved&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>9)drag.moved=true;
     if(drag.moved&&!inside){cam.yaw-=dx*0.009;const uwc=typeof swim!=='undefined'&&swim.uw>0.02;cam.pitch=clamp(cam.pitch+dy*0.005,uwc?-0.5:0.35,uwc?0.8:1.2);/* under water you can look up at the surface */}}});
-function endPtr(e){if(!ptrs.has(e.pointerId))return;const wasOne=ptrs.size===1;ptrs.delete(e.pointerId);clearTimeout(holdT);if(paint&&ptrs.size===0)endPaint();
+function endPtr(e){if(!ptrs.has(e.pointerId))return;const wasOne=ptrs.size===1;ptrs.delete(e.pointerId);clearTimeout(holdT);if(drag&&drag.item&&ptrs.size===0)decoDrop(drag.moved);if(paint&&ptrs.size===0)endPaint();
   if(wasOne&&drag&&!drag.moved&&e.type==='pointerup')onTap(e.clientX,e.clientY);
   if(ptrs.size<2)pinch=null;if(ptrs.size===1){const p=[...ptrs.values()][0];drag={sx:p.x,sy:p.y,lx:p.x,ly:p.y,moved:true};}if(ptrs.size===0)drag=null;}
 canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
@@ -8742,6 +9031,8 @@ if(/[?&]debug\b/.test(location.search)){
       introCam=null;cam.tx=vil.x;cam.tz=vil.z;cam.yaw=yaw;cam.dist=dist;if(pitch)cam.pitch=pitch;return{id:isl.id,name:isl.name,kind:islKind(isl),r:+isl.r.toFixed(1),mode:isl.mode,tiers:isl.tiers,hole:isl.hole,ms:+(frBuild.ms||0).toFixed(1)};},
     frRebuild:(n=8,ids)=>{const out=[];for(const isl of ids?ids.map(i=>islands[i]):islands.filter(i=>i.fr&&i.group).slice(0,n)){if(!isl.group)frBuild(isl);frDrop(isl);const t=performance.now();frBuild(isl);out.push([isl.name,+isl.r.toFixed(1),Math.round(performance.now()-t),isl.keys.length]);}return out;},
     frIsl:id=>{const i=islands[id];return{built:!!i.group,vis:i.group&&i.group.visible,bob:(i.bob||[]).map(w=>({vis:w.visible,mv:w.children[0].visible,n:w.children[0].geometry.attributes.position.count,bb:w.children[0].geometry.boundingBox})),kids:i.group&&i.group.children.length,cx:i.cx,cz:i.cz};},
+    decoOpen:()=>{decoOpen();return!!deco;},decoTab:(t,s)=>{deco.tab=t;if(s)deco.sub=s;renderDeco();},decoBuy:k=>{S.shells+=RI[k].cost;decoBuy(k);return deco.sel;},decoLook:(t,id)=>{const o=RLOOK[t][id];S.shells+=o.cost;decoLook(t,id);},decoAct:a=>decoAct(a),decoMove:(x,z,lv=0)=>{const it=S.room.find(i=>i.id===deco.sel);if(it)decoMoveTo(it,{x,z,lv});},
+    cosy:()=>cosyScore(),rest:()=>[S.rest,S.day,restMul()],roomItems:()=>S.room.map(i=>[i.k,+i.x.toFixed(1),+i.z.toFixed(1),i.lv]),decoClose:()=>decoClose(),
     roomProp:l=>{if(!inside)return null;const q=inside.room.props.find(p=>p.label===l||p.k===l);if(!q)return null;_pv.set(q.x,q.y-curveDropFor(roomCam,q.x,q.z),q.z).project(roomCam);return[(_pv.x+1)/2*innerWidth,(1-_pv.y)/2*innerHeight];},roomMe:()=>inside&&{x:+inside.x.toFixed(2),y:+(inside.y||0).toFixed(2),z:+inside.z.toFixed(2),lv:inside.lv,path:inside.path&&inside.path.length},
     potGarden:()=>{const ks=POT_PLANTS.map(q=>'pot_'+q[0]),at=DS.freeRow(5);if(!at)return null;let i=0;for(let dz=0;dz<4&&i<ks.length;dz++)for(let dx=0;dx<5&&i<ks.length;dx++){const x=at[0]+dx,z=at[1]-dz;if(objAt(x,z))continue;S.objs.push({id:S.nextId++,k:ks[i++],x,z,r:0});}syncObjs();return at;},freeRow:(len=5)=>{for(const [x,z] of tileKeys()){let ok=true;for(let i=0;i<len&&ok;i++){const k=K(x+i,z);ok=canTill(x+i,z)&&farmQ(x+i,z)>1.3&&(lvlMap.get(k)||0)===(lvlMap.get(K(x,z))||0)&&!TOWN.bld.some(b=>Math.abs(b.x+0.5-(x+i))<4&&Math.abs(b.z+1-z)<4)&&!(S.boat&&Math.hypot(S.boat.x-(x+i),S.boat.z-z)<7);}if(ok)return[x,z];}return null;},
     give:(items)=>{Object.assign(S.inv,items||{'m:wood':14,'m:stone':11,'m:fiber':9,'g:shell':4,'f:sardine':2,'tomato|normal':3,'tomato|golden':1});updateHUD();},

@@ -74,6 +74,7 @@ function endPaint(){if(!paint)return;const n=paint.n,m=paint.mode,tl=paint.terra
 function pinchDist(){const [a,b]=[...ptrs.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1;}
 canvas.addEventListener('pointerdown',e=>{if(wheelOpen())showApps(false);canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===1){drag={sx:e.clientX,sy:e.clientY,lx:e.clientX,ly:e.clientY,moved:false};clearTimeout(holdT);
+    if(inside&&deco&&decoGrab(e.clientX,e.clientY))drag.item=true;/* decorating: press on a piece to drag it (56c) */
     if(!inside&&!S.sea&&!placing&&!fishing&&!caught&&S.mode!=='edit'){const x0=e.clientX,y0=e.clientY;
       holdT=setTimeout(()=>{if(!drag||drag.moved||ptrs.size!==1)return;const hit=pick(x0,y0);if(!hit)return;const mode=paintMode(hit.x,hit.z);if(!mode)return;
         paint={mode,done:new Set(),n:0};drag.moved=true;drag.paint=true;SFX.ui();setAction(`<b>${PAINT_LBL[mode]}…</b> keep your finger down and drag across tiles`,[],'Farming');paintAt(hit.x,hit.z);},300);}
@@ -82,12 +83,13 @@ canvas.addEventListener('pointerdown',e=>{if(wheelOpen())showApps(false);canvas.
   if(!AC||!waves){ac();if(S.sound)startWaves();}});
 canvas.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===2&&pinch){cam.dist=clamp(pinch.z0*pinch.d0/pinchDist(),8,60);return;}
+  if(drag&&drag.item&&ptrs.size===1){if(!drag.moved&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>7)drag.moved=true;if(drag.moved)decoDrag(e.clientX,e.clientY);return;}
   if(paint&&ptrs.size===1){const hit=pick(e.clientX,e.clientY);if(hit)paintAt(hit.x,hit.z);return;}
   if(drag&&drag.lay&&ptrs.size===1){const hit=pick(e.clientX,e.clientY);if(hit&&placing&&(hit.x!==placing.x||hit.z!==placing.z))layFloorAt(hit.x,hit.z);return;} // hold and drag to lay a path
   if(ptrs.size===1&&drag){const dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;
     if(!drag.moved&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>9)drag.moved=true;
     if(drag.moved&&!inside){cam.yaw-=dx*0.009;const uwc=typeof swim!=='undefined'&&swim.uw>0.02;cam.pitch=clamp(cam.pitch+dy*0.005,uwc?-0.5:0.35,uwc?0.8:1.2);/* under water you can look up at the surface */}}});
-function endPtr(e){if(!ptrs.has(e.pointerId))return;const wasOne=ptrs.size===1;ptrs.delete(e.pointerId);clearTimeout(holdT);if(paint&&ptrs.size===0)endPaint();
+function endPtr(e){if(!ptrs.has(e.pointerId))return;const wasOne=ptrs.size===1;ptrs.delete(e.pointerId);clearTimeout(holdT);if(drag&&drag.item&&ptrs.size===0)decoDrop(drag.moved);if(paint&&ptrs.size===0)endPaint();
   if(wasOne&&drag&&!drag.moved&&e.type==='pointerup')onTap(e.clientX,e.clientY);
   if(ptrs.size<2)pinch=null;if(ptrs.size===1){const p=[...ptrs.values()][0];drag={sx:p.x,sy:p.y,lx:p.x,ly:p.y,moved:true};}if(ptrs.size===0)drag=null;}
 canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);

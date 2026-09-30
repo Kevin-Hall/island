@@ -16,10 +16,13 @@ const DIO_STYLE={
   homebody:{wall:0xf6ecd8,trim:0xd8b088,floor:[0xd8b088,0xc8a078],rug:0x9ad0a0,rib:0xd8b860,grass:0x78b850,deco:'thatch',lights:0xffe0a0},
   explorer:{wall:0xdcecd8,trim:0x5a8a5a,floor:[0xc8a878,0xb89868],rug:0xd86a3a,rib:0xe8d8b0,grass:0x5aa048,deco:'tent',  lights:0xfff4d0},
   scholar: {wall:0xe8d8c8,trim:0x6a3a3a,floor:[0x7a5236,0x6a4428],rug:0x8a3a4a,rib:0x5a3a2a,grass:0x5a9a4a,deco:'books', lights:0xffe8b0}};
-function buildDiorama(kind,n){const home=kind==='home',st=DIO_STYLE[home?'home':n.pers]||DIO_STYLE.home,R=home?2.5+(S.house||0)*0.22:2.7,LY=DIO.LY,WH=LY+1.45;
+function buildDiorama(kind,n){const home=kind==='home',st=home?homeLookStyle():DIO_STYLE[n.pers]||DIO_STYLE.home,R=home?2.5+(S.house||0)*0.22:2.7,LY=DIO.LY,WH=LY+1.45;
   const p=[],gl=[],lum=[],sway=[],R0=mulberry(home?S.worldSeed|0:hi(n.i,7,11));const light=(c,t)=>lerpHex(c,0xffffff,t),dark=(c,t)=>lerpHex(c,0x1a1420,t);
   // floor: planks across a disc, on a slab with a trim edge
-  for(let x=-R+0.2;x<R;x+=0.4){const L=2*Math.sqrt(Math.max(0,R*R-x*x))-0.04;if(L>0.1)p.push(P(BOX,st.floor[Math.round((x+R)/0.4)%2],x,-0.05,0,0,0,0,0.39,0.1,L));}
+  const fc=st.floor,fN=fc.length;
+  if(st.floorPat==='tiles'){for(let x=-R+0.25;x<R;x+=0.5)for(let z=-R+0.25;z<R;z+=0.5){if(Math.hypot(x,z)>R-0.18)continue;p.push(P(BOX,fc[(Math.round((x+R)/0.5)+Math.round((z+R)/0.5))%fN],x,-0.05,z,0,0,0,0.49,0.1,0.49));}
+    p.push(P(CYL12,fc[0],0,-0.08,0,0,0,0,R*2-0.02,0.08,R*2-0.02));}
+  else for(let x=-R+0.2;x<R;x+=0.4){const L=2*Math.sqrt(Math.max(0,R*R-x*x))-0.04;if(L>0.1)p.push(P(BOX,fc[Math.round((x+R)/0.4)%fN],x,-0.05,0,0,0,0,0.39,0.1,L));}
   p.push(P(CYL12,st.trim,0,-0.2,0,0,0,0,R*2+0.14,0.22,R*2+0.14));
   // the island chunk underneath: a grass rim, then earth in bands narrowing to a rocky point, roots and stones in it
   p.push(P(CYL12,st.grass,0,-0.4,0,0,0,0,R*2+0.7,0.3,R*2+0.7),P(CYL12,dark(st.grass,0.25),0,-0.56,0,0,0,0,R*2+0.62,0.06,R*2+0.62));
@@ -30,13 +33,21 @@ function buildDiorama(kind,n){const home=kind==='home',st=DIO_STYLE[home?'home':
     for(let k=0;k<pts.length-1;k++)limb(p,0x6a4a30,...pts[k],...pts[k+1],0.07-k*0.012);}
   // grass tufts and flowers round the front of the rim
   for(let i=0;i<22;i++){const a=-0.4+R0()*(Math.PI+0.8),rr=R+0.12+R0()*0.2,x=Math.cos(a)*rr,z=Math.sin(a)*rr;if(z<-0.3&&Math.abs(x)<R*0.7)continue;
-    p.push(P(CONE5,light(st.grass,0.15),x,-0.2,z,0,R0()*3,0,0.12,0.22,0.12));if(R0()<0.45)p.push(P(ICO0,[0xf6d04a,0xf39ab0,0xffffff,0xb89aff][i%4],x,-0.08,z,0,0,0,0.1,0.08,0.1));}
+    p.push(P(CONE5,light(st.grass,0.15),x,-0.2,z,0,R0()*3,0,0.12,0.22,0.12));if(R0()<0.45)p.push(P(ICO0,(st.flowers||[0xf6d04a,0xf39ab0,0xffffff,0xb89aff])[i%(st.flowers?st.flowers.length:4)],x,-0.08,z,0,0,0,0.1,0.08,0.1));}
   // the curved wall round the back: tall behind the loft, sweeping down towards the open front
   const segs=26,a0=-0.28,a1=Math.PI+0.28,wallH=a=>{const s=Math.sin(clamp(a,0,Math.PI));return 0.7+(WH-0.7)*Math.pow(s,0.55);};
   p.push(P(arcWall(R,R+0.14,a0,a1,wallH,40),st.wall),P(arcWall(R-0.03,R+0.15,a0,a1,()=>0.9,40),dark(st.trim,0.1)),P(arcWall(R-0.04,R+0.2,a0,a1,a=>wallH(a)+0.08,40,wallH),st.trim));
   for(let i=0;i<segs;i++){const a=a0+(i+0.5)/segs*(a1-a0),h=wallH(a),x=Math.cos(a)*(R-0.02),z=-Math.sin(a)*(R-0.02);
-    if(i%2===0)lum.push(P(ICO0,st.lights,x,h-0.08,z,0,0,0,0.09,0.09,0.09));/* fairy lights along the top */
-    if(i%3===1)p.push(P(BOX,light(st.wall,0.18),x*0.998,(h+0.9)/2,z*0.998,0,Math.PI/2-a,0,0.05,h-0.9,0.02));/* a thin panel line */}
+    const lc=st.lights==='rainbow'?TINTS[i%8]:st.lights;if(i%2===0&&lc!=null)lum.push(P(ICO0,lc,x,h-0.08,z,0,0,0,0.09,0.09,0.09));/* fairy lights along the top */
+    if(i%3===1&&!st.wallPat)p.push(P(BOX,light(st.wall,0.18),x*0.998,(h+0.9)/2,z*0.998,0,Math.PI/2-a,0,0.05,h-0.9,0.02));/* a thin panel line */}
+  // wallpaper patterns
+  if(st.wallPat){const pat=st.wallPat,c2=st.wall2,ry=a=>Math.PI/2-a,at=(a,r,y)=>[Math.cos(a)*r,y,-Math.sin(a)*r];
+    if(pat==='stripe')for(let i=0;i<36;i+=2){const a=a0+(i+0.5)/36*(a1-a0),h=wallH(a);p.push(P(BOX,c2,...at(a,R-0.012,(h+0.9)/2),0,ry(a),0,R*(a1-a0)/36,h-0.9,0.02));}
+    if(pat==='planks')for(let y=1.1;y<WH;y+=0.3)p.push(P(arcWall(R-0.012,R-0.005,a0,a1,a=>Math.min(y+0.03,wallH(a)),40,a=>Math.min(y,wallH(a))),c2));
+    if(pat==='brick')for(let r=0,y=1.0;y<WH;y+=0.22,r++){p.push(P(arcWall(R-0.012,R-0.006,a0,a1,a=>Math.min(y+0.02,wallH(a)),40,a=>Math.min(y,wallH(a))),c2));
+      for(let a=a0+(r%2?0.06:0.12);a<a1;a+=0.12)if(wallH(a)>y+0.22)p.push(P(BOX,c2,...at(a,R-0.012,y+0.11),0,ry(a),0,0.02,0.2,0.02));}
+    if(pat==='dots'||pat==='stars')for(let i=0;i<70;i++){const a=a0+R0()*(a1-a0),h=wallH(a),y=1.0+R0()*(h-1.1);if(y>h-0.1)continue;
+      (pat==='stars'?lum:p).push(P(pat==='stars'?ICO0:CYL12,c2,...at(a,R-0.015,y),Math.PI/2,ry(a),0,pat==='stars'?0.06:0.14,0.02,pat==='stars'?0.06:0.14));}}
   // porthole windows, and the door you leave by
   const winP=[];for(const a of [0.62,Math.PI-0.62]){const x=Math.cos(a)*(R-0.01),z=-Math.sin(a)*(R-0.01),ry=Math.PI/2-a;
     p.push(P(CYL12,st.trim,x,1.35,z,Math.PI/2,ry,0,0.86,0.1,0.86));winP.push(P(CYL12,0xffffff,x*0.985,1.35,z*0.985,Math.PI/2,ry,0,0.66,0.02,0.66));
@@ -71,22 +82,23 @@ function buildDiorama(kind,n){const home=kind==='home',st=DIO_STYLE[home?'home':
     case'books':for(let i=0;i<9;i++){const a=0.35+i/8*(Math.PI-0.7),x=Math.cos(a)*(R-0.16),z=-Math.sin(a)*(R-0.16),ry=Math.PI/2-a;if(Math.abs(a-0.62)<0.3||Math.abs(a-(Math.PI-0.62))<0.3)continue;
         for(let r=0;r<4;r++){p.push(P(BOX,0x5a3a2a,x,0.55+r*0.52+(r>1?0.35:0),z,0,ry,0,0.7,0.04,0.28));for(let j=0;j<5;j++)p.push(P(BOX,[0xd8453a,0x5a8ae0,0x6ab84a,0xf6d04a,0x9a6ad0,0x8a3a4a][(i+j+r)%6],x+Math.cos(ry)*(-0.24+j*0.12),0.7+r*0.52+(r>1?0.35:0),z-Math.sin(ry)*(-0.24+j*0.12),0,ry,0,0.09,0.26,0.2));}}
       ribs(6,st.rib,0.1,0.9,0.7);break;
+    case'none':break;
     default:{/* your own home: the trunk of a great tree grows up through the middle of the back wall, branches spreading overhead */
       const tx=R*0.12,tz=-R+0.3;p.push(PG(STRUNK,0x8a5a36,0x6a4428,tx,WH/2+0.4,tz,0,0,0,0.9,WH+0.9,0.9));
       for(const [a,l] of [[0.5,1.6],[1.4,1.8],[2.4,1.5],[3.0,1.3]]){const x1=tx+Math.cos(a)*l,z1=tz+Math.abs(Math.sin(a))*l*0.9,y1=WH+0.6+R0()*0.5;limb(p,0x7a5030,tx,WH,tz,x1,y1,z1,0.18);
         for(let k=0;k<4;k++)sway.push(P(SPH,[0x6cb04a,0x5a9e3e,0x7cc05a][k%3],x1+(R0()-0.5)*0.9,y1+0.2+R0()*0.4,z1+(R0()-0.5)*0.7,0,0,0,0.9+R0()*0.4,0.6+R0()*0.3,0.8+R0()*0.3));}
       for(let i=0;i<10;i++){const a=0.4+i*0.25;lum.push(P(ICO0,st.lights,Math.cos(a)*R*0.6,WH+0.25-Math.sin(i*0.7)*0.12,-Math.sin(a)*R*0.5,0,0,0,0.09,0.09,0.09));}}}
   // a big round rug in the middle, and a hanging lamp over it
-  p.push(P(CYL12,st.rug,0,0.01,0.35,0,0,0,2.4,0.02,2.0),P(CYL12,light(st.rug,0.35),0,0.02,0.35,0,0,0,1.6,0.02,1.3),P(CYL12,st.rug,0,0.03,0.35,0,0,0,0.8,0.02,0.64));
+  if(st.rugPat==='rainbow')[0xf07a7a,0xf0b060,0xf0e070,0x7ad07a,0x7ab0f0,0xb08ae0].forEach((c,i)=>p.push(P(CYL12,c,0,0.01+i*0.004,0.35,0,0,0,2.4-i*0.36,0.02,2.0-i*0.3)));
+  else if(st.rug!=null)p.push(P(CYL12,st.rug,0,0.01,0.35,0,0,0,2.4,0.02,2.0),P(CYL12,light(st.rug,0.35),0,0.02,0.35,0,0,0,1.6,0.02,1.3),P(CYL12,st.rug,0,0.03,0.35,0,0,0,0.8,0.02,0.64));
   // furniture: the bed up in the loft, the rest round the floor
   const props=[],put=(k,x,z,ry,label,c,y=0,lv=0)=>{const f=furn(k,c||st.rug);p.push(...shift(f.p,x,y,z,ry));gl.push(...shift(f.gl,x,y,z,ry));props.push({x,y:y+0.45,z,w:1.0,d:1.0,label,k,lv});};
-  put('bed',-R*0.4,-R+0.66,Math.PI/2,'bed',home?0x5a8ae0:st.rug,LY,1);
-  if(!home)put('lamp',R*0.1,-R+0.45,0,'lamp',null,LY,1);
-  put('table',-0.55,0.55,0,'table');put('chair',-1.25,0.55,1.57,'chair',home?0xc8905a:st.trim);
+  if(!home){/* (your own home is furnished by you: 56c) */put('bed',-R*0.4,-R+0.66,Math.PI/2,'bed',st.rug,LY,1);
+  put('lamp',R*0.1,-R+0.45,0,'lamp',null,LY,1);
+  put('table',-0.55,0.55,0,'table');put('chair',-1.25,0.55,1.57,'chair',st.trim);
   put('plant',-R+0.55,0.9,0,'plant');put('lamp',R-0.55,1.15,0,'lamp');
-  if(home){put('workbench',-R+0.75,-0.35,1.2,'workbench');if(S.house>=1)put('fishtank',R-0.8,0.85,-1.3,'fish tank');if(S.house>=2)put('fireplace',-R*0.72,-R*0.42,0.75,'fireplace');}
-  else{const extra={sailor:['fishtank','armchair'],dreamer:['stereo','beanbag'],tinkerer:['workbench','shelf'],homebody:['counter','fireplace'],explorer:['bag','tv'],scholar:['shelf','piano']}[n.pers]||['armchair','plant'];
-    put(extra[0],R-0.8,0.85,-1.3,extra[0]);put(extra[1],-R+0.78,-0.4,1.1,extra[1]);}
+  {const extra={sailor:['fishtank','armchair'],dreamer:['stereo','beanbag'],tinkerer:['workbench','shelf'],homebody:['counter','fireplace'],explorer:['bag','tv'],scholar:['shelf','piano']}[n.pers]||['armchair','plant'];
+    put(extra[0],R-0.8,0.85,-1.3,extra[0]);put(extra[1],-R+0.78,-0.4,1.1,extra[1]);}}
   props.push({x:dx,y:0.62,z:dz,w:1,d:1,label:'exit',lv:0});
   const g=new T.Group();g.add(M(p));if(gl.length){const m=M(gl,glowMat);m.castShadow=false;g.add(m);}if(lum.length){const m=M(lum,lumMat);m.castShadow=false;g.add(m);}
   if(sway.length)g.add(M(sway,leafMat));g.add(new T.Mesh(merge(winP),roomWinMat));
@@ -111,5 +123,5 @@ function dioRoute(I,lv,x,z){const D=I.room.dio,[tx,tz]=dioClamp(D,lv,x,z),path=[
   if(lv!==I.lv){if(I.lv===0){path.push([D.LB[0],0,D.LB[1]],[D.LT[0],D.LY,D.LT[1]]);}else{path.push([D.LT[0],D.LY,D.LT[1]],[D.LB[0],0,D.LB[1]]);}}
   path.push([tx,lv?D.LY:0,tz]);I.path=path;I.tlv=lv;}
 // frame the whole diorama for the screen: as wide as the room on a tall phone, as tall as it on a wide screen
-function fitRoomCam(D){const asp=camera.aspect,tv=Math.tan(roomCam.fov*Math.PI/360),th=tv*asp,hw=D.R+0.6,hv=asp<0.8?3.9:4.4,d=Math.max(hw/th,hv/tv)*1.03,pitch=0.4,ty=asp<0.8?0.55:0.75;
+function fitRoomCam(D){const asp=camera.aspect,tv=Math.tan(roomCam.fov*Math.PI/360),th=tv*asp,hw=D.R+0.6,hv=asp<0.8?3.9:4.4,d=Math.max(hw/th,hv/(tv*(1-roomReserve/window.innerHeight)))*1.03,pitch=0.4,ty=asp<0.8?0.55:0.75;
   roomCam.position.set(0,ty+Math.sin(pitch)*d,Math.cos(pitch)*d);const drop=d*d*CURVE;roomCam.lookAt(0,ty-drop*0.9,0);}

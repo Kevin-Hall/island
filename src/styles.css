@@ -542,3 +542,43 @@ img.pix{image-rendering:crisp-edges;image-rendering:pixelated}
 .terraui .seg3{display:flex;background:var(--paper);border-radius:18px;box-shadow:var(--shadow);padding:4px;gap:2px}
 .terraui button{border:none;background:none;border-radius:14px;padding:8px 11px;font:inherit;font-size:13.5px;font-weight:700;color:var(--ink2)}
 .terraui button.on{background:#7cc46a;color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}
+
+/* ---------- decorating your home (56c) ---------- */
+.ctx .msg.cosy{color:#e0a020;letter-spacing:1px;font-size:15px}
+.decotray{position:fixed;z-index:7;left:0;right:0;bottom:0;background:var(--paper);border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(60,40,20,.18);
+  padding:10px 0 calc(env(safe-area-inset-bottom,0px) + 10px);max-height:44vh;display:flex;flex-direction:column;gap:6px}
+.decotray .dtop{display:flex;align-items:center;gap:8px;padding:0 12px}
+.decotray .stars{font-size:20px;color:#f0b020;letter-spacing:1px;white-space:nowrap;text-shadow:0 1px 0 #c8901a}
+.decotray .tip{flex:1;font-size:12.5px;line-height:1.25;color:var(--ink2);font-weight:600}
+.decotray .dtop .pbtn{padding:8px 16px;font-size:15px}
+.decotray .dtabs{display:flex;gap:6px;padding:0 12px;overflow-x:auto;scrollbar-width:none}
+.decotray .dtabs::-webkit-scrollbar{display:none}
+.decotray .dtabs button{border:none;background:var(--wash);color:var(--ink2);border-radius:999px;padding:7px 14px;font:inherit;font-size:13.5px;font-weight:700;white-space:nowrap}
+.decotray .dtabs button.on{background:var(--teal);color:#fff;box-shadow:0 2px 0 var(--teal-d)}
+.decotray .dtabs.sub button{padding:5px 12px;font-size:12.5px}
+.decotray .dtabs.sub button.on{background:var(--yellow);color:var(--ink);box-shadow:0 2px 0 var(--yellow-d)}
+.decotray .drow{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,auto);grid-auto-columns:86px;gap:8px;overflow-x:auto;padding:4px 12px 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.decotray .drow::-webkit-scrollbar{display:none}
+.dcard{position:relative;border:none;background:#fff;border-radius:14px;box-shadow:0 2px 0 var(--line),0 3px 8px rgba(60,40,20,.08);padding:6px 4px 5px;display:flex;flex-direction:column;align-items:center;gap:2px;font:inherit;color:var(--ink)}
+.dcard img{width:56px;height:56px;image-rendering:auto}
+.dcard span{font-size:11px;font-weight:700;line-height:1.1;text-align:center;min-height:24px;display:flex;align-items:center}
+.dcard b{font-size:11px;font-weight:700;color:var(--teal-d)}
+.dcard em{position:absolute;top:4px;right:6px;font-style:normal;font-size:10px;font-weight:700;background:var(--teal);color:#fff;border-radius:99px;padding:1px 6px}
+.dcard.lock{opacity:.55}.dcard.lock b{color:#e0a020}
+.dcard.on{box-shadow:0 0 0 3px var(--teal),0 3px 8px rgba(60,40,20,.08)}
+.dcard .sw{display:block;width:52px;height:52px;border-radius:12px;box-shadow:inset 0 0 0 2px rgba(0,0,0,.08);margin:2px 0}
+.dcard .sw.roof{background:linear-gradient(160deg,#f4e6c8,#d8b88a)}
+.dcard .sw.r-hull{background:repeating-linear-gradient(90deg,#8a5a3a 0 5px,#dce8f2 5px 12px)}
+.dcard .sw.r-dome{background:radial-gradient(circle at 60% 40%,#fff4c0 0 3px,transparent 4px),radial-gradient(circle at 30% 60%,#c8b8ff 0 2px,transparent 3px),#3a3464}
+.dcard .sw.r-pipes{background:repeating-linear-gradient(0deg,#c87a3a 0 5px,#e8dcc4 5px 12px)}
+.dcard .sw.r-thatch{background:repeating-linear-gradient(60deg,#d8b860 0 4px,#c8a450 4px 8px)}
+.dcard .sw.r-tent{background:repeating-conic-gradient(from 0deg at 50% 0,#d86a3a 0 15deg,#f6ecd8 15deg 30deg)}
+.dcard .sw.r-books{background:repeating-linear-gradient(90deg,#d8453a 0 4px,#5a8ae0 4px 8px,#6ab84a 8px 12px,#f6d04a 12px 16px)}
+.dcard .sw.r-tree{background:radial-gradient(circle at 50% 35%,#6cb04a 0 40%,transparent 41%),linear-gradient(90deg,transparent 42%,#8a5a36 42% 58%,transparent 58%),#cfe8f6}
+.dcard .sw.r-none{background:linear-gradient(#9fd4ff,#e8f4ff)}
+.decosel{position:fixed;z-index:8;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;background:var(--paper);border-radius:999px;box-shadow:var(--shadow);padding:5px;white-space:nowrap}
+.decosel .nm{font-size:13px;font-weight:700;color:var(--ink);padding:0 8px 0 10px}
+.decosel button{border:none;background:var(--wash);color:var(--ink);border-radius:999px;padding:7px 11px;font:inherit;font-size:13px;font-weight:700}
+.decosel button[data-da="done"]{background:var(--green);color:#fff}
+.decosel button[data-da="store"]{background:#fde0da;color:#b8503e}
+.dnote{grid-row:span 2;width:260px;font-size:13px;color:var(--ink2);margin:6px 0}

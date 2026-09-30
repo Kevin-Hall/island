@@ -37,7 +37,7 @@ function updateHUD(){
   updateCtx();
 }
 function tickShells(dt){if(shownShells!==S.shells){const d=S.shells-shownShells;shownShells+=Math.sign(d)*Math.max(1,Math.abs(d)*Math.min(1,dt*8));if(Math.abs(S.shells-shownShells)<1)shownShells=S.shells;$('shellTxt').textContent=fmt(shownShells);}}
-function addXP(n){const before=level();S.xp+=n;const after=level();if(after>before&&S.scratch){heartLevelUp(before,after);return;}if(after>before){SFX.level();
+function addXP(n){const before=level();if(n>0&&restMul()>1)n=Math.max(n,Math.round(n*restMul()));/* well rested (56c) */S.xp+=n;const after=level();if(after>before&&S.scratch){heartLevelUp(before,after);return;}if(after>before){SFX.level();
   const un=[...CROP_IDS.filter(id=>CROPS[id].lvl===after).map(id=>CROPS[id].name),...Object.keys(BUILD).filter(k=>BUILD[k].lvl===after).map(k=>BUILD[k].name)];
   if(after===MYSTERY.lvl)un.push('Mystery Seeds');
   toast(`Level ${after}!${un.length?' New: '+un.join(', '):''}`,'rare',ICON.star);}}
@@ -49,9 +49,11 @@ function updateCtx(){
   if(!sheet&&$('actionBar').hidden){
     if(inside)st='inside';else if(S.mode==='edit')st='edit';else if(fishing)st='';else if(S.sea)st=sail?'sailing':'sea';else if(boatNear()&&unlocked('boat'))st='board';}
   const farHome=S.sea&&Math.hypot(vil.x,vil.z)>14;
-  const sig=st+'|'+(sail&&sail.name||'')+'|'+farHome;
+  const sig=st+'|'+(sail&&sail.name||'')+'|'+farHome+'|'+(inside&&inside.kind)+'|'+!!deco+'|'+(inside&&inside.kind==='home'?cosyScore().stars:'');
   if(sig===ctxSig)return;ctxSig=sig;let h='';
-  if(st==='inside')h=`<button class="pbtn go" data-c="leave">Go outside</button>`;
+  if(st==='inside'&&deco)h='';
+  else if(st==='inside'&&inside.kind==='home'){const c=cosyScore();h=`<span class="msg cosy">${starStr(c.stars)}</span><button class="pbtn" data-c="deco">Decorate</button><button class="pbtn go" data-c="leave">Go outside</button>`;}
+  else if(st==='inside')h=`<button class="pbtn go" data-c="leave">Go outside</button>`;
   else if(st==='edit')h=`<span class="msg">Editing: tap decor to move or store it</span><button class="pbtn go" data-c="doneEdit">Done</button>`;
   else if(st==='sailing')h=`<span class="msg">Sailing${sail.name?' to '+sail.name:''}…</span><button class="pbtn" data-c="stop">Stop</button>`;
   else if(st==='sea')h=`<span class="msg">Tap the sea to steer · tap land to go ashore</span><button class="pbtn sea" data-c="cast">Cast line</button>${farHome?'<button class="pbtn" data-c="home">Sail home</button>':''}`;
@@ -64,7 +66,8 @@ $('ctx').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b
   if(c==='cast')startBoatFishing();
   if(c==='home'){SFX.horn();sailHome();}
   if(c==='board')boardBoat();
-  if(c==='leave')leaveHouse();});
+  if(c==='leave')leaveHouse();
+  if(c==='deco')decoOpen();});
 
 /* =========================================================
    Items & dex helpers
