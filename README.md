@@ -18,3 +18,20 @@ Open `index.html` in a browser (three.js loads from a CDN). Progress saves in yo
 Mushrooms grow faster at night and near water. Buy extra log beds and rare glowing spores at the market.
 
 **Controls:** WASD or click to walk · 1–9 hotbar · right-click an empty bed to pick it up · Q/E rotate · scroll zoom · T skips six hours
+
+---
+
+# Sporekeeper (`sporekeeper/index.html`)
+
+A separate prototype: you are the last keeper of a grotto sealed behind a waterfall, breeding mushrooms to rediscover its 120 lost species.
+Each discovery brings back part of the grotto: dead stalks recede and glowing flora returns in that colour's zone.
+
+- **Diorama view:** fixed, gently drifting camera, tuned for portrait phones. All UI is HTML over the canvas.
+- **Four traits:** cap colour, cap shape, stem and special. A hybrid takes each trait from one parent or the other; colour genes can blend.
+- **Conditions gate rarity:** glow shows only under the moonlight lamp, scent only in mist, giants only in peat.
+  Crimson × Azure blends to Violet in acidic soil, Crimson × Ivory to Amber in ash, and Azure × Ivory to Cyan in peat.
+- **Fungepedia:** 120 species (6 colours × 5 shapes × 4 specials) with rumours hinting at undiscovered ones.
+- **Real-time growth:** the first plantings take about a minute, rising toward 6 minutes. Growth continues while the page is closed, and a free wild spore washes into the pool every 3 minutes.
+- **Dew** (earned by harvesting) buys plots, soils, the mist machine and the moonlight lamp. Breeding itself never costs anything.
+
+Progress saves in the browser (`localStorage`).

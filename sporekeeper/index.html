@@ -1,0 +1,1007 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sporekeeper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: the grotto fills the screen as a fixed diorama; brand + dew top-left, books top-right, conditions and keeper's note float over it; everything interactive lives in a bottom sheet or a tall side panel. */
+:root {
+  --night: #0a1628;
+  --glass: rgba(11, 25, 44, 0.88);
+  --glass-2: rgba(22, 42, 66, 0.9);
+  --ink: #e3ecea;
+  --muted: #8fa7b0;
+  --rule: rgba(227, 236, 234, 0.12);
+  --amber: #ffb36b;
+  --cyan: #35f2e0;
+  --display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night); color: var(--ink); font: 15px/1.45 var(--body); -webkit-tap-highlight-color: transparent; }
+canvas.scene { display: block; touch-action: none; position: fixed; inset: 0; }
+#vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 55%, transparent 45%, rgba(3, 8, 16, 0.75) 100%); }
+button { font: 600 14px/1 var(--body); color: var(--ink); background: var(--glass-2); border: 1px solid var(--rule); border-radius: 999px; padding: 9px 14px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: rgba(227, 236, 234, 0.35); }
+button:disabled { opacity: 0.4; cursor: default; }
+button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+button.primary { background: var(--amber); color: #2a1a08; border-color: transparent; }
+.num { font-variant-numeric: tabular-nums; }
+
+#hud { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; pointer-events: none; }
+#hud > * { pointer-events: auto; }
+.brand h1 { margin: 0; font: 700 26px/1 var(--display); letter-spacing: 0.01em; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6); }
+.dew { margin-top: 6px; display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px 5px 8px; border-radius: 999px; background: var(--glass); border: 1px solid var(--rule); font-weight: 600; }
+.dew i { width: 10px; height: 13px; background: var(--cyan); border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; box-shadow: 0 0 10px var(--cyan); }
+nav { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+nav button { background: var(--glass); }
+#conds { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 64px); right: 16px; display: flex; gap: 8px; }
+#conds button { padding: 7px 12px; font-size: 13px; background: var(--glass); display: inline-flex; align-items: center; gap: 6px; }
+#conds button .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+#conds button[aria-pressed="true"] { border-color: rgba(53, 242, 224, 0.6); }
+#conds button[aria-pressed="true"] .dot { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+#conds button.locked { color: var(--muted); }
+#note { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); max-width: min(460px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 14px; background: var(--glass); border: 1px solid var(--rule); font-size: 14px; text-align: center; }
+#note b { font: 600 11px/1 var(--body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber); display: block; margin-bottom: 4px; }
+
+#labels { position: fixed; inset: 0; pointer-events: none; }
+.lbl { position: absolute; transform: translate(-50%, -100%); padding: 3px 9px; border-radius: 999px; background: var(--glass); border: 1px solid var(--rule); font: 600 12px/1.2 var(--body); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lbl.ready { border-color: var(--amber); color: var(--amber); }
+.lbl.locked { color: var(--muted); }
+
+#sheet { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: min(560px, 100vw); max-height: 72vh; overflow: auto; box-sizing: border-box; padding: 18px 20px calc(env(safe-area-inset-bottom, 0px) + 20px); background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--rule); border-bottom: 0; border-radius: 20px 20px 0 0; }
+#panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100vw); overflow: auto; box-sizing: border-box; padding: calc(env(safe-area-inset-top, 0px) + 18px) 20px calc(env(safe-area-inset-bottom, 0px) + 24px); background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-left: 1px solid var(--rule); }
+.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.head h2 { margin: 0; font: 700 24px/1.15 var(--display); text-wrap: balance; }
+.head .sub { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+.x { padding: 6px 11px; font-size: 16px; }
+h3 { margin: 18px 0 8px; font: 600 11.5px/1 var(--body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.new { display: inline-block; margin-top: 6px; padding: 3px 9px; border-radius: 999px; background: var(--cyan); color: #04201d; font: 700 11px/1.2 var(--body); letter-spacing: 0.08em; text-transform: uppercase; }
+.traits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.trait { padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--rule); min-width: 0; }
+.trait .k { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.trait .v { font-weight: 600; }
+.trait .n { font-size: 12.5px; color: var(--muted); }
+.row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--rule); }
+.row canvas { width: 48px; height: 48px; }
+.row .t { font-weight: 600; }
+.row .d { font-size: 12.5px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { padding: 7px 12px; font-size: 13px; display: inline-flex; align-items: center; gap: 7px; }
+.chip[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
+.sw { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.25); }
+.bar { height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; margin: 10px 0 4px; }
+.bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--amber), var(--cyan)); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.muted { color: var(--muted); font-size: 13.5px; }
+.cross { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; text-align: center; }
+.cross canvas { width: 64px; height: 64px; }
+.cross .times { font: 700 22px/1 var(--display); color: var(--muted); }
+.outcome { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 4px 10px; font-size: 14px; }
+.outcome dt { color: var(--muted); }
+.outcome dd { margin: 0; }
+.hint { padding: 10px 12px; border-left: 2px solid var(--cyan); background: rgba(53, 242, 224, 0.05); font-family: var(--display); font-style: italic; margin-bottom: 8px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.card { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--rule); text-align: center; min-width: 0; }
+.card canvas { width: 56px; height: 56px; }
+.card .t { font-size: 12px; font-weight: 600; line-height: 1.2; }
+.card.unk .t { color: var(--muted); font-weight: 500; }
+.progress { font: 700 34px/1 var(--display); }
+#toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 110px); transform: translateX(-50%); padding: 10px 16px; border-radius: 999px; background: var(--glass); border: 1px solid rgba(53, 242, 224, 0.5); font-weight: 600; opacity: 0; transition: opacity .3s; pointer-events: none; max-width: calc(100vw - 32px); text-align: center; }
+@media (max-width: 640px) {
+  .brand h1 { font-size: 21px; }
+  #conds { top: calc(env(safe-area-inset-top, 0px) + 92px); right: auto; left: 16px; }
+  #toast { top: calc(env(safe-area-inset-top, 0px) + 136px); }
+  #note { bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); font-size: 13px; }
+  nav button { padding: 8px 11px; font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js" } }
+</script>
+</head>
+<body>
+<div id="vignette"></div>
+<div id="labels"></div>
+<header id="hud">
+  <div class="brand"><h1>Sporekeeper</h1><div class="dew" title="Dew"><i></i><span class="num" id="dew-n">0</span> dew</div></div>
+  <nav>
+    <button id="btn-pedia">Fungepedia <span class="num" id="pedia-n">0/120</span></button>
+    <button id="btn-shop">Supplies</button>
+  </nav>
+</header>
+<div id="conds">
+  <button id="c-mist" aria-pressed="false"><span class="dot"></span><span>Mist</span></button>
+  <button id="c-moon" aria-pressed="false"><span class="dot"></span><span>Moonlight</span></button>
+</div>
+<div id="note" aria-live="polite"></div>
+<section id="sheet" hidden aria-live="polite"></section>
+<section id="panel" hidden></section>
+<div id="toast" role="status"></div>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ============================== data ============================== */
+const COLORS = [
+  { n: 'Ivory', hex: '#efe6cf' }, { n: 'Crimson', hex: '#ff4a5c' }, { n: 'Azure', hex: '#3a9dff' },
+  { n: 'Violet', hex: '#b65cff' }, { n: 'Amber', hex: '#ffae2b' }, { n: 'Cyan', hex: '#2ff0dc' },
+];
+const SHAPES = ['Button', 'Bell', 'Parasol', 'Spire', 'Trumpet'];
+const STEMS = ['Slender', 'Stout', 'Twisted', 'Clustered'];
+const SPECIALS = ['', 'Glowing', 'Fragrant', 'Giant'];
+const SPECIAL_TRAIT = ['None', 'Glow', 'Scent', 'Giant size'];
+const SOILS = {
+  loam: { n: 'Loam', hex: '#4a3424', price: 0, desc: 'Plain forest loam.' },
+  acid: { n: 'Acidic', hex: '#3a4a2a', price: 30, desc: 'Sour, needle-strewn soil.' },
+  ash: { n: 'Ash', hex: '#5d5c63', price: 30, desc: 'Fine grey ash from old fires.' },
+  peat: { n: 'Peat', hex: '#211915', price: 40, desc: 'Dark, rich and waterlogged.' },
+};
+// two different colour genes blend into a rare colour only in the right soil
+const MIX = { '1+2': { color: 3, soil: 'acid' }, '0+1': { color: 4, soil: 'ash' }, '0+2': { color: 5, soil: 'peat' } };
+const NEED = { 1: 'moon', 2: 'mist', 3: 'peat' };
+const NEED_TEXT = { 1: 'only shows under the moonlight lamp', 2: 'only shows in mist', 3: 'only shows in peat soil' };
+const TOTAL = COLORS.length * SHAPES.length * SPECIALS.length;
+const PRICES = { plots: [0, 0, 0, 25, 45, 80], mist: 35, moon: 60, boost: 8, wild: 12 };
+const GLIMMER_EVERY = 180e3, SAVE_KEY = 'sporekeeper-v1';
+
+const keyOf = p => `${p.color}-${p.shape}-${p.special}`;
+const nameOf = p => [SPECIALS[p.special], COLORS[p.color].n, SHAPES[p.shape]].filter(Boolean).join(' ');
+const pickOf = (a, b) => (Math.random() < 0.5 ? a : b);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const fmtTime = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+// first breeds are quick so the loop teaches itself, then settle toward ~6 minutes
+const growDuration = n => Math.round(Math.min(360, 60 * Math.pow(1.2, n)) * 1000);
+
+/* genotype: { c: [colourGene, colourGene], shape, stem, special }
+   phenotype (what grows): { color, shape, stem, special, hidden, speckled } */
+function express(geno, soil, cond) {
+  const [a, b] = geno.c;
+  let color = a;
+  if (a !== b) {
+    const mix = MIX[[a, b].sort((x, y) => x - y).join('+')];
+    color = mix && mix.soil === soil ? mix.color : pickOf(a, b);
+  }
+  const s = geno.special, need = NEED[s];
+  const ok = !s || (need === 'peat' ? soil === 'peat' : cond[need]);
+  return { color, shape: geno.shape, stem: geno.stem, special: ok ? s : 0, hidden: ok ? 0 : s, speckled: a !== b };
+}
+// the genes a grown mushroom passes on: rare colours breed true
+const breedGenes = (geno, ph) => ({ c: ph.color >= 3 ? [ph.color, ph.color] : geno.c.slice(), shape: geno.shape, stem: geno.stem, special: geno.special });
+function crossGenes(A, B) {
+  const mut = (v, n) => (Math.random() < 0.06 ? Math.floor(Math.random() * n) : v);
+  return {
+    c: [pickOf(A.c[0], A.c[1]), pickOf(B.c[0], B.c[1])],
+    shape: mut(pickOf(A.shape, B.shape), SHAPES.length),
+    stem: mut(pickOf(A.stem, B.stem), STEMS.length),
+    special: mut(pickOf(A.special, B.special), SPECIALS.length),
+  };
+}
+function crossOutcomes(A, B) {
+  const colors = new Map();
+  for (const x of A.c) for (const y of B.c) {
+    colors.set(x, colors.get(x) || null); colors.set(y, colors.get(y) || null);
+    const mix = x !== y && MIX[[x, y].sort((p, q) => p - q).join('+')];
+    if (mix) colors.set(mix.color, mix.soil);
+  }
+  const shapes = [...new Set([A.shape, B.shape])], stems = [...new Set([A.stem, B.stem])], specials = [...new Set([A.special, B.special])];
+  let fresh = 0;
+  const seen = new Set();
+  for (const [c] of colors) for (const sh of shapes) for (const sp of new Set([...specials, 0])) {
+    const k = keyOf({ color: c, shape: sh, special: sp });
+    if (!seen.has(k)) { seen.add(k); if (!state.discovered.includes(k)) fresh++; }
+  }
+  return { colors, shapes, stems, specials, fresh };
+}
+const dewFor = p => 3 + (p.color >= 3 ? 4 : 0) + (p.special ? 3 : 0) + (p.shape >= 3 ? 2 : 0) + (p.stem >= 2 ? 1 : 0);
+
+/* ============================== state + save ============================== */
+const STARTERS = [
+  { c: [1, 1], shape: 0, stem: 1, special: 0 },
+  { c: [2, 2], shape: 1, stem: 0, special: 1 },
+  { c: [0, 0], shape: 2, stem: 2, special: 2 },
+];
+function freshState() {
+  const now = Date.now(), cond = { mist: false, moon: false };
+  const grown = (geno, k) => {
+    const ph = express(geno, 'loam', cond);
+    return { geno, ph, bg: breedGenes(geno, ph), plantedAt: now - 60000, dur: 30000, matured: true, crossed: false, wasNew: false, cond: { soil: 'loam', ...cond } };
+  };
+  const plots = PRICES.plots.map((_, k) => ({ unlocked: k < 3, soil: 'loam', plant: null }));
+  plots[0].plant = grown(STARTERS[0]); plots[1].plant = grown(STARTERS[1]);
+  return {
+    dew: 10, plots,
+    spores: [{ geno: STARTERS[2], label: nameOf(express(STARTERS[2], 'loam', { mist: true })), n: 2, hybrid: false }],
+    discovered: [keyOf(plots[0].plant.ph), keyOf(plots[1].plant.ph)],
+    owned: { soils: ['loam'], mist: false, moon: false }, cond,
+    plantings: 0, glimmers: 1, glimmerAt: now,
+    stats: { crosses: 0, hybridPlanted: 0, hybridMatured: 0, harvests: 0, bought: 0 },
+  };
+}
+function loadState() {
+  try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && Array.isArray(s.plots)) return s; } catch { /* no storage: fresh start */ }
+  return null;
+}
+let state = loadState() || freshState();
+const firstVisit = !loadState();
+function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch { /* storage unavailable: progress lasts this visit */ } }
+
+/* ============================== renderer ============================== */
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.domElement.className = 'scene';
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#0a1628');
+scene.fog = new THREE.FogExp2('#0a1628', 0.042);
+const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 120);
+
+const hemi = new THREE.HemisphereLight('#3f7d8f', '#070b12', 1.1);
+const lantern = new THREE.DirectionalLight('#ffb36b', 1.6);
+lantern.position.set(-4, 9, 9); lantern.target.position.set(0, 0, 2.5);
+lantern.castShadow = true; lantern.shadow.mapSize.set(1024, 1024);
+Object.assign(lantern.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: 1, far: 30 });
+lantern.shadow.bias = -0.0006; lantern.shadow.normalBias = 0.02;
+const moonLight = new THREE.DirectionalLight('#7fa6ff', 0.2);
+moonLight.position.set(3, 12, -6);
+const falls = new THREE.PointLight('#5fb8ff', 18, 16, 1.6);
+falls.position.set(0, 3, -8.2);
+scene.add(hemi, lantern, lantern.target, moonLight, falls);
+
+/* seeded noise so the grotto is always the same place */
+let seed = 1337;
+const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+const NT = Array.from({ length: 64 * 64 }, rnd);
+function vnoise(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const g = (a, b) => NT[(((a % 64) + 64) % 64) + (((b % 64) + 64) % 64) * 64];
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  return lerp(lerp(g(xi, yi), g(xi + 1, yi), u), lerp(g(xi, yi + 1), g(xi + 1, yi + 1), u), v);
+}
+
+/* soft round sprite texture shared by halos, motes and mist */
+function radialTex(inner = 0.0) {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, inner * 32, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const SOFT = radialTex();
+
+/* ============================== grotto ============================== */
+const ZONE_DEG = [150, 30, 190, 350, 228, 312]; // one zone per colour; rare colours sit by the falls
+const zones = COLORS.map((c, k) => ({ color: k, theta: ZONE_DEG[k] * Math.PI / 180, target: 0, shown: 0 }));
+const zoneHealth = k => { const n = state.discovered.filter(s => +s.split('-')[0] === k).length; return n ? 0.3 + 0.7 * n / (SHAPES.length * SPECIALS.length) : 0; };
+const angDist = (a, b) => { const d = Math.abs(a - b) % (Math.PI * 2); return d > Math.PI ? Math.PI * 2 - d : d; };
+
+// floor: a shallow bowl that rises into the walls, vertex-coloured per zone
+const floorGeo = new THREE.PlaneGeometry(28, 28, 72, 72).rotateX(-Math.PI / 2);
+const fp = floorGeo.attributes.position, fInfo = [];
+for (let v = 0; v < fp.count; v++) {
+  const x = fp.getX(v), z = fp.getZ(v), r = Math.hypot(x, z), th = Math.atan2(z, x);
+  const y = (vnoise(x * 0.6 + 20, z * 0.6 + 20) - 0.5) * 0.25 + smooth(8.8, 12.5, r) * 3.2 + (vnoise(x * 1.7, z * 1.7) - 0.5) * smooth(9, 12, r) * 1.2;
+  fp.setY(v, y);
+  const pool = Math.hypot(x, z + 8.3) < 2.4;
+  if (pool) fp.setY(v, -0.25);
+  let zone = 0, zd = 9;
+  zones.forEach((zn, k) => { const d = angDist(th, zn.theta); if (d < zd) { zd = d; zone = k; } });
+  const keeper = th > 0.62 && th < 2.52 && r > 2.6 && r < 6.6;
+  fInfo.push({ r, zone, fall: 1 - smooth(0.25, 0.55, zd) * 0.6, keeper, pool, n: vnoise(x * 2.3, z * 2.3) });
+}
+floorGeo.computeVertexNormals();
+floorGeo.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(fp.count * 3), 3));
+const floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true }));
+floor.receiveShadow = true;
+scene.add(floor);
+const DEAD = new THREE.Color('#3a4049'), ALIVE = new THREE.Color('#2f6b47'), KEEP = new THREE.Color('#3a3326'), ROCK = new THREE.Color('#151c26'), POOL = new THREE.Color('#0d2c44');
+function paintFloor() {
+  const col = floorGeo.attributes.color, c = new THREE.Color(), zc = new THREE.Color();
+  fInfo.forEach((f, v) => {
+    if (f.pool) c.copy(POOL);
+    else if (f.keeper) c.copy(KEEP).lerp(ALIVE, 0.25 + f.n * 0.3);
+    else {
+      const h = zones[f.zone].shown * f.fall;
+      c.copy(DEAD).lerp(ALIVE, h).lerp(zc.set(COLORS[f.zone].hex), h * 0.12);
+      if (f.r < 2.6) c.copy(DEAD).lerp(ALIVE, 0.35);
+    }
+    c.lerp(ROCK, smooth(8.6, 11, f.r)).offsetHSL(0, 0, (f.n - 0.5) * 0.04);
+    col.setXYZ(v, c.r, c.g, c.b);
+  });
+  col.needsUpdate = true;
+}
+
+// rock wall ring: back faces only, so the near wall vanishes and the grotto reads as a cut-away diorama
+const wallGeo = new THREE.CylinderGeometry(12.6, 11.2, 13, 56, 10, true);
+const wp = wallGeo.attributes.position;
+for (let v = 0; v < wp.count; v++) {
+  const x = wp.getX(v), y = wp.getY(v), z = wp.getZ(v), th = Math.atan2(z, x);
+  const k = 1 + (vnoise(th * 5 + 10, y * 0.5) - 0.5) * 0.18 + (vnoise(th * 17, y * 1.4) - 0.5) * 0.06;
+  wp.setX(v, x * k); wp.setZ(v, z * k);
+}
+wallGeo.computeVertexNormals();
+const wall = new THREE.Mesh(wallGeo, new THREE.MeshStandardMaterial({ color: '#121b27', roughness: 1, flatShading: true, side: THREE.BackSide }));
+wall.position.y = 5.2;
+scene.add(wall);
+const rockMat = new THREE.MeshStandardMaterial({ color: '#1d2632', roughness: 1, flatShading: true });
+for (let k = 0; k < 34; k++) {
+  const th = rnd() * Math.PI * 2; if (angDist(th, -Math.PI / 2) < 0.25) continue;
+  const r = 9.3 + rnd() * 1.8, s = 0.5 + rnd() * 1.1;
+  const m = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), rockMat);
+  m.position.set(Math.cos(th) * r, s * 0.3 + smooth(8.8, 12.5, r) * 3.2 - 0.2, Math.sin(th) * r);
+  m.rotation.set(rnd() * 3, rnd() * 3, 0); m.scale.y = 0.7 + rnd() * 0.6; m.castShadow = true;
+  scene.add(m);
+}
+
+// waterfall: scrolling streak shader, pool, drifting spray
+const fallMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  uniforms: { t: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `varying vec2 vUv; uniform float t;
+    float h(float n){ return fract(sin(n)*43758.5453); }
+    void main(){
+      float col = floor(vUv.x*38.0);
+      float speed = 0.9 + h(col)*0.8;
+      float s = fract(vUv.y*2.5 + t*speed + h(col*3.1));
+      float streak = smoothstep(0.0, 0.5, s) * smoothstep(1.0, 0.55, s) * (0.4 + h(col*7.7)*0.6);
+      float edge = smoothstep(0.0, 0.18, vUv.x) * smoothstep(1.0, 0.82, vUv.x);
+      float a = (0.12 + 0.5*streak) * edge * smoothstep(0.0, 0.12, vUv.y) * smoothstep(1.0, 0.8, vUv.y);
+      gl_FragColor = vec4(vec3(0.55, 0.82, 1.0) * (0.7 + streak), a);
+    }`,
+});
+const fall = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 9.5, 1, 1), fallMat);
+fall.position.set(0, 4.4, -10.4); fall.rotation.x = -0.12;
+scene.add(fall);
+const poolMesh = new THREE.Mesh(new THREE.CircleGeometry(2.3, 28).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#0f3a5c', emissive: '#0b3f66', emissiveIntensity: 0.6, roughness: 0.15, metalness: 0.2, transparent: true, opacity: 0.92 }));
+poolMesh.position.set(0, -0.08, -8.3);
+scene.add(poolMesh);
+const sprayMat = new THREE.SpriteMaterial({ map: SOFT, color: '#9fd6ff', transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending });
+const spray = Array.from({ length: 14 }, (_, k) => { const s = new THREE.Sprite(sprayMat); s.userData.t = k / 14; scene.add(s); return s; });
+
+// zone flora: dead white stalks recede, glowing shrooms and ferns take over as a zone heals
+const stalkGeo = new THREE.CylinderGeometry(0.02, 0.06, 1, 5).translate(0, 0.5, 0);
+const tinyCap = new THREE.SphereGeometry(0.12, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2);
+const tinyStem = new THREE.CylinderGeometry(0.025, 0.035, 0.18, 5).translate(0, 0.09, 0);
+const fernGeo = new THREE.ConeGeometry(0.09, 0.5, 4).translate(0, 0.25, 0);
+const stalkMat = new THREE.MeshStandardMaterial({ color: '#d9d6cc', emissive: '#aeb6bd', emissiveIntensity: 0.18, roughness: 0.9, flatShading: true });
+const fernMat = new THREE.MeshStandardMaterial({ color: '#2f7a4c', roughness: 0.8, flatShading: true });
+const stemMatTiny = new THREE.MeshStandardMaterial({ color: '#d8d2c0', emissive: '#d8d2c0', emissiveIntensity: 0.1 });
+const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3(), _e = new THREE.Euler();
+const floorY = (x, z) => { const r = Math.hypot(x, z); return (vnoise(x * 0.6 + 20, z * 0.6 + 20) - 0.5) * 0.25 + smooth(8.8, 12.5, r) * 3.2; };
+zones.forEach((zn, k) => {
+  const spots = n => Array.from({ length: n }, () => {
+    const th = zn.theta + (rnd() - 0.5) * 0.62, r = 5.8 + rnd() * 3.2, x = Math.cos(th) * r, z = Math.sin(th) * r;
+    return { x, z, y: floorY(x, z), s: 0.6 + rnd() * 0.8, ry: rnd() * 6.28, tilt: (rnd() - 0.5) * 0.35 };
+  });
+  zn.stalks = new THREE.InstancedMesh(stalkGeo, stalkMat, 10); zn.stalkPts = spots(10);
+  const capMat = new THREE.MeshStandardMaterial({ color: COLORS[k].hex, emissive: COLORS[k].hex, emissiveIntensity: 1.3, roughness: 0.5 });
+  zn.caps = new THREE.InstancedMesh(tinyCap, capMat, 22); zn.stems = new THREE.InstancedMesh(tinyStem, stemMatTiny, 22); zn.shroomPts = spots(22);
+  zn.ferns = new THREE.InstancedMesh(fernGeo, fernMat, 40); zn.fernPts = spots(40);
+  zn.shroomPts.forEach((p, n) => {
+    _m.compose(_v.set(p.x, p.y, p.z), _q.setFromEuler(_e.set(p.tilt, p.ry, 0)), _s.setScalar(p.s * 1.3)); zn.stems.setMatrixAt(n, _m);
+    _m.compose(_v.set(p.x, p.y + 0.17 * p.s * 1.3, p.z), _q, _s.set(p.s * 1.3, p.s, p.s * 1.3)); zn.caps.setMatrixAt(n, _m);
+  });
+  zn.fernPts.forEach((p, n) => zn.ferns.setMatrixAt(n, _m.compose(_v.set(p.x, p.y, p.z), _q.setFromEuler(_e.set(p.tilt, p.ry, p.tilt)), _s.set(p.s, p.s * 1.4, p.s))));
+  zn.halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: SOFT, color: COLORS[k].hex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  zn.halo.position.set(Math.cos(zn.theta) * 7.5, 1.2, Math.sin(zn.theta) * 7.5); zn.halo.scale.setScalar(6);
+  [zn.stalks, zn.caps, zn.stems, zn.ferns].forEach(m => { m.castShadow = false; scene.add(m); });
+  scene.add(zn.halo);
+});
+function applyZone(zn) {
+  const h = zn.shown;
+  zn.stalkPts.forEach((p, n) => zn.stalks.setMatrixAt(n, _m.compose(_v.set(p.x, p.y, p.z), _q.setFromEuler(_e.set(p.tilt, p.ry, 0)), _s.set(1, Math.max(0.001, (1 - h) * (0.25 + p.s * 0.45)), 1))));
+  zn.stalks.instanceMatrix.needsUpdate = true;
+  zn.caps.count = zn.stems.count = Math.round(h * 22);
+  zn.ferns.count = Math.round(h * 40);
+  zn.halo.material.opacity = h * 0.22;
+}
+
+// drifting spore motes and optional mist
+function makePoints(n, size, colors, spread) {
+  const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), c = new THREE.Color();
+  for (let k = 0; k < n; k++) {
+    const th = rnd() * 6.28, r = Math.sqrt(rnd()) * spread;
+    pos.set([Math.cos(th) * r, rnd() * 5, Math.sin(th) * r], k * 3);
+    c.set(colors[k % colors.length]); col.set([c.r, c.g, c.b], k * 3);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return new THREE.Points(g, new THREE.PointsMaterial({ size, map: SOFT, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.85 }));
+}
+const motes = makePoints(200, 0.12, ['#35f2e0', '#b6ff6a', '#ff6ad5', '#9fd6ff'], 9.5);
+const mist = makePoints(60, 3.2, ['#b7d7ff'], 9); mist.material.opacity = 0; mist.material.blending = THREE.NormalBlending;
+scene.add(motes, mist);
+
+/* ============================== mushroom builder ============================== */
+const V = (x, y) => new THREE.Vector2(x, y);
+const CAP_PROFILES = [
+  [V(0, 0.62), V(0.35, 0.58), V(0.66, 0.45), V(0.88, 0.25), V(1, 0.02), V(0.86, -0.04), V(0.2, 0.02)],
+  [V(0, 1.05), V(0.38, 1.0), V(0.62, 0.78), V(0.74, 0.42), V(0.9, 0.04), V(0.8, 0.02), V(0.2, 0.32)],
+  [V(0, 0.26), V(0.3, 0.24), V(0.75, 0.13), V(1.15, 0.02), V(1.05, -0.03), V(0.2, 0.04)],
+  [V(0, 1.4), V(0.18, 1.12), V(0.42, 0.62), V(0.66, 0.18), V(0.78, 0), V(0.62, 0.04), V(0.15, 0.2)],
+  [V(0, 0.04), V(0.3, 0.1), V(0.62, 0.3), V(0.92, 0.6), V(1.02, 0.58), V(0.66, 0.2), V(0.2, -0.02)],
+];
+const capGeos = CAP_PROFILES.map(p => new THREE.LatheGeometry(p, 14));
+const stemGeos = [
+  new THREE.LatheGeometry([V(0, 0), V(0.075, 0), V(0.062, 0.35), V(0.056, 0.62), V(0.07, 0.7), V(0, 0.7)], 8),
+  new THREE.LatheGeometry([V(0, 0), V(0.18, 0), V(0.16, 0.2), V(0.135, 0.4), V(0.12, 0.45), V(0, 0.45)], 9),
+  new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.1, 0.2, 0), new THREE.Vector3(-0.07, 0.42, 0.04), new THREE.Vector3(0.04, 0.62, 0)]), 14, 0.065, 6),
+  new THREE.LatheGeometry([V(0, 0), V(0.06, 0), V(0.05, 0.3), V(0.06, 0.4), V(0, 0.4)], 7),
+];
+const STEM_TOP = [[0, 0.68], [0, 0.43], [0.04, 0.6], [0, 0.38]];
+const stemMat = new THREE.MeshStandardMaterial({ color: '#e9e2cf', roughness: 0.8, emissive: '#e9e2cf', emissiveIntensity: 0.04, flatShading: true });
+const spotTex = new Map();
+function speckleTexture(hex) {
+  if (spotTex.has(hex)) return spotTex.get(hex);
+  const c = document.createElement('canvas'); c.width = 128; c.height = 64;
+  const x = c.getContext('2d'); x.fillStyle = hex; x.fillRect(0, 0, 128, 64);
+  x.fillStyle = '#f7f1e2';
+  for (let k = 0; k < 26; k++) { x.beginPath(); x.arc((k * 37) % 128, 4 + ((k * 23) % 34), 2 + (k % 3), 0, 7); x.fill(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; spotTex.set(hex, t); return t;
+}
+function buildMushroom(ph) {
+  const group = new THREE.Group(), hex = COLORS[ph.color].hex, glow = ph.special === 1;
+  const capMat = new THREE.MeshStandardMaterial({
+    color: ph.speckled ? '#ffffff' : hex, map: ph.speckled ? speckleTexture(hex) : null,
+    emissive: hex, emissiveIntensity: glow ? 0.8 : 0.14, roughness: 0.55, flatShading: true, side: THREE.DoubleSide,
+  });
+  const caps = [];
+  const one = (s, x, z, ry) => {
+    const m = new THREE.Group();
+    const stem = new THREE.Mesh(stemGeos[ph.stem], stemMat); stem.castShadow = true; m.add(stem);
+    const cap = new THREE.Mesh(capGeos[ph.shape], capMat); cap.castShadow = true;
+    const [tx, ty] = STEM_TOP[ph.stem]; cap.position.set(tx, ty - 0.02, 0); cap.scale.setScalar(0.34); m.add(cap);
+    m.position.set(x, 0, z); m.scale.setScalar(s); m.rotation.y = ry;
+    group.add(m); caps.push(cap);
+  };
+  if (ph.stem === 3) { one(1, 0, 0, 0); one(0.72, 0.24, 0.1, 1.2); one(0.6, -0.2, 0.16, 2.5); }
+  else one(1, 0, 0, 0);
+  let halo = null;
+  if (glow) {
+    halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: SOFT, color: hex, transparent: true, opacity: 0.75, depthWrite: false, blending: THREE.AdditiveBlending }));
+    halo.position.y = 0.7; halo.scale.setScalar(1.8); group.add(halo);
+  }
+  const scent = [];
+  if (ph.special === 2) for (let k = 0; k < 6; k++) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: SOFT, color: new THREE.Color(hex).lerp(new THREE.Color('#ffffff'), 0.4), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+    s.userData.t = k / 6; group.add(s); scent.push(s);
+  }
+  group.userData = { caps, capMat, halo, scent, giant: ph.special === 3 ? 1.55 : 1 };
+  return group;
+}
+
+/* ============================== plots ============================== */
+const PLOT_POS = [[100, 5.2], [82, 5.2], [118, 5.2], [64, 5.2], [115, 3.1], [65, 3.1]];
+const plotObjs = state.plots.map((_, k) => {
+  const th = PLOT_POS[k][0] * Math.PI / 180, r = PLOT_POS[k][1];
+  const g = new THREE.Group(); g.position.set(Math.cos(th) * r, 0.02, Math.sin(th) * r);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.11, 6, 16).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#5a6069', roughness: 0.9, flatShading: true, emissive: '#ffb36b', emissiveIntensity: 0 }));
+  ring.position.y = 0.08; ring.castShadow = ring.receiveShadow = true; g.add(ring);
+  const soil = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.6, 0.14, 16), new THREE.MeshStandardMaterial({ color: '#4a3424', roughness: 1 }));
+  soil.position.y = 0.06; soil.receiveShadow = true; g.add(soil);
+  const slab = new THREE.Mesh(new THREE.DodecahedronGeometry(0.55, 0), new THREE.MeshStandardMaterial({ color: '#2b333e', roughness: 1, flatShading: true }));
+  slab.scale.set(1, 0.4, 1); slab.position.y = 0.16; slab.castShadow = true; g.add(slab);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.9, 5).translate(0, 0.45, 0), new THREE.MeshStandardMaterial({ color: '#2a2622' }));
+  post.position.set(0.5, 0, -0.55); g.add(post);
+  const bulb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.07, 0), new THREE.MeshStandardMaterial({ color: '#ffb36b', emissive: '#ffb36b', emissiveIntensity: 2.2 }));
+  bulb.position.set(0.5, 0.95, -0.55); g.add(bulb);
+  const glowS = new THREE.Sprite(new THREE.SpriteMaterial({ map: SOFT, color: '#ffb36b', transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }));
+  glowS.position.copy(bulb.position); glowS.scale.setScalar(0.7); g.add(glowS);
+  const hit = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 2.2, 8), new THREE.MeshBasicMaterial()); hit.visible = false; hit.position.y = 0.9; hit.userData.plot = k; g.add(hit);
+  scene.add(g);
+  return { g, ring, soil, slab, lamp: [post, bulb, glowS], hit, model: null, modelKey: null, pop: 0 };
+});
+const glowLights = Array.from({ length: 3 }, () => { const l = new THREE.PointLight('#ffffff', 0, 3.5, 1.8); scene.add(l); return l; });
+
+function syncPlot(k) {
+  const p = state.plots[k], o = plotObjs[k];
+  o.soil.visible = p.unlocked; o.slab.visible = !p.unlocked; o.lamp.forEach(m => (m.visible = p.unlocked));
+  o.soil.material.color.set(SOILS[p.soil].hex);
+  const key = p.plant ? JSON.stringify(p.plant.ph) + p.plant.plantedAt : null;
+  if (key !== o.modelKey) {
+    if (o.model) o.g.remove(o.model);
+    o.model = p.plant ? buildMushroom(p.plant.ph) : null;
+    if (o.model) { o.model.position.y = 0.12; o.g.add(o.model); }
+    o.modelKey = key;
+  }
+}
+
+// glimmer: a wild spore washes up in the pool every few minutes
+const glimmer = new THREE.Sprite(new THREE.SpriteMaterial({ map: SOFT, color: '#d9fff9', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+glimmer.position.set(0.6, 0.35, -7.2); glimmer.scale.setScalar(0.9);
+const glimmerHit = new THREE.Mesh(new THREE.SphereGeometry(0.9, 8, 6), new THREE.MeshBasicMaterial()); glimmerHit.visible = false; glimmerHit.position.copy(glimmer.position); glimmerHit.userData.glimmer = true;
+scene.add(glimmer, glimmerHit);
+function wildGenes() {
+  const base = Math.floor(Math.random() * 3);
+  return { c: [base, base], shape: [3, 4, 3, 4, 0, 1, 2][Math.floor(Math.random() * 7)], stem: Math.floor(Math.random() * 4), special: [0, 1, 2, 3, 3][Math.floor(Math.random() * 5)] };
+}
+function describeGenes(g) {
+  const col = g.c[0] === g.c[1] ? COLORS[g.c[0]].n : `${COLORS[g.c[0]].n}/${COLORS[g.c[1]].n}`;
+  return `${col} · ${SHAPES[g.shape]} · ${STEMS[g.stem]} stem${g.special ? ` · carries ${SPECIAL_TRAIT[g.special]}` : ''}`;
+}
+function addSpores(geno, label, n, hybrid = false) {
+  const key = JSON.stringify(geno);
+  const s = !hybrid && state.spores.find(s => !s.hybrid && JSON.stringify(s.geno) === key);
+  if (s) s.n += n; else state.spores.unshift({ geno, label, n, hybrid });
+}
+
+/* ============================== 2D icons (smooth, for DOM) ============================== */
+function icon(ph, size = 96, silhouette = false) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d'), S = size / 64;
+  x.scale(S, S);
+  const hex = COLORS[ph.color]?.hex || '#888', giant = ph.special === 3 ? 1.12 : 1;
+  x.translate(32, 58); x.scale(giant, giant); x.translate(-32, -58);
+  x.fillStyle = 'rgba(0,0,0,0.35)'; x.beginPath(); x.ellipse(32, 58, 14, 3, 0, 0, 7); x.fill();
+  const stemCol = silhouette ? '#1f3148' : '#ece5d3', capCol = silhouette ? '#26405c' : hex;
+  const stemH = [22, 14, 20, 15][ph.stem], stemW = [5, 11, 5, 4][ph.stem];
+  const drawOne = (cx, base, sc) => {
+    x.save(); x.translate(cx, base); x.scale(sc, sc);
+    x.fillStyle = stemCol; x.strokeStyle = stemCol;
+    if (ph.stem === 2) { x.lineWidth = 5; x.lineCap = 'round'; x.beginPath(); x.moveTo(0, 0); x.bezierCurveTo(6, -6, -6, -12, 1, -stemH); x.stroke(); }
+    else { x.beginPath(); x.moveTo(-stemW / 2 - 1, 0); x.lineTo(-stemW / 2, -stemH); x.lineTo(stemW / 2, -stemH); x.lineTo(stemW / 2 + 1, 0); x.closePath(); x.fill(); }
+    x.translate(ph.stem === 2 ? 1 : 0, -stemH + 1);
+    if (!silhouette && ph.special === 1) { x.shadowColor = hex; x.shadowBlur = 14; }
+    const gr = x.createLinearGradient(0, -24, 0, 2);
+    gr.addColorStop(0, silhouette ? capCol : new THREE.Color(hex).lerp(new THREE.Color('#ffffff'), 0.35).getStyle()); gr.addColorStop(1, capCol);
+    x.fillStyle = gr; x.beginPath();
+    if (ph.shape === 0) { x.ellipse(0, 0, 16, 13, 0, Math.PI, 0); x.closePath(); }
+    else if (ph.shape === 1) { x.moveTo(-14, 1); x.bezierCurveTo(-13, -8, -11, -22, 0, -22); x.bezierCurveTo(11, -22, 13, -8, 14, 1); x.closePath(); }
+    else if (ph.shape === 2) { x.moveTo(-21, 1); x.quadraticCurveTo(0, -12, 21, 1); x.closePath(); }
+    else if (ph.shape === 3) { x.moveTo(-12, 1); x.quadraticCurveTo(-6, -10, 0, -28); x.quadraticCurveTo(6, -10, 12, 1); x.closePath(); }
+    else { x.moveTo(-16, -9); x.quadraticCurveTo(0, 6, 16, -9); x.lineTo(13, -6); x.quadraticCurveTo(0, 4, -13, -6); x.closePath(); x.moveTo(-16, -9); x.quadraticCurveTo(-2, -4, 0, 1); x.quadraticCurveTo(2, -4, 16, -9); x.quadraticCurveTo(0, 2, -16, -9); }
+    x.fill(); x.shadowBlur = 0;
+    if (!silhouette && ph.speckled) { x.fillStyle = '#f7f1e2'; [[-7, -5], [4, -8], [9, -3], [-2, -11], [-11, -1]].forEach(([a, b]) => { x.beginPath(); x.arc(a * (ph.shape === 2 ? 1.2 : 0.8), b * (ph.shape === 2 ? 0.4 : 1) + (ph.shape === 4 ? 3 : 0), 1.6, 0, 7); x.fill(); }); }
+    x.restore();
+  };
+  if (ph.stem === 3) { drawOne(22, 58, 0.62); drawOne(43, 58, 0.55); }
+  drawOne(32, 58, ph.stem === 3 ? 0.8 : 1);
+  if (!silhouette && ph.special === 2) {
+    x.strokeStyle = new THREE.Color(hex).lerp(new THREE.Color('#ffffff'), 0.5).getStyle(); x.lineWidth = 1.4;
+    for (const dx of [-10, 0, 10]) { x.beginPath(); x.moveTo(32 + dx, 14); x.bezierCurveTo(28 + dx, 10, 36 + dx, 7, 32 + dx, 2); x.stroke(); }
+  }
+  return c;
+}
+function sporeIcon(s) {
+  const c = document.createElement('canvas'); c.width = c.height = 96;
+  const x = c.getContext('2d'), [a, b] = s.geno.c;
+  const blob = (col, start, end) => { x.fillStyle = col; x.beginPath(); x.moveTo(48, 50); x.arc(48, 50, 18, start, end); x.closePath(); x.fill(); };
+  x.shadowColor = COLORS[a].hex; x.shadowBlur = 16;
+  blob(COLORS[a].hex, Math.PI / 2, Math.PI * 1.5); blob(COLORS[b].hex, -Math.PI / 2, Math.PI / 2);
+  x.shadowBlur = 0; x.fillStyle = 'rgba(255,255,255,0.5)'; x.beginPath(); x.arc(42, 43, 5, 0, 7); x.fill();
+  if (s.hybrid) { x.fillStyle = '#0a1628'; x.font = '700 22px Fraunces, Georgia, serif'; x.textAlign = 'center'; x.fillText('?', 48, 58); }
+  return c;
+}
+
+/* ============================== UI ============================== */
+const $ = id => document.getElementById(id);
+const el = (tag, props = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(props)) { if (k === 'on') e.onclick = v; else if (k in e) e[k] = v; else e.setAttribute(k, v); } e.append(...kids.filter(k => k !== null && k !== false && k !== undefined)); return e; };
+const sheet = $('sheet'), panel = $('panel');
+let sheetFor = null;
+function closeSheet() { sheet.hidden = true; sheetFor = null; renderHud(); }
+function closePanel() { panel.hidden = true; renderHud(); }
+function head(title, sub, closer) {
+  return el('div', { className: 'head' }, el('div', {}, el('h2', { textContent: title }), sub ? el('div', { className: 'sub', textContent: sub }) : null),
+    el('button', { className: 'x', textContent: '×', 'aria-label': 'Close', on: closer }));
+}
+let toastT;
+function toast(msg, ms = 2600) { const t = $('toast'); t.textContent = msg; t.style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => (t.style.opacity = 0), ms); }
+
+function renderHud() {
+  $('dew-n').textContent = state.dew;
+  $('pedia-n').textContent = `${state.discovered.length}/${TOTAL}`;
+  for (const k of ['mist', 'moon']) {
+    const b = $('c-' + k), owned = state.owned[k];
+    b.classList.toggle('locked', !owned);
+    b.setAttribute('aria-pressed', owned && state.cond[k]);
+    b.lastChild.textContent = (k === 'mist' ? 'Mist' : 'Moonlight') + (owned ? '' : ` · ${PRICES[k]} dew`);
+  }
+  const notes = [
+    [() => state.stats.crosses > 0, 'Tap a ready mushroom and crossbreed it with its neighbour.'],
+    [() => state.stats.hybridPlanted > 0, 'Tap the empty plot and plant your hybrid spore.'],
+    [() => state.stats.hybridMatured > 0, 'Hybrids take a minute or two. Growth continues while you are away.'],
+    [() => state.stats.harvests > 0, 'Harvest a mushroom for dew and spores. It frees the plot.'],
+    [() => state.stats.bought > 0, 'Spend dew in Supplies. Soils and lamps unlock rare traits.'],
+    [() => state.discovered.length >= 10, 'Read the Fungepedia hints and chase a rare species.'],
+  ];
+  const next = notes.find(([done]) => !done());
+  $('note').hidden = !next || !sheet.hidden || !panel.hidden;
+  if (next) $('note').innerHTML = `<b>Keeper's note</b>${next[1]}`;
+}
+
+function conditionsText(c) {
+  return `${SOILS[c.soil].n} soil · ${c.moon ? 'moonlight' : 'lantern light'} · ${c.mist ? 'misted' : 'dry air'}`;
+}
+function openPlot(k) {
+  closePanel();
+  const p = state.plots[k], plant = p.plant, now = Date.now();
+  sheetFor = k; sheet.hidden = false;
+  const kids = [];
+  if (!p.unlocked) {
+    const price = PRICES.plots[k], prevLocked = state.plots.slice(0, k).some(q => !q.unlocked);
+    kids.push(head('Sealed plot', 'Rubble from the old grotto. Clear it to grow one more mushroom at a time.', closeSheet));
+    kids.push(el('div', { className: 'actions' }, el('button', {
+      className: 'primary', textContent: prevLocked ? 'Clear the nearer plot first' : `Clear rubble · ${price} dew`, disabled: prevLocked || state.dew < price,
+      on: () => { state.dew -= price; p.unlocked = true; state.stats.bought++; syncPlot(k); save(); toast('A new plot is ready'); openPlot(k); },
+    })));
+  } else if (!plant) {
+    kids.push(head(`Plot ${k + 1}`, `${SOILS[p.soil].n} soil · ${state.cond.moon ? 'moonlight on' : 'moonlight off'} · ${state.cond.mist ? 'mist on' : 'mist off'}`, closeSheet));
+    kids.push(el('h3', { textContent: 'Soil' }));
+    kids.push(el('div', { className: 'chips' }, ...state.owned.soils.map(id => el('button', {
+      className: 'chip', 'aria-pressed': p.soil === id, on: () => { p.soil = id; syncPlot(k); save(); openPlot(k); },
+    }, el('span', { className: 'sw', style: `background:${SOILS[id].hex}` }), SOILS[id].n))));
+    kids.push(el('h3', { textContent: 'Plant a spore' }));
+    const list = state.spores.filter(s => s.n > 0);
+    if (!list.length) kids.push(el('div', { className: 'muted', textContent: 'No spores. Harvest a grown mushroom, crossbreed two, or collect the glimmer in the pool.' }));
+    for (const s of list) {
+      kids.push(el('div', { className: 'row' }, sporeIcon(s),
+        el('div', {}, el('div', { className: 't', textContent: s.hybrid ? 'Hybrid spore' : `${s.label} spores` }), el('div', { className: 'd', textContent: s.hybrid ? s.label : describeGenes(s.geno) })),
+        el('div', {}, el('button', { className: 'primary', textContent: s.n > 1 ? `Plant · ${s.n}` : 'Plant', on: () => plantSpore(k, s) }))));
+    }
+  } else if (now < plant.plantedAt + plant.dur) {
+    const left = plant.plantedAt + plant.dur - now, pct = 1 - left / plant.dur;
+    kids.push(head(plant.hybridOf ? 'A hybrid is growing' : `${nameOf(plant.ph)} is growing`, plant.hybridOf || conditionsText(plant.cond), closeSheet));
+    kids.push(el('div', { className: 'bar' }, el('i', { style: `width:${Math.round(pct * 100)}%` })));
+    kids.push(el('div', { className: 'muted num', id: 'grow-left', textContent: `${fmtTime(left)} left · planted in ${conditionsText(plant.cond)}` }));
+    kids.push(el('div', { className: 'actions' }, el('button', {
+      textContent: `Mist it now · ${PRICES.boost} dew`, disabled: state.dew < PRICES.boost,
+      on: () => { state.dew -= PRICES.boost; plant.plantedAt = Date.now() - plant.dur; save(); closeSheet(); },
+    })));
+  } else {
+    const ph = plant.ph;
+    kids.push(head(nameOf(ph), plant.hybridOf || `Grown in ${conditionsText(plant.cond)}`, closeSheet));
+    if (plant.wasNew) kids.push(el('span', { className: 'new', textContent: 'New species' }));
+    const colNote = ph.speckled ? 'Speckled: carries two colour genes' : 'Pure colour';
+    kids.push(el('h3', { textContent: 'Traits' }));
+    kids.push(el('div', { className: 'traits' },
+      trait('Cap colour', COLORS[ph.color].n, plant.bg.c[0] !== plant.bg.c[1] ? `Genes ${COLORS[plant.bg.c[0]].n} + ${COLORS[plant.bg.c[1]].n}` : colNote),
+      trait('Cap shape', SHAPES[ph.shape]),
+      trait('Stem', STEMS[ph.stem]),
+      trait('Special', SPECIAL_TRAIT[ph.special], ph.hidden ? `Carries ${SPECIAL_TRAIT[ph.hidden]}, which ${NEED_TEXT[ph.hidden]}` : null)));
+    kids.push(el('div', { className: 'actions' }, el('button', { className: 'primary', textContent: `Harvest · +${dewFor(ph)} dew, 2 spores`, on: () => harvest(k) })));
+    kids.push(el('h3', { textContent: 'Crossbreed' }));
+    if (plant.crossed) kids.push(el('div', { className: 'muted', textContent: 'Its spores are spent on a cross. Harvest it to free the plot.' }));
+    else {
+      const partners = state.plots.map((q, j) => ({ q, j })).filter(({ q, j }) => j !== k && q.plant && !q.plant.crossed && Date.now() >= q.plant.plantedAt + q.plant.dur);
+      if (!partners.length) kids.push(el('div', { className: 'muted', textContent: 'Needs a second grown mushroom that has not been crossed yet.' }));
+      for (const { q, j } of partners) kids.push(el('div', { className: 'row' }, icon(q.plant.ph),
+        el('div', {}, el('div', { className: 't', textContent: nameOf(q.plant.ph) }), el('div', { className: 'd', textContent: `Plot ${j + 1}` })),
+        el('div', {}, el('button', { textContent: 'Preview cross', on: () => openCross(k, j) }))));
+    }
+  }
+  sheet.replaceChildren(...kids);
+  renderHud();
+}
+function trait(k, v, n) { return el('div', { className: 'trait' }, el('div', { className: 'k', textContent: k }), el('div', { className: 'v', textContent: v }), n ? el('div', { className: 'n', textContent: n }) : null); }
+
+function openCross(a, b) {
+  const A = state.plots[a].plant, B = state.plots[b].plant, o = crossOutcomes(A.bg, B.bg);
+  sheetFor = a; sheet.hidden = false;
+  const colorText = [...o.colors].map(([c, soil]) => soil ? `${COLORS[c].n} in ${SOILS[soil].n} soil` : COLORS[c].n).join(', ');
+  const specialText = o.specials.map(s => s ? `${SPECIAL_TRAIT[s]} (${NEED_TEXT[s]})` : 'None').join(' or ');
+  sheet.replaceChildren(
+    head('Crossbreed', 'Each trait comes from one parent or the other. The colour genes may blend.', closeSheet),
+    el('div', { className: 'cross' },
+      el('div', {}, icon(A.ph), el('div', { className: 'muted', textContent: nameOf(A.ph) })),
+      el('div', { className: 'times', textContent: '×' }),
+      el('div', {}, icon(B.ph), el('div', { className: 'muted', textContent: nameOf(B.ph) }))),
+    el('h3', { textContent: 'Possible offspring' }),
+    el('dl', { className: 'outcome' },
+      el('dt', { textContent: 'Colour' }), el('dd', { textContent: colorText }),
+      el('dt', { textContent: 'Cap' }), el('dd', { textContent: o.shapes.map(s => SHAPES[s]).join(' or ') }),
+      el('dt', { textContent: 'Stem' }), el('dd', { textContent: o.stems.map(s => STEMS[s]).join(' or ') }),
+      el('dt', { textContent: 'Special' }), el('dd', { textContent: specialText })),
+    el('p', { className: 'muted', textContent: o.fresh ? `Up to ${o.fresh} undiscovered species could come from this pair. Rarely, a trait mutates.` : 'Every likely result is already in your Fungepedia, though a trait sometimes mutates.' }),
+    el('div', { className: 'actions' },
+      el('button', { className: 'primary', textContent: 'Crossbreed · 1 hybrid spore', on: () => doCross(a, b) }),
+      el('button', { textContent: 'Back', on: () => openPlot(a) })));
+  renderHud();
+}
+function doCross(a, b) {
+  const A = state.plots[a].plant, B = state.plots[b].plant;
+  A.crossed = B.crossed = true;
+  addSpores(crossGenes(A.bg, B.bg), `${nameOf(A.ph)} × ${nameOf(B.ph)}`, 1, true);
+  state.stats.crosses++;
+  sporeBurst(plotObjs[a].g.position, COLORS[A.ph.color].hex); sporeBurst(plotObjs[b].g.position, COLORS[B.ph.color].hex);
+  save(); closeSheet();
+  const empty = state.plots.findIndex(p => p.unlocked && !p.plant);
+  toast(empty >= 0 ? `Hybrid spore collected. Plant it in plot ${empty + 1}.` : 'Hybrid spore collected. Harvest a mushroom to free a plot.');
+  renderHud();
+}
+function plantSpore(k, s) {
+  const p = state.plots[k], cond = { soil: p.soil, mist: state.cond.mist, moon: state.cond.moon };
+  const ph = express(s.geno, p.soil, state.cond);
+  s.n--; if (s.n <= 0) state.spores.splice(state.spores.indexOf(s), 1);
+  p.plant = { geno: s.geno, ph, bg: breedGenes(s.geno, ph), plantedAt: Date.now(), dur: growDuration(state.plantings), matured: false, crossed: false, wasNew: false, cond, hybridOf: s.hybrid ? `Hybrid of ${s.label}` : null };
+  state.plantings++;
+  if (s.hybrid) state.stats.hybridPlanted++;
+  syncPlot(k); save(); closeSheet(); renderHud();
+  toast(`Planted. Ready in ${fmtTime(p.plant.dur)}.`);
+}
+function harvest(k) {
+  const p = state.plots[k], plant = p.plant, gain = dewFor(plant.ph);
+  state.dew += gain; state.stats.harvests++;
+  addSpores(plant.bg, nameOf(plant.ph), 2);
+  plotObjs[k].pop = 0.35;
+  sporeBurst(plotObjs[k].g.position, COLORS[plant.ph.color].hex, 26);
+  setTimeout(() => { p.plant = null; syncPlot(k); save(); }, 350);
+  closeSheet(); toast(`+${gain} dew and 2 ${nameOf(plant.ph)} spores`); renderHud(); save();
+}
+
+function hints() {
+  const out = [], all = [];
+  for (let c = 0; c < COLORS.length; c++) for (let s = 0; s < SHAPES.length; s++) for (let sp = 0; sp < SPECIALS.length; sp++) {
+    const p = { color: c, shape: s, special: sp };
+    if (!state.discovered.includes(keyOf(p))) all.push(p);
+  }
+  const knownShapes = new Set(state.discovered.map(k => +k.split('-')[1]));
+  const pool = all.filter(p => knownShapes.has(p.shape)).sort((a, b) => (a.color * 7 + a.shape * 3 + a.special * 11 + state.discovered.length) % 13 - (b.color * 7 + b.shape * 3 + b.special * 11 + state.discovered.length) % 13);
+  const where = { 3: 'where Crimson and Azure blood mingle in acidic soil', 4: 'where Crimson meets Ivory in the ash', 5: 'where Azure meets Ivory deep in the peat' };
+  const how = { 1: 'glowing under the moon', 2: 'breathing sweet scent into the mist', 3: 'grown giant in wet peat' };
+  for (const p of pool) {
+    if (out.length >= 3) break;
+    const cn = COLORS[p.color].n.toLowerCase();
+    const bits = [`${/^[aeiou]/.test(cn) ? 'An' : 'A'} ${cn} ${SHAPES[p.shape].toLowerCase()}`];
+    if (p.special) bits.push(how[p.special]);
+    if (p.color >= 3) bits.push(where[p.color]);
+    if (bits.length > 1 || out.length < 1) out.push(bits.join(', ') + ', has been sighted in the old grotto.');
+  }
+  if (!state.discovered.some(k => +k.split('-')[1] >= 3)) out.push('Tall spires and trumpet caps grew here once. The falls still wash their spores into the pool.');
+  return out.slice(0, 3);
+}
+let pediaFilter = -1;
+function openPedia() {
+  closeSheet(); panel.hidden = false;
+  const kids = [head('Fungepedia', 'Every species that once grew in the grotto. Each discovery brings a corner of it back.', closePanel)];
+  kids.push(el('div', { className: 'progress num', textContent: `${state.discovered.length} / ${TOTAL}` }));
+  kids.push(el('h3', { textContent: 'Rumours' }));
+  hints().forEach(h => kids.push(el('div', { className: 'hint', textContent: h })));
+  kids.push(el('h3', { textContent: 'Species' }));
+  kids.push(el('div', { className: 'chips' },
+    el('button', { className: 'chip', 'aria-pressed': pediaFilter === -1, textContent: 'All', on: () => { pediaFilter = -1; openPedia(); } }),
+    ...COLORS.map((c, k) => el('button', { className: 'chip', 'aria-pressed': pediaFilter === k, on: () => { pediaFilter = k; openPedia(); } },
+      el('span', { className: 'sw', style: `background:${c.hex}` }), `${c.n} ${state.discovered.filter(s => +s.split('-')[0] === k).length}/20`))));
+  const cards = [];
+  for (let c = 0; c < COLORS.length; c++) {
+    if (pediaFilter >= 0 && c !== pediaFilter) continue;
+    for (let s = 0; s < SHAPES.length; s++) for (let sp = 0; sp < SPECIALS.length; sp++) {
+      const p = { color: c, shape: s, special: sp, stem: 0, speckled: false }, known = state.discovered.includes(keyOf(p));
+      cards.push(el('div', { className: 'card' + (known ? '' : ' unk') }, icon(p, 112, !known), el('div', { className: 't', textContent: known ? nameOf(p) : '???' })));
+    }
+  }
+  kids.push(el('div', { className: 'grid', style: 'margin-top:10px' }, ...cards));
+  panel.replaceChildren(...kids);
+  renderHud();
+}
+function openShop() {
+  closeSheet(); panel.hidden = false;
+  const buy = (price, fn) => () => { if (state.dew < price) return; state.dew -= price; state.stats.bought++; fn(); save(); openShop(); renderHud(); };
+  const row = (iconEl, t, d, price, owned, fn) => el('div', { className: 'row' }, iconEl,
+    el('div', {}, el('div', { className: 't', textContent: t }), el('div', { className: 'd', textContent: d })),
+    el('div', {}, owned ? el('span', { className: 'muted', textContent: 'Owned' }) : el('button', { className: 'primary', textContent: `${price} dew`, disabled: state.dew < price, on: buy(price, fn) })));
+  const sw = hex => { const c = document.createElement('canvas'); c.width = c.height = 96; const x = c.getContext('2d'); x.fillStyle = hex; x.beginPath(); x.ellipse(48, 56, 30, 16, 0, 0, 7); x.fill(); x.fillStyle = 'rgba(255,255,255,0.08)'; x.beginPath(); x.ellipse(40, 52, 12, 5, 0, 0, 7); x.fill(); return c; };
+  const lamp = (hex) => { const c = document.createElement('canvas'); c.width = c.height = 96; const x = c.getContext('2d'); x.shadowColor = hex; x.shadowBlur = 24; x.fillStyle = hex; x.beginPath(); x.arc(48, 46, 14, 0, 7); x.fill(); return c; };
+  panel.replaceChildren(
+    head('Supplies', 'Dew buys the conditions rare traits need. Breeding itself is always free.', closePanel),
+    el('div', { className: 'dew', style: 'margin-top:10px' }, el('i'), el('span', { className: 'num', textContent: state.dew }), ' dew'),
+    el('h3', { textContent: 'Conditions' }),
+    row(lamp('#9fd6ff'), 'Mist machine', 'Toggle mist over the plots. Scent only shows in mist.', PRICES.mist, state.owned.mist, () => { state.owned.mist = true; state.cond.mist = true; }),
+    row(lamp('#b7c9ff'), 'Moonlight lamp', 'Toggle cool moonlight. Glow only shows under the moon.', PRICES.moon, state.owned.moon, () => { state.owned.moon = true; state.cond.moon = true; }),
+    el('h3', { textContent: 'Soils' }),
+    ...['acid', 'ash', 'peat'].map(id => row(sw(SOILS[id].hex), `${SOILS[id].n} soil`, `${SOILS[id].desc} ${{ acid: 'Crimson × Azure genes can blend to Violet here.', ash: 'Crimson × Ivory genes can blend to Amber here.', peat: 'Azure × Ivory blend to Cyan here, and giants grow.' }[id]}`, SOILS[id].price, state.owned.soils.includes(id), () => state.owned.soils.push(id))),
+    el('h3', { textContent: 'Spores' }),
+    row(sporeIcon({ geno: { c: [0, 2] }, hybrid: true }), 'Wild spore', 'A random wild strain from beyond the falls, often a rare cap shape.', PRICES.wild, false, () => { const g = wildGenes(); addSpores(g, 'Wild spore', 1, true); toast('Wild spore added'); }),
+    el('p', { className: 'muted', textContent: 'A new wild spore also washes into the pool every few minutes, free.' }));
+  renderHud();
+}
+
+$('btn-pedia').onclick = () => (panel.hidden ? openPedia() : closePanel());
+$('btn-shop').onclick = () => (panel.hidden ? openShop() : closePanel());
+for (const k of ['mist', 'moon']) $('c-' + k).onclick = () => {
+  if (!state.owned[k]) return openShop();
+  state.cond[k] = !state.cond[k]; save(); renderHud();
+  toast(k === 'moon' ? (state.cond.moon ? 'Moonlight on. New plantings can glow.' : 'Lantern light') : (state.cond.mist ? 'Mist on. New plantings can carry scent.' : 'Mist off'));
+};
+addEventListener('keydown', e => { if (e.key === 'Escape') { closeSheet(); closePanel(); renderHud(); } });
+
+/* ============================== effects ============================== */
+const bursts = [];
+function sporeBurst(at, hex, n = 16) {
+  const mat = new THREE.SpriteMaterial({ map: SOFT, color: hex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  for (let k = 0; k < n; k++) {
+    const s = new THREE.Sprite(mat); s.position.set(at.x, at.y + 0.6, at.z); s.scale.setScalar(0.18);
+    s.userData = { v: new THREE.Vector3((Math.random() - 0.5) * 1.6, 1 + Math.random() * 2, (Math.random() - 0.5) * 1.6), life: 1.2 + Math.random() * 0.6 };
+    scene.add(s); bursts.push(s);
+  }
+}
+
+/* ============================== picking ============================== */
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+const targets = [...plotObjs.map(o => o.hit), glimmerHit];
+let hoverPlot = -1;
+function hitAt(ev) {
+  ndc.set(ev.clientX / innerWidth * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const h = ray.intersectObjects(targets, false).find(h => !h.object.userData.glimmer || state.glimmers > 0);
+  return h?.object.userData;
+}
+const cvs = renderer.domElement;
+cvs.addEventListener('pointermove', ev => {
+  const h = hitAt(ev);
+  hoverPlot = h?.plot ?? -1;
+  cvs.style.cursor = h ? 'pointer' : 'default';
+  parallax.set(ev.clientX / innerWidth - 0.5, ev.clientY / innerHeight - 0.5);
+});
+cvs.addEventListener('pointerdown', ev => {
+  const h = hitAt(ev);
+  if (!h) { closeSheet(); closePanel(); renderHud(); return; }
+  if (h.glimmer) {
+    state.glimmers--; if (state.glimmers < 2 && Date.now() - state.glimmerAt > GLIMMER_EVERY) state.glimmerAt = Date.now();
+    addSpores(wildGenes(), 'Wild spore from the falls', 1, true);
+    sporeBurst(glimmer.position.clone().setY(-0.2), '#d9fff9', 20);
+    toast('A wild spore washed in from the falls'); save(); renderHud();
+    return;
+  }
+  closePanel(); openPlot(h.plot);
+});
+
+/* ============================== camera ============================== */
+const parallax = new THREE.Vector2();
+const lookAt = new THREE.Vector3(0, 1.3, -1.6);
+function camBase() {
+  // portrait phones get a wider lens aimed nearer the plots; landscape sees the whole grotto
+  const a = innerWidth / innerHeight, portrait = a < 1;
+  camera.fov = portrait ? 50 : 42; camera.updateProjectionMatrix();
+  lookAt.set(0, portrait ? 0.6 : 1.3, portrait ? 2.2 : -1.6);
+  const k = a < 0.6 ? 0.95 : a < 1 ? 0.9 : a < 1.4 ? 1.15 : 1;
+  return new THREE.Vector3(0, lookAt.y + 8.9 * k, lookAt.z + 16.2 * k);
+}
+let base = camBase();
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); base = camBase(); });
+
+/* ============================== loop ============================== */
+const labels = plotObjs.map(() => { const d = el('div', { className: 'lbl' }); $('labels').append(d); return d; });
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clock = new THREE.Clock();
+let fogTarget = 0.042, lastSec = 0;
+const tmp = new THREE.Vector3();
+
+function checkMaturity(offline) {
+  const now = Date.now(), fresh = [];
+  state.plots.forEach((p, k) => {
+    const pl = p.plant;
+    if (!pl || pl.matured || now < pl.plantedAt + pl.dur) return;
+    pl.matured = true;
+    if (pl.hybridOf) state.stats.hybridMatured++;
+    const key = keyOf(pl.ph);
+    if (!state.discovered.includes(key)) { state.discovered.push(key); pl.wasNew = true; fresh.push(nameOf(pl.ph)); zones[pl.ph.color].target = zoneHealth(pl.ph.color); }
+    if (!offline) sporeBurst(plotObjs[k].g.position, COLORS[pl.ph.color].hex, pl.wasNew ? 30 : 12);
+  });
+  if (fresh.length) toast(offline ? `While you were away: ${fresh.join(', ')} ${fresh.length > 1 ? 'were' : 'was'} discovered` : `New species: ${fresh[0]}. The grotto stirs.`, 3600);
+  if (fresh.length || offline) { save(); renderHud(); }
+  if (sheetFor !== null && !sheet.hidden && fresh.length) openPlot(sheetFor);
+}
+function tickGlimmer() {
+  const now = Date.now();
+  while (state.glimmers < 2 && now - state.glimmerAt >= GLIMMER_EVERY) { state.glimmers++; state.glimmerAt += GLIMMER_EVERY; }
+  if (state.glimmers >= 2) state.glimmerAt = now;
+}
+
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime, now = Date.now();
+
+  // camera: gentle drift plus a touch of pointer parallax
+  const drift = reduced ? 0 : 1;
+  camera.position.set(base.x + Math.sin(t * 0.07) * 0.7 * drift + parallax.x * 0.8, base.y + Math.sin(t * 0.11) * 0.25 * drift - parallax.y * 0.4, base.z);
+  camera.lookAt(lookAt);
+
+  // conditions
+  const moon = state.cond.moon, mistOn = state.cond.mist;
+  lantern.intensity = lerp(lantern.intensity, moon ? 0.55 : 1.6, dt * 2);
+  moonLight.intensity = lerp(moonLight.intensity, moon ? 1.1 : 0.2, dt * 2);
+  hemi.intensity = lerp(hemi.intensity, moon ? 0.85 : 1.1, dt * 2);
+  fogTarget = mistOn ? 0.058 : 0.042;
+  scene.fog.density = lerp(scene.fog.density, fogTarget, dt * 2);
+  mist.material.opacity = lerp(mist.material.opacity, mistOn ? 0.1 : 0, dt * 2);
+
+  // healing zones ease toward their target
+  let repaint = false;
+  zones.forEach(zn => { if (Math.abs(zn.target - zn.shown) > 0.002) { zn.shown = lerp(zn.shown, zn.target, 1 - Math.exp(-dt * 1.2)); applyZone(zn); repaint = true; } });
+  if (repaint) paintFloor();
+
+  // plots
+  let glowIdx = 0;
+  plotObjs.forEach((o, k) => {
+    const p = state.plots[k], pl = p.plant;
+    o.ring.material.emissiveIntensity = lerp(o.ring.material.emissiveIntensity, hoverPlot === k ? 0.35 : 0, dt * 8);
+    if (o.model && pl) {
+      const g = clamp((now - pl.plantedAt) / pl.dur, 0, 1), e = smooth(0, 1, g), u = o.model.userData;
+      let s = lerp(0.15, 1, e) * u.giant;
+      if (o.pop > 0) { o.pop -= dt; s *= o.pop > 0.2 ? 1.2 : Math.max(0, o.pop / 0.2); }
+      o.model.scale.setScalar(s);
+      u.caps.forEach(c => c.scale.set(0.34 * lerp(0.5, 1, e), 0.34 * lerp(1.7, 1, e), 0.34 * lerp(0.5, 1, e)));
+      o.model.rotation.z = reduced ? 0 : Math.sin(t * 1.3 + k * 1.7) * 0.035;
+      o.model.rotation.x = reduced ? 0 : Math.sin(t * 0.9 + k) * 0.02;
+      const mature = g >= 1;
+      if (u.halo) u.halo.material.opacity = mature ? 0.6 + Math.sin(t * 2 + k) * 0.12 : 0.15 * e;
+      if (pl.ph.special === 1) u.capMat.emissiveIntensity = (mature ? 0.75 : 0.3) + Math.sin(t * 2 + k) * 0.12;
+      u.scent.forEach(sp => {
+        sp.userData.t = (sp.userData.t + dt * 0.25) % 1; const q = sp.userData.t;
+        sp.position.set(Math.sin(q * 9 + k) * 0.25, 0.8 + q * 1.4, Math.cos(q * 7) * 0.2);
+        sp.scale.setScalar(0.1 + q * 0.25); sp.material.opacity = mature ? Math.sin(q * Math.PI) * 0.6 : 0;
+      });
+      if (mature && pl.ph.special === 1 && glowIdx < glowLights.length) {
+        const l = glowLights[glowIdx++]; o.g.getWorldPosition(tmp); l.position.set(tmp.x, 1, tmp.z); l.color.set(COLORS[pl.ph.color].hex); l.intensity = 5;
+      }
+    }
+    // floating label
+    o.g.getWorldPosition(tmp); tmp.y += pl ? 1.25 * (o.model?.userData.giant || 1) : 0.9; tmp.project(camera);
+    const L = labels[k];
+    L.style.left = ((tmp.x + 1) / 2 * innerWidth) + 'px'; L.style.top = ((1 - tmp.y) / 2 * innerHeight) + 'px';
+    let text = '', cls = 'lbl';
+    if (!p.unlocked) { text = state.plots.slice(0, k).some(q => !q.unlocked) ? '' : `Clear · ${PRICES.plots[k]} dew`; cls += ' locked'; }
+    else if (!pl) text = 'Plant';
+    else if (now < pl.plantedAt + pl.dur) text = fmtTime(pl.plantedAt + pl.dur - now);
+    else { text = pl.wasNew ? 'New!' : pl.crossed ? 'Ready · crossed' : 'Ready'; cls += ' ready'; }
+    L.className = cls; L.textContent = text; L.hidden = !text;
+  });
+  for (let n = glowIdx; n < glowLights.length; n++) glowLights[n].intensity = 0;
+
+  // once a second: maturity, glimmer, open sheet timer
+  if (t - lastSec > 1) {
+    lastSec = t; checkMaturity(false); tickGlimmer();
+    const left = $('grow-left');
+    if (left && sheetFor !== null) { const pl = state.plots[sheetFor].plant; if (pl) left.textContent = `${fmtTime(pl.plantedAt + pl.dur - now)} left · planted in ${conditionsText(pl.cond)}`; }
+  }
+
+  // glimmer
+  glimmer.visible = state.glimmers > 0;
+  glimmer.material.opacity = 0.6 + Math.sin(t * 3) * 0.3;
+  glimmer.scale.setScalar(0.7 + Math.sin(t * 2.2) * 0.12 + state.glimmers * 0.15);
+
+  // waterfall, spray, motes, mist
+  fallMat.uniforms.t.value = t;
+  spray.forEach((s, k) => { s.userData.t = (s.userData.t + dt * 0.15) % 1; const q = s.userData.t; s.position.set(Math.sin(k * 2.4) * 1.4 * (0.4 + q), 0.2 + q * 1.8, -9.6 + q * 1.2); s.scale.setScalar(1 + q * 2.5); });
+  sprayMat.opacity = 0.14 + Math.sin(t * 0.7) * 0.03;
+  if (!reduced) {
+    const mp = motes.geometry.attributes.position;
+    for (let k = 0; k < mp.count; k++) { let y = mp.getY(k) + dt * (0.12 + (k % 5) * 0.03); if (y > 5.5) y = 0; mp.setY(k, y); mp.setX(k, mp.getX(k) + Math.sin(t * 0.5 + k) * dt * 0.05); }
+    mp.needsUpdate = true;
+    mist.rotation.y += dt * 0.02;
+  }
+  for (let k = bursts.length - 1; k >= 0; k--) {
+    const s = bursts[k], u = s.userData; u.life -= dt; u.v.y -= dt * 0.8; u.v.multiplyScalar(1 - dt * 0.9);
+    s.position.addScaledVector(u.v, dt); s.scale.setScalar(0.18 * Math.max(0, u.life));
+    if (u.life <= 0) { scene.remove(s); bursts.splice(k, 1); }
+  }
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+/* ============================== boot ============================== */
+state.plots.forEach((_, k) => syncPlot(k));
+zones.forEach((zn, k) => { zn.target = zoneHealth(k); zn.shown = zn.target; applyZone(zn); });
+paintFloor();
+tickGlimmer();
+checkMaturity(true);
+renderHud();
+camera.position.copy(base);
+frame();
+setTimeout(() => toast(firstVisit ? 'The grotto is fading. Breed its lost species to bring it back.' : 'Welcome back, keeper.', 3600), 500);
+</script>
+</body>
+</html>
