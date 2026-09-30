@@ -133,4 +133,4 @@ index.html            GENERATED. It's committed so the game stays a single file 
 
 | 22c-icons | Item icons painted smooth on a 128px canvas (soft gradient, gentle outline, gloss): every fish, bug, plant, find, crop, material and consumable, shaped by kind and by hints in its name (long, tall, shark, striped, whiskered fish; moths, beetles, snails; bells, lilies, daisies…). `ICON` keys for these become lazy getters (`paintItemIcon`), so nothing is drawn until shown; later pixel sprites for the same keys are ignored |
 
-UI style: styles.css ends with the Apple-style layer (SF Rounded via `ui-rounded`, frosted panels, `--i-*` colour tokens, segmented `.tabs`/`.seg`, `.iswitch` switches, `.group` inset lists, `.tiles` stat tiles). The apps menu uses inline SVG glyphs on gradient squircles (src/index.html). The journal and morning card keep their field-notes look.
+UI style: the cream, paper-and-yellow theme with Fredoka type (styles.css), plus cream-styled settings tiles (`.tiles`), switches (`.iswitch`), the visual-style picker (`.fxgrid`) and price pills (`.pp`). The journal and morning card use the field-notes look.
