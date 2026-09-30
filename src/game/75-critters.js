@@ -55,7 +55,7 @@ function critModel(k,v){const g=new T.Group(),p=[],e=(x,y,z,s=0.035)=>p.push(P(S
   const body=M(p);g.add(body);if(wings)g.add(...wings);if(tail)g.add(tail);g.userData={body,wings,tail};return g;}
 
 // ---- where each kind lives ----
-function critGround(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&!debrisAt(x,z)&&!objAt(x,z)&&!fixedAt(x,z)&&!riverSurf.has(k);}
+function critGround(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&!debrisAt(x,z)&&!objAt(x,z)&&!floorAt(x,z)&&!fixedAt(x,z)&&!riverSurf.has(k);}
 function nearTree(x,z,r){for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const d=debrisAt(x+dx,z+dz);if(d&&d.k==='tree')return[x+dx,z+dz];}return null;}
 function nearWater(x,z,r){for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)if(riverSurf.has(K(x+dx,z+dz)))return[x+dx,z+dz];return null;}
 function critHabitat(k,x,z){

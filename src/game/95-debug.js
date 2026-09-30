@@ -8,6 +8,8 @@ if(/[?&]debug\b/.test(location.search)){
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
       islands:islands.length,town:TOWN.name,buildings:TOWN.bld.filter(b=>!b.locked).map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
     hour:h=>{setHour(h);applyTime();},
+    floorTest:()=>{S.store.brick=3;S.store.chair=1;startPlace('brick',true);const [x,z]=[placing.x,placing.z];layFloorAt(x,z);const second=nearestValid(x,z,'brick');if(second)layFloorAt(...second);endPlace();
+      startPlace('chair',true);moveGhost(x,z);const ok=canPlace(x,z);if(ok)doPlace();endPlace();return{floor:!!floorAt(x,z)&&floorAt(x,z).k,obj:objAt(x,z)&&objAt(x,z).k,second:!!second&&!!floorAt(...second),left:S.store.brick||0,grassHidden:!!floorAt(x,z)};},
     map:(r=40)=>{const rows=[];for(let z=-r;z<=r;z++){let l='';for(let x=-r;x<=r;x++){const k=K(x,z),t=landMap.get(k),lv=lvlMap.get(k)||0,d=S.debris.find(q=>q.x===x&&q.z===z);
       l+=t==='bridge'?'=':riverSurf.has(k)?'~':!t?' ':t==='sand'?'.':t==='bridge'?'=':x===DOCK.x&&z===DOCK.z?'D':d&&d.k==='tree'?'T':t!=='grass'?t[0]:lv?String(lv):islMap.get(k)===0?',':'?';}rows.push(String(z).padStart(4)+' '+l.replace(/\s+$/,''));}return rows.join('\n');},
     cand:c=>{buildCandidate(c);return DS.map();},thumbs:(ks,sz=160)=>ks.map(k=>snapThumb(objGroup(k,ks.indexOf(k)+3,0.5),sz)),

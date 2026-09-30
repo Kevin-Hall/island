@@ -67,6 +67,7 @@ const isl=await ev(()=>DS.islands().find(i=>!i.grand&&i.id>0));await ev(id=>DS.v
 st=await ev(()=>DS.state());check(st.loc===isl.name,`visited ${isl.name}`);check(await ev(()=>DS.fish()),'started fishing');await wait(1500);
 await pg.screenshot({path:join(shots,'4-island.png')});await ev(()=>DS.fastTravel(0));await wait(1800);st=await ev(()=>DS.state());check(!st.sea,'fast-travelled home');
 const onLand=await ev(()=>DS.npcRouteOnLand());check(onLand===0,`villager sailboat route stays at sea (${onLand} samples on land)`);
+{const f=await ev(()=>DS.floorTest());check(f.floor==='brick'&&f.obj==='chair'&&f.second&&f.left===1,`laid brick paving by tapping and stood a chair on it (${JSON.stringify(f)})`);}
 // sail your own boat to the farthest regular island and make sure it never crosses land
 const far=await ev(()=>DS.islands().filter(i=>!i.grand&&i.id>0).sort((a,b)=>Math.hypot(b.x,b.z)-Math.hypot(a.x,a.z))[0]);
 check(await ev(id=>DS.sailTo(id),far.id),`set sail for ${far.name}`);let hits=0;for(let t=0;t<40;t++){await wait(500);const bt=await ev(()=>DS.boat());if(bt.onLand)hits++;if(!bt.sailing)break;}

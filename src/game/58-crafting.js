@@ -8,6 +8,7 @@ const RECIPES=[
   {out:['b','sprinkler',1],in:{'m:stone':4,'m:wood':2,'g:glass':1},lvl:3},{out:['b','planter',1],in:{'m:wood':3,'c:tulip':2},lvl:4},
   {out:['b','well',1],in:{'m:stone':8,'m:wood':4},lvl:4},{out:['b','beehive',1],in:{'m:wood':6,'p:honeyclover':2},lvl:4},
   {out:['b','picket',4],in:{'m:wood':2,'m:fiber':1},lvl:1},{out:['b','deck',4],in:{'m:wood':4},lvl:2},{out:['b','brick',4],in:{'m:stone':4},lvl:2},
+  {out:['b','cobble',4],in:{'m:stone':3},lvl:1},{out:['b','gravel',6],in:{'m:stone':2},lvl:1},{out:['b','flagstone',4],in:{'m:stone':5},lvl:2},{out:['b','terracotta',4],in:{'m:stone':3,'m:fiber':1},lvl:3},{out:['b','mossy',4],in:{'m:stone':3,'m:fiber':2},lvl:3},
   {out:['b','chair',1],in:{'m:wood':4},lvl:2},{out:['b','topiary',1],in:{'m:fiber':4,'m:wood':1,'m:stone':2},lvl:3},{out:['b','urn',1],in:{'m:stone':5,'m:fiber':2},lvl:3}];
 function haveOf(k){if(k.startsWith('c:')){const id=k.slice(2);let n=0;for(const q in S.inv)if(q.split('|')[0]===id)n+=S.inv[q];return n;}return S.inv[k]||0;}
 function takeOf(k,n){if(k.startsWith('c:')){const id=k.slice(2);const ks=Object.keys(S.inv).filter(q=>q.split('|')[0]===id).sort((a,b)=>priceOf(a)-priceOf(b));for(const q of ks){const t=Math.min(n,S.inv[q]);S.inv[q]-=t;n-=t;if(!S.inv[q])delete S.inv[q];if(!n)break;}return;}
@@ -32,7 +33,8 @@ function syncObjs(){
   // still decor is merged by material (plain, glowing…), so a big, busy island costs a handful of draw calls, not one per
   // piece; animated or sparkling pieces, and parts that can't merge (light pools, indexed shapes), stay as they are
   const pools=[],batches=new Map(),take=c=>c.isMesh&&!c.children.length&&!c.geometry.index&&c.geometry.attributes.color&&c.material&&c.material.vertexColors;
-  for(const o of S.objs){const g=objGroup(o.k,o.id,o.r||0);g.position.set(o.x,topY(o.x,o.z),o.z);g.userData.tile={x:o.x,z:o.z};g.userData.obj=o;
+  for(const m of floorMeshes(S.objs.filter(o=>isFloor(o.k))))objRoot.add(m); // floors: one instanced mesh per kind
+  for(const o of S.objs){if(isFloor(o.k))continue;const g=objGroup(o.k,o.id,o.r||0);g.position.set(o.x,topY(o.x,o.z),o.z);g.userData.tile={x:o.x,z:o.z};g.userData.obj=o;
     if(!g.userData.anim&&!g.userData.sparkle){g.updateMatrixWorld(true);const rest=[];
       for(const c of g.children){if(c.isMesh&&c.geometry===POOL_GEO){c.updateMatrixWorld(true);pools.push(c.matrixWorld.clone());continue;}/* lamp glows: one batch for all */if(take(c)){if(!batches.has(c.material))batches.set(c.material,[]);batches.get(c.material).push(c);}else rest.push(c);}
       if(!rest.length)continue;for(const c of g.children.slice())if(!rest.includes(c))g.remove(c);}
@@ -54,7 +56,10 @@ function recomputeBonuses(){bonus=new Map();hasWindmill=S.objs.some(o=>o.k==='wi
   for(const o of S.objs){if(o.k!=='beehive'&&o.k!=='clover')continue;
     for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++){const k=K(o.x+dx,o.z+dz);const b=bonus.get(k)||{bee:0,clover:0};if(o.k==='beehive')b.bee=1;else b.clover++;bonus.set(k,b);}}}
 function fixedAt(x,z){if(x>=HOUSE_AT.x&&x<=HOUSE_AT.x+1&&z>=HOUSE_AT.z&&z<=HOUSE_AT.z+1)return'house';if(x===BIN_AT.x&&z===BIN_AT.z)return'bin';return TOWN.fixed.get(K(x,z))||null;}
-const OBJ_IDX={src:null,len:-1,map:new Map()};
-function objAt(x,z){if(OBJ_IDX.src!==S.objs||OBJ_IDX.len!==S.objs.length){OBJ_IDX.map.clear();for(const o of S.objs)OBJ_IDX.map.set(K(o.x,o.z),o);OBJ_IDX.src=S.objs;OBJ_IDX.len=S.objs.length;}return OBJ_IDX.map.get(K(x,z))||null;}
+// two layers per tile: a floor (paving, decking…) and a piece standing on it
+const OBJ_IDX={src:null,len:-1,map:new Map(),fl:new Map()};
+function objIdx(){if(OBJ_IDX.src!==S.objs||OBJ_IDX.len!==S.objs.length){OBJ_IDX.map.clear();OBJ_IDX.fl.clear();for(const o of S.objs)(isFloor(o.k)?OBJ_IDX.fl:OBJ_IDX.map).set(K(o.x,o.z),o);OBJ_IDX.src=S.objs;OBJ_IDX.len=S.objs.length;}}
+function objAt(x,z){objIdx();return OBJ_IDX.map.get(K(x,z))||null;}
+function floorAt(x,z){objIdx();return OBJ_IDX.fl.get(K(x,z))||null;}
 const onHome=(x,z)=>islMap.get(K(x,z))===0;
 

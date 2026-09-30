@@ -47,15 +47,6 @@ function furnParts(kind,g,R,seed){let p=[];const paint=PAINT[seed%PAINT.length];
       g.add(M(p));const jet=M([P(CONE8,0xd8f2fc,0,0.13,0,0,0,0,0.1,0.26,0.1),P(ICO2,0xeaf8ff,0,0.26,0,0,0,0,0.12,0.08,0.12)],lumMat);jet.castShadow=false;jet.position.y=0.86;g.add(jet);
       const drops=M([0,1,2,3,4,5].map(i=>{const a=i/6*6.283;return P(ICO2,0xd8f2fc,Math.cos(a)*0.22,0,Math.sin(a)*0.22,0,0,0,0.05,0.07,0.05);}),lumMat);drops.castShadow=false;g.add(drops);
       g.userData.anim=t=>{jet.scale.y=0.85+Math.sin(t*6+seed)*0.15;const u=(t*0.9)%1;drops.position.y=0.95-u*u*0.2;drops.scale.setScalar(0.6+u*0.7);drops.rotation.y=t*0.4;};return true;}
-    case'deck':{// wooden decking: five boards, end to end with the neighbours
-      p.push(P(BOX,FW_D,0,0.03,0,0,0,0,1.0,0.04,1.0));for(let i=0;i<5;i++)p.push(P(BOX,[0xc8945e,0xb88452,0xc08c58][(i+seed)%3],-0.4+i*0.2,0.065,0,0,0,0,0.185,0.04,1.0));break;}
-    case'rug':{// a woven outdoor rug with a border and a pattern down the middle
-      const c=[[0xd86a5a,0xf4e6c8,0x3a7a8a],[0x5a8ac8,0xf4ecd8,0xe8a84a],[0x7aa85a,0xf8f0dc,0xd86a7a],[0xe8b04a,0xfaf2e0,0x9a6ac0]][seed%4];
-      p.push(P(BOX,c[0],0,0.015,0,0,0,0,0.94,0.02,0.94),P(BOX,c[1],0,0.022,0,0,0,0,0.78,0.02,0.78),P(BOX,c[0],0,0.028,0,0,0,0,0.6,0.02,0.6),P(BOX,c[2],0,0.034,0,0,Math.PI/4,0,0.3,0.02,0.3));
-      for(const sz of [-1,1])for(let i=0;i<6;i++)p.push(P(BOX,c[1],-0.4+i*0.16,0.012,sz*0.5,0,0,0,0.03,0.01,0.08));break;}
-    case'brick':{// herringbone-ish brick paving that joins up with its neighbours into one smooth square
-      p.push(P(BOX,0xd4c4aa,0,0.02,0,0,0,0,1.0,0.03,1.0));const bc=[0xc0694a,0xb05c40,0xca7858];
-      for(let r=0;r<4;r++){const z=-0.375+r*0.25,row=r%2?[[-0.385,0.21],[0,0.46],[0.385,0.21]]:[[-0.25,0.46],[0.25,0.46]];row.forEach(([x,w],c)=>p.push(P(BOX,bc[(r+c+seed)%3],x,0.04,z,0,0,0,w,0.03,0.22)));}break;}
     case'hammock':{// a striped hammock slung between two posts
       const c1=[0xe86a5a,0x5aa0d0,0xf2b84a][seed%3];
       for(const sx of [-0.5,0.5])p.push(P(CYL8,FW_D,sx,0.5,0,0,0,0,0.09,1.0,0.09),P(CYL8,FW,sx,1.02,0,0,0,0,0.11,0.04,0.11));

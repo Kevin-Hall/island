@@ -600,7 +600,7 @@ const BUILD={
   sprinkler:{name:'Sprinkler',   cost:350,  lvl:3, desc:'Waters the 8 tiles around it every dawn.'},
   beehive:  {name:'Beehive',     cost:700,  lvl:4, desc:'Crops within 2 tiles grow 30% faster.'},
   clover:   {name:'Lucky Clover',cost:1200, lvl:5, desc:'Rare variants are 50% likelier within 2 tiles.'},
-  stonepath:{name:'Stone Path',cost:0,lvl:1,multi:true,craft:true,desc:'Flat stepping stones for tidy walkways.'},
+  stonepath:{name:'Stepping Stones',cost:0,lvl:1,multi:true,craft:true,floor:true,desc:'Flat stepping stones across the grass.'},
   flowerpot:{name:'Flower Pot',cost:0,lvl:1,multi:true,craft:true,desc:'A terracotta pot of cheerful blooms.'},
   signpost: {name:'Signpost',cost:0,lvl:1,craft:true,rot:true,desc:'Points the way to adventure.'},
   haybale:  {name:'Hay Bale',cost:0,lvl:1,multi:true,craft:true,desc:'Smells like summer.'},
@@ -625,8 +625,16 @@ const BUILD={
   swing:    {name:'Garden Swing', cost:1500, lvl:5, rot:true, desc:'A seat that rocks gently in the breeze.'},
   fountain: {name:'Fountain',     cost:2500, lvl:5, desc:'A bubbling stone fountain. The heart of any plaza.'},
   picket:   {name:'Picket Fence', cost:0, lvl:1, multi:true, craft:true, rot:true, desc:'A white picket fence for neat garden edges.'},
-  deck:     {name:'Decking',      cost:0, lvl:2, multi:true, craft:true, rot:true, desc:'Wooden boards for a patio or a jetty-style floor.'},
-  brick:    {name:'Brick Paving', cost:0, lvl:2, multi:true, craft:true, desc:'Warm red bricks. Lay a few together for a plaza.'},
+  // floors: laid tile by tile under everything else, so furniture can stand on them (50c-floors)
+  deck:     {name:'Decking',      cost:0, lvl:2, multi:true, craft:true, floor:true, rot:true, desc:'Wooden boards for a patio or a boardwalk.'},
+  brick:    {name:'Brick Paving', cost:0, lvl:2, multi:true, craft:true, floor:true, desc:'Weathered red brick. Lay a few together for a plaza.'},
+  cobble:   {name:'Cobblestones', cost:0, lvl:1, multi:true, craft:true, floor:true, desc:'Grey cobbles for a proper village street.'},
+  gravel:   {name:'Gravel Path',  cost:0, lvl:1, multi:true, craft:true, floor:true, desc:'A raked gravel path. Crunchy underfoot.'},
+  flagstone:{name:'Flagstones',   cost:0, lvl:2, multi:true, craft:true, floor:true, desc:'Big warm stone slabs for a terrace.'},
+  terracotta:{name:'Terracotta Tiles',cost:0,lvl:3,multi:true,craft:true, floor:true, desc:'Square clay tiles, sunny and Mediterranean.'},
+  mossy:    {name:'Mossy Cobbles',cost:0, lvl:3, multi:true, craft:true, floor:true, desc:'Old cobbles with moss between them. Perfect for a secret garden.'},
+  marble:   {name:'Marble Checker',cost:60,lvl:4, multi:true, floor:true, desc:'Cream and slate marble squares. Very grand.'},
+  hextile:  {name:'Garden Tiles', cost:50, lvl:3, multi:true, floor:true, desc:'Blue and white painted tiles with little flowers.'},
   chair:    {name:'Garden Chair', cost:0, lvl:2, multi:true, craft:true, rot:true, desc:'A painted slatted chair with wide arms.'},
   topiary:  {name:'Topiary',      cost:0, lvl:3, multi:true, craft:true, desc:'Three clipped balls in a white planter.'},
   urn:      {name:'Stone Urn',    cost:0, lvl:3, multi:true, craft:true, desc:'A stone urn spilling over with flowers.'},
@@ -1807,10 +1815,10 @@ function buildGrass(isl,g){const B=BIOMES[isl.biome],per=GRASS_DENS[isl.biome]||
   isl.gHid=null;im.userData.per=per;im.renderOrder=3;im.receiveShadow=true;im.castShadow=false;im.frustumCulled=false;g.add(im);isl.gIM=im;}
 // hide the blades where something sits on the home island (tilled soil, the house, furniture)
 function refreshHomeGrass(){nearT=0;const isl=islands&&islands[0];if(!isl)return;if(isl.gIM){const im=isl.gIM,per=im.userData.per;if(!isl.gHid)isl.gHid=new Map();let ch=false;
-  for(const [k,i0] of isl.gIdx){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||objAt(x,z)||fixedAt(x,z)||TOWN.path.has(k));if(isl.gHid.get(k)===hide)continue;isl.gHid.set(k,hide);ch=true;
+  for(const [k,i0] of isl.gIdx){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||objAt(x,z)||floorAt(x,z)||fixedAt(x,z)||TOWN.path.has(k));if(isl.gHid.get(k)===hide)continue;isl.gHid.set(k,hide);ch=true;
     for(let j=0;j<per;j++){if(hide)im.setMatrixAt(i0+j,_m.makeScale(0,0,0));else im.setMatrixAt(i0+j,clumpMat(x,z,j));}}
   if(ch)im.instanceMatrix.needsUpdate=true;}
-  const dirty=new Set();if(!TOWN.fHid)TOWN.fHid=new Map();for(const [k,arr] of TOWN.flora){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||objAt(x,z)||fixedAt(x,z));if(TOWN.fHid.get(k)===hide)continue;TOWN.fHid.set(k,hide);
+  const dirty=new Set();if(!TOWN.fHid)TOWN.fHid=new Map();for(const [k,arr] of TOWN.flora){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||objAt(x,z)||floorAt(x,z)||fixedAt(x,z));if(TOWN.fHid.get(k)===hide)continue;TOWN.fHid.set(k,hide);
     for(const [fm,i,mat] of arr){fm.setMatrixAt(i,hide?_m.makeScale(0,0,0):_m.fromArray(mat));dirty.add(fm);}}for(const fm of dirty)fm.instanceMatrix.needsUpdate=true;}
 const TUFT_GEO=merge([P(BOX,0xffffff,0,0.07,0,0.25,0,0.2,0.035,0.16,0.05),P(BOX,0xdddddd,0.06,0.06,0.03,-0.2,0.6,-0.3,0.035,0.13,0.05),P(BOX,0xeeeeee,-0.05,0.05,-0.03,0.3,1.2,0.4,0.035,0.11,0.05),P(BOX,0xd4d4d4,0.02,0.05,-0.06,-0.35,2,0.1,0.035,0.1,0.05)]);
 const riverU={uTime:{value:0}};
@@ -1834,7 +1842,7 @@ function updateNearGrass(dt){
   let i=0;const Ri=Math.ceil(NEAR_R);
   for(let dz=-Ri;dz<=Ri;dz++)for(let dx=-Ri;dx<=Ri;dx++){const d=Math.hypot(dx,dz);if(d>NEAR_R)continue;const x=cx+dx,z=cz+dz,k=K(x,z);
     if(landMap.get(k)!=='grass')continue;const isl=islandAt(x,z);if(!isl||NEAR_SKIP.has(isl.biome)||(isl.home&&S.wild&&season()==='winter'))continue;
-    if(S.tiles[k]||TOWN.path.has(k)||(isl.blocked&&isl.blocked.has(k))||objAt(x,z)||fixedAt(x,z)||debrisAt(x,z))continue;
+    if(S.tiles[k]||TOWN.path.has(k)||(isl.blocked&&isl.blocked.has(k))||objAt(x,z)||floorAt(x,z)||fixedAt(x,z)||debrisAt(x,z))continue;
     const f=Math.min(1,(NEAR_R-d)/2.5),gc=groundCol(BIOMES[isl.biome].grass,x,z,isl.seed);
     for(let j=0;j<NEAR_PER&&i<NEAR_MAX;j++,i++){clumpMat(x,z,j);if(f<1)_m.scale(_nv.set(f,f,f));nearIM.setMatrixAt(i,_m);nearIM.setColorAt(i,_c.setHex(gc).offsetHSL(0,0,(hash(x*3+j,z*5-j)-0.5)*0.05));}}
   nearIM.count=i;nearIM.instanceMatrix.needsUpdate=true;nearIM.instanceColor.needsUpdate=true;}
@@ -2325,6 +2333,7 @@ function syncAllCrops(){for(const k of [...cropMeshes.keys()])syncCrop(k);for(co
    ========================================================= */
 function pickR2(a,R){return a[Math.floor(R()*a.length)];}
 function objGroup(kind,seed=1,rot=0){
+  if(isFloor(kind))return floorGroup(kind,rot);
   const g=new T.Group(),R=mulberry(seed*7919+13);let p=[];
   switch(kind){
     case'pine':case'oak':case'palm':g.add(M(treeParts(kind,R,0x9a9ea8)));break;
@@ -2481,15 +2490,6 @@ function furnParts(kind,g,R,seed){let p=[];const paint=PAINT[seed%PAINT.length];
       g.add(M(p));const jet=M([P(CONE8,0xd8f2fc,0,0.13,0,0,0,0,0.1,0.26,0.1),P(ICO2,0xeaf8ff,0,0.26,0,0,0,0,0.12,0.08,0.12)],lumMat);jet.castShadow=false;jet.position.y=0.86;g.add(jet);
       const drops=M([0,1,2,3,4,5].map(i=>{const a=i/6*6.283;return P(ICO2,0xd8f2fc,Math.cos(a)*0.22,0,Math.sin(a)*0.22,0,0,0,0.05,0.07,0.05);}),lumMat);drops.castShadow=false;g.add(drops);
       g.userData.anim=t=>{jet.scale.y=0.85+Math.sin(t*6+seed)*0.15;const u=(t*0.9)%1;drops.position.y=0.95-u*u*0.2;drops.scale.setScalar(0.6+u*0.7);drops.rotation.y=t*0.4;};return true;}
-    case'deck':{// wooden decking: five boards, end to end with the neighbours
-      p.push(P(BOX,FW_D,0,0.03,0,0,0,0,1.0,0.04,1.0));for(let i=0;i<5;i++)p.push(P(BOX,[0xc8945e,0xb88452,0xc08c58][(i+seed)%3],-0.4+i*0.2,0.065,0,0,0,0,0.185,0.04,1.0));break;}
-    case'rug':{// a woven outdoor rug with a border and a pattern down the middle
-      const c=[[0xd86a5a,0xf4e6c8,0x3a7a8a],[0x5a8ac8,0xf4ecd8,0xe8a84a],[0x7aa85a,0xf8f0dc,0xd86a7a],[0xe8b04a,0xfaf2e0,0x9a6ac0]][seed%4];
-      p.push(P(BOX,c[0],0,0.015,0,0,0,0,0.94,0.02,0.94),P(BOX,c[1],0,0.022,0,0,0,0,0.78,0.02,0.78),P(BOX,c[0],0,0.028,0,0,0,0,0.6,0.02,0.6),P(BOX,c[2],0,0.034,0,0,Math.PI/4,0,0.3,0.02,0.3));
-      for(const sz of [-1,1])for(let i=0;i<6;i++)p.push(P(BOX,c[1],-0.4+i*0.16,0.012,sz*0.5,0,0,0,0.03,0.01,0.08));break;}
-    case'brick':{// herringbone-ish brick paving that joins up with its neighbours into one smooth square
-      p.push(P(BOX,0xd4c4aa,0,0.02,0,0,0,0,1.0,0.03,1.0));const bc=[0xc0694a,0xb05c40,0xca7858];
-      for(let r=0;r<4;r++){const z=-0.375+r*0.25,row=r%2?[[-0.385,0.21],[0,0.46],[0.385,0.21]]:[[-0.25,0.46],[0.25,0.46]];row.forEach(([x,w],c)=>p.push(P(BOX,bc[(r+c+seed)%3],x,0.04,z,0,0,0,w,0.03,0.22)));}break;}
     case'hammock':{// a striped hammock slung between two posts
       const c1=[0xe86a5a,0x5aa0d0,0xf2b84a][seed%3];
       for(const sx of [-0.5,0.5])p.push(P(CYL8,FW_D,sx,0.5,0,0,0,0,0.09,1.0,0.09),P(CYL8,FW,sx,1.02,0,0,0,0,0.11,0.04,0.11));
@@ -2531,6 +2531,71 @@ function furnParts(kind,g,R,seed){let p=[];const paint=PAINT[seed%PAINT.length];
         P(BOX,0xf8f0e0,-0.18,-0.86,0,0,0,0,0.22,0.08,0.22)]);seat.position.y=1.4;g.add(seat);g.userData.anim=t=>{seat.rotation.x=Math.sin(t*1.3+seed)*0.12;};return true;}
     default:return false;}
   g.add(M(p));return true;}
+/* =========================================================
+   Floors: paving, decking and paths you lay tile by tile. A floor is its own layer under the decor (BUILD[k].floor),
+   so a tile can carry a floor AND a piece of furniture on top: a bench on the brick, a parasol on the decking.
+   Each floor is one flat slab with a painted, seamless texture (so neighbouring tiles join up into one surface and the
+   pattern softens into an even colour from far away, with mipmaps), and syncObjs draws every tile of a kind as one
+   instanced mesh: a whole plaza is a single draw call.
+   ========================================================= */
+const isFloor=k=>!!(BUILD[k]&&BUILD[k].floor);
+const FLOOR_GEO=new T.BoxGeometry(1,0.05,1);
+// the painters: each draws one 128px tile that repeats seamlessly (shapes crossing an edge are drawn again on the far side)
+function floorPaint(kind){const S0=128,cv=document.createElement('canvas');cv.width=cv.height=S0;const c=cv.getContext('2d'),R=mulberry(kind.length*977+kind.charCodeAt(0));
+  const wrap=(fn)=>{for(const ox of [-S0,0,S0])for(const oy of [-S0,0,S0]){c.save();c.translate(ox,oy);fn();c.restore();}};
+  const pick=a=>a[Math.floor(R()*a.length)];
+  const blob=(x,y,rx,ry,col,rot=0)=>wrap(()=>{c.fillStyle=col;c.beginPath();c.ellipse(x,y,rx,ry,rot,0,6.283);c.fill();});
+  const shade=(x,y,w,h,col,lip='rgba(255,255,255,0.12)',dark='rgba(0,0,0,0.14)')=>{c.fillStyle=col;c.fillRect(x,y,w,h);c.fillStyle=lip;c.fillRect(x,y,w,2);c.fillStyle=dark;c.fillRect(x,y+h-2,w,2);};
+  const speck=(n,cols,a=0.25)=>{c.globalAlpha=a;for(let i=0;i<n;i++){c.fillStyle=pick(cols);c.fillRect(R()*S0,R()*S0,1+R()*2,1+R()*2);}c.globalAlpha=1;};
+  switch(kind){
+    case'brick':{// soft, weathered red brick in a running bond
+      c.fillStyle='#857663';c.fillRect(0,0,S0,S0);const bc=['#86533f','#7c4c3b','#8e5c47','#80523f','#764838'];
+      for(let r=0;r<4;r++){const y=r*32,off=r%2?32:0;for(let i=-1;i<3;i++){const x=i*64+off;wrap(()=>shade(x+2,y+2,60,28,pick(bc)));}}speck(260,['#5a3a2a','#c89a80','#6a4a3a']);break;}
+    case'cobble':{// grey cobblestones set in dark joints
+      c.fillStyle='#57534e';c.fillRect(0,0,S0,S0);const sc=['#8e8a84','#9a968e','#817d78','#a4a09a','#8a867e'];
+      for(let r=0;r<5;r++)for(let i=0;i<5;i++){const x=i*25.6+(r%2?12.8:0)+(R()-0.5)*4,y=r*25.6+12.8+(R()-0.5)*4;blob(x,y,10.5+R()*1.5,10+R()*1.5,pick(sc),R()*3);}
+      speck(200,['#3e3a36','#c0bcb4']);break;}
+    case'mossy':{// old cobbles with moss creeping between them
+      c.fillStyle='#4a5a3a';c.fillRect(0,0,S0,S0);const sc=['#8a8a7e','#949486','#7e8074','#9c9c8e'];
+      for(let r=0;r<5;r++)for(let i=0;i<5;i++){const x=i*25.6+(r%2?12.8:0)+(R()-0.5)*5,y=r*25.6+12.8+(R()-0.5)*5;blob(x,y,10+R()*2,9+R()*2,pick(sc),R()*3);}
+      for(let i=0;i<14;i++)blob(R()*S0,R()*S0,4+R()*8,3+R()*6,pick(['#5f8a3a','#6e9a44','#557e34']),R()*3);speck(240,['#3a4a2a','#b0b8a0']);break;}
+    case'flagstone':{// big warm stone slabs, a little uneven
+      c.fillStyle='#7e7466';c.fillRect(0,0,S0,S0);const sc=['#ad9f86','#a2957c','#b4a78e','#9c8f78'];
+      const slabs=[[0,0,70,56],[70,0,58,40],[70,40,58,48],[0,56,50,72],[50,56,20,32],[50,88,78,40],[70,88,0,0]];
+      for(const [x,y,w,h] of slabs)if(w)wrap(()=>shade(x+2,y+2,w-4,h-4,pick(sc),'rgba(255,255,255,0.1)','rgba(0,0,0,0.1)'));speck(300,['#8a7e6a','#e0d6c0']);break;}
+    case'terracotta':{// square clay tiles with pale grout
+      c.fillStyle='#d2bea0';c.fillRect(0,0,S0,S0);const tc=['#a8674a','#a06046','#ae6f51','#9a5a42'];
+      for(let i=0;i<2;i++)for(let j=0;j<2;j++){const x=i*64+2,y=j*64+2;shade(x,y,60,60,pick(tc));c.fillStyle='rgba(255,220,190,0.08)';c.fillRect(x+8,y+8,44,44);}speck(160,['#7a4430','#e0a080']);break;}
+    case'gravel':{// a raked gravel path
+      c.fillStyle='#9a8f7a';c.fillRect(0,0,S0,S0);c.globalAlpha=0.9;for(let i=0;i<900;i++){c.fillStyle=pick(['#857a66','#ada18a','#776f60','#b8ad96','#8c8170']);const s=1.5+R()*2.5;c.fillRect(R()*S0,R()*S0,s,s);}c.globalAlpha=1;break;}
+    case'deck':{// wooden boards with dark gaps, grain and nails
+      const wc=['#a87a4c','#b08252','#9e7246','#b48a5a','#a47648'];for(let i=0;i<5;i++){const x=i*25.6;c.fillStyle=pick(wc);c.fillRect(x,0,25.6,S0);c.fillStyle='rgba(0,0,0,0.25)';c.fillRect(x,0,1.5,S0);
+        c.globalAlpha=0.18;c.fillStyle='#5a3a20';for(let g=0;g<3;g++)c.fillRect(x+5+R()*16,0,1,S0);c.globalAlpha=1;c.fillStyle='#4a3424';for(const y of [8,72])c.fillRect(x+11,y,3,3);}
+      c.fillStyle='rgba(0,0,0,0.22)';c.fillRect(0,S0*0.62,S0,1.5);break;}
+    case'marble':{// a checkerboard of cream and slate marble
+      for(let i=0;i<2;i++)for(let j=0;j<2;j++){c.fillStyle=(i+j)%2?'#666a72':'#d4cec0';c.fillRect(i*64,j*64,64,64);}
+      c.globalAlpha=0.25;c.strokeStyle='#9a968e';c.lineWidth=1;for(let v=0;v<6;v++){c.beginPath();let x=R()*S0,y=R()*S0;c.moveTo(x,y);for(let s=0;s<6;s++){x+=(R()-0.3)*18;y+=(R()-0.5)*18;c.lineTo(x,y);}c.stroke();}c.globalAlpha=1;
+      c.fillStyle='rgba(0,0,0,0.12)';c.fillRect(0,63,S0,2);c.fillRect(63,0,2,S0);c.fillRect(0,0,S0,1);c.fillRect(0,0,1,S0);break;}
+    case'hextile':{// blue and white garden tiles, a little flower on each
+      c.fillStyle='#c8ccc4';c.fillRect(0,0,S0,S0);for(let i=0;i<2;i++)for(let j=0;j<2;j++){const x=i*64+2,y=j*64+2;c.fillStyle='#dcdfd6';c.fillRect(x,y,60,60);const cx=x+30,cy=y+30;
+        c.fillStyle='#5a82b4';for(let k=0;k<4;k++){const a=k*Math.PI/2;c.beginPath();c.ellipse(cx+Math.cos(a)*11,cy+Math.sin(a)*11,9,5,a,0,6.283);c.fill();}c.fillStyle='#e8b44a';c.beginPath();c.arc(cx,cy,4,0,6.283);c.fill();
+        c.fillStyle='#5a82b4';for(const [dx,dy] of [[0,0],[60,0],[0,60],[60,60]]){c.beginPath();c.arc(x+dx,y+dy,7,0,6.283);c.fill();}}break;}
+    case'stonepath':{// stepping stones on the grass (the rest of the tile is see-through)
+      c.clearRect(0,0,S0,S0);const sc=['#9a968e','#8a867e','#aaa69e'];
+      for(const [x,y,r] of [[40,38,24],[90,44,20],[34,94,20],[84,96,24]]){c.fillStyle='rgba(0,0,0,0.25)';c.beginPath();c.ellipse(x+2,y+3,r,r*0.8,0.3,0,6.283);c.fill();c.fillStyle=pick(sc);c.beginPath();c.ellipse(x,y,r,r*0.8,0.3,0,6.283);c.fill();
+        c.fillStyle='rgba(255,255,255,0.14)';c.beginPath();c.ellipse(x-4,y-4,r*0.6,r*0.4,0.3,0,6.283);c.fill();}break;}
+  }
+  const tx=new T.CanvasTexture(cv);tx.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());tx.magFilter=T.NearestFilter;tx.minFilter=T.LinearMipmapLinearFilter;return tx;}
+const FLOOR_MAT={};
+function floorMat(kind){if(!FLOOR_MAT[kind]){const see=kind==='stonepath';FLOOR_MAT[kind]=toon({map:floorPaint(kind),transparent:see,alphaTest:see?0.5:0,depthWrite:!see});}return FLOOR_MAT[kind];}
+// a single tile (for thumbnails and the placement ghost)
+function floorGroup(kind,rot=0){const g=new T.Group(),m=new T.Mesh(FLOOR_GEO,floorMat(kind));m.position.y=0.005;m.receiveShadow=true;g.add(m);g.rotation.y=rot;g.userData.floor=true;return g;}
+// every floor tile on the island, one instanced mesh per kind
+function floorMeshes(list){const by=new Map();for(const o of list){if(!by.has(o.k))by.set(o.k,[]);by.get(o.k).push(o);}const out=[];
+  for(const [k,arr] of by){const im=new T.InstancedMesh(FLOOR_GEO,floorMat(k),arr.length);
+    arr.forEach((o,i)=>{_e.set(0,o.r||0,0);_q.setFromEuler(_e);_v.set(o.x,topY(o.x,o.z)+0.005,o.z);_s.set(1,1,1);_m.compose(_v,_q,_s);im.setMatrixAt(i,_m);});
+    im.receiveShadow=true;im.castShadow=false;im.frustumCulled=false;im.userData.noThumb=true;out.push(im);}
+  return out;}
 /* =========================================================
    The wild island. A game started by arriving at sea (S.scratch) begins on untouched land: forests, thickets, rocky
    ground under the cliffs and open meadows, laid out by noise from the world seed and the island's style. Nothing is
@@ -3442,6 +3507,7 @@ const RECIPES=[
   {out:['b','sprinkler',1],in:{'m:stone':4,'m:wood':2,'g:glass':1},lvl:3},{out:['b','planter',1],in:{'m:wood':3,'c:tulip':2},lvl:4},
   {out:['b','well',1],in:{'m:stone':8,'m:wood':4},lvl:4},{out:['b','beehive',1],in:{'m:wood':6,'p:honeyclover':2},lvl:4},
   {out:['b','picket',4],in:{'m:wood':2,'m:fiber':1},lvl:1},{out:['b','deck',4],in:{'m:wood':4},lvl:2},{out:['b','brick',4],in:{'m:stone':4},lvl:2},
+  {out:['b','cobble',4],in:{'m:stone':3},lvl:1},{out:['b','gravel',6],in:{'m:stone':2},lvl:1},{out:['b','flagstone',4],in:{'m:stone':5},lvl:2},{out:['b','terracotta',4],in:{'m:stone':3,'m:fiber':1},lvl:3},{out:['b','mossy',4],in:{'m:stone':3,'m:fiber':2},lvl:3},
   {out:['b','chair',1],in:{'m:wood':4},lvl:2},{out:['b','topiary',1],in:{'m:fiber':4,'m:wood':1,'m:stone':2},lvl:3},{out:['b','urn',1],in:{'m:stone':5,'m:fiber':2},lvl:3}];
 function haveOf(k){if(k.startsWith('c:')){const id=k.slice(2);let n=0;for(const q in S.inv)if(q.split('|')[0]===id)n+=S.inv[q];return n;}return S.inv[k]||0;}
 function takeOf(k,n){if(k.startsWith('c:')){const id=k.slice(2);const ks=Object.keys(S.inv).filter(q=>q.split('|')[0]===id).sort((a,b)=>priceOf(a)-priceOf(b));for(const q of ks){const t=Math.min(n,S.inv[q]);S.inv[q]-=t;n-=t;if(!S.inv[q])delete S.inv[q];if(!n)break;}return;}
@@ -3466,7 +3532,8 @@ function syncObjs(){
   // still decor is merged by material (plain, glowing…), so a big, busy island costs a handful of draw calls, not one per
   // piece; animated or sparkling pieces, and parts that can't merge (light pools, indexed shapes), stay as they are
   const pools=[],batches=new Map(),take=c=>c.isMesh&&!c.children.length&&!c.geometry.index&&c.geometry.attributes.color&&c.material&&c.material.vertexColors;
-  for(const o of S.objs){const g=objGroup(o.k,o.id,o.r||0);g.position.set(o.x,topY(o.x,o.z),o.z);g.userData.tile={x:o.x,z:o.z};g.userData.obj=o;
+  for(const m of floorMeshes(S.objs.filter(o=>isFloor(o.k))))objRoot.add(m); // floors: one instanced mesh per kind
+  for(const o of S.objs){if(isFloor(o.k))continue;const g=objGroup(o.k,o.id,o.r||0);g.position.set(o.x,topY(o.x,o.z),o.z);g.userData.tile={x:o.x,z:o.z};g.userData.obj=o;
     if(!g.userData.anim&&!g.userData.sparkle){g.updateMatrixWorld(true);const rest=[];
       for(const c of g.children){if(c.isMesh&&c.geometry===POOL_GEO){c.updateMatrixWorld(true);pools.push(c.matrixWorld.clone());continue;}/* lamp glows: one batch for all */if(take(c)){if(!batches.has(c.material))batches.set(c.material,[]);batches.get(c.material).push(c);}else rest.push(c);}
       if(!rest.length)continue;for(const c of g.children.slice())if(!rest.includes(c))g.remove(c);}
@@ -3488,8 +3555,11 @@ function recomputeBonuses(){bonus=new Map();hasWindmill=S.objs.some(o=>o.k==='wi
   for(const o of S.objs){if(o.k!=='beehive'&&o.k!=='clover')continue;
     for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++){const k=K(o.x+dx,o.z+dz);const b=bonus.get(k)||{bee:0,clover:0};if(o.k==='beehive')b.bee=1;else b.clover++;bonus.set(k,b);}}}
 function fixedAt(x,z){if(x>=HOUSE_AT.x&&x<=HOUSE_AT.x+1&&z>=HOUSE_AT.z&&z<=HOUSE_AT.z+1)return'house';if(x===BIN_AT.x&&z===BIN_AT.z)return'bin';return TOWN.fixed.get(K(x,z))||null;}
-const OBJ_IDX={src:null,len:-1,map:new Map()};
-function objAt(x,z){if(OBJ_IDX.src!==S.objs||OBJ_IDX.len!==S.objs.length){OBJ_IDX.map.clear();for(const o of S.objs)OBJ_IDX.map.set(K(o.x,o.z),o);OBJ_IDX.src=S.objs;OBJ_IDX.len=S.objs.length;}return OBJ_IDX.map.get(K(x,z))||null;}
+// two layers per tile: a floor (paving, decking…) and a piece standing on it
+const OBJ_IDX={src:null,len:-1,map:new Map(),fl:new Map()};
+function objIdx(){if(OBJ_IDX.src!==S.objs||OBJ_IDX.len!==S.objs.length){OBJ_IDX.map.clear();OBJ_IDX.fl.clear();for(const o of S.objs)(isFloor(o.k)?OBJ_IDX.fl:OBJ_IDX.map).set(K(o.x,o.z),o);OBJ_IDX.src=S.objs;OBJ_IDX.len=S.objs.length;}}
+function objAt(x,z){objIdx();return OBJ_IDX.map.get(K(x,z))||null;}
+function floorAt(x,z){objIdx();return OBJ_IDX.fl.get(K(x,z))||null;}
 const onHome=(x,z)=>islMap.get(K(x,z))===0;
 
 /* =========================================================
@@ -4167,7 +4237,7 @@ function afterSim(out,label){rebuildSoil();syncAllCrops();syncLife();for(const i
 function editTap(x,z){
   if(!onHome(x,z))return;
   const f=fixedAt(x,z);if(f){toast(f==='house'?'Your home stays put — upgrade it in Shop → Island.':'The shipping bin stays by your home.');return;}
-  const o=objAt(x,z);
+  const o=objAt(x,z)||floorAt(x,z); // the piece on top first, then the floor under it
   if(o){const B=BUILD[o.k];setAction(`<b>${B.name}</b>`,[
     {label:'Move',cls:'go',fn:()=>{removeObj(o);S.store[o.k]=(S.store[o.k]||0)+1;startPlace(o.k,true,o.r||0);}},
     {label:'Store',fn:()=>{removeObj(o);S.store[o.k]=(S.store[o.k]||0)+1;toast(`${B.name} put in storage. Place it again from the Shop.`);clearAction();}},
@@ -4183,15 +4253,17 @@ function removeObj(o){S.objs=S.objs.filter(q=>q!==o);syncObjs();SFX.place();}
    ========================================================= */
 let placing=null,ghost=null;
 const ghostMat=new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0.7,depthWrite:false});
-function canPlace(x,z){return onHome(x,z)&&isLand(x,z)&&!TOWN.path.has(K(x,z))&&landMap.get(K(x,z))!=='bridge'&&!debrisAt(x,z)&&!S.tiles[K(x,z)]&&!objAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z);}
-function nearestValid(x0,z0){let best=null,bd=1e9;for(const [x,z] of [...islands[0].grass,...islands[0].sand]){if(!canPlace(x,z))continue;const d=(x-x0)**2+(z-z0)**2;if(d<bd){bd=d;best=[x,z];}}return best;}
+// a floor needs a tile with no floor yet (a worn dirt path is fine: it paves over it); anything else needs no other piece,
+// and happily stands on a floor
+function canPlace(x,z,kind=placing&&placing.kind){const fl=isFloor(kind);return onHome(x,z)&&isLand(x,z)&&(fl||!TOWN.path.has(K(x,z)))&&landMap.get(K(x,z))!=='bridge'&&!debrisAt(x,z)&&!S.tiles[K(x,z)]&&!(fl?floorAt(x,z):objAt(x,z))&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z);}
+function nearestValid(x0,z0,kind){let best=null,bd=1e9;for(const [x,z] of [...islands[0].grass,...islands[0].sand]){if(!canPlace(x,z,kind))continue;const d=(x-x0)**2+(z-z0)**2;if(d<bd){bd=d;best=[x,z];}}return best;}
 function startPlace(kind,fromStore,rot=0){
   closeSheet();clearAction();
   if(S.sea||!onHome(Math.round(vil.x),Math.round(vil.z))){toast('Decor can only be placed on your home island.');return;}
-  const spot=nearestValid(Math.round(vil.x),Math.round(vil.z));
+  const spot=nearestValid(Math.round(vil.x),Math.round(vil.z),kind);
   if(!spot){toast('No free space left — expand your island in Shop → Island.');return;}
   placing={kind,fromStore,rot,x:spot[0],z:spot[1]};
-  ghost=objGroup(kind,S.nextId,rot);ghost.traverse(o=>{if(o.isMesh){if(o.userData.noThumb)o.visible=false;else{o.material=ghostMat;o.castShadow=false;}}});
+  ghost=objGroup(kind,S.nextId,rot);ghost.traverse(o=>{if(o.isMesh){if(o.userData.noThumb)o.visible=false;else if(isFloor(kind)){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=0.75;o.position.y+=0.02;}else{o.material=ghostMat;o.castShadow=false;}}});
   scene.add(ghost);moveGhost(spot[0],spot[1]);
 }
 function moveGhost(x,z){if(!placing)return;if(placing.bp){bpMove(x,z);return;}placing.x=x;placing.z=z;ghost.position.set(x,topY(x,z),z);ghost.rotation.y=placing.rot;
@@ -4200,13 +4272,16 @@ function placeBar(){const B=BUILD[placing.kind],n=S.store[placing.kind]||0,ok=ca
   const cost=placing.fromStore?`from storage (${n} left)`:`${B.cost} shells`;
   const btns=[];if(B.rot)btns.push({label:'Rotate',fn:()=>{placing.rot=(placing.rot+Math.PI/2)%(Math.PI*2);moveGhost(placing.x,placing.z);}});
   btns.push({label:'Place',cls:'go',disabled:!ok||(!placing.fromStore&&S.shells<B.cost),fn:doPlace},{label:'Done',fn:endPlace});
-  setAction(`<b>${B.name}</b> · ${cost}<br><small>Tap a tile to move it${ok?'':' — this spot is taken'}</small>`,btns);}
+  setAction(`<b>${B.name}</b> · ${cost}<br><small>${B.floor?'Tap a tile to lay one, or hold and drag to lay a path':'Tap a tile to move it'}${ok?'':' — this spot is taken'}</small>`,btns);}
 function doPlace(){const B=BUILD[placing.kind];const {x,z}=placing;if(!canPlace(x,z))return;
   if(placing.fromStore){S.store[placing.kind]--;if(!S.store[placing.kind])delete S.store[placing.kind];}
   else{if(S.shells<B.cost){SFX.no();return;}S.shells-=B.cost;}
   S.objs.push({id:S.nextId++,k:placing.kind,x,z,r:placing.rot});S.placedK=S.placedK||{};addXP(S.placedK[placing.kind]?1:6);S.placedK[placing.kind]=1;logEvent('decor',{name:BUILD[placing.kind].name.toLowerCase()});syncObjs();SFX.place();burst(x,topY(x,z)+0.2,z,0xf6eedb,12,1.4,0.08);walkTo(x,z);
   if(placing.fromStore?!S.store[placing.kind]:!B.multi){endPlace();toast(`${B.name} placed.`);return;}
-  const nxt=nearestValid(x,z);if(nxt)moveGhost(nxt[0],nxt[1]);else endPlace();}
+  if(B.floor){placeBar();return;}/* floors stay where you are laying them: tap or drag on to the next tile */
+  const nxt=nearestValid(x,z,placing.kind);if(nxt)moveGhost(nxt[0],nxt[1]);else endPlace();}
+// laying floors: a tap on a free tile lays one straight away (a tap on a taken one just moves the ghost there)
+function layFloorAt(x,z){if(!placing||!isFloor(placing.kind))return false;moveGhost(x,z);if(canPlace(x,z)){doPlace();return true;}return false;}
 function endPlace(){if(ghost){scene.remove(ghost);ghost=null;}placing=null;cursor.visible=false;cursorT=0;clearAction();}
 
 /* =========================================================
@@ -4217,7 +4292,7 @@ function endPlace(){if(ghost){scene.remove(ghost);ghost=null;}placing=null;curso
    Your driftseed is placed the same way (one tile, with open ground round it): it becomes the Island Heart.
    ========================================================= */
 const BP_NAME=k=>k==='tent'?'your tent':k==='seed'?'your driftseed':((HEART_UNLOCKS.find(u=>u.k===k)||{}).name||k).toLowerCase();
-function bpFree(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&onHome(x,z)&&farmQ(x,z)>1.15&&!debrisAt(x,z)&&!objAt(x,z)&&!fixedAt(x,z)&&!S.tiles[k]&&!findAt(x,z)&&!weedAt(x,z);}
+function bpFree(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&onHome(x,z)&&farmQ(x,z)>1.15&&!debrisAt(x,z)&&!objAt(x,z)&&!floorAt(x,z)&&!fixedAt(x,z)&&!S.tiles[k]&&!findAt(x,z)&&!weedAt(x,z);}
 // everything a tent brings with it: the tent (2x2) and the ground at its door, and the camp at its front-left (the
 // bonfire, a bench on either side of it) and the crate at its back-right. See houseGroup(0) in 50-objects.
 function campTiles(x,z){const t=[];for(let dx=0;dx<2;dx++)for(let dz=0;dz<3;dz++)t.push([x+dx,z+dz]);t.push([x-1,z+1],[x-1,z+2],[x-1,z+3],[x-2,z+2],[x-2,z+3],[x+2,z]);return t;}
@@ -4424,7 +4499,7 @@ function syncLife(){syncDebris();
   for(const w of S.weeds){const g=findGroup('weed',w.x*31+w.z*7+99);g.position.set(w.x,topY(w.x,w.z),w.z);lifeRoot.add(g);
     for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)weedSlow.add(K(w.x+dx,w.z+dz));}
 }
-const freeTile=(x,z)=>!TOWN.path.has(K(x,z))&&!debrisAt(x,z)&&!objAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z)&&!S.tiles[K(x,z)];
+const freeTile=(x,z)=>!TOWN.path.has(K(x,z))&&!debrisAt(x,z)&&!objAt(x,z)&&!floorAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z)&&!S.tiles[K(x,z)];
 function spawnFind(quiet,isl){if(!isl)return;const here=S.finds.filter(f=>islMap.get(K(f.x,f.z))===isl.id&&!forageOf(f));if(here.length>=5)return;
   if(S.finds.length>=70)S.finds.shift();
   const c=isl.sand.filter(([x,z])=>freeTile(x,z)&&!(isl.blocked&&isl.blocked.has(K(x,z))));if(!c.length)return;const [x,z]=pickR(c);
@@ -4627,7 +4702,7 @@ function critModel(k,v){const g=new T.Group(),p=[],e=(x,y,z,s=0.035)=>p.push(P(S
   const body=M(p);g.add(body);if(wings)g.add(...wings);if(tail)g.add(tail);g.userData={body,wings,tail};return g;}
 
 // ---- where each kind lives ----
-function critGround(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&!debrisAt(x,z)&&!objAt(x,z)&&!fixedAt(x,z)&&!riverSurf.has(k);}
+function critGround(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&!debrisAt(x,z)&&!objAt(x,z)&&!floorAt(x,z)&&!fixedAt(x,z)&&!riverSurf.has(k);}
 function nearTree(x,z,r){for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const d=debrisAt(x+dx,z+dz);if(d&&d.k==='tree')return[x+dx,z+dz];}return null;}
 function nearWater(x,z,r){for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)if(riverSurf.has(K(x+dx,z+dz)))return[x+dx,z+dz];return null;}
 function critHabitat(k,x,z){
@@ -5838,7 +5913,7 @@ function onTap(cx,cy){buzz(6);
   if(!S.sea&&S.boat&&!placing){const s=toScreen(S.boat.x,0.4,S.boat.z);if(Math.hypot(s[0]-cx,s[1]-cy)<Math.max(20,26*40/cam.dist)){boardBoat();return;}/* close taps only, so the ground right by the boat stays tappable */}
   if(!S.sea&&!placing&&(fireTap(cx,cy)||traderTap(cx,cy)||crateTap(cx,cy)))return;
   const hit=pick(cx,cy);
-  if(placing){if(hit)moveGhost(hit.x,hit.z);return;}
+  if(placing){if(hit&&!layFloorAt(hit.x,hit.z))moveGhost(hit.x,hit.z);return;}
   if(S.sea){clearAction();
     {const fl=floaterAt(cx,cy);if(fl){sailTo(fl.x,fl.z,null,'');return;}}
     if(hit){const isl=islandAt(hit.x,hit.z);if(isl){cursorAt(hit.x,hit.z);if(landDist(S.boat.x,S.boat.z,isl)<2.4)disembark(isl.id);
@@ -5887,12 +5962,14 @@ canvas.addEventListener('pointerdown',e=>{if(!$('apps').hidden)showApps(false);c
   if(ptrs.size===1){drag={sx:e.clientX,sy:e.clientY,lx:e.clientX,ly:e.clientY,moved:false};clearTimeout(holdT);
     if(!inside&&!S.sea&&!placing&&!fishing&&!caught&&S.mode!=='edit'){const x0=e.clientX,y0=e.clientY;
       holdT=setTimeout(()=>{if(!drag||drag.moved||ptrs.size!==1)return;const hit=pick(x0,y0);if(!hit)return;const mode=paintMode(hit.x,hit.z);if(!mode)return;
-        paint={mode,done:new Set(),n:0};drag.moved=true;drag.paint=true;SFX.ui();setAction(`<b>${PAINT_LBL[mode]}…</b> keep your finger down and drag across tiles`,[],'Farming');paintAt(hit.x,hit.z);},300);}}
+        paint={mode,done:new Set(),n:0};drag.moved=true;drag.paint=true;SFX.ui();setAction(`<b>${PAINT_LBL[mode]}…</b> keep your finger down and drag across tiles`,[],'Farming');paintAt(hit.x,hit.z);},300);}
+    else if(placing&&isFloor(placing.kind)){const x0=e.clientX,y0=e.clientY;holdT=setTimeout(()=>{if(!drag||drag.moved||ptrs.size!==1||!placing)return;drag.moved=true;drag.lay=true;const hit=pick(x0,y0);if(hit)layFloorAt(hit.x,hit.z);},250);}}
   else if(ptrs.size===2){clearTimeout(holdT);if(paint)endPaint();if(drag)drag.moved=true;pinch={d0:pinchDist(),z0:cam.dist};}
   if(!AC||!waves){ac();if(S.sound)startWaves();}});
 canvas.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===2&&pinch){cam.dist=clamp(pinch.z0*pinch.d0/pinchDist(),8,60);return;}
   if(paint&&ptrs.size===1){const hit=pick(e.clientX,e.clientY);if(hit)paintAt(hit.x,hit.z);return;}
+  if(drag&&drag.lay&&ptrs.size===1){const hit=pick(e.clientX,e.clientY);if(hit&&placing&&(hit.x!==placing.x||hit.z!==placing.z))layFloorAt(hit.x,hit.z);return;} // hold and drag to lay a path
   if(ptrs.size===1&&drag){const dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;
     if(!drag.moved&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>9)drag.moved=true;
     if(drag.moved&&!inside){cam.yaw-=dx*0.009;cam.pitch=clamp(cam.pitch+dy*0.005,0.35,1.2);}}});
@@ -6414,10 +6491,10 @@ if(S.acornNew){delete S.acornNew;setTimeout(()=>toast('Welcome to <b>Acornfield<
    Dev: the Dream Island. A usual-sized home island as a player who has put in the hours would have it: every level,
    the whole Islandex, every island charted and restored, the best rod and can, and the land laid out by hand, lined
    up on the grid the way people do in cosy island games:
-     - the villa under the northern cliff, a brick patio out front (picnic table, parasol, chairs) and a walled
+     - the villa under the northern cliff, a terracotta patio out front (picnic table, parasol, chairs) and a walled
        home garden of rare flowers with a rose arbor, a swing, a sundial and a bird bath
      - a brick plaza round the grown Island Heart, lamps at the corners and benches facing the tree
-     - Main Street: the shop, café, museum and hall in a row on a brick road, planters between them
+     - Main Street: the shop, café, museum and hall in a row on a cobbled road, planters between them
      - Cottage Row: six neighbours' cottages facing the sea, each with a picket-fenced garden of rare flowers
      - the orchard (peach, starfruit, dragon fruit) and a tea garden on decking by the pond
      - the farm across the river: two fenced fields, a row per crop, every one a legendary harvest (prismatic,
@@ -6451,7 +6528,7 @@ function dreamProgress(){
   for(const id of CROP_IDS){for(const v of VARIANTS)S.alm[id+'|'+v.id]=1;S.almR[id]=1;}
   for(const k of ['m:wood','m:stone','m:fiber'])S.inv[k]=(S.inv[k]||0)+60;
   // a few of each new piece in storage, to try placing
-  for(const k of ['picnic','parasol','chair','lamppost','rug','brick','deck','picket','topiary','urn','arbor','hammock','swing','fountain','birdbath','sundial','stall','mailbox'])S.store[k]=(S.store[k]||0)+(BUILD[k].multi?6:2);}
+  for(const k of ['picnic','parasol','chair','lamppost','rug','brick','deck','cobble','gravel','flagstone','terracotta','mossy','marble','hextile','stonepath','picket','topiary','urn','arbor','hammock','swing','fountain','birdbath','sundial','stall','mailbox'])S.store[k]=(S.store[k]||0)+(BUILD[k].multi?6:2);}
 
 // lay the island out on the real land (after boot has built it and grown the wild)
 function layDream(){dreamProgress();const D=DREAM,R=mulberry(D.seed^0x7e1),occ=new Set();let id=S.nextId||1;
@@ -6459,20 +6536,21 @@ function layDream(){dreamProgress();const D=DREAM,R=mulberry(D.seed^0x7e1),occ=n
   const bld=[D.home,...D.civic.map(c=>[c[1],c[2]]),...D.cottages];const inBld=(x,z)=>bld.some(([bx,bz])=>x>=bx&&x<=bx+1&&z>=bz&&z<=bz+1);
   for(const [x,z] of bld)for(let dx=0;dx<2;dx++)for(let dz=0;dz<2;dz++)occ.add(k2(x+dx,z+dz));occ.add(k2(...D.heart));occ.add(k2(...D.fire));
   occ.add(k2(D.home[0]+2,D.home[1]+1));occ.add(k2(D.home[0]-1,D.home[1]+1));/* the crate/bin spots by the villa */
-  let hi=false;const obj=(k,x,z,r=0,onSand)=>{if(!(onSand?land(x,z):grass(x,z))||occ.has(k2(x,z))||!hi&&(lvlMap.get(k2(x,z))||0)>0)return false;S.objs.push({id:id++,k,x,z,r});occ.add(k2(x,z));return true;};
+  // two layers, as in the game: floors (focc) and the pieces that stand on them (occ)
+  let hi=false;const focc=new Set();const obj=(k,x,z,r=0,onSand)=>{const fl=isFloor(k),o=fl?focc:occ;if(!(onSand?land(x,z):grass(x,z))||o.has(k2(x,z))||fl&&S.tiles[k2(x,z)]||!hi&&(lvlMap.get(k2(x,z))||0)>0)return false;S.objs.push({id:id++,k,x,z,r});o.add(k2(x,z));return true;};
   const pave=(k,x0,z0,x1,z1,r=0)=>{for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++)obj(k,x,z,r);};
-  const swap=(k,x,z,r=0)=>{const i=S.objs.findIndex(o=>o.x===x&&o.z===z);if(i>=0){S.objs.splice(i,1);occ.delete(k2(x,z));}return obj(k,x,z,r);}; // a piece standing on the paving
+  const swap=(k,x,z,r=0)=>{const i=S.objs.findIndex(o=>o.x===x&&o.z===z&&!isFloor(o.k));if(i>=0){S.objs.splice(i,1);occ.delete(k2(x,z));}return obj(k,x,z,r);}; // a piece standing on the paving
   const EX=['rainbow','crystal','golden','moonlit','giant'];
-  const crop=(t,x,z,v)=>{if(!grass(x,z)||occ.has(k2(x,z)))return;S.tiles[k2(x,z)]={w:1,crop:{t,p:1,v:v||EX[Math.floor(R()*EX.length)],m:0}};occ.add(k2(x,z));};
-  const dirt=(x,z)=>{if(grass(x,z)&&!occ.has(k2(x,z))){S.paths[k2(x,z)]=PATH_WEAR;occ.add(k2(x,z));}};
+  const crop=(t,x,z,v)=>{if(!grass(x,z)||occ.has(k2(x,z))||focc.has(k2(x,z)))return;S.tiles[k2(x,z)]={w:1,crop:{t,p:1,v:v||EX[Math.floor(R()*EX.length)],m:0}};occ.add(k2(x,z));};
+  const dirt=(x,z)=>{if(grass(x,z)&&!occ.has(k2(x,z))&&!focc.has(k2(x,z))){S.paths[k2(x,z)]=PATH_WEAR;occ.add(k2(x,z));}};
   const fenceRect=(k,x0,z0,x1,z1,gates=[])=>{const g=(x,z)=>gates.some(([a,b])=>a===x&&b===z);
     for(let x=x0;x<=x1;x++)for(const z of [z0,z1])if(!g(x,z))obj(k,x,z,0);for(let z=z0+1;z<z1;z++)for(const x of [x0,x1])if(!g(x,z))obj(k,x,z,Math.PI/2);};
   const lane=(a,b)=>{const p=landPath(a[0],a[1],b[0],b[1],{four:true,max:20000,block:(x,z)=>inBld(x,z)||occ.has(k2(x,z))&&!S.paths[k2(x,z)]&&!(x===b[0]&&z===b[1]),cost:(x,z)=>S.paths[k2(x,z)]?0.4:1});
     if(p)for(const [x,z] of p)dirt(x,z);};
   const [hx,hz]=D.home,[cx,cz]=D.heart;
 
-  // ---- the villa: a brick patio across the front and the walk down to the plaza; a hammock corner to the west
-  pave('brick',hx-4,hz+2,hx+3,hz+4);pave('brick',cx-1,hz+5,cx+1,cz-4);
+  // ---- the villa: a terracotta patio across the front and the walk down to the plaza; a hammock corner to the west
+  pave('terracotta',hx-4,hz+2,hx+3,hz+4);pave('brick',cx-1,hz+5,cx+1,cz-4);
   swap('parasol',hx-4,hz+2);swap('picnic',hx-3,hz+3,0);swap('urn',hx-4,hz+4);swap('topiary',hx-2,hz+2);swap('topiary',hx+2,hz+2);
   swap('urn',hx+3,hz+2);swap('chair',hx+3,hz+3,-Math.PI/2);swap('rug',hx+2,hz+4);swap('chair',hx+3,hz+4,-Math.PI/2);
   obj('mailbox',cx+2,hz+5);obj('lamppost',cx-2,hz+5);obj('swing',hx-6,hz+3,Math.PI/2);
@@ -6480,14 +6558,14 @@ function layDream(){dreamProgress();const D=DREAM,R=mulberry(D.seed^0x7e1),occ=n
   // ---- the home garden between the villa and the river: beds of every flower in its rarest forms, behind a rose arbor
   {const x0=hx+5,x1=hx+7,z0=hz-1,z1=hz+5;fenceRect('picket',x0-1,z0-1,x1+1,z1+1,[[x0+1,z1+1]]);obj('arbor',x0+1,z1+1,0);
     const fl=['tulip','lavender','moonflower','sunflower'];
-    for(let z=z0;z<=z1;z++)for(let x=x0;x<=x1;x++){if(x===x0+1){obj(z===z0+2?'sundial':z===z1-1?'birdbath':'stonepath',x,z);continue;}crop(fl[(z<z0+3?0:2)+(x<x0+1?0:1)],x,z,EX[(x+z+8)&3]);}}
+    for(let z=z0;z<=z1;z++)for(let x=x0;x<=x1;x++){if(x===x0+1){obj(z===z0+2||z===z1-1?'hextile':'gravel',x,z);if(z===z0+2)obj('sundial',x,z);if(z===z1-1)obj('birdbath',x,z);continue;}crop(fl[(z<z0+3?0:2)+(x<x0+1?0:1)],x,z,EX[(x+z+8)&3]);}}
   // ---- the plaza: brick round the Island Heart, wildflowers at its feet, benches facing it, lamps at the corners
   for(let x=cx-3;x<=cx+3;x++)for(let z=cz-3;z<=cz+5;z++){if(Math.abs(x-cx)<=1&&Math.abs(z-cz)<=1){if(x!==cx||z!==cz)obj('flowers',x,z);continue;}obj('brick',x,z);}
   for(const [dx,dz,r] of [[-3,-1,Math.PI/2],[-3,1,Math.PI/2],[3,-1,-Math.PI/2],[3,1,-Math.PI/2],[-1,3,Math.PI],[1,3,Math.PI]])swap('bench',cx+dx,cz+dz,r);
   for(const [dx,dz] of [[-3,-3],[3,-3],[-3,3],[3,3]])swap('lamppost',cx+dx,cz+dz);
   for(const [dx,dz] of [[-2,-3],[2,-3]])swap('urn',cx+dx,cz+dz);
-  // ---- Main Street: a brick road in front of the shop, café, museum and hall; planters and lamps between them
-  pave('brick',-26,10,cx+3,11);
+  // ---- Main Street: a cobbled road in front of the shop, café, museum and hall; planters and lamps between them
+  pave('cobble',-26,10,cx+3,11);obj('marble',-27,8);obj('marble',-27,9);
   for(const x of [-23,-19,-15]){obj('planter',x,9,0);obj('lamppost',x+1,9);obj('topiary',x,8);obj('topiary',x+1,8);}
   obj('lamppost',-11,9);obj('planter',-11,8,Math.PI/2);obj('signpost',-27,10,Math.PI/2);
   // the café's terrace at the west end of the street
@@ -6501,7 +6579,7 @@ function layDream(){dreamProgress();const D=DREAM,R=mulberry(D.seed^0x7e1),occ=n
   // ---- the orchard (fenced, in rows) and the tea garden on decking by the pond
   {fenceRect('fence',-27,-9,-15,-1,[[-21,-1]]);const tr=['peach','starfruit','peach','dragonfruit'];
     for(let z=-8;z<=-2;z+=2)for(let x=-26;x<=-16;x+=2)crop(tr[((z+8)/2)|0],x,z,EX[(x/2+z/2+40)%5|0]);
-    for(let z=-8;z<=-2;z++)obj('stonepath',-21,z);obj('beehive',-26,-7+6);obj('scarecrow',-16,-2);}
+    for(let z=-8;z<=-2;z++)obj('mossy',-21,z);obj('beehive',-26,-7+6);obj('scarecrow',-16,-2);}
   pave('deck',-24,2,-17,6);
   for(const [x,z] of [[-23,3],[-19,3]]){swap('picnic',x,z,0);swap('parasol',x-1,z);}
   swap('stall',-18,5,0);swap('rug',-22,5);swap('rug',-21,5);swap('chair',-24,6,0);swap('chair',-23,6,0);swap('lamppost',-17,2);swap('lamppost',-24,2);
@@ -6510,9 +6588,9 @@ function layDream(){dreamProgress();const D=DREAM,R=mulberry(D.seed^0x7e1),occ=n
   const X0=10,X1=22,Z0=-3,Z1=13,MID=16;
   {const veg=['turnip','radish','carrot','lettuce','onion','potato','cabbage','strawberry','wheat','peas','pepper','tomato','corn','eggplant','blueberry','pumpkin','watermelon','grape',
       'sunflower','tulip','lavender','moonflower','strawberry','wheat','pumpkin','corn','watermelon','blueberry'];
-    fenceRect('fence',X0-1,Z0-1,X1+1,Z1+1,[[X0-1,4],[MID,Z1+1],[MID,Z0-1]]);obj('stonepath',X0-1,4);obj('stonepath',MID,Z1+1);obj('stonepath',MID,Z0-1);let row=0;
+    fenceRect('fence',X0-1,Z0-1,X1+1,Z1+1,[[X0-1,4],[MID,Z1+1],[MID,Z0-1]]);obj('gravel',X0-1,4);obj('gravel',MID,Z1+1);obj('gravel',MID,Z0-1);let row=0;
     for(let z=Z0;z<=Z1;z++){const path=(z-Z0)%4===3;
-      for(let x=X0;x<=X1;x++){if(x===MID){obj('stonepath',x,z);continue;}if(!path)continue;
+      for(let x=X0;x<=X1;x++){if(x===MID){obj('gravel',x,z);continue;}if(!path)continue;
         if(x===X0&&z===8||x===X1&&z===0)obj('scarecrow',x,z);else if((x-X0)%3===1)obj('sprinkler',x,z);else dirt(x,z);}
       if(path)continue;for(const [a,b] of [[X0,MID-1],[MID+1,X1]]){const t=veg[row%veg.length],v=EX[row%EX.length];row++;for(let x=a;x<=b;x++)crop(t,x,z,v);}}
     for(let z=Z0;z<=Z1;z+=3)obj('beehive',X1+3,z);
@@ -6531,7 +6609,7 @@ function layDream(){dreamProgress();const D=DREAM,R=mulberry(D.seed^0x7e1),occ=n
   S.nextId=id;
   // ---- clear the wild off everything that's been made, and off the lowland meadows round the town and farm
   const kept=(x,z)=>(lvlMap.get(k2(x,z))||0)>0||x>=24||z>=15&&x>=-2||x<=-27;
-  const near=(x,z)=>{for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)if(occ.has(k2(x+a,z+b))||inBld(x+a,z+b))return true;return false;};
+  const near=(x,z)=>{for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)if(occ.has(k2(x+a,z+b))||focc.has(k2(x+a,z+b))||inBld(x+a,z+b))return true;return false;};
   S.debris=S.debris.filter(d=>!near(d.x,d.z)&&(kept(d.x,d.z)||d.k==='tree'&&R()<0.5&&d.x>-3&&d.x<9));
   S.weeds=[];S.finds=S.finds.filter(f=>!near(f.x,f.z));
   rebuildHome();}
@@ -6661,6 +6739,8 @@ if(/[?&]debug\b/.test(location.search)){
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
       islands:islands.length,town:TOWN.name,buildings:TOWN.bld.filter(b=>!b.locked).map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
     hour:h=>{setHour(h);applyTime();},
+    floorTest:()=>{S.store.brick=3;S.store.chair=1;startPlace('brick',true);const [x,z]=[placing.x,placing.z];layFloorAt(x,z);const second=nearestValid(x,z,'brick');if(second)layFloorAt(...second);endPlace();
+      startPlace('chair',true);moveGhost(x,z);const ok=canPlace(x,z);if(ok)doPlace();endPlace();return{floor:!!floorAt(x,z)&&floorAt(x,z).k,obj:objAt(x,z)&&objAt(x,z).k,second:!!second&&!!floorAt(...second),left:S.store.brick||0,grassHidden:!!floorAt(x,z)};},
     map:(r=40)=>{const rows=[];for(let z=-r;z<=r;z++){let l='';for(let x=-r;x<=r;x++){const k=K(x,z),t=landMap.get(k),lv=lvlMap.get(k)||0,d=S.debris.find(q=>q.x===x&&q.z===z);
       l+=t==='bridge'?'=':riverSurf.has(k)?'~':!t?' ':t==='sand'?'.':t==='bridge'?'=':x===DOCK.x&&z===DOCK.z?'D':d&&d.k==='tree'?'T':t!=='grass'?t[0]:lv?String(lv):islMap.get(k)===0?',':'?';}rows.push(String(z).padStart(4)+' '+l.replace(/\s+$/,''));}return rows.join('\n');},
     cand:c=>{buildCandidate(c);return DS.map();},thumbs:(ks,sz=160)=>ks.map(k=>snapThumb(objGroup(k,ks.indexOf(k)+3,0.5),sz)),

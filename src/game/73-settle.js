@@ -6,7 +6,7 @@
    Your driftseed is placed the same way (one tile, with open ground round it): it becomes the Island Heart.
    ========================================================= */
 const BP_NAME=k=>k==='tent'?'your tent':k==='seed'?'your driftseed':((HEART_UNLOCKS.find(u=>u.k===k)||{}).name||k).toLowerCase();
-function bpFree(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&onHome(x,z)&&farmQ(x,z)>1.15&&!debrisAt(x,z)&&!objAt(x,z)&&!fixedAt(x,z)&&!S.tiles[k]&&!findAt(x,z)&&!weedAt(x,z);}
+function bpFree(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&onHome(x,z)&&farmQ(x,z)>1.15&&!debrisAt(x,z)&&!objAt(x,z)&&!floorAt(x,z)&&!fixedAt(x,z)&&!S.tiles[k]&&!findAt(x,z)&&!weedAt(x,z);}
 // everything a tent brings with it: the tent (2x2) and the ground at its door, and the camp at its front-left (the
 // bonfire, a bench on either side of it) and the crate at its back-right. See houseGroup(0) in 50-objects.
 function campTiles(x,z){const t=[];for(let dx=0;dx<2;dx++)for(let dz=0;dz<3;dz++)t.push([x+dx,z+dz]);t.push([x-1,z+1],[x-1,z+2],[x-1,z+3],[x-2,z+2],[x-2,z+3],[x+2,z]);return t;}

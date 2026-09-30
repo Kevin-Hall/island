@@ -3,6 +3,7 @@
    ========================================================= */
 function pickR2(a,R){return a[Math.floor(R()*a.length)];}
 function objGroup(kind,seed=1,rot=0){
+  if(isFloor(kind))return floorGroup(kind,rot);
   const g=new T.Group(),R=mulberry(seed*7919+13);let p=[];
   switch(kind){
     case'pine':case'oak':case'palm':g.add(M(treeParts(kind,R,0x9a9ea8)));break;

@@ -92,7 +92,7 @@ function afterSim(out,label){rebuildSoil();syncAllCrops();syncLife();for(const i
 function editTap(x,z){
   if(!onHome(x,z))return;
   const f=fixedAt(x,z);if(f){toast(f==='house'?'Your home stays put — upgrade it in Shop → Island.':'The shipping bin stays by your home.');return;}
-  const o=objAt(x,z);
+  const o=objAt(x,z)||floorAt(x,z); // the piece on top first, then the floor under it
   if(o){const B=BUILD[o.k];setAction(`<b>${B.name}</b>`,[
     {label:'Move',cls:'go',fn:()=>{removeObj(o);S.store[o.k]=(S.store[o.k]||0)+1;startPlace(o.k,true,o.r||0);}},
     {label:'Store',fn:()=>{removeObj(o);S.store[o.k]=(S.store[o.k]||0)+1;toast(`${B.name} put in storage. Place it again from the Shop.`);clearAction();}},
@@ -108,15 +108,17 @@ function removeObj(o){S.objs=S.objs.filter(q=>q!==o);syncObjs();SFX.place();}
    ========================================================= */
 let placing=null,ghost=null;
 const ghostMat=new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0.7,depthWrite:false});
-function canPlace(x,z){return onHome(x,z)&&isLand(x,z)&&!TOWN.path.has(K(x,z))&&landMap.get(K(x,z))!=='bridge'&&!debrisAt(x,z)&&!S.tiles[K(x,z)]&&!objAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z);}
-function nearestValid(x0,z0){let best=null,bd=1e9;for(const [x,z] of [...islands[0].grass,...islands[0].sand]){if(!canPlace(x,z))continue;const d=(x-x0)**2+(z-z0)**2;if(d<bd){bd=d;best=[x,z];}}return best;}
+// a floor needs a tile with no floor yet (a worn dirt path is fine: it paves over it); anything else needs no other piece,
+// and happily stands on a floor
+function canPlace(x,z,kind=placing&&placing.kind){const fl=isFloor(kind);return onHome(x,z)&&isLand(x,z)&&(fl||!TOWN.path.has(K(x,z)))&&landMap.get(K(x,z))!=='bridge'&&!debrisAt(x,z)&&!S.tiles[K(x,z)]&&!(fl?floorAt(x,z):objAt(x,z))&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z);}
+function nearestValid(x0,z0,kind){let best=null,bd=1e9;for(const [x,z] of [...islands[0].grass,...islands[0].sand]){if(!canPlace(x,z,kind))continue;const d=(x-x0)**2+(z-z0)**2;if(d<bd){bd=d;best=[x,z];}}return best;}
 function startPlace(kind,fromStore,rot=0){
   closeSheet();clearAction();
   if(S.sea||!onHome(Math.round(vil.x),Math.round(vil.z))){toast('Decor can only be placed on your home island.');return;}
-  const spot=nearestValid(Math.round(vil.x),Math.round(vil.z));
+  const spot=nearestValid(Math.round(vil.x),Math.round(vil.z),kind);
   if(!spot){toast('No free space left — expand your island in Shop → Island.');return;}
   placing={kind,fromStore,rot,x:spot[0],z:spot[1]};
-  ghost=objGroup(kind,S.nextId,rot);ghost.traverse(o=>{if(o.isMesh){if(o.userData.noThumb)o.visible=false;else{o.material=ghostMat;o.castShadow=false;}}});
+  ghost=objGroup(kind,S.nextId,rot);ghost.traverse(o=>{if(o.isMesh){if(o.userData.noThumb)o.visible=false;else if(isFloor(kind)){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=0.75;o.position.y+=0.02;}else{o.material=ghostMat;o.castShadow=false;}}});
   scene.add(ghost);moveGhost(spot[0],spot[1]);
 }
 function moveGhost(x,z){if(!placing)return;if(placing.bp){bpMove(x,z);return;}placing.x=x;placing.z=z;ghost.position.set(x,topY(x,z),z);ghost.rotation.y=placing.rot;
@@ -125,12 +127,15 @@ function placeBar(){const B=BUILD[placing.kind],n=S.store[placing.kind]||0,ok=ca
   const cost=placing.fromStore?`from storage (${n} left)`:`${B.cost} shells`;
   const btns=[];if(B.rot)btns.push({label:'Rotate',fn:()=>{placing.rot=(placing.rot+Math.PI/2)%(Math.PI*2);moveGhost(placing.x,placing.z);}});
   btns.push({label:'Place',cls:'go',disabled:!ok||(!placing.fromStore&&S.shells<B.cost),fn:doPlace},{label:'Done',fn:endPlace});
-  setAction(`<b>${B.name}</b> · ${cost}<br><small>Tap a tile to move it${ok?'':' — this spot is taken'}</small>`,btns);}
+  setAction(`<b>${B.name}</b> · ${cost}<br><small>${B.floor?'Tap a tile to lay one, or hold and drag to lay a path':'Tap a tile to move it'}${ok?'':' — this spot is taken'}</small>`,btns);}
 function doPlace(){const B=BUILD[placing.kind];const {x,z}=placing;if(!canPlace(x,z))return;
   if(placing.fromStore){S.store[placing.kind]--;if(!S.store[placing.kind])delete S.store[placing.kind];}
   else{if(S.shells<B.cost){SFX.no();return;}S.shells-=B.cost;}
   S.objs.push({id:S.nextId++,k:placing.kind,x,z,r:placing.rot});S.placedK=S.placedK||{};addXP(S.placedK[placing.kind]?1:6);S.placedK[placing.kind]=1;logEvent('decor',{name:BUILD[placing.kind].name.toLowerCase()});syncObjs();SFX.place();burst(x,topY(x,z)+0.2,z,0xf6eedb,12,1.4,0.08);walkTo(x,z);
   if(placing.fromStore?!S.store[placing.kind]:!B.multi){endPlace();toast(`${B.name} placed.`);return;}
-  const nxt=nearestValid(x,z);if(nxt)moveGhost(nxt[0],nxt[1]);else endPlace();}
+  if(B.floor){placeBar();return;}/* floors stay where you are laying them: tap or drag on to the next tile */
+  const nxt=nearestValid(x,z,placing.kind);if(nxt)moveGhost(nxt[0],nxt[1]);else endPlace();}
+// laying floors: a tap on a free tile lays one straight away (a tap on a taken one just moves the ghost there)
+function layFloorAt(x,z){if(!placing||!isFloor(placing.kind))return false;moveGhost(x,z);if(canPlace(x,z)){doPlace();return true;}return false;}
 function endPlace(){if(ghost){scene.remove(ghost);ghost=null;}placing=null;cursor.visible=false;cursorT=0;clearAction();}
 

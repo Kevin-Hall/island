@@ -24,7 +24,7 @@ function onTap(cx,cy){buzz(6);
   if(!S.sea&&S.boat&&!placing){const s=toScreen(S.boat.x,0.4,S.boat.z);if(Math.hypot(s[0]-cx,s[1]-cy)<Math.max(20,26*40/cam.dist)){boardBoat();return;}/* close taps only, so the ground right by the boat stays tappable */}
   if(!S.sea&&!placing&&(fireTap(cx,cy)||traderTap(cx,cy)||crateTap(cx,cy)))return;
   const hit=pick(cx,cy);
-  if(placing){if(hit)moveGhost(hit.x,hit.z);return;}
+  if(placing){if(hit&&!layFloorAt(hit.x,hit.z))moveGhost(hit.x,hit.z);return;}
   if(S.sea){clearAction();
     {const fl=floaterAt(cx,cy);if(fl){sailTo(fl.x,fl.z,null,'');return;}}
     if(hit){const isl=islandAt(hit.x,hit.z);if(isl){cursorAt(hit.x,hit.z);if(landDist(S.boat.x,S.boat.z,isl)<2.4)disembark(isl.id);
@@ -73,12 +73,14 @@ canvas.addEventListener('pointerdown',e=>{if(!$('apps').hidden)showApps(false);c
   if(ptrs.size===1){drag={sx:e.clientX,sy:e.clientY,lx:e.clientX,ly:e.clientY,moved:false};clearTimeout(holdT);
     if(!inside&&!S.sea&&!placing&&!fishing&&!caught&&S.mode!=='edit'){const x0=e.clientX,y0=e.clientY;
       holdT=setTimeout(()=>{if(!drag||drag.moved||ptrs.size!==1)return;const hit=pick(x0,y0);if(!hit)return;const mode=paintMode(hit.x,hit.z);if(!mode)return;
-        paint={mode,done:new Set(),n:0};drag.moved=true;drag.paint=true;SFX.ui();setAction(`<b>${PAINT_LBL[mode]}…</b> keep your finger down and drag across tiles`,[],'Farming');paintAt(hit.x,hit.z);},300);}}
+        paint={mode,done:new Set(),n:0};drag.moved=true;drag.paint=true;SFX.ui();setAction(`<b>${PAINT_LBL[mode]}…</b> keep your finger down and drag across tiles`,[],'Farming');paintAt(hit.x,hit.z);},300);}
+    else if(placing&&isFloor(placing.kind)){const x0=e.clientX,y0=e.clientY;holdT=setTimeout(()=>{if(!drag||drag.moved||ptrs.size!==1||!placing)return;drag.moved=true;drag.lay=true;const hit=pick(x0,y0);if(hit)layFloorAt(hit.x,hit.z);},250);}}
   else if(ptrs.size===2){clearTimeout(holdT);if(paint)endPaint();if(drag)drag.moved=true;pinch={d0:pinchDist(),z0:cam.dist};}
   if(!AC||!waves){ac();if(S.sound)startWaves();}});
 canvas.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===2&&pinch){cam.dist=clamp(pinch.z0*pinch.d0/pinchDist(),8,60);return;}
   if(paint&&ptrs.size===1){const hit=pick(e.clientX,e.clientY);if(hit)paintAt(hit.x,hit.z);return;}
+  if(drag&&drag.lay&&ptrs.size===1){const hit=pick(e.clientX,e.clientY);if(hit&&placing&&(hit.x!==placing.x||hit.z!==placing.z))layFloorAt(hit.x,hit.z);return;} // hold and drag to lay a path
   if(ptrs.size===1&&drag){const dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;
     if(!drag.moved&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>9)drag.moved=true;
     if(drag.moved&&!inside){cam.yaw-=dx*0.009;cam.pitch=clamp(cam.pitch+dy*0.005,0.35,1.2);}}});
