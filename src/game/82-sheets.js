@@ -4,18 +4,18 @@
 const THUMB={};
 // renders a model to a small transparent PNG (data URL), from a close 3/4 view so the world-curve shader doesn't bend it
 let thumbRig=null;
-function snapThumb(g,size=48){
+function snapThumb(g,out=48){const size=out*2;
   if(!thumbRig||thumbRig.size!==size){if(thumbRig)thumbRig.trt.dispose();const ts=new T.Scene();ts.add(new T.HemisphereLight(0xfff4e0,0x6a6a8a,0.8));const dl=new T.DirectionalLight(0xffffff,0.8);dl.position.set(3,6,5);ts.add(dl);
     const cv=document.createElement('canvas');cv.width=cv.height=size;const cx=cv.getContext('2d');
     thumbRig={size,ts,tc:new T.OrthographicCamera(-1,1,1,-1,0.1,60),trt:new T.WebGLRenderTarget(size,size,{minFilter:T.NearestFilter,magFilter:T.NearestFilter}),buf:new Uint8Array(size*size*4),cv,cx,img:cx.createImageData(size,size)};}
   const {ts,tc,trt,buf,cv,cx,img}=thumbRig;
-  g.traverse(o=>{if(o.userData.noThumb)o.visible=false;});ts.add(g);const box=new T.Box3().setFromObject(g);const c=box.getCenter(new T.Vector3());const s=box.getSize(new T.Vector3());
+  g.traverse(o=>{if(o.userData.noThumb)o.visible=false;});ts.add(g);g.updateMatrixWorld(true);const box=new T.Box3();g.traverse(o=>{if(o.isMesh&&o.visible&&!o.userData.noThumb&&o.geometry){o.geometry.computeBoundingBox();box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));}});if(box.isEmpty())box.setFromObject(g);const c=box.getCenter(new T.Vector3());const s=box.getSize(new T.Vector3());
   const r=Math.max(s.x,s.y,s.z)*0.62;tc.left=-r;tc.right=r;tc.top=r;tc.bottom=-r;tc.position.set(c.x+2.2,c.y+1.55,c.z+2.2);tc.lookAt(c);tc.updateProjectionMatrix();tc.updateMatrixWorld();
   const old=glowMat.emissiveIntensity;glowMat.emissiveIntensity=0.4;renderer.setRenderTarget(trt);renderer.setClearColor(0x000000,0);renderer.clear();renderer.render(ts,tc);
   renderer.readRenderTargetPixels(trt,0,0,size,size,buf);renderer.setRenderTarget(null);renderer.setClearColor(0x000000,1);glowMat.emissiveIntensity=old;ts.remove(g);
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){const si=((size-1-y)*size+x)*4,di=(y*size+x)*4;img.data[di]=buf[si];img.data[di+1]=buf[si+1];img.data[di+2]=buf[si+2];img.data[di+3]=buf[si+3];}
-  cx.putImageData(img,0,0);return cv.toDataURL();}
-function makeThumbs(){const snap=g=>snapThumb(g,96);
+  cx.putImageData(img,0,0);const oc=document.createElement('canvas');oc.width=oc.height=out;const o2=oc.getContext('2d');o2.imageSmoothingEnabled=true;o2.imageSmoothingQuality='high';o2.drawImage(cv,0,0,out,out);return oc.toDataURL();}
+function makeThumbs(){const snap=g=>snapThumb(g,128);
   for(const k in BUILD)THUMB[k]=snap(objGroup(k,3,0));
   for(let i=0;i<4;i++)THUMB['house'+i]=snap(houseGroup(i));
   const isl=new T.Group();for(let x=-3;x<=3;x++)for(let z=-3;z<=3;z++){const d=Math.hypot(x*0.9,z);if(d<3.4){const m=new T.Mesh(BOX,toon({color:d<2.2?0x6aa843:0xe9d3a4}));m.scale.set(1,d<2.2?1:0.8,1);m.position.set(x,0,z);isl.add(m);}}
@@ -48,7 +48,7 @@ function renderSheet(){
         h+=`<div class="recipe ${lock?'lock':''}"><img src="${recipeIcon(r)}" alt=""><span class="grow"><span class="nm">${recipeName(r)}${r.out[2]>1?' ×'+r.out[2]:''}</span><div class="ing">${lock?`<span class="chip">Unlocks at Lv ${r.lvl}</span>`:ing}</div></span><button class="pbtn go" data-craft="${i}" ${canCraft(r)?'':'disabled'}>Craft</button></div>`;});
       h+='</div>';}
     else if(T0==='store'){const ks=Object.keys(S.store).filter(k=>S.store[k]>0);
-      if(!ks.length)h+=`<p class="note">Storage is empty. Crafted decor, villager gifts and decor you put away all end up here.</p>`;
+      if(!ks.length)h+=`<p class="note">Nothing here yet. Decor you craft, buy or put away waits here, ready to place.</p>`;
       else{const sel=ks.includes(sheet.sel)?sheet.sel:ks[0];const B=BUILD[sel];
         h+=`<div class="detail"><img src="${THUMB[sel]||''}" alt=""><div class="grow"><div class="nm">${B.name} ×${S.store[sel]}</div><div class="sub">${B.desc}</div><div class="acts"><button class="pbtn go" data-place="${sel}">Place it</button></div></div></div><div class="inv">`;
         for(const k of ks)h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img src="${THUMB[k]||''}" alt=""><span class="n">${S.store[k]}</span></button>`;h+='</div>';}}
@@ -63,7 +63,7 @@ function renderSheet(){
       else{const sel=ks.includes(sheet.sel)?sheet.sel:ks[0],I=itemInfo(sel),t=sel.split('|')[0],mat=sel.startsWith('m:')||sel.startsWith('x:');
         const inOrder=S.orders.some(o=>!o.done&&(o.k===sel||o.k==='c:'+t));const wish=npcs.find(n=>{const d=S.npc[n.i];return d&&d.wish&&!d.wish.done&&d.wish.day===S.day&&invFor(d.wish.k)===sel;});
         const desc=(I&&I.desc)||(sel.includes('|')?(VAR[varOf(sel)].name?`A rare ${VAR[varOf(sel)].name.toLowerCase()} harvest!`:'Fresh from your farm.'):I&&I.bio?'Found around '+I.bio.map(b=>bioLabel(b)).join(', ')+'.':'');
-        h+=`<div class="detail"><img class="v-${varOf(sel)}" src="${iconOf(sel)}" alt=""><div class="grow"><div class="nm">${nameOf(sel)} ×${S.inv[sel]}</div><div class="sub">${desc}<br>${fmt(priceOf(sel))} shells each${S.demand===t?' · in demand today':''}${inOrder?' · wanted for an order':''}${wish?' · '+wish.name+' wants this!':''}</div>
+        h+=`<div class="detail"><img class="v-${varOf(sel)}" src="${iconOf(sel)}" alt=""><div class="grow"><div class="nm">${nameOf(sel)} ×${S.inv[sel]}</div><div class="sub">${desc}<br><span class="pp">${shellHTML}${fmt(priceOf(sel))}</span>${S.demand===t?' <span class="pp hot">In demand</span>':''}${inOrder?' · wanted for an order':''}${wish?' · '+wish.name+' wants this!':''}</div>
           <div class="acts">${sel.startsWith('x:')?`<button class="pbtn go" data-use="${sel}">Use</button>`:''}${sheet.ctx==='trader'||!S.scratch&&!sheet.ctx?`<button class="pbtn" data-sell="${sel}">Sell 1</button>${S.inv[sel]>1?`<button class="pbtn" data-sellk="${sel}">Sell all ×${S.inv[sel]}</button>`:''}`:sheet.ctx==='crate'&&!sel.startsWith('x:')?`<button class="pbtn" data-crate="${sel}">Put 1 in</button>${S.inv[sel]>1?`<button class="pbtn" data-cratek="${sel}">Put all ×${S.inv[sel]}</button>`:''}`:''}</div></div></div><div class="inv">`;
         for(const k of ks){const v=varOf(k);h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img class="v-${v}" src="${iconOf(k)}" alt="">${v!=='normal'?`<span class="dot" style="background:${{giant:'#6ab84a',moonlit:'#9ab8ff',golden:'#f5c542',crystal:'#7ad8f0',rainbow:'#f39ab0'}[v]}"></span>`:''}<span class="n">${S.inv[k]}</span></button>`;}
         const pad=Math.max(0,20-ks.length);for(let i=0;i<pad;i++)h+=`<div class="cell empty"></div>`;h+='</div>';}}}

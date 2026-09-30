@@ -305,7 +305,28 @@ function icMisc(x,k){switch(k){
       icLeaf(x,40,64,20,8,-0.6,'#5aa844');icLeaf(x,50,66,18,7,-1.2,'#6ab84a');return;
     case'x:bait':icFill(x,q=>{q.beginPath();q.rect(26,40,48,48);},'#a8b0bc',{gloss:[36,56,4,14]});icFill(x,icEll(50,40,24,7),'#6a4a30',{lw:1.8});
       x.lineCap='round';for(const [w,c] of [[9,'#c86a7a'],[6,'#f08a9a']]){x.strokeStyle=c;x.lineWidth=w;x.beginPath();x.moveTo(40,40);x.bezierCurveTo(30,20,56,18,54,30);x.bezierCurveTo(52,40,70,34,64,22);x.stroke();}return;
-    case'shell':return icShellFan(x,'#f7b8c4','#e088a0');}}
+    case'shell':return icShellFan(x,'#f7b8c4','#e088a0');
+    case'star':icFill(x,q=>{q.beginPath();for(let i=0;i<10;i++){const a=-1.5708+i*0.6283,r=i%2?19:42;q.lineTo(50+Math.cos(a)*r,54+Math.sin(a)*r);}q.closePath();},'#ffcc2e',{gloss:[42,40,10,7,-0.4],lw:3});return;
+    case'heart':icFill(x,q=>{q.beginPath();q.moveTo(50,86);q.bezierCurveTo(10,60,14,20,40,24);q.quadraticCurveTo(48,26,50,34);q.quadraticCurveTo(52,26,60,24);q.bezierCurveTo(86,20,90,60,50,86);},'#ff5a6e',{gloss:[36,38,8,6,-0.5]});return;
+    case'sprout':icFill(x,icEll(50,80,30,11),'#9a6a42',{gloss:[42,76,10,3]});icCurve(x,'#4f9a3a',5,[50,78,48,60,50,44]);icLeaf(x,50,48,30,13,-2.6,'#6ac04a');icLeaf(x,50,44,32,14,-0.45,'#5aae44');return;
+    case'boat':icFill(x,q=>{q.beginPath();q.moveTo(12,66);q.lineTo(88,66);q.quadraticCurveTo(80,86,64,88);q.lineTo(34,88);q.quadraticCurveTo(20,86,12,66);},'#c8834a',{gloss:[40,72,20,3]});icLine(x,'#6a4a30',3,[50,66,50,14]);
+      icFill(x,q=>{q.beginPath();q.moveTo(53,16);q.quadraticCurveTo(80,36,82,60);q.lineTo(53,60);q.closePath();},'#fbf6ea',{gloss:[62,34,5,10]});icFill(x,q=>{q.beginPath();q.moveTo(47,24);q.lineTo(47,60);q.lineTo(24,60);q.closePath();},'#ff7a6a');return;
+    case'rod':icLine(x,'#6a4a30',4.5,[14,88,74,14]);icLine(x,'#c89a5a',3,[20,81,70,19]);icFill(x,icCirc(28,76,6),'#8a8e98',{lw:1.6});icCurve(x,'#9ab0c8',1.4,[74,14,86,40,80,70]);icFill(x,icCirc(80,72,6),'#ff5a4a',{lw:1.6});icFill(x,q=>{q.beginPath();q.ellipse(80,69,6,3,0,Math.PI,6.283);},'#fff',{lw:1.2});return;
+    case'hammer':icLine(x,'#6a4a30',7,[30,86,58,44]);icLine(x,'#b8844e',4,[30,86,58,44]);icFill(x,q=>{q.save();q.translate(62,34);q.rotate(0.6);q.beginPath();q.roundRect?q.roundRect(-24,-10,48,20,5):q.rect(-24,-10,48,20);q.restore();},'#8a8e98',{gloss:[56,28,10,3,0.6]});return;
+    case'chart':icFill(x,q=>{q.beginPath();q.moveTo(14,24);q.lineTo(38,16);q.lineTo(62,24);q.lineTo(86,16);q.lineTo(86,78);q.lineTo(62,86);q.lineTo(38,78);q.lineTo(14,86);q.closePath();},'#f4e8c8',{lw:2.4});
+      icFill(x,icEll(34,46,12,9),'#7ac05a',{lw:1.4});icFill(x,icEll(66,62,10,8),'#7ac05a',{lw:1.4});icLine(x,'#e05a4a',2.4,[34,46,44,56,56,54,66,62]);icLine(x,'#c8b890',1.4,[38,16,38,78]);icLine(x,'#c8b890',1.4,[62,24,62,86]);return;
+    case'can':icFill(x,q=>{q.beginPath();q.moveTo(26,40);q.lineTo(70,40);q.lineTo(66,86);q.lineTo(30,86);q.closePath();},'#5ab4a8',{gloss:[36,56,5,14]});icLine(x,'#3a8a80',6,[68,50,90,28]);icFill(x,icEll(90,27,6,4,-0.7),'#3a8a80',{lw:1.4});
+      icCurve(x,'#3a8a80',5,[34,40,48,18,62,40]);return;
+    case'shop':icFill(x,q=>{q.beginPath();q.rect(20,46,60,40);},'#f6ead0',{lw:2.2});icFill(x,q=>{q.beginPath();q.rect(42,62,16,24);},'#8a5a3a',{lw:1.6});
+      for(let i=0;i<5;i++)icFill(x,q=>{q.beginPath();q.moveTo(14+i*14.4,30);q.lineTo(28.4+i*14.4,30);q.lineTo(28.4+i*14.4,46);q.quadraticCurveTo(21.2+i*14.4,54,14+i*14.4,46);q.closePath();},i%2?'#fff':'#ff6a5a',{lw:1.6});return;
+    case'mystery':icFill(x,q=>{q.beginPath();q.moveTo(24,14);q.lineTo(76,14);q.lineTo(80,88);q.lineTo(20,88);q.closePath();},'#c89ae8',{gloss:[36,34,5,16]});icLine(x,'#a070c8',2,[24,24,76,24]);
+      x.fillStyle='#fff';x.font='bold 44px ui-rounded,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('?',50,60);return;
+    case'dex':icFill(x,q=>{q.beginPath();q.rect(22,14,58,72);},'#9a6ad8',{gloss:[34,30,5,16]});icFill(x,q=>{q.beginPath();q.rect(22,78,58,8);},'#f4eee4',{lw:1.4});icLeaf(x,40,60,30,11,-0.9,'#8ad86a');return;
+    case'bag':icFill(x,q=>{q.beginPath();q.moveTo(22,50);q.bezierCurveTo(22,20,78,20,78,50);q.lineTo(78,82);q.quadraticCurveTo(78,88,72,88);q.lineTo(28,88);q.quadraticCurveTo(22,88,22,82);q.closePath();},'#ffa53a',{gloss:[36,40,6,12]});
+      icCurve(x,'#c8741a',4,[40,26,50,10,60,26]);icFill(x,q=>{q.beginPath();q.rect(34,58,32,20);},'#ff8a1a',{lw:1.8});return;
+    case'fish':return icFish(x,{col:'#8ab4d8',dk:'#3a6a98',fin:'#e8a040',size:2},'fish');
+    case'fly':return icBug(x,{col:'#ffb040',dk:'#5a3a2a'},'butterfly');
+    case'crawl':return icBug(x,{kind:'crawl',col:'#e8453a',dk:'#2b1e2e'},'ladybug');}}
 
 // paint one icon (returns a data URL), or null if this key isn't one we draw
 function paintItemIcon(key){const [c,x]=(()=>{const c=document.createElement('canvas');c.width=c.height=IC;const x=c.getContext('2d');x.scale(IC/100,IC/100);x.lineJoin='round';x.lineCap='round';return[c,x];})();
@@ -318,6 +339,6 @@ function paintItemIcon(key){const [c,x]=(()=>{const c=document.createElement('ca
     else icMisc(x,key);}catch(e){console.warn('icon',key,e);return null;}
   return c.toDataURL();}
 // swap the pixel icons for painted ones, lazily
-{const keys=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),'g:mushroom','g:truffle','g:acorn','g:pinecone','g:berries','g:clover4','g:apple','g:clam','g:geode','g:oldcoin',...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','shell'];
+{const keys=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),'g:mushroom','g:truffle','g:acorn','g:pinecone','g:berries','g:clover4','g:apple','g:clam','g:geode','g:oldcoin',...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','shell','star','heart','sprout','boat','rod','hammer','chart','can','shop','mystery','dex','bag','fish','fly','crawl'];
   for(const k of [...new Set(keys)]){const old=ICON[k];Object.defineProperty(ICON,k,{configurable:true,enumerable:true,get(){const v=paintItemIcon(k)||old;Object.defineProperty(ICON,k,{value:v,writable:true,configurable:true,enumerable:true});return v;},set(v){/* a later pixel sprite for the same thing: keep the painted one */}});}}
 shellHTML=`<img class="px" src="${ICON.shell}" alt="">`;
