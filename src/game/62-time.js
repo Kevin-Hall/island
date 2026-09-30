@@ -14,7 +14,7 @@ const KF=[
  {h:24,  sun:0x9ab0ff,si:.58,sky:0x6a7cc4,gnd:0x3a4478,hi:.82,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
 ];
 const _a=new T.Color(),_b=new T.Color(),GREY=new T.Color(0x8a90a0);
-let nightF=0,rainMix=S.rain?1:0;
+let nightF=0,rainMix=S.rain?1:0,rainFall=S.rain?1:0; // rainMix: how grey the sky is; rainFall: how hard it's raining
 function lerpCol(target,key,A,B,t,rm=0){target.copy(_a.set(A[key])).lerp(_b.set(B[key]),t);if(rm)target.lerp(GREY,rm*0.35);return target;}
 function applyTime(){
   const h=S.hour;let i=0;while(i<KF.length-2&&KF[i+1].h<=h)i++;const A=KF[i],B=KF[i+1],t=(h-A.h)/(B.h-A.h);
@@ -41,7 +41,7 @@ function clockStr(h){let hh=Math.floor(h),mm=Math.floor((h-hh)*6)*10;const ap=hh
 let sprayT=0;
 function dawn(quiet){
   S.day++;for(const k in S.tiles)S.tiles[k].w=0;regrowDebris();seasonCheck();morningMoveIn();seaGifts();collectCrate();/* the sea leaves something every night */
-  S.rain=Math.random()<0.18;S.rainUntil=S.rain&&Math.random()<0.6?11+Math.random()*5:0;S.meteor=false;
+  dawnWeather();S.meteor=false;
   const wishes=Math.min(4,S.wishes||0);S.wishes=0;for(let i=0;i<wishes;i++){const c=islands[0].sand.filter(([x,z])=>freeTile(x,z));if(c.length){const [x,z]=pickR(c);S.finds.push({k:'starfrag',x,z});}}
   if(wishes&&!quiet)setTimeout(()=>toast('Star fragments washed up on your beach overnight!','rare',ICON['g:starfrag']),1200);
   if(S.rain)for(const k in S.tiles)S.tiles[k].w=1;
@@ -49,7 +49,7 @@ function dawn(quiet){
   const un=CROP_IDS.filter(id=>CROPS[id].lvl<=level());S.demand=pickR(un);
   for(let i=0;i<2;i++)spawnFind(true,islands[0]);forageSpawn(true,10);for(let i=0;i<2;i++)spawnWeed(true);makeOrders();spawnDriftseed(islands[0],true);
   if(!quiet){rebuildSoil();syncLife();if(spr&&!S.rain){sprayT=2.5;}
-    toast(`Day ${S.day} — ${S.rain?'rain is watering everything':'crops are thirsty'}. New orders are in, and wild plants have regrown.`,'',ICON.sprout);}
+    toast(`Day ${S.day} — ${S.rain?(S.wx==='storm'?'a storm is watering everything':'rain is watering everything'):S.wx==='snow'?'snow on the island, and crops are thirsty':S.wx==='fog'?'a foggy morning, and crops are thirsty':'crops are thirsty'}. New orders are in, and wild plants have regrown.`,'',ICON.sprout);}
 }
 function rollVariant(x,z,mystery){
   const b=bonus.get(K(x,z));let boost=1+(b?Math.min(3,b.clover)*0.5:0);if(mystery)boost*=3;

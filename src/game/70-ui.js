@@ -1,6 +1,11 @@
 // the weather in the clock card: a sun with rays, a crescent moon, or a rain cloud
 let wxKind='';const WX_ICO={sun:'<svg viewBox="0 0 32 32">'+[0,1,2,3,4,5,6,7].map(i=>{const a=i*Math.PI/4;return `<rect x="15" y="1" width="2.4" height="6" rx="1.2" fill="#f6b42a" transform="rotate(${i*45} 16 16)"/>`;}).join('')+'<circle cx="16" cy="16" r="7.5" fill="#f9c940" stroke="#f0a020" stroke-width="1.5"/><circle cx="13.5" cy="13.5" r="2.2" fill="#fde9a0"/></svg>',
   moon:'<svg viewBox="0 0 32 32"><path d="M21 4a12 12 0 1 0 7 20A10 10 0 0 1 21 4z" fill="#f4e6a8" stroke="#d8c270" stroke-width="1.5"/></svg>',
+  cloud:'<svg viewBox="0 0 32 32"><ellipse cx="18" cy="15" rx="9" ry="7" fill="#e6ecf4"/><ellipse cx="11" cy="18" rx="7" ry="5.5" fill="#f6f8fb"/><rect x="6" y="17" width="21" height="6.5" rx="3.2" fill="#f6f8fb"/><path d="M8 23.5h18" stroke="#b8c4d4" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  storm:'<svg viewBox="0 0 32 32"><ellipse cx="18" cy="11" rx="9" ry="7" fill="#7a8494"/><ellipse cx="11" cy="14" rx="7" ry="5.5" fill="#8c96a6"/><rect x="6" y="13" width="21" height="6" rx="3" fill="#8c96a6"/><path d="M17 18l-4 7h4l-2 6 7-9h-4l2-4z" fill="#ffd23a" stroke="#c89a10" stroke-width=".8" stroke-linejoin="round"/></svg>',
+  snow:'<svg viewBox="0 0 32 32"><ellipse cx="18" cy="11" rx="9" ry="7" fill="#e6ecf4"/><ellipse cx="11" cy="14" rx="7" ry="5.5" fill="#f6f8fb"/><rect x="6" y="13" width="21" height="6" rx="3" fill="#f6f8fb"/>'+[[10,24],[16,27],[22,24],[13,30],[20,30]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="1.7" fill="#fff" stroke="#9ab8d8" stroke-width=".8"/>`).join('')+'</svg>',
+  fog:'<svg viewBox="0 0 32 32">'+[[6,10,20],[4,16,24],[8,22,18]].map(([x,y,w])=>`<rect x="${x}" y="${y}" width="${w}" height="3.4" rx="1.7" fill="#dfe6ee" stroke="#aab6c4" stroke-width=".8"/>`).join('')+'</svg>',
+  wind:'<svg viewBox="0 0 32 32"><path d="M4 12h15a4 4 0 1 0-4-4M4 18h20a4 4 0 1 1-4 4M4 24h9" fill="none" stroke="#9ec8e8" stroke-width="2.6" stroke-linecap="round"/></svg>',
   rain:'<svg viewBox="0 0 32 32"><ellipse cx="13" cy="13" rx="8" ry="6" fill="#cfd8e4"/><ellipse cx="20" cy="12" rx="7" ry="6.5" fill="#dde4ee"/><rect x="6" y="13" width="21" height="6" rx="3" fill="#cfd8e4"/><path d="M11 22l-2 4M17 22l-2 4M23 22l-2 4" stroke="#6aa8e8" stroke-width="2" stroke-linecap="round"/></svg>'};
 /* =========================================================
    UI helpers
@@ -24,8 +29,8 @@ function updateHUD(){
   const lv=level();$('lvlTxt').textContent='Lv '+lv;
   const a=LV[lv-1]||0,b=LV[lv];$('xpFill').style.width=(b?clamp((S.xp-a)/(b-a),0,1)*100:100)+'%';
   {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;
-    const wk=S.rain?'rain':nightF>0.5?'moon':'sun';if(wxKind!==wk){wxKind=wk;$('wxIco').innerHTML=WX_ICO[wk];}}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${S.rain?' · rain':''}`;tideHUD();$('locTxt').textContent=locName();
-  refreshMuseumShow();$('bTask').classList.toggle('ready',ordersReady());$('bMenu').classList.toggle('ready',ordersReady());
+    const w0=wxNow(),wk=w0==='storm'?'storm':S.rain?'rain':w0==='snow'?'snow':w0==='fog'?'fog':w0==='cloudy'?'cloud':nightF>0.5?'moon':w0==='windy'?'wind':'sun';if(wxKind!==wk){wxKind=wk;$('wxIco').innerHTML=WX_ICO[wk];}}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${wxNow()!=='clear'?' · '+WX[wxNow()].name.toLowerCase():''}`;tideHUD();$('locTxt').textContent=locName();
+  refreshMuseumShow();$('bTask').classList.toggle('ready',ordersReady());
   {const g=nextGoal(),el=$('nextUp');el.hidden=!g;if(g){const h=`<small>${g.tag}</small>${g.name}`;if(el.innerHTML!==h)el.innerHTML=h;}}
   jrCheck();$('bShop').hidden=!!S.scratch;/* on a wild island you buy from Marlo's boat and, later, your own store: not from a menu */
   const [g,t]=dexCount();$('dexTxt').textContent=`Dex ${Math.floor(g/t*100)}%`;$('locTxt').hidden=!$('locTxt').textContent;
@@ -39,7 +44,7 @@ function addXP(n){const before=level();S.xp+=n;const after=level();if(after>befo
 
 let ctxSig='';
 function updateCtx(){
-  $('tools').hidden=!!(inside||S.sea||S.mode==='edit'||placing);
+  $('bar').hidden=!!(inside||S.sea||S.mode==='edit'||placing);$('apps').hidden=!!(inside||S.mode==='edit'||placing);
   const box=$('ctx');let st='';
   if(!sheet&&$('actionBar').hidden){
     if(inside)st='inside';else if(S.mode==='edit')st='edit';else if(fishing)st='';else if(S.sea)st=sail?'sailing':'sea';else if(boatNear()&&unlocked('boat'))st='board';}

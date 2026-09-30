@@ -58,7 +58,8 @@ function checkRow(type){if(S.almR[type])return;if(VARIANTS.every(v=>S.alm[type+'
 // buildings, the bin and placed decor respond to a tap whatever tool you hold; returns true if it handled the tap
 function useFixed(x,z){
   const f=fixedAt(x,z);
-  if(f==='bin'){walkTo(x,z);openSheet('bag','all','trader');return true;}
+  if(f==='bin'){walkTo(x,z);openSheet('bag','all',S.scratch?'crate':'trader');return true;}
+  if(f==='outpost'){outpostTap();return true;}
   if(f==='house'){goTo(HOUSE_AT.x+0.5,HOUSE_AT.z+2.2,()=>enterHouse('home'));return true;}
   if(isFire(x,z)){restByFire();return true;}
   if(isTent(x,z)){walkTo(x+0.5,z+2);tentTap();return true;}

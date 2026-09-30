@@ -33,7 +33,7 @@ function traderTap(cx,cy){if(!trader.shown||trader.come<0.9)return false;const s
   const isl=islands[0];let best=null,bd=1e9;for(const [x,z] of [...isl.sand,...isl.grass]){const d=(x-trader.x)**2+(z-trader.z)**2;if(d<bd){bd=d;best=[x,z];}}
   clearAction();goTo(best[0],best[1],()=>{villager.rotation.y=Math.atan2(trader.x-vil.x,trader.z-vil.z);traderHello();openSheet('trader','buy');});return true;}
 const MARLO_HI=['Fresh off the tide today!','Ahoy! Have a look, have a look.','Mind the crates. What can I get you?','Found some lovely bits out on the reef.','Business is slow… on account of there being one customer.'];
-function traderHello(){const first=!S.metMarlo;S.metMarlo=1;say(first?`I'm ${TRADER.name}! I sail these islands trading bits and bobs. Leave things in your crate and I'll collect them at dawn.`:`${TRADER.name}: “${MARLO_HI[(S.day+Math.floor(S.hour))%MARLO_HI.length]}”`);}
+function traderHello(){const first=!S.metMarlo;S.metMarlo=1;say(first?`I'm ${TRADER.name}! I sail these islands trading bits and bobs. Leave things at the outpost by the dock and I'll sell them for you at dawn.`:`${TRADER.name}: “${MARLO_HI[(S.day+Math.floor(S.hour))%MARLO_HI.length]}”`);}
 
 // ---- today's stock: a handful of things, the same all day, different tomorrow ----
 function traderStock(){if(S.tstock&&S.tstock.day===S.day)return S.tstock.items;const R=mulberry((S.worldSeed|0)+S.day*7919),lv=level(),items=[];
@@ -66,9 +66,26 @@ function buryTreasure(){const isl=islands[0],c=isl.grass.filter(([x,z])=>freeTil
   S.finds.push({k:'dig',x,z,map:1});syncLife();const dir=Math.abs(x-vil.x)>Math.abs(z-vil.z)?(x>vil.x?'east':'west'):(z>vil.z?'south':'north');
   setTimeout(()=>say(`The map shows an X to the <b>${dir}</b> of here. Look for the golden glint!`),900);}
 
-// ---- the crate by your tent: sell by leaving things for Marlo ----
+// ---- the trading outpost by the dock: drop things off and Marlo sells them for you at dawn ----
+// (it stands from the first day; once your shop is built you can also sell at its counter straight away)
+function outpostSpot(){if(S.outpost&&isLand(S.outpost.x,S.outpost.z)&&!TOWN.fixed.has(K(S.outpost.x,S.outpost.z)))return S.outpost;
+  let best=null,bd=1e9;for(let dx=-6;dx<=6;dx++)for(let dz=-5;dz<=0;dz++){const x=DOCK.x+dx,z=DOCK.z+dz,k=K(x,z);if(Math.abs(dx)<2||!isLand(x,z)||landMap.get(k)==='bridge'||TOWN.fixed.has(k)||(lvlMap.get(k)||0)>0)continue;
+    if(S.objs.some(o=>o.x===x&&o.z===z)||S.tiles[k])continue;const d=Math.abs(Math.abs(dx)-3)+Math.abs(dz+1.5)*1.2;if(d<bd){bd=d;best={x,z};}}
+  if(best){best.r=Math.atan2(DOCK.x-best.x,DOCK.z+2-best.z);S.outpost=best;}return best;}
+// a little stall: decking, four posts under a striped awning, a counter, crates and sacks, a sign and a flag
+function outpostParts(){const p=[],W=0xb88452,D=0x7a5230;p.push(P(BOX,D,0,0.04,0,0,0,0,1.0,0.08,0.9));for(let i=0;i<5;i++)p.push(P(BOX,i%2?0xc8945e:0xb88452,-0.4+i*0.2,0.09,0,0,0,0,0.19,0.03,0.9));
+  for(const [x,z] of [[-0.44,-0.36],[0.44,-0.36],[-0.44,0.36],[0.44,0.36]])p.push(P(BOX,D,x,0.62,z,0,0,0,0.07,1.1,0.07));
+  for(let i=0;i<6;i++)p.push(P(BOX,i%2?0xf6efe0:0x2cc3b2,-0.42+i*0.168,1.2,0.02,0.28,0,0,0.17,0.03,0.96));
+  for(let i=0;i<6;i++)p.push(P(PRISM,i%2?0xf6efe0:0x2cc3b2,-0.42+i*0.168,1.06,0.5,0,0,Math.PI,0.085,0.07,0.02));
+  p.push(P(BOX,W,0,0.36,0.26,0,0,0,0.92,0.5,0.24),P(BOX,0xa87848,0,0.62,0.26,0,0,0,0.98,0.04,0.3),P(BOX,0xf4ead0,0,0.4,0.385,0,0,0,0.5,0.16,0.01));
+  p.push(P(BOX,0xc89858,-0.24,0.26,-0.18,0,0.2,0,0.3,0.3,0.3),P(BOX,0xb88a50,0.2,0.22,-0.2,0,-0.1,0,0.26,0.24,0.26),P(ICO2,0xd8c8a0,0.3,0.24,0.02,0,0,0,0.2,0.26,0.2),
+    P(ICO2,0xe84a3a,-0.26,0.44,-0.18,0,0,0,0.08,0.08,0.08),P(ICO2,0xf6a830,-0.18,0.44,-0.12,0,0,0,0.08,0.08,0.08),P(ICO2,0x8ac850,0.18,0.37,-0.2,0,0,0,0.08,0.08,0.08));
+  p.push(P(CYL8,D,0.62,0.9,-0.3,0,0,0,0.04,1.8,0.04),P(PRISM,0xf6d04a,0.8,1.62,-0.3,0,Math.PI/2,Math.PI/2,0.16,0.02,0.2));
+  p.push(P(BOX,D,-0.66,0.35,0.42,0,0,0,0.05,0.7,0.05),P(BOX,0xe8d4a8,-0.66,0.62,0.42,0,0.3,0,0.36,0.18,0.03));return p;}
+function outpostTap(){const o=S.outpost;if(!o)return;clearAction();goTo(o.x+Math.sin(o.r)*0.9,o.z+Math.cos(o.r)*0.9,()=>{villager.rotation.y=Math.atan2(o.x-vil.x,o.z-vil.z);openSheet('bag','all','crate');});}
+// (the old crate by the tent is just scenery now: the outpost takes its job)
 function cratePos(){return{x:HOUSE_AT.x+1.75,z:HOUSE_AT.z-0.05};}
-function crateTap(cx,cy){if(!S.scratch||!S.homeAt||S.house)return false;const c=cratePos(),s=toScreen(c.x,topY(Math.round(c.x),Math.round(c.z))+0.3,c.z);
+function crateTap(cx,cy){return false;if(!S.scratch||!S.homeAt||S.house)return false;const c=cratePos(),s=toScreen(c.x,topY(Math.round(c.x),Math.round(c.z))+0.3,c.z);
   if(Math.hypot(s[0]-cx,s[1]-cy)>Math.max(18,22*40/cam.dist))return false;clearAction();goTo(c.x+0.4,c.z+0.9,()=>{villager.rotation.y=Math.atan2(c.x-vil.x,c.z-vil.z);openSheet('bag','all','crate');});return true;}
 function crateWorth(){return Object.entries(S.crate||{}).reduce((t,[k,n])=>t+priceOf(k)*n,0);}
 function toCrate(key,n){const have=S.inv[key]||0;n=Math.min(n,have);if(!n)return 0;S.crate=S.crate||{};S.crate[key]=(S.crate[key]||0)+n;S.inv[key]=have-n;if(!S.inv[key])delete S.inv[key];

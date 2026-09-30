@@ -57,14 +57,14 @@ function renderSheet(){
       const sellable=Object.keys(S.inv).filter(k=>!k.startsWith('m:')&&!k.startsWith('x:')),total=sellable.reduce((t,k)=>t+priceOf(k)*S.inv[k],0);
       const ctx=sheet.ctx;
       if(ctx==='trader')h+=`<div class="invtop"><span class="tot">Worth <b>${fmt(total)}</b> shells · market wants <b>${CROPS[S.demand].name}</b></span><button class="pbtn go" data-sellall="1" ${total?'':'disabled'}>Sell all</button></div>`;
-      else if(ctx==='crate'){const cn=Object.values(S.crate||{}).reduce((a,b)=>a+b,0);h+=`<div class="invtop"><span class="tot">In the crate: <b>${cn}</b> thing${cn===1?'':'s'}, worth ~<b>${fmt(crateWorth())}</b> · ${TRADER.name} collects at dawn</span><button class="pbtn go" data-crateall="1" ${total?'':'disabled'}>Put it all in</button></div>`;}
-      else if(S.scratch)h+=`<p class="note">To sell, put things in the <b>crate by your tent</b> or take them to <b>${TRADER.name}'s boat</b>.</p>`;
+      else if(ctx==='crate'){const cn=Object.values(S.crate||{}).reduce((a,b)=>a+b,0);h+=`<div class="invtop"><span class="tot">Dropped off: <b>${cn}</b> thing${cn===1?'':'s'}, worth ~<b>${fmt(crateWorth())}</b> · ${TRADER.name} sells them at dawn</span><button class="pbtn go" data-crateall="1" ${total?'':'disabled'}>Drop it all off</button></div>`;}
+      else h+=`<p class="note">${S.scratch?`To sell, drop things off at the <b>outpost by the dock</b> (sold at dawn), or sell to <b>${TRADER.name}'s boat</b>${built('shop')?' or at your <b>shop</b>':''}.`:'To sell, take things to the <b>shipping bin</b> by your house.'}</p>`;
       if(!ks.length)h+=`<p class="note">${T0==='all'?'Your pockets are empty. Harvest, fish, catch bugs, forage and gather to fill them.':'Nothing here yet.'}</p>`;
       else{const sel=ks.includes(sheet.sel)?sheet.sel:ks[0],I=itemInfo(sel),t=sel.split('|')[0],mat=sel.startsWith('m:')||sel.startsWith('x:');
         const inOrder=S.orders.some(o=>!o.done&&(o.k===sel||o.k==='c:'+t));const wish=npcs.find(n=>{const d=S.npc[n.i];return d&&d.wish&&!d.wish.done&&d.wish.day===S.day&&invFor(d.wish.k)===sel;});
         const desc=(I&&I.desc)||(sel.includes('|')?(VAR[varOf(sel)].name?`A rare ${VAR[varOf(sel)].name.toLowerCase()} harvest!`:'Fresh from your farm.'):I&&I.bio?'Found around '+I.bio.map(b=>bioLabel(b)).join(', ')+'.':'');
         h+=`<div class="detail"><img class="v-${varOf(sel)}" src="${iconOf(sel)}" alt=""><div class="grow"><div class="nm">${nameOf(sel)} ×${S.inv[sel]}</div><div class="sub">${desc}<br><span class="pp">${shellHTML}${fmt(priceOf(sel))}</span>${S.demand===t?' <span class="pp hot">In demand</span>':''}${inOrder?' · wanted for an order':''}${wish?' · '+wish.name+' wants this!':''}</div>
-          <div class="acts">${sel.startsWith('x:')?`<button class="pbtn go" data-use="${sel}">Use</button>`:''}${sheet.ctx==='trader'||!S.scratch&&!sheet.ctx?`<button class="pbtn" data-sell="${sel}">Sell 1</button>${S.inv[sel]>1?`<button class="pbtn" data-sellk="${sel}">Sell all ×${S.inv[sel]}</button>`:''}`:sheet.ctx==='crate'&&!sel.startsWith('x:')?`<button class="pbtn" data-crate="${sel}">Put 1 in</button>${S.inv[sel]>1?`<button class="pbtn" data-cratek="${sel}">Put all ×${S.inv[sel]}</button>`:''}`:''}</div></div></div><div class="inv">`;
+          <div class="acts">${sel.startsWith('x:')?`<button class="pbtn go" data-use="${sel}">Use</button>`:''}${sheet.ctx==='trader'?`<button class="pbtn" data-sell="${sel}">Sell 1</button>${S.inv[sel]>1?`<button class="pbtn" data-sellk="${sel}">Sell all ×${S.inv[sel]}</button>`:''}`:sheet.ctx==='crate'&&!sel.startsWith('x:')?`<button class="pbtn" data-crate="${sel}">Drop off 1</button>${S.inv[sel]>1?`<button class="pbtn" data-cratek="${sel}">Drop off all ×${S.inv[sel]}</button>`:''}`:''}</div></div></div><div class="inv">`;
         for(const k of ks){const v=varOf(k);h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img class="v-${v}" src="${iconOf(k)}" alt="">${v!=='normal'?`<span class="dot" style="background:${{giant:'#6ab84a',moonlit:'#9ab8ff',golden:'#f5c542',crystal:'#7ad8f0',rainbow:'#f39ab0'}[v]}"></span>`:''}<span class="n">${S.inv[k]}</span></button>`;}
         const pad=Math.max(0,20-ks.length);for(let i=0;i<pad;i++)h+=`<div class="cell empty"></div>`;h+='</div>';}}}
   else if(sheet.kind==='trader'){$('sheetTitle').textContent=`${TRADER.name}'s boat`;tabs([]);
@@ -72,8 +72,8 @@ function renderSheet(){
     for(const q of traderStock()){const I=stockInfo(q);h+=`<button class="card ${q.sold?'lock':''}" data-tbuy="${q.i}" ${q.sold?'disabled':''}><img class="px" src="${I.icon}" alt=""><span class="grow"><span class="nm">${I.name}</span><br><span class="sub">${q.sold?'Sold out today':I.desc}</span></span><span class="price">${q.sold?'':sh(q.price)}</span></button>`;}
     h+='</div>';}
   else if(sheet.kind==='shop'){$('sheetTitle').textContent='Shop';tabs([['decor','Decor'],['island','Island']]);
-    if(!built('shop'))h+=`<p class="note">${S.scratch?'You don\'t have a store yet. It comes as a kit when your Island Heart reaches <b>level 3</b>, and you choose where to build it.':'The general store opens when your Island Heart reaches <b>level 3</b>.'} Until then, sell at your shipping bin and buy seeds from the Seeds tool.</p>`;
-    else if(sheet.tab==='decor'){h+=`<p class="note">Buy something, then tap where it should go on your home island.</p><div class="sellall"><button class="pbtn" data-edit="1">Move or store existing decor</button></div><div class="grid">`;
+    if(!built('shop'))h+=`<p class="note">${S.scratch?'You don\'t have a store yet. It comes as a kit when your Island Heart reaches <b>level 3</b>, and you choose where to build it.':'The general store opens when your Island Heart reaches <b>level 3</b>.'} Until then, drop things off at the <b>outpost by the dock</b> to sell them, and buy seeds from the Seeds tool.</p>`;
+    else if(sheet.tab==='decor'){h+=`<p class="note">Buy something, then tap where it should go on your home island.</p><div class="sellall"><button class="pbtn go" data-sellshop="1">Sell things</button><button class="pbtn" data-edit="1">Move or store decor</button></div><div class="grid">`;
       for(const k in BUILD){const B=BUILD[k],lock=B.lvl>lv,n=S.store[k]||0;if(B.craft)continue;
         h+=`<button class="card ${lock?'lock':''}" data-buy="${k}" ${lock?'disabled':''}><img class="px" src="${THUMB[k]||''}" alt=""><span class="grow"><span class="nm">${B.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+B.lvl:(n?`${n} in storage — tap to place`:B.desc)}</span></span><span class="price">${n?'':sh(B.cost)}</span></button>`;}
       h+='</div>';}
@@ -141,7 +141,7 @@ function renderSheet(){
     h+=`<div class="setrow"><span>Time speed</span><span class="seg">${[[0,'Pause'],[1,'Real'],[10,'10×'],[60,'60×']].map(([v,l])=>`<button data-spd="${v}" class="${devSpeed===v?'on':''}">${l}</button>`).join('')}</span></div>`;
     h+=`<div class="setrow"><span>Clock</span><span class="seg">${S.toff?`<button data-dev="realtime">Back to real time</button>`:'<button class="on" disabled>Your real time</button>'}</span></div>`;
     h+=`<div class="setrow"><span>Season</span><span class="seg">${[['','Auto'],['spring','Spr'],['summer','Sum'],['autumn','Aut'],['winter','Win']].map(([v,l])=>`<button data-season="${v}" class="${(S.seasonOv||'')===v?'on':''}">${l}</button>`).join('')}</span></div>`;
-    h+=`<div class="setrow"><span>Weather</span><span class="seg"><button data-wx="clear" class="${S.rain?'':'on'}">Clear</button><button data-wx="rain" class="${S.rain?'on':''}">Rain</button></span></div>`;
+    h+=`<div class="setrow"><span>Weather</span><span class="seg">${Object.keys(WX).map(k=>`<button data-wx="${k}" class="${wxNow()===k?'on':''}">${WX[k].name}</button>`).join('')}</span></div>`;
     h+=`<div class="setrow"><span>Night sky</span><span class="seg"><button data-dev="star">Shooting star</button><button data-dev="meteor" class="${S.meteor?'on':''}">Meteor shower</button></span></div>`;
     h+=`<div class="setrow"><span>Island Heart · Lv ${level()}</span><span class="seg"><button data-dev="lvdown">−1</button><button data-dev="lvup">+1</button><button data-dev="lvboat">Boat (Lv 4)</button><button data-dev="lvmax">Max</button></span></div>`;
     h+=`<div class="setrow"><span>Chart</span><span class="seg"><button data-dev="chartall">Reveal all islands</button><button data-dev="chart">Open chart</button></span></div>`;
@@ -187,13 +187,14 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.use){useItem(d.use);renderSheet();return;}
   if(d.tbuy!==undefined){buyStock(+d.tbuy);return;}
   if(d.tsell){openSheet('bag','all','trader');return;}
-  if(d.crate){if(toCrate(d.crate,1))floatText(vil.x,1.2,vil.z,'into the crate');renderSheet();return;}
+  if(d.crate){if(toCrate(d.crate,1))floatText(vil.x,1.2,vil.z,'dropped off');renderSheet();return;}
   if(d.cratek){toCrate(d.cratek,S.inv[d.cratek]||0);renderSheet();return;}
-  if(d.crateall){let n=0;for(const k of Object.keys(S.inv))if(!k.startsWith('m:')&&!k.startsWith('x:'))n+=toCrate(k,S.inv[k]);if(n)say(`${n} things in the crate. ${TRADER.name} will collect them at dawn.`);renderSheet();return;}
+  if(d.crateall){let n=0;for(const k of Object.keys(S.inv))if(!k.startsWith('m:')&&!k.startsWith('x:'))n+=toCrate(k,S.inv[k]);if(n)say(`${n} things dropped off. ${TRADER.name} will sell them at dawn.`);renderSheet();return;}
   if(d.sellk){const g=sell(d.sellk,S.inv[d.sellk]||0);if(g){SFX.coin();toast(`Sold for ${fmt(g)} shells.`,'',ICON.shell);}renderSheet();return;}
   if(d.sell){const g=sell(d.sell,1);if(g){SFX.coin();floatText(vil.x,1.2,vil.z,'+'+fmt(g),'gold');}renderSheet();return;}
   if(d.sellall){let g=0;for(const k of Object.keys(S.inv))if(!k.startsWith('m:')&&!k.startsWith('x:'))g+=sell(k,S.inv[k]);if(g){SFX.coin();setTimeout(SFX.coin,120);toast(`Sold everything for ${fmt(g)} shells.`,'',ICON.shell);}renderSheet();return;}
   if(d.buy){const k=d.buy;if(S.store[k]){startPlace(k,true);return;}if(S.shells<BUILD[k].cost){toast(`${BUILD[k].name} costs ${fmt(BUILD[k].cost)} shells.`);SFX.no();return;}startPlace(k,false);return;}
+  if(d.sellshop){openSheet('bag','all','trader');return;}
   if(d.edit){S.mode='edit';closeSheet();toast('Edit mode: tap decor to move or store it, tap empty soil to clear it.','',ICON.hammer);return;}
   if(d.isle){chartGo(islands[Number(d.isle)]);return;}
   if(d.rumour){if(!unlocked('boat')){say('You need your boat for that (Island Heart level 4).');return;}closeSheet();sailToIsland(islands[Number(d.rumour)]);return;}
@@ -206,7 +207,7 @@ $('sheetBody').addEventListener('click',e=>{
     toast(S.house===3?'Your Villa is complete!':`Your new ${HOUSES[S.house]} is ready!`,'rare',THUMB['house'+S.house]);renderSheet();return;}
   if(d.mus!==undefined){S.music=d.mus==='1';renderSheet();return;}
   if(d.spd!==undefined){devSpeed=Number(d.spd);renderSheet();return;}
-  if(d.wx){if(d.wx==='rain'){S.rain=true;S.rainUntil=0;for(const k in S.tiles)S.tiles[k].w=1;rebuildSoil();}else if(S.rain)stopRain();renderSheet();return;}
+  if(d.wx){setWx(d.wx);renderSheet();return;}
   if(d.dev==='star'){if(nightF<0.5){setHour(22);applyTime();}spawnShootingStar();closeSheet();return;}
   if(d.dev==='meteor'){S.meteor=!S.meteor;if(S.meteor&&nightF<0.5){setHour(21.5);applyTime();}renderSheet();return;}
   if(d.dev&&d.dev.startsWith('lv')){const cur=level(),to=d.dev==='lvup'?cur+1:d.dev==='lvdown'?cur-1:d.dev==='lvboat'?Math.max(cur,4):LV.length;devLevel(to);renderSheet();return;}
@@ -229,9 +230,10 @@ $('sheetBody').addEventListener('click',e=>{
 });
 $('sheetX').onclick=()=>{SFX.ui();closeSheet();};
 // the menu button pops the apps up above the bar; any app, sheet or tap on the world closes it
-function showApps(on){$('apps').hidden=!on;$('bMenu').classList.toggle('on',on);$('bMenu').setAttribute('aria-expanded',on);}
-$('bMenu').onclick=()=>{SFX.ui();showApps($('apps').hidden);};
-$('apps').addEventListener('click',()=>showApps(false));
+// the tool ring (showApps kept its name: everything that used to close the menu now closes the ring)
+function wheelOpen(){return $('bar').classList.contains('open');}
+function showApps(on){$('bar').classList.toggle('open',!!on);$('bTool').setAttribute('aria-expanded',!!on);}
+$('bTool').onclick=()=>{SFX.ui();showApps(!wheelOpen());};
 $('bBag').onclick=()=>openSheet('bag');
 $('nextUp').onclick=goalTap;$('jrChip').onclick=jrOpen;
 $('bShop').onclick=()=>openSheet('shop',sheet&&sheet.kind==='shop'?sheet.tab:'decor');

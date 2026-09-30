@@ -465,3 +465,41 @@ body.titling .say,body.cine .say{display:none}
 .catchcard span{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.catchcard em{font-style:normal;font-size:13px;font-weight:700;background:var(--cream);border-radius:99px;padding:3px 10px;box-shadow:0 2px 0 var(--line)}
 .catchcard p{margin:8px 0 4px;font-size:15px;color:var(--ink)}
 .catchcard i{display:block;font-style:normal;font-size:12px;color:var(--ink2);margin-top:4px}.catchcard i.new{color:var(--teal-d);font-weight:700;font-size:13.5px}
+
+/* ---------- Minimal HUD: time bottom-left, one tool button with a ring, the apps in a slim column ---------- */
+.clockb{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);z-index:5;background:none;box-shadow:none;padding:0 0 0 2px;min-width:0;border-radius:0}
+.clockb .t{color:#fffcf2;font-size:38px;text-shadow:0 2px 0 rgba(58,38,22,.6),0 0 8px rgba(58,38,22,.35),0 0 1px rgba(58,38,22,.8)}
+.clockb .t small{color:#fffcf2}.clockb .d{color:#fffcf2;font-size:13.5px;text-shadow:0 1px 0 rgba(58,38,22,.7),0 0 6px rgba(58,38,22,.4);margin-top:4px}
+.clockb .wx{position:static;display:inline-block;vertical-align:middle;width:24px;height:24px;margin-left:6px;filter:drop-shadow(0 1px 1px rgba(58,38,22,.5))}
+.clockb{display:flex;flex-direction:column}.clockb .t{display:flex;align-items:baseline}
+.wheel{position:fixed;z-index:5;right:calc(env(safe-area-inset-right,0px) + 96px);bottom:calc(env(safe-area-inset-bottom,0px) + 108px);width:0;height:0;
+  left:auto;transform:none;background:none;box-shadow:none;padding:0;border-radius:0;max-width:none}
+.toolbtn{position:absolute;left:-33px;top:-33px;width:66px;height:66px;border-radius:50%;background:var(--paper);box-shadow:var(--shadow),inset 0 -4px 0 rgba(107,79,47,.1);display:grid;place-items:center;padding:0;transition:transform .15s}
+.toolbtn img{width:42px;height:42px}.toolbtn:active{transform:scale(.92)}
+.wheel.open .toolbtn{background:#fbe39a;box-shadow:0 0 0 3px #e0a93a,var(--shadow)}
+.ring{position:absolute;left:0;top:0;width:0;height:0}
+.ring .tool{position:absolute;left:-24px;top:-24px;width:48px;height:48px;border-radius:50%;background:var(--paper);box-shadow:var(--shadow);display:grid;place-items:center;padding:0;
+  transform:rotate(var(--a)) translate(0) rotate(calc(-1 * var(--a))) scale(.3);opacity:0;pointer-events:none;transition:transform .28s cubic-bezier(.3,1.5,.5,1),opacity .18s}
+.wheel.open .ring .tool{transform:rotate(var(--a)) translate(82px) rotate(calc(-1 * var(--a))) scale(1);opacity:1;pointer-events:auto}
+.ring .tool img{width:32px;height:32px}.ring .tool.on{background:#fbe39a;box-shadow:0 0 0 2.5px #e0a93a,var(--shadow)}
+.ring .tool span{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:1px;font-size:10.5px;font-weight:700;white-space:nowrap;color:#fffcf2;text-shadow:0 1px 0 rgba(58,38,22,.7),0 0 4px rgba(58,38,22,.5)}
+.appcol{position:fixed;z-index:5;right:calc(env(safe-area-inset-right,0px) + 10px);bottom:calc(env(safe-area-inset-bottom,0px) + 220px);display:flex;flex-direction:column;gap:8px;
+  background:none;box-shadow:none;padding:0;animation:none}
+.appcol .btn{width:auto;flex-direction:row;gap:0}
+.appcol .btn .ico{width:46px;height:46px;border-radius:50%;background:var(--paper);box-shadow:var(--shadow)}
+.appcol .btn .ico img{width:30px;height:30px}
+.appcol .btn .lb{display:none}
+.appcol .btn.ready::after{top:-3px;right:-3px}
+@media (max-height:640px){.appcol{bottom:calc(env(safe-area-inset-bottom,0px) + 200px);gap:5px}.appcol .btn .ico{width:40px;height:40px}}
+.wheel{right:calc(env(safe-area-inset-right,0px) + 118px);bottom:calc(env(safe-area-inset-bottom,0px) + 122px)}
+.wheel.open .ring .tool{transform:rotate(var(--a)) translate(76px) rotate(calc(-1 * var(--a))) scale(1)}
+.ring .tool{width:44px;height:44px;left:-22px;top:-22px}.ring .tool img{width:29px;height:29px}.ring .tool span{font-size:10px}
+.toolbtn{width:62px;height:62px;left:-31px;top:-31px}.toolbtn img{width:40px;height:40px}
+.clockb{display:grid;grid-template-columns:auto auto;justify-content:start;align-items:center;column-gap:4px}
+.clockb .t{grid-column:1;grid-row:1}.clockb .wx{grid-column:2;grid-row:1;margin-left:2px}.clockb .d{grid-column:1 / span 2;grid-row:2;margin-top:0}
+.appcol{bottom:calc(env(safe-area-inset-bottom,0px) + 232px)}
+
+/* a lightning flash in a storm */
+#bolt{position:fixed;inset:0;z-index:4;pointer-events:none;background:#eef4ff;opacity:0}
+#bolt.on{animation:bolt .9s ease-out}
+@keyframes bolt{0%{opacity:0}6%{opacity:.75}14%{opacity:.1}22%{opacity:.55}100%{opacity:0}}

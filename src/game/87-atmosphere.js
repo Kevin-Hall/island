@@ -58,7 +58,7 @@ function makeWish(){if(!shoot||shoot.wished)return;shoot.wished=true;S.wishes=(S
 const RB_COLS=[0xe8504a,0xf09040,0xf6d04a,0x6ac860,0x4a9ae8,0x8a6ad0];const rainbow=new T.Group();
 RB_COLS.forEach((c,i)=>{const m=new T.Mesh(new T.TorusGeometry(58-i*2.2,1.1,4,64,Math.PI),noCurve(new T.MeshBasicMaterial({color:c,fog:false,transparent:true,opacity:0,depthWrite:false})));m.frustumCulled=false;rainbow.add(m);});
 rainbow.visible=false;scene.add(rainbow);let rainbowT=0;
-function stopRain(){S.rain=false;S.rainUntil=0;if(S.hour>7&&S.hour<18){rainbowT=50;toast('The rain has stopped… look, a rainbow!','rare',ICON.star);}}
+function stopRain(){S.rain=false;S.rainUntil=0;S.wx='clear';if(S.hour>7&&S.hour<18){rainbowT=50;toast('The rain has stopped… look, a rainbow!','rare',ICON.star);}}
 function duskEvent(){S.meteor=!S.rain&&Math.random()<0.22;if(S.meteor)toast('Tonight there will be a meteor shower! Tap the sky when a star falls to make a wish.','rare',ICON.star);}
 const STAR_T=[],STAR_F=[];for(let i=0;i<STARN;i++){STAR_T.push(Math.random()*6.283);STAR_F.push(Math.random()*1.3);}
 function skyPos(theta,f,d,out,curved=false){const cp=camera.position,hc=cp.y,aT=cam.pitch-camera.fov/2*Math.PI/180,aH=horizonA(),a=lerp(aH,aT,f);
@@ -91,6 +91,7 @@ const MOTE_KINDS={petals:{n:40,size:3,cols:[0xf7c3d3,0xfbe3ea,0xffffff],vy:-0.35
   pollen:{n:45,size:2,cols:[0xfff4b0,0xffffff],vy:-0.05,sway:0.25},spores:{n:55,size:2,cols:[0xc8f0a8,0xe0ffc8],vy:0.12,sway:0.3}};
 let moteKind='',moteSt=[];
 function wantMotes(){if(S.rain)return'';const isl=S.sea?null:curIsl(),b=isl?isl.biome:(S.sea?regionAt(vil.x,vil.z):'open');const night=nightF>0.6;
+  if(wxNow()==='snow'&&(!isl||isl.home))return'snow';if(wxNow()==='windy'&&!night&&isl&&isl.home)return season()==='autumn'?'leaves':'petals';
   if(b==='snow')return'snow';if(b==='autumn')return'leaves';if(b==='volcano')return'embers';if(b==='swamp')return'spores';
   if(night)return'';if(b==='home'||b==='meadow')return'petals';if(b==='tropic'||b==='pine')return'pollen';return'';}
 function updateMotes(dt,tt){const k=wantMotes();
@@ -114,7 +115,7 @@ function chirp(){const a=AC;if(!a||!S.sound)return;const n=2+Math.floor(Math.ran
     g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(0.012,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+0.09);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+0.1);}}
 function crickets(){for(let i=0;i<6;i++)setTimeout(()=>noise(0.03,0.012,4800,6),i*55);}
 function updateAudio(dt){if(!AC||!S.sound)return;
-  if(waves){waves.g.gain.value=0.018+rainMix*0.035;if(waves.f)waves.f.frequency.value=420+rainMix*1600;}
+  if(waves){waves.g.gain.value=0.018+rainFall*0.035;if(waves.f)waves.f.frequency.value=420+rainFall*1600;}
   if(S.music!==false){musT-=dt;if(musT<=0){const night=nightF>0.6,sc=night?SCALES.night:S.hour>16?SCALES.eve:SCALES.day;musT=night?0.85:0.55;beat++;
     mel=clamp(mel+Math.round((Math.random()-0.5)*3),0,sc.length-1);if(Math.random()<(night?0.45:0.6))pluck(sc[mel],night?0.014:0.017,night?1.4:0.9);
     if(beat%8===0)pluck(sc[0]/2,0.02,1.8);if(beat%8===4)pluck(sc[2]/2,0.014,1.4);}}
@@ -131,7 +132,7 @@ function updateAtmos(dt,tt){
   // idle: glance around like a villager
   if(!S.sea&&!fishing&&!caught&&vil.idle>2.5)villager.rotation.y+=Math.sin(tt*0.9)*0.006;
   // swamp islands hold a low mist
-  const sw=(curIsl()||{}).biome==='swamp'?1:0;fogBoost=lerp(fogBoost,sw,Math.min(1,dt*0.8));
+  const sw=Math.max((curIsl()||{}).biome==='swamp'?1:0,wxNow()==='fog'?1:0,wxNow()==='cloudy'?0.2:0);fogBoost=lerp(fogBoost,sw,Math.min(1,dt*0.8));
 }
 let fogBoost=0;
 

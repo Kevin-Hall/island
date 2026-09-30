@@ -477,6 +477,44 @@ body.titling .say,body.cine .say{display:none}
 .catchcard span{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.catchcard em{font-style:normal;font-size:13px;font-weight:700;background:var(--cream);border-radius:99px;padding:3px 10px;box-shadow:0 2px 0 var(--line)}
 .catchcard p{margin:8px 0 4px;font-size:15px;color:var(--ink)}
 .catchcard i{display:block;font-style:normal;font-size:12px;color:var(--ink2);margin-top:4px}.catchcard i.new{color:var(--teal-d);font-weight:700;font-size:13.5px}
+
+/* ---------- Minimal HUD: time bottom-left, one tool button with a ring, the apps in a slim column ---------- */
+.clockb{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);z-index:5;background:none;box-shadow:none;padding:0 0 0 2px;min-width:0;border-radius:0}
+.clockb .t{color:#fffcf2;font-size:38px;text-shadow:0 2px 0 rgba(58,38,22,.6),0 0 8px rgba(58,38,22,.35),0 0 1px rgba(58,38,22,.8)}
+.clockb .t small{color:#fffcf2}.clockb .d{color:#fffcf2;font-size:13.5px;text-shadow:0 1px 0 rgba(58,38,22,.7),0 0 6px rgba(58,38,22,.4);margin-top:4px}
+.clockb .wx{position:static;display:inline-block;vertical-align:middle;width:24px;height:24px;margin-left:6px;filter:drop-shadow(0 1px 1px rgba(58,38,22,.5))}
+.clockb{display:flex;flex-direction:column}.clockb .t{display:flex;align-items:baseline}
+.wheel{position:fixed;z-index:5;right:calc(env(safe-area-inset-right,0px) + 96px);bottom:calc(env(safe-area-inset-bottom,0px) + 108px);width:0;height:0;
+  left:auto;transform:none;background:none;box-shadow:none;padding:0;border-radius:0;max-width:none}
+.toolbtn{position:absolute;left:-33px;top:-33px;width:66px;height:66px;border-radius:50%;background:var(--paper);box-shadow:var(--shadow),inset 0 -4px 0 rgba(107,79,47,.1);display:grid;place-items:center;padding:0;transition:transform .15s}
+.toolbtn img{width:42px;height:42px}.toolbtn:active{transform:scale(.92)}
+.wheel.open .toolbtn{background:#fbe39a;box-shadow:0 0 0 3px #e0a93a,var(--shadow)}
+.ring{position:absolute;left:0;top:0;width:0;height:0}
+.ring .tool{position:absolute;left:-24px;top:-24px;width:48px;height:48px;border-radius:50%;background:var(--paper);box-shadow:var(--shadow);display:grid;place-items:center;padding:0;
+  transform:rotate(var(--a)) translate(0) rotate(calc(-1 * var(--a))) scale(.3);opacity:0;pointer-events:none;transition:transform .28s cubic-bezier(.3,1.5,.5,1),opacity .18s}
+.wheel.open .ring .tool{transform:rotate(var(--a)) translate(82px) rotate(calc(-1 * var(--a))) scale(1);opacity:1;pointer-events:auto}
+.ring .tool img{width:32px;height:32px}.ring .tool.on{background:#fbe39a;box-shadow:0 0 0 2.5px #e0a93a,var(--shadow)}
+.ring .tool span{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:1px;font-size:10.5px;font-weight:700;white-space:nowrap;color:#fffcf2;text-shadow:0 1px 0 rgba(58,38,22,.7),0 0 4px rgba(58,38,22,.5)}
+.appcol{position:fixed;z-index:5;right:calc(env(safe-area-inset-right,0px) + 10px);bottom:calc(env(safe-area-inset-bottom,0px) + 220px);display:flex;flex-direction:column;gap:8px;
+  background:none;box-shadow:none;padding:0;animation:none}
+.appcol .btn{width:auto;flex-direction:row;gap:0}
+.appcol .btn .ico{width:46px;height:46px;border-radius:50%;background:var(--paper);box-shadow:var(--shadow)}
+.appcol .btn .ico img{width:30px;height:30px}
+.appcol .btn .lb{display:none}
+.appcol .btn.ready::after{top:-3px;right:-3px}
+@media (max-height:640px){.appcol{bottom:calc(env(safe-area-inset-bottom,0px) + 200px);gap:5px}.appcol .btn .ico{width:40px;height:40px}}
+.wheel{right:calc(env(safe-area-inset-right,0px) + 118px);bottom:calc(env(safe-area-inset-bottom,0px) + 122px)}
+.wheel.open .ring .tool{transform:rotate(var(--a)) translate(76px) rotate(calc(-1 * var(--a))) scale(1)}
+.ring .tool{width:44px;height:44px;left:-22px;top:-22px}.ring .tool img{width:29px;height:29px}.ring .tool span{font-size:10px}
+.toolbtn{width:62px;height:62px;left:-31px;top:-31px}.toolbtn img{width:40px;height:40px}
+.clockb{display:grid;grid-template-columns:auto auto;justify-content:start;align-items:center;column-gap:4px}
+.clockb .t{grid-column:1;grid-row:1}.clockb .wx{grid-column:2;grid-row:1;margin-left:2px}.clockb .d{grid-column:1 / span 2;grid-row:2;margin-top:0}
+.appcol{bottom:calc(env(safe-area-inset-bottom,0px) + 232px)}
+
+/* a lightning flash in a storm */
+#bolt{position:fixed;inset:0;z-index:4;pointer-events:none;background:#eef4ff;opacity:0}
+#bolt.on{animation:bolt .9s ease-out}
+@keyframes bolt{0%{opacity:0}6%{opacity:.75}14%{opacity:.1}22%{opacity:.55}100%{opacity:0}}
 </style>
 </head>
 <body>
@@ -496,11 +534,12 @@ body.titling .say,body.cine .say{display:none}
 <div id="actionBar" class="actionbar" hidden><div class="tag" id="abTag"></div><div class="msg" id="abMsg"></div><div class="row" id="abRow"></div></div>
 
 <!-- one bottom bar: your tools, plus a menu button that pops up the apps -->
-<nav class="bar" id="bar" aria-label="Tools">
-  <div class="tools" id="tools"></div>
-  <button class="menubtn" id="bMenu" aria-label="Menu" aria-expanded="false"><img class="px" id="icoMenu" alt=""></button>
-</nav>
-<nav class="dock apps" id="apps" aria-label="Menu" hidden>
+<!-- one tool button: tap it and every tool fans out in a ring around it -->
+<div class="wheel" id="bar">
+  <div class="ring" id="tools"></div>
+  <button class="toolbtn" id="bTool" aria-label="Tools" aria-expanded="false"><img class="px" id="icoTool" alt=""></button>
+</div>
+<nav class="appcol" id="apps" aria-label="Menu">
   <button class="btn" id="bBag" style="--c:#f3d3a8"><span class="ico"><img class="px" id="icoBag" alt=""></span><span class="lb">Bag</span></button>
   <button class="btn" id="bShop" style="--c:#a6e3d8"><span class="ico"><img class="px" id="icoShop" alt=""></span><span class="lb">Shop</span></button>
   <button class="btn" id="bTask" style="--c:#ffc9a3"><span class="ico"><img class="px" id="icoTask" alt=""></span><span class="lb">Orders</span></button>
@@ -3293,6 +3332,7 @@ function layoutTown(isl){
       if(!S.house)TOWN.fixed.set(K(HOUSE_AT.x-1,HOUSE_AT.z+2),'decor'); // the tent's bonfire
       const binC=[[home.x+2,home.z+1],[home.x-1,home.z+1],[home.x+2,home.z],[home.x-1,home.z]].find(([x,z])=>isLand(x,z)&&!taken(K(x,z))&&!S.debris.some(d=>d.x===x&&d.z===z));if(binC){BIN_AT.x=binC[0];BIN_AT.z=binC[1];}else{BIN_AT.x=home.x+2;BIN_AT.z=home.z+1;}}
     else{HOUSE_AT.x=HOUSE_AT.z=9999;BIN_AT.x=BIN_AT.z=9999;}
+    {const o=outpostSpot();if(o)TOWN.fixed.set(K(o.x,o.z),'outpost');}
     for(const e of ['tent','fire'])if(S.home&&S.home[e]){const [x,z]=S.home[e];for(let dx=0;dx<(e==='tent'?2:1);dx++)for(let dz=0;dz<(e==='tent'?2:1);dz++)TOWN.fixed.set(K(x+dx,z+dz),'decor');}
     for(const k in S.paths||{})if(S.paths[k]>=PATH_WEAR&&landMap.get(k)==='grass'&&!TOWN.fixed.has(k))TOWN.path.set(k,1);
   }else{
@@ -3333,6 +3373,7 @@ function layoutTown(isl){
     q.push(P(BOX,0xb07a44,0,0.26,0,0,0,0,0.9,0.06,0.34),P(BOX,0xb07a44,0,0.52,-0.16,0,0,0,0.9,0.18,0.05));p.push(...shift(q,bx,y0(bx,bz),bz,r));TOWN.fixed.set(K(bx,bz),'decor');}
   if(TOWN.board){const [bx,bz]=TOWN.board,q=[P(CYL8,0x6a4428,-0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(CYL8,0x6a4428,0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(BOX,0x9a6a3a,0,0.62,0,0,0,0,0.9,0.52,0.06),P(BOX,0x7a5230,0,0.92,0,0,0,0,1.0,0.07,0.12),
     P(BOX,0xf6ecd0,-0.2,0.66,0.035,0,0,0.08,0.22,0.26,0.01),P(BOX,0xf2c8d8,0.14,0.6,0.035,0,0,-0.1,0.2,0.2,0.01),P(BOX,0xd8ecf4,0.22,0.74,0.035,0,0,0.05,0.14,0.12,0.01)];p.push(...shift(q,bx,y0(bx,bz),bz,0));}
+  if(S.scratch&&S.outpost){const o=S.outpost;p.push(...shift(outpostParts(),o.x,y0(o.x,o.z),o.z,o.r||0));}
   // buildings
   for(const b of TOWN.bld){if(b.t==='home')continue;const bx=b.x+0.5,bz=b.z+0.5,by=Math.min(y0(b.x,b.z),y0(b.x+1,b.z+1));
     if(b.locked){if(b.t!=='vh'||unlocked('vh'+b.n))p.push(...shift(plotParts(b,b.t==='vh'),bx,by,bz,0));continue;}
@@ -4236,7 +4277,7 @@ const KF=[
  {h:24,  sun:0x9ab0ff,si:.58,sky:0x6a7cc4,gnd:0x3a4478,hi:.82,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
 ];
 const _a=new T.Color(),_b=new T.Color(),GREY=new T.Color(0x8a90a0);
-let nightF=0,rainMix=S.rain?1:0;
+let nightF=0,rainMix=S.rain?1:0,rainFall=S.rain?1:0; // rainMix: how grey the sky is; rainFall: how hard it's raining
 function lerpCol(target,key,A,B,t,rm=0){target.copy(_a.set(A[key])).lerp(_b.set(B[key]),t);if(rm)target.lerp(GREY,rm*0.35);return target;}
 function applyTime(){
   const h=S.hour;let i=0;while(i<KF.length-2&&KF[i+1].h<=h)i++;const A=KF[i],B=KF[i+1],t=(h-A.h)/(B.h-A.h);
@@ -4263,7 +4304,7 @@ function clockStr(h){let hh=Math.floor(h),mm=Math.floor((h-hh)*6)*10;const ap=hh
 let sprayT=0;
 function dawn(quiet){
   S.day++;for(const k in S.tiles)S.tiles[k].w=0;regrowDebris();seasonCheck();morningMoveIn();seaGifts();collectCrate();/* the sea leaves something every night */
-  S.rain=Math.random()<0.18;S.rainUntil=S.rain&&Math.random()<0.6?11+Math.random()*5:0;S.meteor=false;
+  dawnWeather();S.meteor=false;
   const wishes=Math.min(4,S.wishes||0);S.wishes=0;for(let i=0;i<wishes;i++){const c=islands[0].sand.filter(([x,z])=>freeTile(x,z));if(c.length){const [x,z]=pickR(c);S.finds.push({k:'starfrag',x,z});}}
   if(wishes&&!quiet)setTimeout(()=>toast('Star fragments washed up on your beach overnight!','rare',ICON['g:starfrag']),1200);
   if(S.rain)for(const k in S.tiles)S.tiles[k].w=1;
@@ -4271,7 +4312,7 @@ function dawn(quiet){
   const un=CROP_IDS.filter(id=>CROPS[id].lvl<=level());S.demand=pickR(un);
   for(let i=0;i<2;i++)spawnFind(true,islands[0]);forageSpawn(true,10);for(let i=0;i<2;i++)spawnWeed(true);makeOrders();spawnDriftseed(islands[0],true);
   if(!quiet){rebuildSoil();syncLife();if(spr&&!S.rain){sprayT=2.5;}
-    toast(`Day ${S.day} — ${S.rain?'rain is watering everything':'crops are thirsty'}. New orders are in, and wild plants have regrown.`,'',ICON.sprout);}
+    toast(`Day ${S.day} — ${S.rain?(S.wx==='storm'?'a storm is watering everything':'rain is watering everything'):S.wx==='snow'?'snow on the island, and crops are thirsty':S.wx==='fog'?'a foggy morning, and crops are thirsty':'crops are thirsty'}. New orders are in, and wild plants have regrown.`,'',ICON.sprout);}
 }
 function rollVariant(x,z,mystery){
   const b=bonus.get(K(x,z));let boost=1+(b?Math.min(3,b.clover)*0.5:0);if(mystery)boost*=3;
@@ -4311,6 +4352,31 @@ function simulate(sec){const out=[],end=gameNow();let t=end-sec*1000;if(S.dayKey
   S.hour=realHour();return out;}
 
 /* =========================================================
+   Weather: every morning picks the day's weather at random, weighted by the (real) season: summers are mostly clear
+   with the odd thunderstorm, springs showery, autumns cloudy and foggy, winters grey with snow. There's a 30% chance
+   the weather simply carries on from yesterday, so you get runs of fine days and wet spells rather than noise.
+   Tomorrow's weather is rolled a day ahead (S.wxNext), so the diary's forecast is true.
+   What each one does: rain and storms water every crop (storms add lightning and thunder), clouds and fog grey the sky,
+   fog thickens the haze, snow falls on the island in winter, and breezy days send leaves and petals flying.
+   ========================================================= */
+const WX={clear:{name:'Clear',grey:0},windy:{name:'Breezy',grey:0.12},cloudy:{name:'Cloudy',grey:0.55},fog:{name:'Foggy',grey:0.45,fog:1},
+  rain:{name:'Rain',grey:1,rain:1},storm:{name:'Storm',grey:1,rain:1,storm:1},snow:{name:'Snow',grey:0.7,snow:1}};
+const WX_SEASON={spring:{clear:34,windy:8,cloudy:20,fog:8,rain:26,storm:4},summer:{clear:54,windy:8,cloudy:12,fog:3,rain:12,storm:11},
+  autumn:{clear:28,windy:10,cloudy:22,fog:14,rain:20,storm:6},winter:{clear:26,windy:4,cloudy:24,fog:11,rain:5,storm:2,snow:28}};
+function rollWx(prev){const W=WX_SEASON[season()]||WX_SEASON.spring;if(prev&&W[prev]&&Math.random()<0.3)return prev;
+  let t=0;for(const k in W)t+=W[k];let r=Math.random()*t;for(const k in W){r-=W[k];if(r<=0)return k;}return'clear';}
+const wxNow=()=>S.wx&&WX[S.wx]?S.wx:(S.rain?'rain':'clear');
+function wxGrey(){return WX[wxNow()].grey;}
+// set the weather (the morning roll, or the dev switch)
+function setWx(k){S.wx=k;S.rain=!!WX[k].rain;S.rainUntil=0;if(S.rain){for(const q in S.tiles)S.tiles[q].w=1;if(typeof rebuildSoil==='function'&&soilIM)rebuildSoil();}}
+function dawnWeather(){const k=S.wxNext&&WX[S.wxNext]?S.wxNext:rollWx(S.wx);S.wx=k;S.wxNext=rollWx(k);S.rain=!!WX[k].rain;
+  S.rainUntil=S.rain&&k!=='storm'&&Math.random()<0.55?11+Math.random()*5:0;}
+// storms: now and then a flash of lightning, and the thunder a moment later
+let boltT=4,fogW=0;
+function updateWeather(dt){if(wxNow()!=='storm'||inside){return;}boltT-=dt;if(boltT>0)return;boltT=6+Math.random()*14;
+  let f=$('bolt');if(!f){f=document.createElement('div');f.id='bolt';document.body.appendChild(f);}f.classList.remove('on');void f.offsetWidth;f.classList.add('on');
+  setTimeout(()=>{noise(1.8,0.22,70,0.95);tone(48,1.2,'sine',0.05,30);},500+Math.random()*1500);}
+/* =========================================================
    Audio (tiny synth)
    ========================================================= */
 let AC=null,waves=null;
@@ -4347,6 +4413,11 @@ const SFX={
 // the weather in the clock card: a sun with rays, a crescent moon, or a rain cloud
 let wxKind='';const WX_ICO={sun:'<svg viewBox="0 0 32 32">'+[0,1,2,3,4,5,6,7].map(i=>{const a=i*Math.PI/4;return `<rect x="15" y="1" width="2.4" height="6" rx="1.2" fill="#f6b42a" transform="rotate(${i*45} 16 16)"/>`;}).join('')+'<circle cx="16" cy="16" r="7.5" fill="#f9c940" stroke="#f0a020" stroke-width="1.5"/><circle cx="13.5" cy="13.5" r="2.2" fill="#fde9a0"/></svg>',
   moon:'<svg viewBox="0 0 32 32"><path d="M21 4a12 12 0 1 0 7 20A10 10 0 0 1 21 4z" fill="#f4e6a8" stroke="#d8c270" stroke-width="1.5"/></svg>',
+  cloud:'<svg viewBox="0 0 32 32"><ellipse cx="18" cy="15" rx="9" ry="7" fill="#e6ecf4"/><ellipse cx="11" cy="18" rx="7" ry="5.5" fill="#f6f8fb"/><rect x="6" y="17" width="21" height="6.5" rx="3.2" fill="#f6f8fb"/><path d="M8 23.5h18" stroke="#b8c4d4" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  storm:'<svg viewBox="0 0 32 32"><ellipse cx="18" cy="11" rx="9" ry="7" fill="#7a8494"/><ellipse cx="11" cy="14" rx="7" ry="5.5" fill="#8c96a6"/><rect x="6" y="13" width="21" height="6" rx="3" fill="#8c96a6"/><path d="M17 18l-4 7h4l-2 6 7-9h-4l2-4z" fill="#ffd23a" stroke="#c89a10" stroke-width=".8" stroke-linejoin="round"/></svg>',
+  snow:'<svg viewBox="0 0 32 32"><ellipse cx="18" cy="11" rx="9" ry="7" fill="#e6ecf4"/><ellipse cx="11" cy="14" rx="7" ry="5.5" fill="#f6f8fb"/><rect x="6" y="13" width="21" height="6" rx="3" fill="#f6f8fb"/>'+[[10,24],[16,27],[22,24],[13,30],[20,30]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="1.7" fill="#fff" stroke="#9ab8d8" stroke-width=".8"/>`).join('')+'</svg>',
+  fog:'<svg viewBox="0 0 32 32">'+[[6,10,20],[4,16,24],[8,22,18]].map(([x,y,w])=>`<rect x="${x}" y="${y}" width="${w}" height="3.4" rx="1.7" fill="#dfe6ee" stroke="#aab6c4" stroke-width=".8"/>`).join('')+'</svg>',
+  wind:'<svg viewBox="0 0 32 32"><path d="M4 12h15a4 4 0 1 0-4-4M4 18h20a4 4 0 1 1-4 4M4 24h9" fill="none" stroke="#9ec8e8" stroke-width="2.6" stroke-linecap="round"/></svg>',
   rain:'<svg viewBox="0 0 32 32"><ellipse cx="13" cy="13" rx="8" ry="6" fill="#cfd8e4"/><ellipse cx="20" cy="12" rx="7" ry="6.5" fill="#dde4ee"/><rect x="6" y="13" width="21" height="6" rx="3" fill="#cfd8e4"/><path d="M11 22l-2 4M17 22l-2 4M23 22l-2 4" stroke="#6aa8e8" stroke-width="2" stroke-linecap="round"/></svg>'};
 /* =========================================================
    UI helpers
@@ -4370,8 +4441,8 @@ function updateHUD(){
   const lv=level();$('lvlTxt').textContent='Lv '+lv;
   const a=LV[lv-1]||0,b=LV[lv];$('xpFill').style.width=(b?clamp((S.xp-a)/(b-a),0,1)*100:100)+'%';
   {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;
-    const wk=S.rain?'rain':nightF>0.5?'moon':'sun';if(wxKind!==wk){wxKind=wk;$('wxIco').innerHTML=WX_ICO[wk];}}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${S.rain?' · rain':''}`;tideHUD();$('locTxt').textContent=locName();
-  refreshMuseumShow();$('bTask').classList.toggle('ready',ordersReady());$('bMenu').classList.toggle('ready',ordersReady());
+    const w0=wxNow(),wk=w0==='storm'?'storm':S.rain?'rain':w0==='snow'?'snow':w0==='fog'?'fog':w0==='cloudy'?'cloud':nightF>0.5?'moon':w0==='windy'?'wind':'sun';if(wxKind!==wk){wxKind=wk;$('wxIco').innerHTML=WX_ICO[wk];}}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${wxNow()!=='clear'?' · '+WX[wxNow()].name.toLowerCase():''}`;tideHUD();$('locTxt').textContent=locName();
+  refreshMuseumShow();$('bTask').classList.toggle('ready',ordersReady());
   {const g=nextGoal(),el=$('nextUp');el.hidden=!g;if(g){const h=`<small>${g.tag}</small>${g.name}`;if(el.innerHTML!==h)el.innerHTML=h;}}
   jrCheck();$('bShop').hidden=!!S.scratch;/* on a wild island you buy from Marlo's boat and, later, your own store: not from a menu */
   const [g,t]=dexCount();$('dexTxt').textContent=`Dex ${Math.floor(g/t*100)}%`;$('locTxt').hidden=!$('locTxt').textContent;
@@ -4385,7 +4456,7 @@ function addXP(n){const before=level();S.xp+=n;const after=level();if(after>befo
 
 let ctxSig='';
 function updateCtx(){
-  $('tools').hidden=!!(inside||S.sea||S.mode==='edit'||placing);
+  $('bar').hidden=!!(inside||S.sea||S.mode==='edit'||placing);$('apps').hidden=!!(inside||S.mode==='edit'||placing);
   const box=$('ctx');let st='';
   if(!sheet&&$('actionBar').hidden){
     if(inside)st='inside';else if(S.mode==='edit')st='edit';else if(fishing)st='';else if(S.sea)st=sail?'sailing':'sea';else if(boatNear()&&unlocked('boat'))st='board';}
@@ -4442,9 +4513,10 @@ const DEBRIS_TOOL={weed:null,twig:'axe',bush:'axe',stump:'axe',rock:'shovel',bou
 const toolIcon=k=>k==='seeds'?seedIcon(S.seed):ICON[k];
 
 /* ---- tool bar ---- */
-function renderTools(){$('tools').innerHTML=TOOLS.map((t,i)=>`<button class="tool${S.tool===t.k?' on':''}" data-tool="${t.k}" aria-label="${t.name}" title="${t.name} (${i+1})"><img class="px" src="${toolIcon(t.k)}" alt=""></button>`).join('');}
+function renderTools(){const n=TOOLS.length;$('tools').innerHTML=TOOLS.map((t,i)=>`<button class="tool${S.tool===t.k?' on':''}" data-tool="${t.k}" style="--a:${(i/n*360-90).toFixed(1)}deg" aria-label="${t.name}" title="${t.name} (${i+1})"><img class="px" src="${toolIcon(t.k)}" alt=""><span>${t.name}</span></button>`).join('');
+  $('icoTool').src=toolIcon(S.tool);$('bTool').title=TOOL_OF[S.tool]?TOOL_OF[S.tool].name:'Tools';}
 function equip(k){if(!TOOL_OF[k])return;if(S.tool===k&&k==='seeds'){openSheet('seeds');return;}
-  S.tool=k;SFX.ui();renderTools();showHeld();floatText(vil.x,1.25,vil.z,TOOL_OF[k].name);save();}
+  S.tool=k;SFX.ui();renderTools();showApps(false);showHeld();floatText(vil.x,1.25,vil.z,TOOL_OF[k].name);save();}
 $('tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(b)equip(b.dataset.tool);});
 window.addEventListener('keydown',e=>{if(sheet||inside||e.target.tagName==='INPUT')return;const i=+e.key-1;if(i>=0&&i<TOOLS.length)equip(TOOLS[i].k);});
 // tap-to-do: the thing you tap picks the tool (Animal Crossing / Club Penguin style), so you rarely need the tool bar
@@ -4644,7 +4716,8 @@ function checkRow(type){if(S.almR[type])return;if(VARIANTS.every(v=>S.alm[type+'
 // buildings, the bin and placed decor respond to a tap whatever tool you hold; returns true if it handled the tap
 function useFixed(x,z){
   const f=fixedAt(x,z);
-  if(f==='bin'){walkTo(x,z);openSheet('bag','all','trader');return true;}
+  if(f==='bin'){walkTo(x,z);openSheet('bag','all',S.scratch?'crate':'trader');return true;}
+  if(f==='outpost'){outpostTap();return true;}
   if(f==='house'){goTo(HOUSE_AT.x+0.5,HOUSE_AT.z+2.2,()=>enterHouse('home'));return true;}
   if(isFire(x,z)){restByFire();return true;}
   if(isTent(x,z)){walkTo(x+0.5,z+2);tentTap();return true;}
@@ -5957,9 +6030,10 @@ function seaGifts(){const isl=islands[0];if(!isl||!S.scratch&&!S.wild)return 0;c
   for(let i=0;i<3&&c.length;i++){const [x,z]=c.splice(Math.floor(Math.random()*c.length),1)[0];const r=Math.random();S.finds.push({k:r<0.08?'bottle':r<0.3?'glass':r<0.55?'dollar':r<0.8?'shell':'drift',x,z,gift:1});n++;}
   S.giftN=(S.giftN||0)+n;return n;}
 function tomorrowLines(){const lt=lowTimes(1).map(h=>clockStr(h)),cr=Object.values(S.tiles).filter(t=>t.crop).length,out=[];
-  if(lt.length)out.push(`Low tide at ${lt.join(' and ')}`);if(cr)out.push(`${cr} crop${cr>1?'s':''} growing in the dark`);out.push('Something may wash up on the beach');if(S.heartAt)out.push('The driftseed is stirring…');return out;}
+  if(S.wxNext&&WX[S.wxNext])out.push(`Forecast: ${WX[S.wxNext].name.toLowerCase()}`);if(lt.length)out.push(`Low tide at ${lt.join(' and ')}`);if(cr)out.push(`${cr} crop${cr>1?'s':''} growing in the dark`);out.push('Something may wash up on the beach');if(S.heartAt)out.push('The driftseed is stirring…');return out;}
 function morningCard(out,away){if(document.body.classList.contains('titling')){setTimeout(()=>morningCard(out,away),700);return;}const gifts=S.giftN||0;S.giftN=0;const lines=[];
-  if(out&&out.length)lines.push(`${out.length} crop${out.length>1?'s':''} ripened`);if(S.crateLast){lines.push(`${TRADER.name} collected your crate: +${fmt(S.crateLast)} shells`);S.crateLast=0;flyShells(8);}if(gifts)lines.push(`The sea left ${gifts} gift${gifts>1?'s':''} on the beach`);if(S.scratch&&!built('shop'))lines.push(`${TRADER.name}'s boat is at the dock 8am–6pm`);
+  if(out&&out.length)lines.push(`${out.length} crop${out.length>1?'s':''} ripened`);if(S.crateLast){lines.push(`${TRADER.name} sold what you left at the outpost: +${fmt(S.crateLast)} shells`);S.crateLast=0;flyShells(8);}if(gifts)lines.push(`The sea left ${gifts} gift${gifts>1?'s':''} on the beach`);if(S.scratch&&!built('shop'))lines.push(`${TRADER.name}'s boat is at the dock 8am–6pm`);
+  lines.push(`Weather today: ${WX[wxNow()].name.toLowerCase()}`);
   const lt=lowTimes(0).filter(h=>h>S.hour).map(h=>clockStr(h));if(lt.length)lines.push(`Low tide today at ${lt[0]}`);if(S.rain)lines.push('Rain today: the fish are biting');
   const wd=new Date(typeof gameNow==='function'?gameNow():Date.now()).toLocaleDateString(undefined,{weekday:'long'});
   // the morning report: a manila explorer's card with a rubber stamp, typed up like a field station's daily sheet
@@ -6053,7 +6127,7 @@ function traderTap(cx,cy){if(!trader.shown||trader.come<0.9)return false;const s
   const isl=islands[0];let best=null,bd=1e9;for(const [x,z] of [...isl.sand,...isl.grass]){const d=(x-trader.x)**2+(z-trader.z)**2;if(d<bd){bd=d;best=[x,z];}}
   clearAction();goTo(best[0],best[1],()=>{villager.rotation.y=Math.atan2(trader.x-vil.x,trader.z-vil.z);traderHello();openSheet('trader','buy');});return true;}
 const MARLO_HI=['Fresh off the tide today!','Ahoy! Have a look, have a look.','Mind the crates. What can I get you?','Found some lovely bits out on the reef.','Business is slow… on account of there being one customer.'];
-function traderHello(){const first=!S.metMarlo;S.metMarlo=1;say(first?`I'm ${TRADER.name}! I sail these islands trading bits and bobs. Leave things in your crate and I'll collect them at dawn.`:`${TRADER.name}: “${MARLO_HI[(S.day+Math.floor(S.hour))%MARLO_HI.length]}”`);}
+function traderHello(){const first=!S.metMarlo;S.metMarlo=1;say(first?`I'm ${TRADER.name}! I sail these islands trading bits and bobs. Leave things at the outpost by the dock and I'll sell them for you at dawn.`:`${TRADER.name}: “${MARLO_HI[(S.day+Math.floor(S.hour))%MARLO_HI.length]}”`);}
 
 // ---- today's stock: a handful of things, the same all day, different tomorrow ----
 function traderStock(){if(S.tstock&&S.tstock.day===S.day)return S.tstock.items;const R=mulberry((S.worldSeed|0)+S.day*7919),lv=level(),items=[];
@@ -6086,9 +6160,26 @@ function buryTreasure(){const isl=islands[0],c=isl.grass.filter(([x,z])=>freeTil
   S.finds.push({k:'dig',x,z,map:1});syncLife();const dir=Math.abs(x-vil.x)>Math.abs(z-vil.z)?(x>vil.x?'east':'west'):(z>vil.z?'south':'north');
   setTimeout(()=>say(`The map shows an X to the <b>${dir}</b> of here. Look for the golden glint!`),900);}
 
-// ---- the crate by your tent: sell by leaving things for Marlo ----
+// ---- the trading outpost by the dock: drop things off and Marlo sells them for you at dawn ----
+// (it stands from the first day; once your shop is built you can also sell at its counter straight away)
+function outpostSpot(){if(S.outpost&&isLand(S.outpost.x,S.outpost.z)&&!TOWN.fixed.has(K(S.outpost.x,S.outpost.z)))return S.outpost;
+  let best=null,bd=1e9;for(let dx=-6;dx<=6;dx++)for(let dz=-5;dz<=0;dz++){const x=DOCK.x+dx,z=DOCK.z+dz,k=K(x,z);if(Math.abs(dx)<2||!isLand(x,z)||landMap.get(k)==='bridge'||TOWN.fixed.has(k)||(lvlMap.get(k)||0)>0)continue;
+    if(S.objs.some(o=>o.x===x&&o.z===z)||S.tiles[k])continue;const d=Math.abs(Math.abs(dx)-3)+Math.abs(dz+1.5)*1.2;if(d<bd){bd=d;best={x,z};}}
+  if(best){best.r=Math.atan2(DOCK.x-best.x,DOCK.z+2-best.z);S.outpost=best;}return best;}
+// a little stall: decking, four posts under a striped awning, a counter, crates and sacks, a sign and a flag
+function outpostParts(){const p=[],W=0xb88452,D=0x7a5230;p.push(P(BOX,D,0,0.04,0,0,0,0,1.0,0.08,0.9));for(let i=0;i<5;i++)p.push(P(BOX,i%2?0xc8945e:0xb88452,-0.4+i*0.2,0.09,0,0,0,0,0.19,0.03,0.9));
+  for(const [x,z] of [[-0.44,-0.36],[0.44,-0.36],[-0.44,0.36],[0.44,0.36]])p.push(P(BOX,D,x,0.62,z,0,0,0,0.07,1.1,0.07));
+  for(let i=0;i<6;i++)p.push(P(BOX,i%2?0xf6efe0:0x2cc3b2,-0.42+i*0.168,1.2,0.02,0.28,0,0,0.17,0.03,0.96));
+  for(let i=0;i<6;i++)p.push(P(PRISM,i%2?0xf6efe0:0x2cc3b2,-0.42+i*0.168,1.06,0.5,0,0,Math.PI,0.085,0.07,0.02));
+  p.push(P(BOX,W,0,0.36,0.26,0,0,0,0.92,0.5,0.24),P(BOX,0xa87848,0,0.62,0.26,0,0,0,0.98,0.04,0.3),P(BOX,0xf4ead0,0,0.4,0.385,0,0,0,0.5,0.16,0.01));
+  p.push(P(BOX,0xc89858,-0.24,0.26,-0.18,0,0.2,0,0.3,0.3,0.3),P(BOX,0xb88a50,0.2,0.22,-0.2,0,-0.1,0,0.26,0.24,0.26),P(ICO2,0xd8c8a0,0.3,0.24,0.02,0,0,0,0.2,0.26,0.2),
+    P(ICO2,0xe84a3a,-0.26,0.44,-0.18,0,0,0,0.08,0.08,0.08),P(ICO2,0xf6a830,-0.18,0.44,-0.12,0,0,0,0.08,0.08,0.08),P(ICO2,0x8ac850,0.18,0.37,-0.2,0,0,0,0.08,0.08,0.08));
+  p.push(P(CYL8,D,0.62,0.9,-0.3,0,0,0,0.04,1.8,0.04),P(PRISM,0xf6d04a,0.8,1.62,-0.3,0,Math.PI/2,Math.PI/2,0.16,0.02,0.2));
+  p.push(P(BOX,D,-0.66,0.35,0.42,0,0,0,0.05,0.7,0.05),P(BOX,0xe8d4a8,-0.66,0.62,0.42,0,0.3,0,0.36,0.18,0.03));return p;}
+function outpostTap(){const o=S.outpost;if(!o)return;clearAction();goTo(o.x+Math.sin(o.r)*0.9,o.z+Math.cos(o.r)*0.9,()=>{villager.rotation.y=Math.atan2(o.x-vil.x,o.z-vil.z);openSheet('bag','all','crate');});}
+// (the old crate by the tent is just scenery now: the outpost takes its job)
 function cratePos(){return{x:HOUSE_AT.x+1.75,z:HOUSE_AT.z-0.05};}
-function crateTap(cx,cy){if(!S.scratch||!S.homeAt||S.house)return false;const c=cratePos(),s=toScreen(c.x,topY(Math.round(c.x),Math.round(c.z))+0.3,c.z);
+function crateTap(cx,cy){return false;if(!S.scratch||!S.homeAt||S.house)return false;const c=cratePos(),s=toScreen(c.x,topY(Math.round(c.x),Math.round(c.z))+0.3,c.z);
   if(Math.hypot(s[0]-cx,s[1]-cy)>Math.max(18,22*40/cam.dist))return false;clearAction();goTo(c.x+0.4,c.z+0.9,()=>{villager.rotation.y=Math.atan2(c.x-vil.x,c.z-vil.z);openSheet('bag','all','crate');});return true;}
 function crateWorth(){return Object.entries(S.crate||{}).reduce((t,[k,n])=>t+priceOf(k)*n,0);}
 function toCrate(key,n){const have=S.inv[key]||0;n=Math.min(n,have);if(!n)return 0;S.crate=S.crate||{};S.crate[key]=(S.crate[key]||0)+n;S.inv[key]=have-n;if(!S.inv[key])delete S.inv[key];
@@ -6281,14 +6372,14 @@ function renderSheet(){
       const sellable=Object.keys(S.inv).filter(k=>!k.startsWith('m:')&&!k.startsWith('x:')),total=sellable.reduce((t,k)=>t+priceOf(k)*S.inv[k],0);
       const ctx=sheet.ctx;
       if(ctx==='trader')h+=`<div class="invtop"><span class="tot">Worth <b>${fmt(total)}</b> shells · market wants <b>${CROPS[S.demand].name}</b></span><button class="pbtn go" data-sellall="1" ${total?'':'disabled'}>Sell all</button></div>`;
-      else if(ctx==='crate'){const cn=Object.values(S.crate||{}).reduce((a,b)=>a+b,0);h+=`<div class="invtop"><span class="tot">In the crate: <b>${cn}</b> thing${cn===1?'':'s'}, worth ~<b>${fmt(crateWorth())}</b> · ${TRADER.name} collects at dawn</span><button class="pbtn go" data-crateall="1" ${total?'':'disabled'}>Put it all in</button></div>`;}
-      else if(S.scratch)h+=`<p class="note">To sell, put things in the <b>crate by your tent</b> or take them to <b>${TRADER.name}'s boat</b>.</p>`;
+      else if(ctx==='crate'){const cn=Object.values(S.crate||{}).reduce((a,b)=>a+b,0);h+=`<div class="invtop"><span class="tot">Dropped off: <b>${cn}</b> thing${cn===1?'':'s'}, worth ~<b>${fmt(crateWorth())}</b> · ${TRADER.name} sells them at dawn</span><button class="pbtn go" data-crateall="1" ${total?'':'disabled'}>Drop it all off</button></div>`;}
+      else h+=`<p class="note">${S.scratch?`To sell, drop things off at the <b>outpost by the dock</b> (sold at dawn), or sell to <b>${TRADER.name}'s boat</b>${built('shop')?' or at your <b>shop</b>':''}.`:'To sell, take things to the <b>shipping bin</b> by your house.'}</p>`;
       if(!ks.length)h+=`<p class="note">${T0==='all'?'Your pockets are empty. Harvest, fish, catch bugs, forage and gather to fill them.':'Nothing here yet.'}</p>`;
       else{const sel=ks.includes(sheet.sel)?sheet.sel:ks[0],I=itemInfo(sel),t=sel.split('|')[0],mat=sel.startsWith('m:')||sel.startsWith('x:');
         const inOrder=S.orders.some(o=>!o.done&&(o.k===sel||o.k==='c:'+t));const wish=npcs.find(n=>{const d=S.npc[n.i];return d&&d.wish&&!d.wish.done&&d.wish.day===S.day&&invFor(d.wish.k)===sel;});
         const desc=(I&&I.desc)||(sel.includes('|')?(VAR[varOf(sel)].name?`A rare ${VAR[varOf(sel)].name.toLowerCase()} harvest!`:'Fresh from your farm.'):I&&I.bio?'Found around '+I.bio.map(b=>bioLabel(b)).join(', ')+'.':'');
         h+=`<div class="detail"><img class="v-${varOf(sel)}" src="${iconOf(sel)}" alt=""><div class="grow"><div class="nm">${nameOf(sel)} ×${S.inv[sel]}</div><div class="sub">${desc}<br><span class="pp">${shellHTML}${fmt(priceOf(sel))}</span>${S.demand===t?' <span class="pp hot">In demand</span>':''}${inOrder?' · wanted for an order':''}${wish?' · '+wish.name+' wants this!':''}</div>
-          <div class="acts">${sel.startsWith('x:')?`<button class="pbtn go" data-use="${sel}">Use</button>`:''}${sheet.ctx==='trader'||!S.scratch&&!sheet.ctx?`<button class="pbtn" data-sell="${sel}">Sell 1</button>${S.inv[sel]>1?`<button class="pbtn" data-sellk="${sel}">Sell all ×${S.inv[sel]}</button>`:''}`:sheet.ctx==='crate'&&!sel.startsWith('x:')?`<button class="pbtn" data-crate="${sel}">Put 1 in</button>${S.inv[sel]>1?`<button class="pbtn" data-cratek="${sel}">Put all ×${S.inv[sel]}</button>`:''}`:''}</div></div></div><div class="inv">`;
+          <div class="acts">${sel.startsWith('x:')?`<button class="pbtn go" data-use="${sel}">Use</button>`:''}${sheet.ctx==='trader'?`<button class="pbtn" data-sell="${sel}">Sell 1</button>${S.inv[sel]>1?`<button class="pbtn" data-sellk="${sel}">Sell all ×${S.inv[sel]}</button>`:''}`:sheet.ctx==='crate'&&!sel.startsWith('x:')?`<button class="pbtn" data-crate="${sel}">Drop off 1</button>${S.inv[sel]>1?`<button class="pbtn" data-cratek="${sel}">Drop off all ×${S.inv[sel]}</button>`:''}`:''}</div></div></div><div class="inv">`;
         for(const k of ks){const v=varOf(k);h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img class="v-${v}" src="${iconOf(k)}" alt="">${v!=='normal'?`<span class="dot" style="background:${{giant:'#6ab84a',moonlit:'#9ab8ff',golden:'#f5c542',crystal:'#7ad8f0',rainbow:'#f39ab0'}[v]}"></span>`:''}<span class="n">${S.inv[k]}</span></button>`;}
         const pad=Math.max(0,20-ks.length);for(let i=0;i<pad;i++)h+=`<div class="cell empty"></div>`;h+='</div>';}}}
   else if(sheet.kind==='trader'){$('sheetTitle').textContent=`${TRADER.name}'s boat`;tabs([]);
@@ -6296,8 +6387,8 @@ function renderSheet(){
     for(const q of traderStock()){const I=stockInfo(q);h+=`<button class="card ${q.sold?'lock':''}" data-tbuy="${q.i}" ${q.sold?'disabled':''}><img class="px" src="${I.icon}" alt=""><span class="grow"><span class="nm">${I.name}</span><br><span class="sub">${q.sold?'Sold out today':I.desc}</span></span><span class="price">${q.sold?'':sh(q.price)}</span></button>`;}
     h+='</div>';}
   else if(sheet.kind==='shop'){$('sheetTitle').textContent='Shop';tabs([['decor','Decor'],['island','Island']]);
-    if(!built('shop'))h+=`<p class="note">${S.scratch?'You don\'t have a store yet. It comes as a kit when your Island Heart reaches <b>level 3</b>, and you choose where to build it.':'The general store opens when your Island Heart reaches <b>level 3</b>.'} Until then, sell at your shipping bin and buy seeds from the Seeds tool.</p>`;
-    else if(sheet.tab==='decor'){h+=`<p class="note">Buy something, then tap where it should go on your home island.</p><div class="sellall"><button class="pbtn" data-edit="1">Move or store existing decor</button></div><div class="grid">`;
+    if(!built('shop'))h+=`<p class="note">${S.scratch?'You don\'t have a store yet. It comes as a kit when your Island Heart reaches <b>level 3</b>, and you choose where to build it.':'The general store opens when your Island Heart reaches <b>level 3</b>.'} Until then, drop things off at the <b>outpost by the dock</b> to sell them, and buy seeds from the Seeds tool.</p>`;
+    else if(sheet.tab==='decor'){h+=`<p class="note">Buy something, then tap where it should go on your home island.</p><div class="sellall"><button class="pbtn go" data-sellshop="1">Sell things</button><button class="pbtn" data-edit="1">Move or store decor</button></div><div class="grid">`;
       for(const k in BUILD){const B=BUILD[k],lock=B.lvl>lv,n=S.store[k]||0;if(B.craft)continue;
         h+=`<button class="card ${lock?'lock':''}" data-buy="${k}" ${lock?'disabled':''}><img class="px" src="${THUMB[k]||''}" alt=""><span class="grow"><span class="nm">${B.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+B.lvl:(n?`${n} in storage — tap to place`:B.desc)}</span></span><span class="price">${n?'':sh(B.cost)}</span></button>`;}
       h+='</div>';}
@@ -6365,7 +6456,7 @@ function renderSheet(){
     h+=`<div class="setrow"><span>Time speed</span><span class="seg">${[[0,'Pause'],[1,'Real'],[10,'10×'],[60,'60×']].map(([v,l])=>`<button data-spd="${v}" class="${devSpeed===v?'on':''}">${l}</button>`).join('')}</span></div>`;
     h+=`<div class="setrow"><span>Clock</span><span class="seg">${S.toff?`<button data-dev="realtime">Back to real time</button>`:'<button class="on" disabled>Your real time</button>'}</span></div>`;
     h+=`<div class="setrow"><span>Season</span><span class="seg">${[['','Auto'],['spring','Spr'],['summer','Sum'],['autumn','Aut'],['winter','Win']].map(([v,l])=>`<button data-season="${v}" class="${(S.seasonOv||'')===v?'on':''}">${l}</button>`).join('')}</span></div>`;
-    h+=`<div class="setrow"><span>Weather</span><span class="seg"><button data-wx="clear" class="${S.rain?'':'on'}">Clear</button><button data-wx="rain" class="${S.rain?'on':''}">Rain</button></span></div>`;
+    h+=`<div class="setrow"><span>Weather</span><span class="seg">${Object.keys(WX).map(k=>`<button data-wx="${k}" class="${wxNow()===k?'on':''}">${WX[k].name}</button>`).join('')}</span></div>`;
     h+=`<div class="setrow"><span>Night sky</span><span class="seg"><button data-dev="star">Shooting star</button><button data-dev="meteor" class="${S.meteor?'on':''}">Meteor shower</button></span></div>`;
     h+=`<div class="setrow"><span>Island Heart · Lv ${level()}</span><span class="seg"><button data-dev="lvdown">−1</button><button data-dev="lvup">+1</button><button data-dev="lvboat">Boat (Lv 4)</button><button data-dev="lvmax">Max</button></span></div>`;
     h+=`<div class="setrow"><span>Chart</span><span class="seg"><button data-dev="chartall">Reveal all islands</button><button data-dev="chart">Open chart</button></span></div>`;
@@ -6411,13 +6502,14 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.use){useItem(d.use);renderSheet();return;}
   if(d.tbuy!==undefined){buyStock(+d.tbuy);return;}
   if(d.tsell){openSheet('bag','all','trader');return;}
-  if(d.crate){if(toCrate(d.crate,1))floatText(vil.x,1.2,vil.z,'into the crate');renderSheet();return;}
+  if(d.crate){if(toCrate(d.crate,1))floatText(vil.x,1.2,vil.z,'dropped off');renderSheet();return;}
   if(d.cratek){toCrate(d.cratek,S.inv[d.cratek]||0);renderSheet();return;}
-  if(d.crateall){let n=0;for(const k of Object.keys(S.inv))if(!k.startsWith('m:')&&!k.startsWith('x:'))n+=toCrate(k,S.inv[k]);if(n)say(`${n} things in the crate. ${TRADER.name} will collect them at dawn.`);renderSheet();return;}
+  if(d.crateall){let n=0;for(const k of Object.keys(S.inv))if(!k.startsWith('m:')&&!k.startsWith('x:'))n+=toCrate(k,S.inv[k]);if(n)say(`${n} things dropped off. ${TRADER.name} will sell them at dawn.`);renderSheet();return;}
   if(d.sellk){const g=sell(d.sellk,S.inv[d.sellk]||0);if(g){SFX.coin();toast(`Sold for ${fmt(g)} shells.`,'',ICON.shell);}renderSheet();return;}
   if(d.sell){const g=sell(d.sell,1);if(g){SFX.coin();floatText(vil.x,1.2,vil.z,'+'+fmt(g),'gold');}renderSheet();return;}
   if(d.sellall){let g=0;for(const k of Object.keys(S.inv))if(!k.startsWith('m:')&&!k.startsWith('x:'))g+=sell(k,S.inv[k]);if(g){SFX.coin();setTimeout(SFX.coin,120);toast(`Sold everything for ${fmt(g)} shells.`,'',ICON.shell);}renderSheet();return;}
   if(d.buy){const k=d.buy;if(S.store[k]){startPlace(k,true);return;}if(S.shells<BUILD[k].cost){toast(`${BUILD[k].name} costs ${fmt(BUILD[k].cost)} shells.`);SFX.no();return;}startPlace(k,false);return;}
+  if(d.sellshop){openSheet('bag','all','trader');return;}
   if(d.edit){S.mode='edit';closeSheet();toast('Edit mode: tap decor to move or store it, tap empty soil to clear it.','',ICON.hammer);return;}
   if(d.isle){chartGo(islands[Number(d.isle)]);return;}
   if(d.rumour){if(!unlocked('boat')){say('You need your boat for that (Island Heart level 4).');return;}closeSheet();sailToIsland(islands[Number(d.rumour)]);return;}
@@ -6430,7 +6522,7 @@ $('sheetBody').addEventListener('click',e=>{
     toast(S.house===3?'Your Villa is complete!':`Your new ${HOUSES[S.house]} is ready!`,'rare',THUMB['house'+S.house]);renderSheet();return;}
   if(d.mus!==undefined){S.music=d.mus==='1';renderSheet();return;}
   if(d.spd!==undefined){devSpeed=Number(d.spd);renderSheet();return;}
-  if(d.wx){if(d.wx==='rain'){S.rain=true;S.rainUntil=0;for(const k in S.tiles)S.tiles[k].w=1;rebuildSoil();}else if(S.rain)stopRain();renderSheet();return;}
+  if(d.wx){setWx(d.wx);renderSheet();return;}
   if(d.dev==='star'){if(nightF<0.5){setHour(22);applyTime();}spawnShootingStar();closeSheet();return;}
   if(d.dev==='meteor'){S.meteor=!S.meteor;if(S.meteor&&nightF<0.5){setHour(21.5);applyTime();}renderSheet();return;}
   if(d.dev&&d.dev.startsWith('lv')){const cur=level(),to=d.dev==='lvup'?cur+1:d.dev==='lvdown'?cur-1:d.dev==='lvboat'?Math.max(cur,4):LV.length;devLevel(to);renderSheet();return;}
@@ -6453,9 +6545,10 @@ $('sheetBody').addEventListener('click',e=>{
 });
 $('sheetX').onclick=()=>{SFX.ui();closeSheet();};
 // the menu button pops the apps up above the bar; any app, sheet or tap on the world closes it
-function showApps(on){$('apps').hidden=!on;$('bMenu').classList.toggle('on',on);$('bMenu').setAttribute('aria-expanded',on);}
-$('bMenu').onclick=()=>{SFX.ui();showApps($('apps').hidden);};
-$('apps').addEventListener('click',()=>showApps(false));
+// the tool ring (showApps kept its name: everything that used to close the menu now closes the ring)
+function wheelOpen(){return $('bar').classList.contains('open');}
+function showApps(on){$('bar').classList.toggle('open',!!on);$('bTool').setAttribute('aria-expanded',!!on);}
+$('bTool').onclick=()=>{SFX.ui();showApps(!wheelOpen());};
 $('bBag').onclick=()=>openSheet('bag');
 $('nextUp').onclick=goalTap;$('jrChip').onclick=jrOpen;
 $('bShop').onclick=()=>openSheet('shop',sheet&&sheet.kind==='shop'?sheet.tab:'decor');
@@ -6538,7 +6631,7 @@ function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!
   if(did){paint.n++;cursorAt(x,z);walkTo(x,z);swingTool();if(paint.soil){rebuildSoil();paint.soil=false;}}}
 function endPaint(){if(!paint)return;const n=paint.n,m=paint.mode;paint=null;clearAction();updateHUD();if(n>1)floatText(vil.x,1.3,vil.z,PAINT_LBL[m]+' ×'+n);}
 function pinchDist(){const [a,b]=[...ptrs.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1;}
-canvas.addEventListener('pointerdown',e=>{if(!$('apps').hidden)showApps(false);canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+canvas.addEventListener('pointerdown',e=>{if(wheelOpen())showApps(false);canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===1){drag={sx:e.clientX,sy:e.clientY,lx:e.clientX,ly:e.clientY,moved:false};clearTimeout(holdT);
     if(!inside&&!S.sea&&!placing&&!fishing&&!caught&&S.mode!=='edit'){const x0=e.clientX,y0=e.clientY;
       holdT=setTimeout(()=>{if(!drag||drag.moved||ptrs.size!==1)return;const hit=pick(x0,y0);if(!hit)return;const mode=paintMode(hit.x,hit.z);if(!mode)return;
@@ -6559,7 +6652,7 @@ function endPtr(e){if(!ptrs.has(e.pointerId))return;const wasOne=ptrs.size===1;p
 canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('wheel',e=>{e.preventDefault();cam.dist=clamp(cam.dist*(1+e.deltaY*0.001),8,60);},{passive:false});
-window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('apps').hidden)showApps(false);else if(placing)endPlace();else if(sheet)closeSheet();else clearAction();}});
+window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(wheelOpen())showApps(false);else if(placing)endPlace();else if(sheet)closeSheet();else clearAction();}});
 
 /* =========================================================
    New game: arriving by sea. You drift on a raft past islands the currents bring you to; each one is generated in
@@ -6686,7 +6779,7 @@ function makeWish(){if(!shoot||shoot.wished)return;shoot.wished=true;S.wishes=(S
 const RB_COLS=[0xe8504a,0xf09040,0xf6d04a,0x6ac860,0x4a9ae8,0x8a6ad0];const rainbow=new T.Group();
 RB_COLS.forEach((c,i)=>{const m=new T.Mesh(new T.TorusGeometry(58-i*2.2,1.1,4,64,Math.PI),noCurve(new T.MeshBasicMaterial({color:c,fog:false,transparent:true,opacity:0,depthWrite:false})));m.frustumCulled=false;rainbow.add(m);});
 rainbow.visible=false;scene.add(rainbow);let rainbowT=0;
-function stopRain(){S.rain=false;S.rainUntil=0;if(S.hour>7&&S.hour<18){rainbowT=50;toast('The rain has stopped… look, a rainbow!','rare',ICON.star);}}
+function stopRain(){S.rain=false;S.rainUntil=0;S.wx='clear';if(S.hour>7&&S.hour<18){rainbowT=50;toast('The rain has stopped… look, a rainbow!','rare',ICON.star);}}
 function duskEvent(){S.meteor=!S.rain&&Math.random()<0.22;if(S.meteor)toast('Tonight there will be a meteor shower! Tap the sky when a star falls to make a wish.','rare',ICON.star);}
 const STAR_T=[],STAR_F=[];for(let i=0;i<STARN;i++){STAR_T.push(Math.random()*6.283);STAR_F.push(Math.random()*1.3);}
 function skyPos(theta,f,d,out,curved=false){const cp=camera.position,hc=cp.y,aT=cam.pitch-camera.fov/2*Math.PI/180,aH=horizonA(),a=lerp(aH,aT,f);
@@ -6719,6 +6812,7 @@ const MOTE_KINDS={petals:{n:40,size:3,cols:[0xf7c3d3,0xfbe3ea,0xffffff],vy:-0.35
   pollen:{n:45,size:2,cols:[0xfff4b0,0xffffff],vy:-0.05,sway:0.25},spores:{n:55,size:2,cols:[0xc8f0a8,0xe0ffc8],vy:0.12,sway:0.3}};
 let moteKind='',moteSt=[];
 function wantMotes(){if(S.rain)return'';const isl=S.sea?null:curIsl(),b=isl?isl.biome:(S.sea?regionAt(vil.x,vil.z):'open');const night=nightF>0.6;
+  if(wxNow()==='snow'&&(!isl||isl.home))return'snow';if(wxNow()==='windy'&&!night&&isl&&isl.home)return season()==='autumn'?'leaves':'petals';
   if(b==='snow')return'snow';if(b==='autumn')return'leaves';if(b==='volcano')return'embers';if(b==='swamp')return'spores';
   if(night)return'';if(b==='home'||b==='meadow')return'petals';if(b==='tropic'||b==='pine')return'pollen';return'';}
 function updateMotes(dt,tt){const k=wantMotes();
@@ -6742,7 +6836,7 @@ function chirp(){const a=AC;if(!a||!S.sound)return;const n=2+Math.floor(Math.ran
     g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(0.012,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+0.09);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+0.1);}}
 function crickets(){for(let i=0;i<6;i++)setTimeout(()=>noise(0.03,0.012,4800,6),i*55);}
 function updateAudio(dt){if(!AC||!S.sound)return;
-  if(waves){waves.g.gain.value=0.018+rainMix*0.035;if(waves.f)waves.f.frequency.value=420+rainMix*1600;}
+  if(waves){waves.g.gain.value=0.018+rainFall*0.035;if(waves.f)waves.f.frequency.value=420+rainFall*1600;}
   if(S.music!==false){musT-=dt;if(musT<=0){const night=nightF>0.6,sc=night?SCALES.night:S.hour>16?SCALES.eve:SCALES.day;musT=night?0.85:0.55;beat++;
     mel=clamp(mel+Math.round((Math.random()-0.5)*3),0,sc.length-1);if(Math.random()<(night?0.45:0.6))pluck(sc[mel],night?0.014:0.017,night?1.4:0.9);
     if(beat%8===0)pluck(sc[0]/2,0.02,1.8);if(beat%8===4)pluck(sc[2]/2,0.014,1.4);}}
@@ -6759,7 +6853,7 @@ function updateAtmos(dt,tt){
   // idle: glance around like a villager
   if(!S.sea&&!fishing&&!caught&&vil.idle>2.5)villager.rotation.y+=Math.sin(tt*0.9)*0.006;
   // swamp islands hold a low mist
-  const sw=(curIsl()||{}).biome==='swamp'?1:0;fogBoost=lerp(fogBoost,sw,Math.min(1,dt*0.8));
+  const sw=Math.max((curIsl()||{}).biome==='swamp'?1:0,wxNow()==='fog'?1:0,wxNow()==='cloudy'?0.2:0);fogBoost=lerp(fogBoost,sw,Math.min(1,dt*0.8));
 }
 let fogBoost=0;
 
@@ -6789,7 +6883,7 @@ function streakBump(){streak.n++;streak.t=7;const n=streak.n;
 function updateStreak(dt){if(streak.n===0)return;streak.t-=dt;if(streak.el){const u=streak.el.querySelector('u');if(u)u.style.width=Math.max(0,streak.t/7*100)+'%';}
   if(streak.t<=0){streak.n=0;if(streak.el)streak.el.classList.remove('on');}}
 // a find sails off your head into the bag button
-function flyItem(key){const ic=ICON[key],to=$('bMenu');if(!ic||!to)return;setTimeout(()=>{const [sx,sy]=toScreen(vil.x,(vil.y||0)+1.2,vil.z),r=to.getBoundingClientRect(),s=document.createElement('img');
+function flyItem(key){const ic=ICON[key],to=$('bBag');if(!ic||!to)return;setTimeout(()=>{const [sx,sy]=toScreen(vil.x,(vil.y||0)+1.2,vil.z),r=to.getBoundingClientRect(),s=document.createElement('img');
   s.src=ic;s.className='flyitem';s.style.left=sx+'px';s.style.top=sy+'px';document.body.appendChild(s);
   requestAnimationFrame(()=>{s.style.transform=`translate(${r.left+r.width/2-sx-15}px,${r.top+r.height/2-sy-15}px) scale(.55)`;s.style.opacity='0.3';});
   setTimeout(()=>{s.remove();to.classList.remove('bump');void to.offsetWidth;to.classList.add('bump');tone(1300,0.03,'triangle',0.018);},560);},520);}
@@ -7202,7 +7296,7 @@ const FRAME_STAT={calls:0,tris:0,logic:0,render:0};/* read by DS.perf() */
 function frame(now){
   const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;
   advance(dt*devSpeed);
-  rainMix=clamp(rainMix+(S.rain?dt:-dt)*0.5,0,1);
+  {const gT=wxGrey();rainMix=clamp(rainMix+Math.sign(gT-rainMix)*Math.min(Math.abs(gT-rainMix),dt*0.5),0,1);rainFall=clamp(rainFall+(S.rain?dt:-dt)*0.5,0,1);updateWeather(dt);}
   grassU.uTime.value=tt;leafU.uT.value=tt;leafU.uWind.value=S.rain?1.8:1;riverU.uTime.value=tt;waterU.uT.value=tt;waterU.uCam.value.copy(camera.position);if(depthDirty)buildDepthTex();
   {const ci=S.sea?null:curIsl();if(ci&&ci.falls)for(const [x,y,z] of ci.falls){if(Math.random()<dt*3&&Math.abs(x-cam.tx)<16&&Math.abs(z-cam.tz)<16)emit(x+(Math.random()-0.5)*0.8,y+0.05,z+(Math.random()-0.5)*0.3,{vy:0.5+Math.random()*0.5,life:0.6,max:0.6,size:0.07,color:ci.lava?0xffc070:0xf4fbff,g:2});}}grassU.uWind.value=1+rainMix*1.3;grassU.uPl.value.set(vil.x,S.sea?-99:vil.y,vil.z);
   if(!S.sea){
@@ -7227,7 +7321,7 @@ function frame(now){
   const k=paint?0:Math.min(1,dt*5);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();cullIslands();updateNearGrass(dt); // hold the view still while drag-farming so tiles stay under the finger
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
-  scene.fog.near=camD()+45-fogBoost*30;scene.fog.far=camD()+300-fogBoost*200;/* a light haze: neighbouring islands stay green on the horizon */
+  fogW=lerp(fogW,wxNow()==='fog'&&!S.sea?1:0,Math.min(1,dt*0.6));scene.fog.near=Math.max(4,camD()+45-fogBoost*30-fogW*50);scene.fog.far=camD()+300-fogBoost*200-fogW*245;/* foggy days close the world in *//* a light haze: neighbouring islands stay green on the horizon */
   flushCrops();for(const {g} of cropMeshes.values())if(g.children.length)g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;
   updatePops(dt);updateFires(dt,tt);updateJournal(dt,tt);updatePitch(dt);updateTrader(dt,tt);updateSeaGuide(dt,tt);updateToolFx(dt);
   // ripe crops twinkle now and then, so you can see what's ready
@@ -7250,7 +7344,7 @@ function frame(now){
   glints.instanceMatrix.needsUpdate=true;
   if(nightF>0.05&&ffData.length){const pa=ffGeo.attributes.position.array;ffData.forEach((f,i)=>{pa[i*3]=f.x+Math.sin(tt*0.6+f.ph)*0.7;pa[i*3+1]=0.9+Math.sin(tt*1.3+f.ph*2)*0.4;pa[i*3+2]=f.z+Math.cos(tt*0.5+f.ph)*0.7;});ffGeo.attributes.position.needsUpdate=true;}
   fireflies.visible=nightF>0.05&&ffData.length>0;
-  rain.visible=rainMix>0.02;rain.material.opacity=0.6*rainMix;
+  rain.visible=rainFall>0.02;rain.material.opacity=0.6*rainFall*(wxNow()==='storm'?1.3:1);
   if(rain.visible){const pa=rainGeo.attributes.position.array;for(let i=0;i<RAIN;i++){const r=rainData[i];r.y-=dt*16;r.x+=dt*2;if(r.y<0){r.y=12+Math.random()*2;r.x=cam.tx+(Math.random()-0.5)*30;r.z=cam.tz+(Math.random()-0.5)*30;}
     pa[i*6]=r.x;pa[i*6+1]=r.y;pa[i*6+2]=r.z;pa[i*6+3]=r.x-0.08;pa[i*6+4]=r.y+0.5;pa[i*6+5]=r.z;}rainGeo.attributes.position.needsUpdate=true;}
   if(cursorT>0){cursorT-=dt;cursor.visible=cursorT>0;cursor.position.y=(topY(Math.round(cursor.position.x),Math.round(cursor.position.z))||0.3)+0.1+Math.abs(Math.sin(tt*5))*0.04;}
@@ -7266,7 +7360,7 @@ function frame(now){
 /* =========================================================
    Boot
    ========================================================= */
-$('icoMenu').src=ICON.menu;$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
+$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
 // a brand-new game first chooses its island (85-islandpick), then boots; everything else boots straight away
 let introCam=null;
 function bootGame(prebuilt){applyHomeStyle();seasonCheck();
@@ -7318,7 +7412,7 @@ if(/[?&]debug\b/.test(location.search)){
   window.DS={
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
       islands:islands.length,town:TOWN.name,buildings:TOWN.bld.filter(b=>!b.locked).map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
-    hour:h=>{setHour(h);applyTime();},catchNow:id=>{const tg={fish:id,g:new T.Group(),gold:false,x:vil.x+1.5,z:vil.z};shadows.push(tg);fishing={px:vil.x+1.5,pz:vil.z,state:'bite',t:0,target:tg};catchFish();return !!caught;},fish3d:(ks,sz=200)=>(ks==='all'?Object.keys(FISH):ks).map(k=>{const w=new T.Group(),m=fishModel(FISH[k]);m.rotation.y=Math.PI*0.75;w.add(m);return[k,snapThumb(w,sz)];}),scan:v=>{S.scan=v;applyFx();},fx:k=>{setFx(k);if(S.rain)stopRain();return Object.keys(FXS);},
+    hour:h=>{setHour(h);applyTime();},wx:k=>{if(k)setWx(k);return{wx:S.wx,next:S.wxNext,rain:S.rain,grey:wxGrey()};},wxStats:(n=400)=>{const o={};for(const se of ['spring','summer','autumn','winter']){S.seasonOv=se;const c={};let p=null;for(let i=0;i<n;i++){p=rollWx(p);c[p]=(c[p]||0)+1;}o[se]=c;}delete S.seasonOv;return o;},outpost:()=>S.outpost,catchNow:id=>{const tg={fish:id,g:new T.Group(),gold:false,x:vil.x+1.5,z:vil.z};shadows.push(tg);fishing={px:vil.x+1.5,pz:vil.z,state:'bite',t:0,target:tg};catchFish();return !!caught;},fish3d:(ks,sz=200)=>(ks==='all'?Object.keys(FISH):ks).map(k=>{const w=new T.Group(),m=fishModel(FISH[k]);m.rotation.y=Math.PI*0.75;w.add(m);return[k,snapThumb(w,sz)];}),scan:v=>{S.scan=v;applyFx();},fx:k=>{setFx(k);if(S.rain)stopRain();return Object.keys(FXS);},
     icons:(ks)=>{if(ks==='all')ks=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','shell'];return ks.map(k=>[k,ICON[k]]);},
     fillBag:(n=4)=>{const pick=(o,pre)=>Object.keys(o).slice(0,n).map(k=>pre+k);for(const k of [...pick(FISH,'f:'),...pick(BUGS,'b:'),...pick(PLANTS,'p:'),...pick(FINDS,'g:'),'m:wood','m:stone','m:fiber','x:bait','x:fert',...CROP_IDS.slice(0,n*2).map(k=>k+'|normal'),CROP_IDS[3]+'|golden',CROP_IDS[6]+'|rainbow'])S.inv[k]=(S.inv[k]||0)+3;for(const k of ['bench','lamppost','picnic','parasol','fountain','brick','topiary','swing'])S.store[k]=2;updateHUD();return Object.keys(S.inv).length;},
     floorTest:()=>{S.store.brick=3;S.store.chair=1;startPlace('brick',true);const [x,z]=[placing.x,placing.z];layFloorAt(x,z);const second=nearestValid(x,z,'brick');if(second)layFloorAt(...second);endPlace();

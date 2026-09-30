@@ -18,9 +18,10 @@ const DEBRIS_TOOL={weed:null,twig:'axe',bush:'axe',stump:'axe',rock:'shovel',bou
 const toolIcon=k=>k==='seeds'?seedIcon(S.seed):ICON[k];
 
 /* ---- tool bar ---- */
-function renderTools(){$('tools').innerHTML=TOOLS.map((t,i)=>`<button class="tool${S.tool===t.k?' on':''}" data-tool="${t.k}" aria-label="${t.name}" title="${t.name} (${i+1})"><img class="px" src="${toolIcon(t.k)}" alt=""></button>`).join('');}
+function renderTools(){const n=TOOLS.length;$('tools').innerHTML=TOOLS.map((t,i)=>`<button class="tool${S.tool===t.k?' on':''}" data-tool="${t.k}" style="--a:${(i/n*360-90).toFixed(1)}deg" aria-label="${t.name}" title="${t.name} (${i+1})"><img class="px" src="${toolIcon(t.k)}" alt=""><span>${t.name}</span></button>`).join('');
+  $('icoTool').src=toolIcon(S.tool);$('bTool').title=TOOL_OF[S.tool]?TOOL_OF[S.tool].name:'Tools';}
 function equip(k){if(!TOOL_OF[k])return;if(S.tool===k&&k==='seeds'){openSheet('seeds');return;}
-  S.tool=k;SFX.ui();renderTools();showHeld();floatText(vil.x,1.25,vil.z,TOOL_OF[k].name);save();}
+  S.tool=k;SFX.ui();renderTools();showApps(false);showHeld();floatText(vil.x,1.25,vil.z,TOOL_OF[k].name);save();}
 $('tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(b)equip(b.dataset.tool);});
 window.addEventListener('keydown',e=>{if(sheet||inside||e.target.tagName==='INPUT')return;const i=+e.key-1;if(i>=0&&i<TOOLS.length)equip(TOOLS[i].k);});
 // tap-to-do: the thing you tap picks the tool (Animal Crossing / Club Penguin style), so you rarely need the tool bar

@@ -54,6 +54,7 @@ function layoutTown(isl){
       if(!S.house)TOWN.fixed.set(K(HOUSE_AT.x-1,HOUSE_AT.z+2),'decor'); // the tent's bonfire
       const binC=[[home.x+2,home.z+1],[home.x-1,home.z+1],[home.x+2,home.z],[home.x-1,home.z]].find(([x,z])=>isLand(x,z)&&!taken(K(x,z))&&!S.debris.some(d=>d.x===x&&d.z===z));if(binC){BIN_AT.x=binC[0];BIN_AT.z=binC[1];}else{BIN_AT.x=home.x+2;BIN_AT.z=home.z+1;}}
     else{HOUSE_AT.x=HOUSE_AT.z=9999;BIN_AT.x=BIN_AT.z=9999;}
+    {const o=outpostSpot();if(o)TOWN.fixed.set(K(o.x,o.z),'outpost');}
     for(const e of ['tent','fire'])if(S.home&&S.home[e]){const [x,z]=S.home[e];for(let dx=0;dx<(e==='tent'?2:1);dx++)for(let dz=0;dz<(e==='tent'?2:1);dz++)TOWN.fixed.set(K(x+dx,z+dz),'decor');}
     for(const k in S.paths||{})if(S.paths[k]>=PATH_WEAR&&landMap.get(k)==='grass'&&!TOWN.fixed.has(k))TOWN.path.set(k,1);
   }else{
@@ -94,6 +95,7 @@ function layoutTown(isl){
     q.push(P(BOX,0xb07a44,0,0.26,0,0,0,0,0.9,0.06,0.34),P(BOX,0xb07a44,0,0.52,-0.16,0,0,0,0.9,0.18,0.05));p.push(...shift(q,bx,y0(bx,bz),bz,r));TOWN.fixed.set(K(bx,bz),'decor');}
   if(TOWN.board){const [bx,bz]=TOWN.board,q=[P(CYL8,0x6a4428,-0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(CYL8,0x6a4428,0.36,0.45,0,0,0,0,0.07,0.9,0.07),P(BOX,0x9a6a3a,0,0.62,0,0,0,0,0.9,0.52,0.06),P(BOX,0x7a5230,0,0.92,0,0,0,0,1.0,0.07,0.12),
     P(BOX,0xf6ecd0,-0.2,0.66,0.035,0,0,0.08,0.22,0.26,0.01),P(BOX,0xf2c8d8,0.14,0.6,0.035,0,0,-0.1,0.2,0.2,0.01),P(BOX,0xd8ecf4,0.22,0.74,0.035,0,0,0.05,0.14,0.12,0.01)];p.push(...shift(q,bx,y0(bx,bz),bz,0));}
+  if(S.scratch&&S.outpost){const o=S.outpost;p.push(...shift(outpostParts(),o.x,y0(o.x,o.z),o.z,o.r||0));}
   // buildings
   for(const b of TOWN.bld){if(b.t==='home')continue;const bx=b.x+0.5,bz=b.z+0.5,by=Math.min(y0(b.x,b.z),y0(b.x+1,b.z+1));
     if(b.locked){if(b.t!=='vh'||unlocked('vh'+b.n))p.push(...shift(plotParts(b,b.t==='vh'),bx,by,bz,0));continue;}

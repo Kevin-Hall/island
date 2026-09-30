@@ -24,7 +24,7 @@ function streakBump(){streak.n++;streak.t=7;const n=streak.n;
 function updateStreak(dt){if(streak.n===0)return;streak.t-=dt;if(streak.el){const u=streak.el.querySelector('u');if(u)u.style.width=Math.max(0,streak.t/7*100)+'%';}
   if(streak.t<=0){streak.n=0;if(streak.el)streak.el.classList.remove('on');}}
 // a find sails off your head into the bag button
-function flyItem(key){const ic=ICON[key],to=$('bMenu');if(!ic||!to)return;setTimeout(()=>{const [sx,sy]=toScreen(vil.x,(vil.y||0)+1.2,vil.z),r=to.getBoundingClientRect(),s=document.createElement('img');
+function flyItem(key){const ic=ICON[key],to=$('bBag');if(!ic||!to)return;setTimeout(()=>{const [sx,sy]=toScreen(vil.x,(vil.y||0)+1.2,vil.z),r=to.getBoundingClientRect(),s=document.createElement('img');
   s.src=ic;s.className='flyitem';s.style.left=sx+'px';s.style.top=sy+'px';document.body.appendChild(s);
   requestAnimationFrame(()=>{s.style.transform=`translate(${r.left+r.width/2-sx-15}px,${r.top+r.height/2-sy-15}px) scale(.55)`;s.style.opacity='0.3';});
   setTimeout(()=>{s.remove();to.classList.remove('bump');void to.offsetWidth;to.classList.add('bump');tone(1300,0.03,'triangle',0.018);},560);},520);}

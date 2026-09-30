@@ -34,9 +34,10 @@ function seaGifts(){const isl=islands[0];if(!isl||!S.scratch&&!S.wild)return 0;c
   for(let i=0;i<3&&c.length;i++){const [x,z]=c.splice(Math.floor(Math.random()*c.length),1)[0];const r=Math.random();S.finds.push({k:r<0.08?'bottle':r<0.3?'glass':r<0.55?'dollar':r<0.8?'shell':'drift',x,z,gift:1});n++;}
   S.giftN=(S.giftN||0)+n;return n;}
 function tomorrowLines(){const lt=lowTimes(1).map(h=>clockStr(h)),cr=Object.values(S.tiles).filter(t=>t.crop).length,out=[];
-  if(lt.length)out.push(`Low tide at ${lt.join(' and ')}`);if(cr)out.push(`${cr} crop${cr>1?'s':''} growing in the dark`);out.push('Something may wash up on the beach');if(S.heartAt)out.push('The driftseed is stirring…');return out;}
+  if(S.wxNext&&WX[S.wxNext])out.push(`Forecast: ${WX[S.wxNext].name.toLowerCase()}`);if(lt.length)out.push(`Low tide at ${lt.join(' and ')}`);if(cr)out.push(`${cr} crop${cr>1?'s':''} growing in the dark`);out.push('Something may wash up on the beach');if(S.heartAt)out.push('The driftseed is stirring…');return out;}
 function morningCard(out,away){if(document.body.classList.contains('titling')){setTimeout(()=>morningCard(out,away),700);return;}const gifts=S.giftN||0;S.giftN=0;const lines=[];
-  if(out&&out.length)lines.push(`${out.length} crop${out.length>1?'s':''} ripened`);if(S.crateLast){lines.push(`${TRADER.name} collected your crate: +${fmt(S.crateLast)} shells`);S.crateLast=0;flyShells(8);}if(gifts)lines.push(`The sea left ${gifts} gift${gifts>1?'s':''} on the beach`);if(S.scratch&&!built('shop'))lines.push(`${TRADER.name}'s boat is at the dock 8am–6pm`);
+  if(out&&out.length)lines.push(`${out.length} crop${out.length>1?'s':''} ripened`);if(S.crateLast){lines.push(`${TRADER.name} sold what you left at the outpost: +${fmt(S.crateLast)} shells`);S.crateLast=0;flyShells(8);}if(gifts)lines.push(`The sea left ${gifts} gift${gifts>1?'s':''} on the beach`);if(S.scratch&&!built('shop'))lines.push(`${TRADER.name}'s boat is at the dock 8am–6pm`);
+  lines.push(`Weather today: ${WX[wxNow()].name.toLowerCase()}`);
   const lt=lowTimes(0).filter(h=>h>S.hour).map(h=>clockStr(h));if(lt.length)lines.push(`Low tide today at ${lt[0]}`);if(S.rain)lines.push('Rain today: the fish are biting');
   const wd=new Date(typeof gameNow==='function'?gameNow():Date.now()).toLocaleDateString(undefined,{weekday:'long'});
   // the morning report: a manila explorer's card with a rubber stamp, typed up like a field station's daily sheet

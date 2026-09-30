@@ -6,7 +6,7 @@ const FRAME_STAT={calls:0,tris:0,logic:0,render:0};/* read by DS.perf() */
 function frame(now){
   const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;
   advance(dt*devSpeed);
-  rainMix=clamp(rainMix+(S.rain?dt:-dt)*0.5,0,1);
+  {const gT=wxGrey();rainMix=clamp(rainMix+Math.sign(gT-rainMix)*Math.min(Math.abs(gT-rainMix),dt*0.5),0,1);rainFall=clamp(rainFall+(S.rain?dt:-dt)*0.5,0,1);updateWeather(dt);}
   grassU.uTime.value=tt;leafU.uT.value=tt;leafU.uWind.value=S.rain?1.8:1;riverU.uTime.value=tt;waterU.uT.value=tt;waterU.uCam.value.copy(camera.position);if(depthDirty)buildDepthTex();
   {const ci=S.sea?null:curIsl();if(ci&&ci.falls)for(const [x,y,z] of ci.falls){if(Math.random()<dt*3&&Math.abs(x-cam.tx)<16&&Math.abs(z-cam.tz)<16)emit(x+(Math.random()-0.5)*0.8,y+0.05,z+(Math.random()-0.5)*0.3,{vy:0.5+Math.random()*0.5,life:0.6,max:0.6,size:0.07,color:ci.lava?0xffc070:0xf4fbff,g:2});}}grassU.uWind.value=1+rainMix*1.3;grassU.uPl.value.set(vil.x,S.sea?-99:vil.y,vil.z);
   if(!S.sea){
@@ -31,7 +31,7 @@ function frame(now){
   const k=paint?0:Math.min(1,dt*5);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();cullIslands();updateNearGrass(dt); // hold the view still while drag-farming so tiles stay under the finger
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
-  scene.fog.near=camD()+45-fogBoost*30;scene.fog.far=camD()+300-fogBoost*200;/* a light haze: neighbouring islands stay green on the horizon */
+  fogW=lerp(fogW,wxNow()==='fog'&&!S.sea?1:0,Math.min(1,dt*0.6));scene.fog.near=Math.max(4,camD()+45-fogBoost*30-fogW*50);scene.fog.far=camD()+300-fogBoost*200-fogW*245;/* foggy days close the world in *//* a light haze: neighbouring islands stay green on the horizon */
   flushCrops();for(const {g} of cropMeshes.values())if(g.children.length)g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;
   updatePops(dt);updateFires(dt,tt);updateJournal(dt,tt);updatePitch(dt);updateTrader(dt,tt);updateSeaGuide(dt,tt);updateToolFx(dt);
   // ripe crops twinkle now and then, so you can see what's ready
@@ -54,7 +54,7 @@ function frame(now){
   glints.instanceMatrix.needsUpdate=true;
   if(nightF>0.05&&ffData.length){const pa=ffGeo.attributes.position.array;ffData.forEach((f,i)=>{pa[i*3]=f.x+Math.sin(tt*0.6+f.ph)*0.7;pa[i*3+1]=0.9+Math.sin(tt*1.3+f.ph*2)*0.4;pa[i*3+2]=f.z+Math.cos(tt*0.5+f.ph)*0.7;});ffGeo.attributes.position.needsUpdate=true;}
   fireflies.visible=nightF>0.05&&ffData.length>0;
-  rain.visible=rainMix>0.02;rain.material.opacity=0.6*rainMix;
+  rain.visible=rainFall>0.02;rain.material.opacity=0.6*rainFall*(wxNow()==='storm'?1.3:1);
   if(rain.visible){const pa=rainGeo.attributes.position.array;for(let i=0;i<RAIN;i++){const r=rainData[i];r.y-=dt*16;r.x+=dt*2;if(r.y<0){r.y=12+Math.random()*2;r.x=cam.tx+(Math.random()-0.5)*30;r.z=cam.tz+(Math.random()-0.5)*30;}
     pa[i*6]=r.x;pa[i*6+1]=r.y;pa[i*6+2]=r.z;pa[i*6+3]=r.x-0.08;pa[i*6+4]=r.y+0.5;pa[i*6+5]=r.z;}rainGeo.attributes.position.needsUpdate=true;}
   if(cursorT>0){cursorT-=dt;cursor.visible=cursorT>0;cursor.position.y=(topY(Math.round(cursor.position.x),Math.round(cursor.position.z))||0.3)+0.1+Math.abs(Math.sin(tt*5))*0.04;}
@@ -70,7 +70,7 @@ function frame(now){
 /* =========================================================
    Boot
    ========================================================= */
-$('icoMenu').src=ICON.menu;$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
+$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
 // a brand-new game first chooses its island (85-islandpick), then boots; everything else boots straight away
 let introCam=null;
 function bootGame(prebuilt){applyHomeStyle();seasonCheck();
