@@ -16,6 +16,9 @@ const css=readFileSync(join(root,'src/styles.css'),'utf8').replace(/\n$/,'');
 const mods=readdirSync(join(root,'src/game')).filter(f=>f.endsWith('.js')).sort();
 const js=mods.map(f=>readFileSync(join(root,'src/game',f),'utf8').replace(/\n$/,'')).join('\n');
 // parse (don't run) the bundle so a syntax slip fails the build instead of shipping a blank page
+// two modules declaring the same top-level function would silently override each other (the later one wins): refuse
+{const seen=new Map(),dup=[];for(const f of mods)for(const m of readFileSync(join(root,'src/game',f),'utf8').matchAll(/^function ([A-Za-z0-9_$]+)\(/gm)){if(seen.has(m[1]))dup.push(`${m[1]} (${seen.get(m[1])} and ${f})`);else seen.set(m[1],f);}
+  if(dup.length){console.error('Duplicate top-level functions in src/game: '+dup.join(', '));process.exit(1);}}
 try{new vm.Script(`(function(){'use strict';\n${js}\n})`,{filename:'game.js'});}catch(e){console.error('Syntax error in src/game:',e.message);process.exit(1);}
 const html=tpl.replace('/*@styles*/',()=>css).replace('/*@game*/',()=>`<script>\n(function(){\n'use strict';\n${js}\n})();\n</script>`);
 if(args.includes('--check')){const cur=readFileSync(out,'utf8');if(cur!==html){console.error('index.html is out of date: run `npm run build`');process.exit(1);}console.log('index.html is up to date');}

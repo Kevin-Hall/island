@@ -22,7 +22,7 @@ const SP_COLS={
   birch:{spring:[0xc0e88a,0x8ecc5e,0x5a9a40],summer:[0x9ad464,0x6cb048,0x3e7a34],autumn:[0xfae070,0xf0c040,0xc08a20]},
   poplar:{spring:[0x9ad46a,0x68aa48,0x3c7434],summer:[0x6aac4a,0x46883a,0x265a2c],autumn:[0xf6d25a,0xe0aa38,0xa87a24]}};
 // scale a set of parts about a point (for stretching a crown taller or wider)
-function scaleParts(p,from,sx,sy,sz,cx,cy,cz){for(let i=from;i<p.length;i++){const q=p[i];q.x=cx+(q.x-cx)*sx;q.y=cy+(q.y-cy)*sy;q.z=cz+(q.z-cz)*sz;q.sx*=sx;q.sy*=sy;q.sz*=sz;}}
+function stretchParts(p,from,sx,sy,sz,cx,cy,cz){for(let i=from;i<p.length;i++){const q=p[i];q.x=cx+(q.x-cx)*sx;q.y=cy+(q.y-cy)*sy;q.z=cz+(q.z-cz)*sz;q.sx*=sx;q.sy*=sy;q.sz*=sz;}}
 function blossom(p,R,n,cx,cy,cz,rad,cols){dots(p,R,n,cx,cy+rad*0.2,cz,rad*1.7,rad*1.5,cols,0xf6d04a,0.075);}
 // a branch from (x0,y0,z0) to (x1,y1,z1)
 function limb(p,col,x0,y0,z0,x1,y1,z1,w){const dx=x1-x0,dy=y1-y0,dz=z1-z0,L=Math.hypot(dx,dy,dz);
@@ -32,7 +32,7 @@ function speciesParts(v,s,R,p){const sp=treeSp(v),sh=treeShape(v),id=sp.id,C=SP_
   const bare=s==='winter';
   switch(id){
     case'oak':case'maple':{if(bare){bareTree(p,R,true);break;}
-      if(sh===0){trunkP(p,R,0x7a5230,0.62,0.12,0x5e3e24);const n=p.length;canopy(p,R,C,0,1.08,0,0.42);if(id==='maple')scaleParts(p,n,0.92,1.18,0.92,0,1.08,0);cr.push([0,1.08,0,0.42]);}
+      if(sh===0){trunkP(p,R,0x7a5230,0.62,0.12,0x5e3e24);const n=p.length;canopy(p,R,C,0,1.08,0,0.42);if(id==='maple')stretchParts(p,n,0.92,1.18,0.92,0,1.08,0);cr.push([0,1.08,0,0.42]);}
       else{// a broad old tree: the trunk forks into two big limbs, each under its own crown
         trunkP(p,R,0x74502e,0.5,0.14,0x5a3a22);limb(p,0x6a4428,0,0.7,0,-0.3,1.05,0.05,0.09);limb(p,0x6a4428,0,0.7,0,0.28,1.15,-0.05,0.085);
         canopy(p,R,C,-0.3,1.12,0.05,0.36);canopy(p,R,C,0.3,1.28,-0.05,0.34);canopy(p,R,C,0,1.45,0.02,0.24);cr.push([-0.3,1.12,0.05,0.36],[0.3,1.28,-0.05,0.34]);}
@@ -42,10 +42,10 @@ function speciesParts(v,s,R,p){const sp=treeSp(v),sh=treeShape(v),id=sp.id,C=SP_
       if(s==='spring')for(let i=0;i<6;i++)lf(p,[0xf8c8d8,0xffe4ee][i%2],(R()-0.5)*1.5,0.02,(R()-0.5)*1.5,R()*6.28,0,0.1,0.08,0.02);/* petals on the grass */break;}
     case'apple':{if(bare){bareTree(p,R,true);break;}// short and spreading: a low, wide, flattened crown on a stout, leaning trunk
       const lean=(R()-0.5)*0.16;trunkP(p,R,0x6e4a30,0.4,0.13,0x523622);limb(p,0x62422a,0,0.55,0,lean-0.25,0.85,0.1,0.08);limb(p,0x62422a,0,0.55,0,lean+0.25,0.9,-0.08,0.08);
-      const n=p.length,cy=sh?1.02:0.96;canopy(p,R,C,lean,cy,0,sh?0.4:0.46);scaleParts(p,n,sh?1.05:1.18,sh?0.9:0.74,sh?1.05:1.18,lean,cy,0);cr.push([lean,cy,0,sh?0.4:0.46,sh?0.9:0.74,sh?1.05:1.18]);
+      const n=p.length,cy=sh?1.02:0.96;canopy(p,R,C,lean,cy,0,sh?0.4:0.46);stretchParts(p,n,sh?1.05:1.18,sh?0.9:0.74,sh?1.05:1.18,lean,cy,0);cr.push([lean,cy,0,sh?0.4:0.46,sh?0.9:0.74,sh?1.05:1.18]);
       if(s==='spring')blossom(p,R,26,lean,cy,0,sh?0.42:0.52,[0xffffff,0xffe8f0,0xfad0dc]);break;}
     case'pear':{if(bare){bareTree(p,R,true);break;}// upright, with a tall teardrop crown
-      trunkP(p,R,0x5e4232,0.78,0.11,0x463024);const n=p.length;canopy(p,R,C,0,1.3,0,0.38);scaleParts(p,n,0.9,1.35,0.9,0,1.3,0);cr.push([0,1.3,0,0.38,1.35,0.9]);
+      trunkP(p,R,0x5e4232,0.78,0.11,0x463024);const n=p.length;canopy(p,R,C,0,1.3,0,0.38);stretchParts(p,n,0.9,1.35,0.9,0,1.3,0);cr.push([0,1.3,0,0.38,1.35,0.9]);
       if(s==='spring')blossom(p,R,24,0,1.36,0,0.36,[0xffffff,0xf4f4ea]);break;}
     case'peach':{if(bare){bareTree(p,R,true);break;}// a little open-centred tree: three slim stems in a vase, each with a small crown
       p.push(PG(SPH_LO,0x5a3a2c,0x6a4636,0,0.05,0,0,0,0,0.36,0.22,0.36));const a0=R()*6.283;
@@ -65,7 +65,7 @@ function speciesParts(v,s,R,p){const sp=treeSp(v),sh=treeShape(v),id=sp.id,C=SP_
         p.push(PG(SCONE,top,bot,0,y+h/2,0,0,R(),0,rad*2,h,rad*2));if(sn)p.push(PG(SCONE,0xffffff,0xdce8f2,0,y+h*0.68,0,0,R(),0,rad*1.6,h*0.62,rad*1.6));}
       p.push(P(CONE5,sn?0xffffff:tip,0,2.55,0,0,0,0,0.14,0.34,0.14));break;}
     case'poplar':{if(bare){trunkP(p,R,0x6a5a48,1.1,0.1,0x4e4234);for(let i=0;i<8;i++){const a=i*0.8,y=0.8+i*0.16;limb(p,0x5e5044,Math.cos(a)*0.04,y,Math.sin(a)*0.04,Math.cos(a)*0.2,y+0.45,Math.sin(a)*0.2,0.025);}break;}
-      trunkP(p,R,0x6a5a48,0.42,0.1,0x4e4234);const n=p.length;canopy(p,R,C,0,1.42,0,0.34);scaleParts(p,n,0.74,2.2,0.74,0,1.42,0);break;}
+      trunkP(p,R,0x6a5a48,0.42,0.1,0x4e4234);const n=p.length;canopy(p,R,C,0,1.42,0,0.34);stretchParts(p,n,0.74,2.2,0.74,0,1.42,0);break;}
   }
   return cr;}
 const PINE_TREE=(s,R)=>treeParts(s==='winter'?'snowpine':'pine',R,0x9a9ea8).map(q=>Object.assign(q,{x:q.x*0.78,y:q.y*0.78,z:q.z*0.78,sx:q.sx*0.78,sy:q.sy*0.78,sz:q.sz*0.78}));
