@@ -1,13 +1,20 @@
-# Pocket Island
+# Sporeholm
 
-A tiny low-poly, Minecraft-flavoured island sandbox built with three.js in a single `index.html`.
-It uses an orthographic isometric camera, stepped terrain, long sun shadows and a day/night cycle.
+A small, quiet mushroom-breeding game in three.js, all in one `index.html`.
+The island is drawn like a pen-and-ink map: paper-toned terraces, ink outlines, stipple and dashed ripples.
+The only saturated colour in the world comes from the mushrooms you find and breed.
 
-Open `index.html` in a browser. three.js loads from a CDN, so you need an internet connection.
+Open `index.html` in a browser (three.js loads from a CDN). Progress saves in your browser.
 
-- **WASD** or click the ground to walk
-- **Click** trees, rocks, bushes, mushrooms and flowers to gather them (trees take 3 hits and regrow)
-- **2 / 3** select wood or stone slabs, then click to build; **right-click** removes a slab
-- Slabs on shallow water make bridges, and stacked slabs make steps up the terraces
-- **Q / E** rotate the view · scroll to zoom · **T** skips six hours · **H** hides the help
-- **New island** generates a fresh seed: cabin, campfire, river, bears and all
+## How it plays
+
+1. **Forage.** Four wild strains grow in patches around the island. Picking one gives you the mushroom and 2 spores.
+2. **Plant.** Choose spores in the hotbar and click a log bed by the cabin.
+3. **Cross.** An empty bed touching two grown mushrooms catches their spores and sprouts a hybrid.
+   Hybrids blend hue and inherit cap shape, size, pattern and (rarely) glow, with occasional mutations.
+4. **Sell.** Take your basket to the market boat on the pier. The buyer also posts orders, such as "Speckled Orchid Spire", that pay a bonus.
+5. **Collect.** The journal (J, or click the cabin) records every strain you have harvested.
+
+Mushrooms grow faster at night and near water. Buy extra log beds and rare glowing spores at the market.
+
+**Controls:** WASD or click to walk · 1–9 hotbar · right-click an empty bed to pick it up · Q/E rotate · scroll zoom · T skips six hours

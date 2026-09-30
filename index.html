@@ -3,31 +3,37 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pocket Island</title>
+<title>Sporeholm</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Work+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Work+Sans:wght@400;500;600&display=swap">
 <style>
-/* Layout: full-bleed WebGL scene; HUD floats on paper-like chips at the corners, hotbar docked bottom-centre. */
+/* Layout: full-bleed ink-and-paper scene; HUD sits on paper slips at the corners; hotbar docked bottom-centre; market and journal open as a centred ledger sheet. */
 :root {
-  --paper: #f3ecd8;
-  --paper-glass: rgba(243, 236, 216, 0.9);
-  --ink: #2e2b25;
-  --ink-soft: #6c6557;
-  --moss: #6f8f55;
-  --roof: #d85c5c;
-  --ground: #b7c49a;
+  --paper: #f1ece1;
+  --paper-glass: rgba(241, 236, 225, 0.94);
+  --ink: #2b2926;
+  --ink-soft: #6f6a61;
+  --rule: rgba(43, 41, 38, 0.16);
+  --coin: #e0a72e;
+  --ground: #e7e1d3;
   --display: 'Pixelify Sans', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --body: 'Work Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: light;
 }
-html, body { height: 100%; margin: 0; overflow: hidden; background: var(--ground); color: var(--ink); font: 14px/1.4 var(--body); }
-canvas { display: block; touch-action: none; }
+html, body { height: 100%; margin: 0; overflow: hidden; background: var(--ground); color: var(--ink); font: 14px/1.45 var(--body); }
+canvas.scene { display: block; touch-action: none; }
 .chip {
   background: var(--paper-glass); color: var(--ink);
-  border: 2px solid var(--ink); border-radius: 4px;
-  box-shadow: 3px 3px 0 rgba(46, 43, 37, 0.35);
+  border: 2px solid var(--ink); border-radius: 3px;
+  box-shadow: 3px 3px 0 rgba(43, 41, 38, 0.28);
 }
+button { font: 500 14px/1 var(--display); color: var(--ink); cursor: pointer; padding: 8px 10px; min-width: 36px; }
+button:hover:not(:disabled) { background: var(--paper); }
+button:disabled { opacity: 0.45; cursor: default; }
+button:focus-visible { outline: 3px solid var(--coin); outline-offset: 2px; }
+.px { image-rendering: pixelated; display: block; }
+
 #top {
   position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 12px; right: 12px;
   display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; pointer-events: none;
@@ -35,50 +41,79 @@ canvas { display: block; touch-action: none; }
 #top > * { pointer-events: auto; }
 #title { padding: 6px 12px 8px; }
 #title h1 { margin: 0; font: 700 20px/1.1 var(--display); letter-spacing: 0.02em; }
-#title .sub { font: 500 13px/1.2 var(--display); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-#tools { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-button {
-  font: 500 14px/1 var(--display); color: var(--ink); cursor: pointer;
-  padding: 8px 10px; min-width: 36px;
-}
-button:hover { background: var(--paper); }
-button:focus-visible { outline: 3px solid var(--roof); outline-offset: 2px; }
+#title .sub { font: 500 13px/1.3 var(--display); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+#tools { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+#coins { display: flex; align-items: center; gap: 6px; padding: 7px 10px; font: 700 15px/1 var(--display); font-variant-numeric: tabular-nums; }
+.coin { width: 12px; height: 12px; border-radius: 50%; background: var(--coin); border: 2px solid var(--ink); flex: none; }
+
 #bar {
   position: fixed; left: 50%; transform: translateX(-50%);
   bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
-  display: flex; gap: 6px; padding: 6px; align-items: stretch; max-width: calc(100vw - 24px);
+  display: flex; gap: 6px; padding: 6px; max-width: calc(100vw - 24px); overflow-x: auto;
 }
 .slot {
-  position: relative; width: 52px; height: 52px; padding: 0; display: grid; place-items: center;
-  border: 2px solid transparent; border-radius: 3px; background: rgba(46, 43, 37, 0.06); box-shadow: none;
+  position: relative; flex: none; width: 52px; height: 52px; padding: 0; display: grid; place-items: center;
+  border: 2px solid transparent; border-radius: 2px; background: rgba(43, 41, 38, 0.05); box-shadow: none;
 }
 .slot[aria-pressed="true"] { border-color: var(--ink); background: var(--paper); }
-.slot canvas { width: 32px; height: 32px; image-rendering: pixelated; }
+.slot canvas { width: 40px; height: 40px; }
 .slot .key { position: absolute; top: 2px; left: 4px; font: 500 10px/1 var(--display); color: var(--ink-soft); }
 .slot .n { position: absolute; bottom: 2px; right: 4px; font: 700 13px/1 var(--display); font-variant-numeric: tabular-nums; }
-.sep { width: 2px; background: rgba(46, 43, 37, 0.2); margin: 4px 2px; }
-.pouch { width: 44px; cursor: default; }
-#help {
-  position: fixed; left: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
-  padding: 8px 12px; max-width: 280px; font-size: 12.5px; color: var(--ink);
-}
-#help b { font: 700 12px/1 var(--display); letter-spacing: 0.04em; text-transform: uppercase; display: block; margin-bottom: 4px; }
-#help ul { margin: 0; padding-left: 16px; }
+
+#notes { position: fixed; left: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 86px); padding: 10px 12px; width: 260px; font-size: 12.5px; }
+#notes h2 { margin: 0 0 6px; font: 700 12px/1 var(--display); letter-spacing: 0.06em; text-transform: uppercase; }
+#notes ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+#notes li { display: grid; grid-template-columns: 16px 1fr; gap: 4px; color: var(--ink-soft); }
+#notes li.done { text-decoration: line-through; text-decoration-color: var(--rule); }
+#notes li.now { color: var(--ink); font-weight: 600; }
+#notes .keys { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--rule); color: var(--ink-soft); font-size: 11.5px; }
+
 #toast {
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
-  padding: 6px 12px; font: 500 14px/1.2 var(--display); opacity: 0; transition: opacity .25s; pointer-events: none;
+  position: fixed; z-index: 6; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 86px);
+  padding: 6px 12px; font: 500 14px/1.25 var(--display); opacity: 0; transition: opacity .25s; pointer-events: none; max-width: min(420px, calc(100vw - 24px)); text-align: center;
+}
+#tip {
+  position: fixed; pointer-events: none; padding: 4px 8px; font: 500 13px/1.2 var(--display); white-space: nowrap;
+  border-width: 1.5px; box-shadow: 2px 2px 0 rgba(43, 41, 38, 0.25);
 }
 .pop {
-  position: fixed; pointer-events: none; font: 700 15px/1 var(--display); color: var(--paper);
+  position: fixed; z-index: 1; pointer-events: none; font: 700 15px/1 var(--display); color: var(--paper);
   text-shadow: 0 2px 0 var(--ink), 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 -2px 0 var(--ink);
-  transform: translate(-50%, -100%); animation: pop 1.1s ease-out forwards;
+  transform: translate(-50%, -100%); animation: pop 1.3s ease-out forwards; white-space: nowrap;
 }
-@keyframes pop { from { opacity: 1; margin-top: 0 } to { opacity: 0; margin-top: -40px } }
-@media (max-width: 640px) {
-  #help { display: none; }
-  .slot { width: 44px; height: 44px; }
-  .pouch { width: 38px; }
+@keyframes pop { from { opacity: 1; margin-top: 0 } to { opacity: 0; margin-top: -44px } }
+
+#panel {
+  position: fixed; z-index: 5; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(540px, calc(100vw - 32px)); max-height: min(78vh, 680px); overflow: auto; padding: 16px 18px 18px;
+}
+#panel header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+#panel h2 { margin: 0; font: 700 22px/1.1 var(--display); }
+#panel h3 { margin: 16px 0 6px; font: 700 12px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+#panel .close { min-width: 32px; padding: 6px 8px; }
+.row { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--rule); }
+.row canvas { width: 40px; height: 40px; }
+.row .nm { font-weight: 600; min-width: 0; }
+.row .meta { color: var(--ink-soft); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.row .acts { display: flex; gap: 6px; }
+.row button { padding: 6px 8px; font-size: 13px; }
+.order { border: 2px dashed var(--ink); padding: 10px 12px; display: grid; gap: 6px; }
+.order .want { font: 700 17px/1.2 var(--display); }
+.empty { color: var(--ink-soft); padding: 8px 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.card { border: 1.5px solid var(--rule); padding: 8px; display: grid; justify-items: center; gap: 4px; text-align: center; min-width: 0; }
+.card canvas { width: 60px; height: 60px; }
+.card .nm { font-weight: 600; font-size: 12.5px; line-height: 1.25; }
+.card .meta { color: var(--ink-soft); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 700px) {
+  #notes { width: auto; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 80px); padding: 8px 10px; }
+  #notes ol li:not(.now) { display: none; }
+  #notes .keys { display: none; }
+  .slot { width: 46px; height: 46px; }
+  .slot canvas { width: 34px; height: 34px; }
   #title h1 { font-size: 17px; }
+  .hide-sm { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .pop { animation-duration: .01s; } #toast { transition: none; } }
 </style>
@@ -88,40 +123,38 @@ button:focus-visible { outline: 3px solid var(--roof); outline-offset: 2px; }
 </head>
 <body>
 <div id="top">
-  <div id="title" class="chip"><h1 id="isle-name">Mossholm</h1><div class="sub" id="clock">Day 1 · 07:00</div></div>
+  <div id="title" class="chip"><h1 id="isle-name">Sporeholm</h1><div class="sub" id="clock">Day 1 · 08:00</div></div>
   <div id="tools">
-    <button class="chip" id="rot-l" title="Rotate view left (Q)" aria-label="Rotate view left">⟲</button>
-    <button class="chip" id="rot-r" title="Rotate view right (E)" aria-label="Rotate view right">⟳</button>
-    <button class="chip" id="time" title="Skip ahead six hours (T)">Time +6h</button>
-    <button class="chip" id="regen" title="Generate a new island">New island</button>
+    <div id="coins" class="chip" aria-label="Coins"><span class="coin"></span><span id="coin-n">0</span></div>
+    <button class="chip" id="journal-btn" title="Journal (J)">Journal</button>
+    <button class="chip hide-sm" id="rot-l" title="Rotate view left (Q)" aria-label="Rotate view left">⟲</button>
+    <button class="chip hide-sm" id="rot-r" title="Rotate view right (E)" aria-label="Rotate view right">⟳</button>
+    <button class="chip" id="time" title="Skip ahead six hours (T)">+6h</button>
+    <button class="chip" id="regen" title="Start over on a new island">New island</button>
   </div>
 </div>
-<div id="help" class="chip">
-  <b>Field notes</b>
-  <ul>
-    <li>WASD or click the ground to walk</li>
-    <li>Click trees, rocks, mushrooms to gather</li>
-    <li>Pick a slab (2, 3), click to build; right-click removes</li>
-    <li>Slabs over shallow water make a bridge</li>
-    <li>Q / E rotate · scroll to zoom · H hides this</li>
-  </ul>
-</div>
+<div id="notes" class="chip" aria-live="polite"></div>
 <div id="bar" class="chip" role="toolbar" aria-label="Hotbar"></div>
 <div id="toast" class="chip" role="status"></div>
+<div id="tip" class="chip" hidden></div>
+<div id="panel" class="chip" role="dialog" aria-modal="false" hidden></div>
 
 <script type="module">
 import * as THREE from 'three';
 
-/* ---------- constants ---------- */
-const SIZE = 26, HALF = SIZE / 2, STEP = 0.4, SEA = STEP * 1.35, REACH = 2.1, DAY_LEN = 300;
-const TILE_COL = ['#5f9e9a', '#a6d6c0', '#e8dcab', '#b6c78f', '#a5ba7e', '#93ad70', '#8e9d7c', '#eef0ea'];
-const MUSH_COL = ['#d9573f', '#e98a2e', '#6a7fd1', '#9b6ad1', '#c9a36b', '#e04f78'];
+/* ================= constants ================= */
+const SIZE = 26, HALF = SIZE / 2, STEP = 0.4, SEA = STEP * 1.35, REACH = 2.1, DAY_LEN = 240, GROW_TIME = 30;
+const INK = '#2b2926';
+const TILE_COL = ['#b8c4c0', '#ccd6d1', '#ece3cd', '#e8e2d4', '#e0dacb', '#d8d1c1', '#cfc8b8', '#f6f4ef'];
+const SAVE_KEY = 'sporeholm-v1';
+const BED_PRICE = 12, GLOW_PRICE = 60, WILD_PACK_PRICE = 6;
 
-/* ---------- random + noise ---------- */
+/* ================= random + noise (seeded, world gen only) ================= */
 const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 let R = mulberry(1);
 const rand = (a = 0, b = 1) => a + R() * (b - a);
 const pick = arr => arr[Math.floor(R() * arr.length)];
+const mr = (a = 0, b = 1) => a + Math.random() * (b - a);
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -135,67 +168,218 @@ function vnoise(x, y) {
 }
 const fbm = (x, y) => vnoise(x, y) * 0.6 + vnoise(x * 2.1 + 7, y * 2.1 + 3) * 0.3 + vnoise(x * 4.3 + 1, y * 4.3 + 9) * 0.1;
 
-/* ---------- renderer / scene ---------- */
+/* ================= mushroom genetics ================= */
+// Genome: hue 0-360, shape 0 cap/1 parasol/2 spire/3 bell, w cap width 0-1, h stem height 0-1, pattern 0 plain/1 speckled/2 banded, glow, gen
+const HUES = [[12, 'Crimson'], [28, 'Ember'], [42, 'Amber'], [60, 'Saffron'], [90, 'Lime'], [130, 'Moss'], [165, 'Jade'], [190, 'Tide'], [215, 'Azure'], [240, 'Cobalt'], [265, 'Indigo'], [290, 'Violet'], [320, 'Orchid'], [345, 'Rose'], [361, 'Crimson']];
+const COLOR_NAMES = [...new Set(HUES.map(h => h[1]))];
+const SHAPES = ['Cap', 'Parasol', 'Spire', 'Bell'], PATTERNS = ['', 'Speckled', 'Banded'];
+const WILD = [
+  { hue: 5, shape: 0, w: 0.6, h: 0.45, pattern: 1, glow: false, gen: 0 },
+  { hue: 50, shape: 3, w: 0.35, h: 0.75, pattern: 0, glow: false, gen: 0 },
+  { hue: 203, shape: 1, w: 0.9, h: 0.55, pattern: 2, glow: false, gen: 0 },
+  { hue: 278, shape: 2, w: 0.4, h: 0.3, pattern: 0, glow: false, gen: 0 },
+];
+const hueDist = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+const hueName = h => HUES.find(([e]) => ((h % 360) + 360) % 360 < e)[1];
+const nameOf = g => [g.glow ? 'Glowing' : '', PATTERNS[g.pattern], hueName(g.hue), SHAPES[g.shape]].filter(Boolean).join(' ');
+const valueOf = g => Math.round(4 + Math.min(g.gen, 8) * 2 + (g.pattern ? 3 : 0) + (g.glow ? 22 : 0)
+  + Math.min(...WILD.map(w => hueDist(g.hue, w.hue))) * 0.3 + (g.w > 0.85 || g.h > 0.85 ? 3 : 0));
+function cross(a, b) {
+  const d = ((b.hue - a.hue + 540) % 360) - 180;
+  const hue = (a.hue + d * mr(0.25, 0.75) + mr(-12, 12) + (Math.random() < 0.08 ? mr(-70, 70) : 0) + 720) % 360;
+  return {
+    hue,
+    shape: Math.random() < 0.1 ? Math.floor(mr(0, 4)) : (Math.random() < 0.5 ? a.shape : b.shape),
+    w: clamp(lerp(a.w, b.w, Math.random()) + mr(-0.15, 0.15), 0, 1),
+    h: clamp(lerp(a.h, b.h, Math.random()) + mr(-0.15, 0.15), 0, 1),
+    pattern: Math.random() < 0.12 ? Math.floor(mr(0, 3)) : (Math.random() < 0.5 ? a.pattern : b.pattern),
+    glow: (a.glow || b.glow) ? Math.random() < 0.55 : Math.random() < 0.04,
+    gen: Math.max(a.gen, b.gen) + 1,
+  };
+}
+
+/* ---- pixel portrait of a genome (20x20, drawn per pixel) ---- */
+function portrait(g) {
+  const W = 20, cx = 10, base = 18;
+  const c = document.createElement('canvas'); c.width = c.height = W; c.className = 'px';
+  const x2 = c.getContext('2d');
+  const hw = 3.2 + g.w * 2.8, stemH = Math.round(3 + g.h * 5), yb = base - stemH;
+  const hs = l => `hsl(${g.hue} 78% ${l}%)`;
+  const inCap = (dx, dy) => {
+    if (dy < -0.5) return false;
+    if (g.shape === 0) return (dx / hw) ** 2 + (dy / (hw * 0.75)) ** 2 <= 1;
+    if (g.shape === 1) return dy <= 2.5 && Math.abs(dx) <= hw + 0.5 - dy * 1.1;
+    if (g.shape === 2) { const H = hw * 1.6; return dy <= H && Math.abs(dx) <= hw * 0.75 * (1 - dy / H) + 0.3; }
+    return (dx / (hw * 0.8)) ** 2 + (dy / (hw * 1.05)) ** 2 <= 1;
+  };
+  const px = Array.from({ length: W }, () => Array(W).fill(null));
+  for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+    const dx = x + 0.5 - cx, dy = yb - (y + 0.5);
+    if (inCap(dx, dy)) {
+      let col = hs(56);
+      if (dy < 0.6) col = hs(40);
+      else if (dx < -hw * 0.25 && dy > hw * 0.3) col = hs(70);
+      if (g.pattern === 2 && dy >= 1 && dy < 2) col = hs(30);
+      px[y][x] = col;
+    } else if (y + 0.5 > yb && y <= base && Math.abs(dx) <= 0.9 + g.w * 0.6) {
+      px[y][x] = dx > 0.2 ? '#d6ccb7' : '#f3ede0';
+    }
+  }
+  if (g.pattern === 1) {
+    const inside = (x, y) => px[y]?.[x] && px[y - 1]?.[x] && px[y + 1]?.[x] && px[y][x - 1] && px[y][x + 1] && y + 1 < yb;
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) if (inside(x, y) && (x * 3 + y * 5) % 7 === 0) px[y][x] = '#fbf7ee';
+  }
+  const filled = (x, y) => x >= 0 && y >= 0 && x < W && y < W && px[y][x] && px[y][x] !== INK;
+  const out = px.map(r => r.slice());
+  for (let y = 0; y < W; y++) for (let x = 0; x < W; x++)
+    if (!px[y][x] && (filled(x - 1, y) || filled(x + 1, y) || filled(x, y - 1) || filled(x, y + 1))) out[y][x] = INK;
+  if (g.glow) {
+    x2.fillStyle = `hsla(${g.hue} 95% 70% / 0.35)`;
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+      if (out[y][x]) continue;
+      let near = false;
+      for (let a = -2; a <= 2 && !near; a++) for (let b = -2; b <= 2; b++) if (out[y + a]?.[x + b] === INK && Math.abs(a) + Math.abs(b) <= 2) { near = true; break; }
+      if (near && y < base) x2.fillRect(x, y, 1, 1);
+    }
+  }
+  for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) if (out[y][x]) { x2.fillStyle = out[y][x]; x2.fillRect(x, y, 1, 1); }
+  x2.fillStyle = 'rgba(43,41,38,0.25)'; x2.fillRect(cx - 4, base + 1, 8, 1);
+  return c;
+}
+function iconCanvas(kind) {
+  const c = document.createElement('canvas'); c.width = c.height = 20; c.className = 'px';
+  const x = c.getContext('2d');
+  const r = (col, ...rects) => { x.fillStyle = col; rects.forEach(q => x.fillRect(...q)); };
+  if (kind === 'hand') { r(INK, [6, 6, 10, 11], [5, 3, 3, 6], [8, 2, 3, 6], [11, 2, 3, 6], [14, 4, 3, 6]); r('#e8d6bd', [7, 7, 8, 9], [6, 4, 1, 4], [9, 3, 1, 4], [12, 3, 1, 4], [15, 5, 1, 4]); }
+  if (kind === 'bed') { r(INK, [2, 8, 16, 8]); r('#4a4541', [3, 9, 14, 6]); r('#8a7862', [2, 7, 16, 2], [2, 15, 16, 2]); r(INK, [2, 6, 16, 1], [2, 17, 16, 1]); r('#7d7266', [6, 11, 2, 1], [11, 12, 2, 1]); }
+  return c;
+}
+
+/* ================= renderer / scene ================= */
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.domElement.className = 'scene';
 document.body.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog('#cfd8b8', 58, 110);
-scene.background = new THREE.Color('#cfd8b8');
+scene.background = new THREE.Color('#e3ddd0');
+scene.fog = new THREE.Fog('#e3ddd0', 58, 110);
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
 const cam = { angle: Math.PI / 4, targetAngle: Math.PI / 4, zoom: 1, target: new THREE.Vector3() };
 
-const hemi = new THREE.HemisphereLight('#eef3ff', '#9aa47a', 1);
-scene.add(hemi);
-const sun = new THREE.DirectionalLight('#fff3dc', 2);
+const hemi = new THREE.HemisphereLight('#d9e2ee', '#e8e1d2', 1);
+const sun = new THREE.DirectionalLight('#fff6e6', 2.4);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 0.5, far: 100 });
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
-scene.add(sun, sun.target);
-const moon = new THREE.DirectionalLight('#8fa8d8', 0);
+const moon = new THREE.DirectionalLight('#8fa2c8', 0);
 moon.position.set(12, 25, -8);
-scene.add(moon);
+scene.add(hemi, sun, sun.target, moon);
 
-/* ---------- material + geometry caches ---------- */
+/* ---- ink outlines: back-face shell pushed out along smoothed normals, constant width in world units ---- */
+const inkMat = new THREE.ShaderMaterial({
+  uniforms: { color: { value: new THREE.Color(INK) }, thick: { value: 0.018 } },
+  vertexShader: `uniform float thick; void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vec3 wn = normalize(mat3(modelMatrix) * normal); wp.xyz += wn * thick; gl_Position = projectionMatrix * viewMatrix * wp; }`,
+  fragmentShader: `uniform vec3 color; void main(){ gl_FragColor = vec4(color, 1.0); }`,
+  side: THREE.BackSide,
+});
+const shellCache = new WeakMap();
+function shellGeo(src) {
+  if (shellCache.has(src)) return shellCache.get(src);
+  const g = src.index ? src.toNonIndexed() : src.clone();
+  const p = g.attributes.position, n = g.attributes.normal, acc = new Map();
+  const key = v => `${Math.round(p.getX(v) * 1e3)},${Math.round(p.getY(v) * 1e3)},${Math.round(p.getZ(v) * 1e3)}`;
+  for (let v = 0; v < p.count; v++) { const k = key(v), a = acc.get(k) || [0, 0, 0]; a[0] += n.getX(v); a[1] += n.getY(v); a[2] += n.getZ(v); acc.set(k, a); }
+  for (let v = 0; v < p.count; v++) { const a = acc.get(key(v)), l = Math.hypot(...a) || 1; n.setXYZ(v, a[0] / l, a[1] / l, a[2] / l); }
+  shellCache.set(src, g);
+  return g;
+}
+function ink(mesh) { const o = new THREE.Mesh(shellGeo(mesh.geometry), inkMat); o.raycast = () => {}; mesh.add(o); return mesh; }
+
 const matCache = new Map();
-function mat(hex, extra) {
-  const key = hex + (extra ? JSON.stringify(extra) : '');
-  if (!matCache.has(key)) matCache.set(key, new THREE.MeshLambertMaterial({ color: hex, flatShading: true, ...extra }));
-  return matCache.get(key);
+function mat(hex) {
+  if (!matCache.has(hex)) matCache.set(hex, new THREE.MeshLambertMaterial({ color: hex, flatShading: true }));
+  return matCache.get(hex);
 }
 const G = {
-  trunk: new THREE.CylinderGeometry(0.08, 0.12, 0.7, 6).translate(0, 0.35, 0),
+  trunk: new THREE.CylinderGeometry(0.05, 0.08, 0.5, 6).translate(0, 0.25, 0),
   blob: new THREE.IcosahedronGeometry(1, 0),
   cone: new THREE.ConeGeometry(1, 1, 7),
-  twig: new THREE.CylinderGeometry(0.035, 0.06, 1, 5).translate(0, 0.5, 0),
+  twig: new THREE.CylinderGeometry(0.03, 0.05, 1, 5).translate(0, 0.5, 0),
   rock: new THREE.DodecahedronGeometry(1, 0),
-  stem: new THREE.CylinderGeometry(0.035, 0.05, 0.16, 6).translate(0, 0.08, 0),
-  cap: new THREE.SphereGeometry(0.12, 7, 3, 0, Math.PI * 2, 0, Math.PI / 2),
   box: new THREE.BoxGeometry(1, 1, 1),
-  slab: new THREE.BoxGeometry(0.98, STEP, 0.98).translate(0, STEP / 2, 0),
+  log: new THREE.CylinderGeometry(1, 1, 1, 7),
   petal: new THREE.OctahedronGeometry(0.06, 0),
-  blade: new THREE.ConeGeometry(0.03, 0.22, 3).translate(0, 0.11, 0),
+  blade: new THREE.ConeGeometry(0.018, 0.2, 3).translate(0, 0.1, 0),
   puff: new THREE.IcosahedronGeometry(0.18, 0),
-  bit: new THREE.BoxGeometry(0.07, 0.07, 0.07),
+  bit: new THREE.BoxGeometry(0.06, 0.06, 0.06),
+  mstem: new THREE.CylinderGeometry(0.8, 1, 1, 7).translate(0, 0.5, 0),
+  band: new THREE.TorusGeometry(1, 0.09, 4, 14).rotateX(Math.PI / 2),
 };
-function part(geo, hex, sx = 1, sy = sx, sz = sx, extra) {
-  const m = new THREE.Mesh(geo, mat(hex, extra));
+const CAP_GEO = [
+  new THREE.SphereGeometry(1, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2),
+  new THREE.CylinderGeometry(0.25, 1, 0.35, 11).translate(0, 0.175, 0),
+  new THREE.ConeGeometry(0.8, 1.7, 9).translate(0, 0.85, 0),
+  new THREE.SphereGeometry(1, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.62),
+];
+const CAP_SY = [0.75, 1, 1, 1.3];
+// radius and height on the cap's surface at t (0 = rim, 1 = top), in unscaled cap units
+function prof(shape, t) {
+  if (shape === 0) return [Math.sqrt(1 - t * t), t];
+  if (shape === 1) return [lerp(1, 0.25, t), 0.35 * t];
+  if (shape === 2) return [0.8 * (1 - t), 1.7 * t];
+  const f = (1 - t) * 0.62 * Math.PI; return [Math.sin(f), Math.cos(f)];
+}
+function part(geo, hex, sx = 1, sy = sx, sz = sx, outline = true) {
+  const m = new THREE.Mesh(geo, mat(hex));
   m.scale.set(sx, sy, sz); m.castShadow = true; m.receiveShadow = true;
-  return m;
+  return outline ? ink(m) : m;
 }
 
-/* ---------- world state ---------- */
-let flames = [], world, tilesMesh, lv, river, occ, stacks, ents, critters, fireLight, windowMat, smoke = [], fireflies, islandName;
+/* ---- 3D mushroom from genome ---- */
+const glowMats = new Set(), capMats = new Set();
+function mushroomModel(g, n = 1) {
+  const grp = new THREE.Group();
+  const col = new THREE.Color().setHSL(g.hue / 360, 0.88, 0.52);
+  const capMat = new THREE.MeshLambertMaterial({ color: col, emissive: col, emissiveIntensity: 0.22, flatShading: true, side: THREE.DoubleSide });
+  grp.userData.capMat = capMat;
+  (g.glow ? glowMats : capMats).add(capMat);
+  const band = new THREE.Color().setHSL(g.hue / 360, 0.7, 0.28);
+  for (let k = 0; k < n; k++) {
+    const s = k ? mr(0.5, 0.7) : 1, m = new THREE.Group();
+    const r = (0.11 + g.w * 0.1) * s, sh = (0.08 + g.h * 0.24) * s, sy = CAP_SY[g.shape], cy = sh * 0.9;
+    m.add(part(G.mstem, '#f1ebdd', r * 0.32, sh, r * 0.32));
+    const cap = ink(new THREE.Mesh(CAP_GEO[g.shape], capMat));
+    cap.castShadow = true; cap.scale.set(r, r * sy, r); cap.position.y = cy; m.add(cap);
+    if (g.pattern === 1) for (let q = 0; q < 6; q++) {
+      const [pr, py] = prof(g.shape, mr(0.2, 0.75)), th = mr(0, Math.PI * 2);
+      const sp = part(G.petal, '#fbf7ee', r * 3.5, r * 2, r * 3.5, false);
+      sp.position.set(Math.cos(th) * pr * r * 1.03, cy + py * r * sy, Math.sin(th) * pr * r * 1.03); m.add(sp);
+    }
+    if (g.pattern === 2) {
+      const [pr, py] = prof(g.shape, 0.3);
+      const b = new THREE.Mesh(G.band, new THREE.MeshLambertMaterial({ color: band, flatShading: true }));
+      b.scale.set(pr * r * 1.02, r * 0.9, pr * r * 1.02); b.position.y = cy + py * r * sy; m.add(b);
+    }
+    if (k) m.position.set(mr(-0.18, 0.18), 0, mr(-0.18, 0.18));
+    m.rotation.set(mr(-0.12, 0.12), mr(0, 6.28), mr(-0.12, 0.12));
+    grp.add(m);
+  }
+  return grp;
+}
+function disposeModel(m) { if (m?.userData.capMat) { glowMats.delete(m.userData.capMat); capMats.delete(m.userData.capMat); } }
+
+/* ================= world state ================= */
+let world, tilesMesh, lv, river, deck, occ, ents, fireLight, windowMat, smoke = [], flames = [], fireflies, boat, islandName, homes, site, seed;
 const idx = (i, j) => i * SIZE + j;
 const inb = (i, j) => i >= 0 && j >= 0 && i < SIZE && j < SIZE;
 const wx = i => i - HALF + 0.5;
 const ti = x => Math.floor(x + HALF);
-const topAt = (i, j) => lv[idx(i, j)] * STEP + stacks[idx(i, j)].length * STEP;
+const topAt = (i, j) => deck[idx(i, j)] || lv[idx(i, j)] * STEP;
 
 function walkable(i, j, fromY) {
   if (!inb(i, j)) return false;
@@ -205,289 +389,349 @@ function walkable(i, j, fromY) {
   return t - fromY <= STEP * 1.05;
 }
 
-/* ---------- entity factories ---------- */
-function roundTree() {
+/* ---- scenery factories (muted, ink-lined) ---- */
+function pine(snowy) {
   const g = new THREE.Group();
-  g.add(part(G.trunk, '#3b2f2f'));
-  const greens = ['#5f9a4e', '#4f8a45', '#72ad58'];
-  const n = 3 + Math.floor(rand(0, 2));
-  for (let k = 0; k < n; k++) {
-    const b = part(G.blob, pick(greens), rand(0.32, 0.42));
-    b.position.set(rand(-0.18, 0.18), rand(0.75, 1.05), rand(-0.18, 0.18));
-    b.rotation.set(rand(0, 3), rand(0, 3), 0);
-    g.add(b);
-  }
+  g.add(part(G.trunk, INK, 1, 0.8, 1));
+  const col = pick(['#8a9d95', '#7f938b', '#94a59c']), h = rand(0.9, 1.3), r = rand(0.28, 0.36);
+  const c = part(G.cone, col, r, h, r); c.position.y = 0.3 + h / 2; g.add(c);
+  if (snowy) { const s = part(G.cone, '#f7f5f0', r * 0.55, h * 0.45, r * 0.55); s.position.y = 0.3 + h * 0.78; g.add(s); }
   return g;
 }
-function pineTree(snowy) {
+function roundTree() {
   const g = new THREE.Group();
-  g.add(part(G.trunk, '#3b3230', 0.9, 0.6, 0.9));
-  const col = pick(['#5aa597', '#4e9486', '#3f7f5a']);
-  for (let k = 0; k < 3; k++) {
-    const r = 0.42 - k * 0.1, h = 0.55 - k * 0.06, y = 0.45 + k * 0.32;
-    const c = part(G.cone, col, r, h, r); c.position.y = y + h / 2; c.rotation.y = rand(0, 3); g.add(c);
-    if (snowy) { const s = part(G.cone, '#f4f6f2', r * 0.62, h * 0.5, r * 0.62); s.position.y = y + h * 0.78; s.rotation.y = c.rotation.y; g.add(s); }
-  }
+  g.add(part(G.trunk, INK, 1.1, 1.3, 1.1));
+  const b = part(G.blob, pick(['#a7b09c', '#9ea896']), rand(0.36, 0.44)); b.position.y = 0.95; b.rotation.set(rand(0, 3), rand(0, 3), 0); g.add(b);
   return g;
 }
 function snag() {
-  const g = new THREE.Group();
-  const col = '#5f8a80';
-  const t = part(G.twig, col, 1, rand(1.1, 1.5), 1); g.add(t);
+  const g = new THREE.Group(), col = '#7d8a85';
+  g.add(part(G.twig, col, 1, rand(1.1, 1.5), 1));
   for (let k = 0; k < 3; k++) {
-    const b = part(G.twig, col, 0.6, rand(0.25, 0.4), 0.6);
-    b.position.y = rand(0.5, 1.1); b.rotation.set(0, rand(0, 6.28), 0); b.rotateZ(rand(0.7, 1.1) * (R() < 0.5 ? 1 : -1));
-    g.add(b);
+    const b = part(G.twig, col, 0.6, rand(0.22, 0.36), 0.6);
+    b.position.y = rand(0.5, 1.1); b.rotation.set(0, rand(0, 6.28), 0); b.rotateZ(rand(0.7, 1.1) * (R() < 0.5 ? 1 : -1)); g.add(b);
   }
   return g;
 }
 function rock() {
+  const g = new THREE.Group(), col = pick(['#c5c0b4', '#bab5a9']);
+  const a = part(G.rock, col, rand(0.22, 0.3)); a.scale.y *= 0.7; a.position.y = 0.1; a.rotation.set(rand(0, 3), rand(0, 3), 0); g.add(a);
+  return g;
+}
+function tuft() {
   const g = new THREE.Group();
-  const col = pick(['#8f9784', '#99a08d', '#858c7c']);
-  const a = part(G.rock, col, rand(0.26, 0.34)); a.scale.y *= 0.7; a.position.y = 0.12; a.rotation.set(rand(0, 3), rand(0, 3), 0); g.add(a);
-  if (R() < 0.5) { const b = part(G.rock, col, 0.15); b.position.set(0.25, 0.06, 0.12); b.rotation.y = rand(0, 3); g.add(b); }
-  return g;
-}
-function bush() {
-  const g = new THREE.Group();
-  const col = pick(['#6a9a55', '#5c8c4b']);
-  const a = part(G.blob, col, 0.24, 0.2, 0.24); a.position.y = 0.14; a.rotation.y = rand(0, 3); g.add(a);
-  if (R() < 0.6) { const b = part(G.petal, '#c94f5c', 0.7); b.position.set(0.1, 0.3, 0.08); g.add(b); }
-  return g;
-}
-function mushrooms() {
-  const g = new THREE.Group(), col = pick(MUSH_COL), n = 1 + Math.floor(rand(0, 3));
-  for (let k = 0; k < n; k++) {
-    const s = rand(0.7, 1.2), m = new THREE.Group();
-    m.add(part(G.stem, '#efe6d0', s));
-    const c = part(G.cap, col, s); c.position.y = 0.15 * s; m.add(c);
-    m.position.set(rand(-0.2, 0.2), 0, rand(-0.2, 0.2));
-    g.add(m);
-  }
-  return g;
-}
-function flower() {
-  const g = new THREE.Group(), col = pick(['#e59ab8', '#f2cf5b', '#f4f1ea', '#b99be6']);
-  for (let k = 0; k < 3; k++) {
-    const s = part(G.blade, '#6f8f55', 0.8, 1.2, 0.8); s.position.set(rand(-0.15, 0.15), 0, rand(-0.15, 0.15)); g.add(s);
-    const p = part(G.petal, col); p.position.set(s.position.x, 0.27, s.position.z); g.add(p);
-  }
-  return g;
-}
-function tuft(dry) {
-  const g = new THREE.Group(), col = dry ? '#a79a6c' : '#7f9a5a';
   for (let k = 0; k < 4; k++) {
-    const b = part(G.blade, col, 1, rand(0.8, 1.4), 1); b.position.set(rand(-0.12, 0.12), 0, rand(-0.12, 0.12));
-    b.rotation.set(rand(-0.3, 0.3), 0, rand(-0.3, 0.3)); g.add(b);
+    const b = part(G.blade, '#55594f', 1, rand(0.8, 1.5), 1, false);
+    b.position.set(rand(-0.1, 0.1), 0, rand(-0.1, 0.1)); b.rotation.set(rand(-0.35, 0.35), 0, rand(-0.35, 0.35)); b.castShadow = false; g.add(b);
   }
   return g;
 }
-
-const KINDS = {
-  tree:  { make: roundTree, blocking: true, hp: 3, yield: { wood: 3 }, color: '#5f9a4e', regrow: true },
-  pine:  { make: () => pineTree(false), blocking: true, hp: 3, yield: { wood: 2 }, color: '#4e9486', regrow: true },
-  snowpine: { make: () => pineTree(true), blocking: true, hp: 3, yield: { wood: 2 }, color: '#f4f6f2', regrow: true },
-  snag:  { make: snag, blocking: true, hp: 2, yield: { wood: 1 }, color: '#5f8a80' },
-  rock:  { make: rock, blocking: true, hp: 3, yield: { stone: 2 }, color: '#8f9784' },
-  bush:  { make: bush, blocking: false, hp: 1, yield: { berry: 1 }, color: '#6a9a55' },
-  mush:  { make: mushrooms, blocking: false, hp: 1, yield: { mushroom: 1 }, color: '#d9573f' },
-  flower:{ make: flower, blocking: false, hp: 1, yield: { flower: 1 }, color: '#e59ab8' },
-  tuft:  { make: () => tuft(false), blocking: false, hp: 1, yield: {}, color: '#7f9a5a' },
-  drytuft:{ make: () => tuft(true), blocking: false, hp: 1, yield: {}, color: '#a79a6c' },
-};
-
-function spawn(kind, i, j, growth = 1) {
-  const def = KINDS[kind], mesh = def.make();
-  const e = { kind, i, j, mesh, hp: def.hp, blocking: def.blocking && growth >= 1, growth, shake: 0 };
-  mesh.position.set(wx(i) + rand(-0.15, 0.15), topAt(i, j), wx(j) + rand(-0.15, 0.15));
-  mesh.rotation.y = rand(0, Math.PI * 2);
-  e.baseScale = rand(0.85, 1.15);
-  mesh.scale.setScalar(e.baseScale * Math.max(growth, 0.2));
+const SCENERY = { pine: () => pine(false), snowpine: () => pine(true), tree: roundTree, snag, rock, tuft };
+function place(kind, i, j, mesh, blocking, extra = {}) {
+  const e = { kind, i, j, mesh, blocking, ...extra };
+  mesh.position.set(wx(i) + (extra.jitter === false ? 0 : rand(-0.15, 0.15)), topAt(i, j), wx(j) + (extra.jitter === false ? 0 : rand(-0.15, 0.15)));
+  if (extra.jitter !== false) mesh.rotation.y = rand(0, Math.PI * 2);
   mesh.traverse(o => (o.userData.ent = e));
-  occ[idx(i, j)] = e;
-  ents.add(e);
-  world.add(mesh);
+  occ[idx(i, j)] = e; ents.add(e); world.add(mesh);
   return e;
 }
-function despawn(e) {
-  world.remove(e.mesh);
-  ents.delete(e);
+function remove(e) {
+  world.remove(e.mesh); ents.delete(e);
   if (occ[idx(e.i, e.j)] === e) occ[idx(e.i, e.j)] = null;
 }
 
-/* ---------- cabin, campfire, critters ---------- */
+/* ---- cabin, campfire ---- */
 function buildCabin(i, j) {
-  const g = new THREE.Group();
-  const L = 1.7, W = 1.25, H = 0.85;
-  const walls = part(G.box, '#b86b3c', L, H, W); walls.position.y = H / 2; g.add(walls);
-  for (let k = 1; k < 5; k++) {
-    for (const s of [-1, 1]) { const log = part(G.box, '#8f4d2b', L + 0.06, 0.035, 0.03); log.position.set(0, k * H / 5, s * (W / 2 + 0.01)); g.add(log); }
+  const g = new THREE.Group(), L = 1.7, W = 1.25, H = 0.85;
+  const walls = part(G.box, '#b9ab94', L, H, W); walls.position.y = H / 2; g.add(walls);
+  for (let k = 1; k < 5; k++) for (const s of [-1, 1]) {
+    const log = new THREE.Mesh(G.box, mat('#6e6456')); log.scale.set(L + 0.02, 0.018, 0.02); log.position.set(0, k * H / 5, s * (W / 2 + 0.01)); g.add(log);
   }
-  const roof = part(new THREE.CylinderGeometry(1, 1, 1, 3), '#d85c5c', 0.9, L + 0.25, 0.37);
+  const roof = part(new THREE.CylinderGeometry(1, 1, 1, 3), '#625d57', 0.9, L + 0.25, 0.37);
   roof.rotation.set(-Math.PI / 2, 0, Math.PI / 2); roof.position.y = H + 0.2; g.add(roof);
-  const eave = part(G.box, '#f4f1ea', L + 0.3, 0.06, W + 0.25); eave.position.y = H + 0.02; g.add(eave);
-  const chim = part(G.box, '#7d7a73', 0.22, 0.6, 0.22); chim.position.set(0.5, H + 0.5, -0.2); g.add(chim);
-  const door = part(G.box, '#4d3222', 0.3, 0.52, 0.05); door.position.set(-0.25, 0.26, W / 2 + 0.03); g.add(door);
-  windowMat = new THREE.MeshLambertMaterial({ color: '#3d4a52', emissive: '#ffb454', emissiveIntensity: 0, flatShading: true });
+  const chim = part(G.box, '#8f897f', 0.2, 0.55, 0.2); chim.position.set(0.5, H + 0.48, -0.2); g.add(chim);
+  const door = part(G.box, '#4d463e', 0.3, 0.52, 0.04); door.position.set(-0.25, 0.26, W / 2 + 0.03); g.add(door);
+  windowMat = new THREE.MeshLambertMaterial({ color: '#4b4f52', emissive: '#ffb454', emissiveIntensity: 0, flatShading: true });
   for (const [x, z, ry] of [[0.35, W / 2 + 0.03, 0], [-L / 2 - 0.03, 0, Math.PI / 2]]) {
-    const w = new THREE.Mesh(G.box, windowMat); w.scale.set(0.26, 0.22, 0.04); w.position.set(x, 0.5, z); w.rotation.y = ry; g.add(w);
+    const w = ink(new THREE.Mesh(G.box, windowMat)); w.scale.set(0.24, 0.2, 0.04); w.position.set(x, 0.5, z); w.rotation.y = ry; g.add(w);
   }
-  const step = part(G.box, '#8a857a', 0.5, 0.08, 0.25); step.position.set(-0.25, 0.04, W / 2 + 0.14); g.add(step);
-  const barrel = part(new THREE.CylinderGeometry(0.1, 0.1, 0.22, 8), '#9b5a33'); barrel.position.set(0.7, 0.11, W / 2 + 0.2); g.add(barrel);
-  g.position.set(wx(i) + 0.5, topAt(i, j), wx(j) + 0.5);
+  const barrel = part(new THREE.CylinderGeometry(0.1, 0.1, 0.22, 8), '#8a7c68'); barrel.position.set(0.7, 0.11, W / 2 + 0.2); g.add(barrel);
+  g.position.set(wx(i) + 0.5, lv[idx(i, j)] * STEP, wx(j) + 0.5);
   const e = { kind: 'cabin', blocking: true, mesh: g, i, j };
   for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) occ[idx(i + a, j + b)] = e;
   g.traverse(o => (o.userData.ent = e));
   world.add(g);
-  // chimney smoke puffs
   smoke = [];
-  const smokeMat = new THREE.MeshLambertMaterial({ color: '#ecebe4', transparent: true, opacity: 0.8, flatShading: true });
   for (let k = 0; k < 9; k++) {
-    const p = new THREE.Mesh(G.puff, smokeMat.clone());
-    p.userData.t = k / 9; p.userData.base = new THREE.Vector3(g.position.x + 0.5, g.position.y + H + 0.85, g.position.z - 0.2);
+    const p = new THREE.Mesh(G.puff, new THREE.MeshLambertMaterial({ color: '#f2efe8', transparent: true, opacity: 0.8, flatShading: true }));
+    p.userData.t = k / 9; p.userData.base = new THREE.Vector3(g.position.x + 0.5, g.position.y + H + 0.8, g.position.z - 0.2);
     world.add(p); smoke.push(p);
   }
 }
 function buildCampfire(i, j) {
   const g = new THREE.Group();
-  for (let k = 0; k < 7; k++) {
-    const a = k / 7 * Math.PI * 2, r = part(G.rock, '#7f8577', 0.08);
-    r.position.set(Math.cos(a) * 0.24, 0.04, Math.sin(a) * 0.24); g.add(r);
-  }
-  for (const r of [0.5, -0.5]) { const log = part(G.twig, '#5a3a26', 1.4, 0.4, 1.4); log.rotation.set(Math.PI / 2, r, 0); log.position.set(-Math.sin(r) * 0.2, 0.05, -Math.cos(r) * 0.2); g.add(log); }
-  const f1 = new THREE.Mesh(G.cone, new THREE.MeshBasicMaterial({ color: '#ff8a3d' })); f1.scale.set(0.13, 0.32, 0.13); f1.position.y = 0.18;
-  const f2 = new THREE.Mesh(G.cone, new THREE.MeshBasicMaterial({ color: '#ffd35c' })); f2.scale.set(0.07, 0.2, 0.07); f2.position.y = 0.14;
+  for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2, r = part(G.rock, '#a9a498', 0.07); r.position.set(Math.cos(a) * 0.22, 0.04, Math.sin(a) * 0.22); g.add(r); }
+  for (const r of [0.5, -0.5]) { const log = part(G.twig, '#5a4f44', 1.3, 0.38, 1.3); log.rotation.set(Math.PI / 2, r, 0); log.position.set(-Math.sin(r) * 0.19, 0.05, -Math.cos(r) * 0.19); g.add(log); }
+  const f1 = new THREE.Mesh(G.cone, new THREE.MeshBasicMaterial({ color: '#ff8a3d' })); f1.scale.set(0.12, 0.3, 0.12); f1.position.y = 0.17;
+  const f2 = new THREE.Mesh(G.cone, new THREE.MeshBasicMaterial({ color: '#ffd35c' })); f2.scale.set(0.065, 0.19, 0.065); f2.position.y = 0.13;
   g.add(f1, f2); flames = [f1, f2];
   fireLight = new THREE.PointLight('#ff9a4a', 1, 7, 1.6); fireLight.position.y = 0.5; g.add(fireLight);
-  g.position.set(wx(i), topAt(i, j), wx(j));
-  const e = { kind: 'fire', blocking: true, mesh: g, i, j };
-  occ[idx(i, j)] = e; g.traverse(o => (o.userData.ent = e));
-  world.add(g);
-  return g;
-}
-function bear(cub) {
-  const g = new THREE.Group(), c = '#3a3333', s = cub ? 0.6 : 1;
-  const body = part(G.box, c, 0.5 * s, 0.32 * s, 0.3 * s); body.position.y = 0.3 * s; g.add(body);
-  const head = part(G.box, c, 0.2 * s, 0.2 * s, 0.2 * s); head.position.set(0.3 * s, 0.4 * s, 0); g.add(head);
-  const snout = part(G.box, '#5a4f4a', 0.08 * s, 0.08 * s, 0.1 * s); snout.position.set(0.43 * s, 0.37 * s, 0); g.add(snout);
-  for (const z of [-1, 1]) { const ear = part(G.box, c, 0.05 * s, 0.06 * s, 0.05 * s); ear.position.set(0.28 * s, 0.53 * s, z * 0.07 * s); g.add(ear); }
-  g.userData.legs = [];
-  for (const [x, z] of [[-0.17, -0.1], [-0.17, 0.1], [0.17, -0.1], [0.17, 0.1]]) {
-    const l = part(G.box, c, 0.09 * s, 0.18 * s, 0.09 * s); l.geometry = G.box; l.position.set(x * s, 0.1 * s, z * s); g.add(l); g.userData.legs.push(l);
-  }
-  return g;
+  place('fire', i, j, g, true, { jitter: false });
 }
 
-/* ---------- player ---------- */
+/* ---- log beds ---- */
+function bedMesh() {
+  const g = new THREE.Group();
+  const soil = part(G.box, '#4a4541', 0.74, 0.1, 0.7); soil.position.y = 0.05; g.add(soil);
+  for (const z of [-0.37, 0.37]) { const l = part(G.log, '#8a7862', 0.065, 0.86, 0.065); l.rotation.z = Math.PI / 2; l.position.set(0, 0.065, z); g.add(l); }
+  for (let k = 0; k < 4; k++) { const d = new THREE.Mesh(G.petal, mat('#6f675d')); d.scale.setScalar(0.5); d.position.set(rand(-0.28, 0.28), 0.1, rand(-0.25, 0.25)); g.add(d); }
+  return g;
+}
+function nearWater(i, j) {
+  for (let a = -2; a <= 2; a++) for (let b = -2; b <= 2; b++) if (inb(i + a, j + b) && lv[idx(i + a, j + b)] <= 1) return true;
+  return false;
+}
+function makeBed(i, j, plant) {
+  const e = place('bed', i, j, bedMesh(), false, { jitter: false, plant: null, wet: nearWater(i, j) });
+  if (plant) plantBed(e, plant.g, plant.growth);
+  return e;
+}
+function plantBed(bed, g, growth = 0) {
+  const model = mushroomModel(g, 1);
+  model.position.y = 0.1;
+  model.traverse(o => (o.userData.ent = bed));
+  bed.mesh.add(model);
+  bed.plant = { g, growth, model };
+  setPlantScale(bed);
+}
+function setPlantScale(bed) {
+  const p = bed.plant; if (!p) return;
+  p.model.scale.setScalar((0.12 + 0.88 * smooth(0, 1, p.growth)) * 1.7);
+}
+function clearBed(bed) { if (!bed.plant) return; disposeModel(bed.plant.model); bed.mesh.remove(bed.plant.model); bed.plant = null; }
+
+/* ---- wild mushrooms ---- */
+function spawnWild(s) {
+  const h = homes[s];
+  for (let t = 0; t < 40; t++) {
+    const i = h.i + Math.round(mr(-3, 3)), j = h.j + Math.round(mr(-3, 3));
+    if (!inb(i, j) || occ[idx(i, j)] || deck[idx(i, j)] || lv[idx(i, j)] < 3 || river[idx(i, j)]) continue;
+    const m = mushroomModel(WILD[s], 1 + Math.floor(mr(0, 3)));
+    m.scale.setScalar(1.6);
+    return place('wild', i, j, m, false, { g: WILD[s] });
+  }
+}
+
+/* ---- pier + market boat ---- */
+function buildDock() {
+  let best = null;
+  for (let i = 1; i < SIZE - 1; i++) for (let j = 1; j < SIZE - 1; j++) {
+    const L = lv[idx(i, j)];
+    if (L < 2 || L > 4 || occ[idx(i, j)] || river[idx(i, j)]) continue;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      let ok = true;
+      for (let s = 1; s <= 3; s++) { const a = i + di * s, b = j + dj * s; if (!inb(a, b) || lv[idx(a, b)] > 1 || river[idx(a, b)]) ok = false; }
+      if (!ok) continue;
+      const d = Math.hypot(i - site.i, j - site.j) + L * 0.8;
+      if (!best || d < best.d) best = { i, j, di, dj, d };
+    }
+  }
+  if (!best) return null;
+  const { i, j, di, dj } = best, h = Math.max(SEA + 0.1, topAt(i, j) - 0.12);
+  for (let s = 1; s <= 2; s++) {
+    const a = i + di * s, b = j + dj * s;
+    deck[idx(a, b)] = h;
+    const g = new THREE.Group();
+    const planks = part(G.box, '#b3a58d', 1, 0.07, 0.86); planks.position.y = -0.035; g.add(planks);
+    for (let q = -2; q <= 2; q++) { const line = new THREE.Mesh(G.box, mat('#6e6456')); line.scale.set(0.012, 0.072, 0.86); line.position.set(q * 0.2, -0.035, 0); g.add(line); }
+    for (const [x, z] of [[-0.45, -0.4], [0.45, -0.4], [-0.45, 0.4], [0.45, 0.4]]) { const post = part(G.log, '#5f574c', 0.05, h + 0.4, 0.05); post.position.set(x, -(h + 0.4) / 2, z); g.add(post); }
+    g.rotation.y = di ? Math.PI / 2 : 0;
+    g.position.set(wx(a), h, wx(b));
+    g.traverse(o => (o.userData.tile = { i: a, j: b }));
+    world.add(g);
+  }
+  // market crate at the end of the pier
+  const ci = i + di * 2, cj = j + dj * 2, crate = new THREE.Group();
+  const box = part(G.box, '#a8977b', 0.44, 0.34, 0.44); box.position.y = 0.17; crate.add(box);
+  for (const y of [0.1, 0.24]) { const s = new THREE.Mesh(G.box, mat('#6e6456')); s.scale.set(0.45, 0.02, 0.45); s.position.y = y; crate.add(s); }
+  const sign = part(G.box, '#f1ece1', 0.04, 0.3, 0.3); sign.position.set(0.25, 0.5, 0); crate.add(sign);
+  const post = part(G.log, '#5f574c', 0.025, 0.4, 0.025); post.position.set(0.25, 0.25, 0); crate.add(post);
+  place('market', ci, cj, crate, true, { jitter: false });
+  crate.rotation.y = Math.atan2(di, dj) - Math.PI / 2;
+  // boat moored alongside
+  boat = new THREE.Group();
+  const hull = part(new THREE.CylinderGeometry(0.5, 0.32, 0.26, 6, 1).scale(1.6, 1, 0.6), '#7d7061'); hull.position.y = 0.05; boat.add(hull);
+  const rim = part(G.box, '#a8977b', 1.3, 0.04, 0.5); rim.position.y = 0.19; boat.add(rim);
+  const mast = part(G.log, '#5f574c', 0.03, 1.5, 0.03); mast.position.y = 0.9; boat.add(mast);
+  const sailGeo = new THREE.BufferGeometry().setFromPoints([[0, 1.55], [0, 0.35], [0.75, 0.35], [0, 1.55], [0.75, 0.35], [0, 0.35]].map(([x, y]) => new THREE.Vector3(x, y, 0)));
+  sailGeo.computeVertexNormals();
+  const sail = new THREE.Mesh(sailGeo, new THREE.MeshLambertMaterial({ color: '#f4f1ea', side: THREE.DoubleSide }));
+  sail.castShadow = true; boat.add(sail);
+  const crates = part(G.box, '#a8977b', 0.25, 0.2, 0.25); crates.position.set(-0.4, 0.28, 0); boat.add(crates);
+  const bx = wx(i + di * 3) + dj * 0.95, bz = wx(j + dj * 3) + di * 0.95;
+  boat.position.set(bx - di * 0.4, SEA - 0.05, bz - dj * 0.4);
+  boat.rotation.y = Math.atan2(-dj, di);
+  const mk = occ[idx(ci, cj)];
+  boat.traverse(o => (o.userData.ent = mk));
+  world.add(boat);
+  return { i: ci, j: cj };
+}
+
+/* ================= player ================= */
 const player = { pos: new THREE.Vector3(), y: 0, facing: 0, walk: 0, goal: null, pending: null, stuck: 0 };
 const pmesh = new THREE.Group();
 {
-  const legs = [part(G.box, '#4a4d5a', 0.08, 0.2, 0.08), part(G.box, '#4a4d5a', 0.08, 0.2, 0.08)];
-  legs.forEach((l, k) => { l.geometry = G.box.clone().translate(0, -0.5, 0); l.position.set(k ? 0.05 : -0.05, 0.2, 0); pmesh.add(l); });
-  const body = part(G.box, '#5f6f7e', 0.22, 0.24, 0.15); body.position.y = 0.32; pmesh.add(body);
-  const pack = part(G.box, '#c2403a', 0.2, 0.22, 0.1); pack.position.set(0, 0.34, -0.12); pmesh.add(pack);
-  const roll = part(new THREE.CylinderGeometry(0.05, 0.05, 0.22, 6), '#e0cfa0'); roll.rotation.z = Math.PI / 2; roll.position.set(0, 0.47, -0.12); pmesh.add(roll);
-  const head = part(G.box, '#e8c4a0', 0.15, 0.15, 0.15); head.position.y = 0.52; pmesh.add(head);
-  const hat = part(G.box, '#c2403a', 0.17, 0.07, 0.17); hat.position.y = 0.61; pmesh.add(hat);
-  const bob = part(G.box, '#f3ecd8', 0.06, 0.06, 0.06); bob.position.y = 0.67; pmesh.add(bob);
+  const legs = [0, 1].map(k => { const l = ink(new THREE.Mesh(G.box.clone().translate(0, -0.5, 0), mat('#4a4744'))); l.scale.set(0.08, 0.2, 0.08); l.castShadow = true; l.position.set(k ? 0.05 : -0.05, 0.2, 0); pmesh.add(l); return l; });
+  const body = part(G.box, '#6d6862', 0.22, 0.24, 0.15); body.position.y = 0.32; pmesh.add(body);
+  const pack = part(G.box, '#c9bca6', 0.2, 0.22, 0.1); pack.position.set(0, 0.34, -0.12); pmesh.add(pack);
+  const basket = part(new THREE.CylinderGeometry(0.09, 0.07, 0.1, 7), '#a8977b'); basket.position.set(0.15, 0.26, 0.04); pmesh.add(basket);
+  const head = part(G.box, '#e8d6bd', 0.15, 0.15, 0.15); head.position.y = 0.52; pmesh.add(head);
+  const hat = part(new THREE.CylinderGeometry(0.02, 0.15, 0.1, 8), '#4a4744'); hat.position.y = 0.64; pmesh.add(hat);
   pmesh.userData.legs = legs;
 }
 scene.add(pmesh);
 
-/* ---------- world generation ---------- */
-const NAMES_A = ['Moss', 'Fern', 'Pine', 'Cedar', 'Heather', 'Bramble', 'Willow', 'Juniper', 'Thistle', 'Alder', 'Birch', 'Rowan'];
+/* ================= world generation ================= */
+const NAMES_A = ['Spore', 'Moss', 'Fern', 'Gill', 'Heather', 'Bramble', 'Willow', 'Morel', 'Thistle', 'Alder', 'Birch', 'Rowan'];
 const NAMES_B = ['holm', 'fall', 'reach', 'mere', 'hollow', 'cay', 'wick', 'rest', 'ness', 'combe'];
 
-function generate(seed) {
-  R = mulberry(seed); initNoise();
-  if (world) scene.remove(world);
+function generate(sd, saved) {
+  seed = sd; R = mulberry(seed); initNoise();
+  if (world) { scene.remove(world); glowMats.clear(); capMats.clear(); }
   world = new THREE.Group(); scene.add(world);
-  lv = new Uint8Array(SIZE * SIZE); river = new Uint8Array(SIZE * SIZE);
-  occ = new Array(SIZE * SIZE).fill(null);
-  stacks = Array.from({ length: SIZE * SIZE }, () => []);
-  ents = new Set(); critters = [];
+  lv = new Uint8Array(SIZE * SIZE); river = new Uint8Array(SIZE * SIZE); deck = new Float32Array(SIZE * SIZE);
+  occ = new Array(SIZE * SIZE).fill(null); ents = new Set();
   islandName = pick(NAMES_A) + pick(NAMES_B);
-  document.getElementById('isle-name').textContent = islandName + ' Island';
+  document.getElementById('isle-name').textContent = islandName;
 
   const ox = rand(0, 40), oy = rand(0, 40);
-  // river: a spring near the middle winding out to sea
-  const theta = rand(0, Math.PI * 2), sx = rand(-2, 2), sz = rand(-2, 2), wob = rand(1, 2.2), ph = rand(0, 6);
-  const path = [];
+  const theta = rand(0, Math.PI * 2), sx = rand(-2, 2), sz = rand(-2, 2), wob = rand(1, 2.2), ph = rand(0, 6), path = [];
   for (let s = 0; s <= 80; s++) {
-    const t = s / 80, d = t * HALF * 1.3;
-    const perp = Math.sin(t * 7 + ph) * wob * t;
+    const t = s / 80, d = t * HALF * 1.3, perp = Math.sin(t * 7 + ph) * wob * t;
     path.push([sx + Math.cos(theta) * d - Math.sin(theta) * perp, sz + Math.sin(theta) * d + Math.cos(theta) * perp]);
   }
   for (let i = 0; i < SIZE; i++) for (let j = 0; j < SIZE; j++) {
-    const x = wx(i), z = wx(j), k = idx(i, j);
-    const d = Math.hypot(x, z) / HALF;
-    const n = fbm(i * 0.13 + ox, j * 0.13 + oy);
-    const e = 0.62 + (n - 0.5) * 0.9 - d * d * 1.05;
-    let L;
-    if (e < 0.1) L = 0; else if (e < 0.2) L = 1; else if (e < 0.28) L = 2; else L = Math.min(7, 3 + Math.floor((e - 0.28) / 0.12));
-    let md = 99;
-    for (const [px, pz] of path) md = Math.min(md, Math.hypot(px - x, pz - z));
+    const x = wx(i), z = wx(j), k = idx(i, j), d = Math.hypot(x, z) / HALF;
+    const e = 0.62 + (fbm(i * 0.13 + ox, j * 0.13 + oy) - 0.5) * 0.9 - d * d * 1.05;
+    let L = e < 0.1 ? 0 : e < 0.2 ? 1 : e < 0.28 ? 2 : Math.min(7, 3 + Math.floor((e - 0.28) / 0.12));
+    let md = 99; for (const [px, pz] of path) md = Math.min(md, Math.hypot(px - x, pz - z));
     if (L >= 2 && (md < 0.75 || Math.hypot(sx - x, sz - z) < 1.3)) { L = 1; river[k] = 1; }
     lv[k] = L;
   }
 
-  // cabin site: flat-ish 2x2 plus a clearing in front
-  let site = null, best = 1e9;
-  for (let i = 2; i < SIZE - 4; i++) for (let j = 2; j < SIZE - 5; j++) {
-    const cells = [[i, j], [i + 1, j], [i, j + 1], [i + 1, j + 1], [i, j + 2], [i + 1, j + 2], [i + 1, j + 3], [i, j + 3]];
-    const ls = cells.map(([a, b]) => lv[idx(a, b)]);
-    if (Math.min(...ls) < 3 || Math.max(...ls) - Math.min(...ls) > 1 || ls[4] === 7) continue;
-    const dist = Math.hypot(wx(i) + 0.5, wx(j) + 1.5);
-    if (dist < best) { best = dist; site = { i, j, L: Math.max(...ls.slice(0, 4)) }; }
+  // homestead: cabin 2x2, a 3x2 block of log beds beside it, a clearing and campfire in front
+  site = null; let best = 1e9;
+  for (const tol of [1, 2]) {
+    for (let i = 1; i < SIZE - 6; i++) for (let j = 1; j < SIZE - 5; j++) {
+      const ls = [];
+      for (let a = 0; a < 5; a++) for (let b = 0; b < 4; b++) ls.push(lv[idx(i + a, j + b)]);
+      if (Math.min(...ls) < 3 || Math.max(...ls) - Math.min(...ls) > tol || Math.max(...ls) >= 7) continue;
+      const dist = Math.hypot(wx(i) + 2, wx(j) + 1.5);
+      if (dist < best) { best = dist; site = { i, j, L: Math.round(ls.reduce((a, b) => a + b) / ls.length) }; }
+    }
+    if (site) break;
   }
-  if (!site) site = { i: HALF - 1, j: HALF - 2, L: 3 };
-  for (let a = 0; a < 2; a++) for (let b = 0; b < 4; b++) { const k = idx(site.i + a, site.j + b); if (b < 2) lv[k] = site.L; else lv[k] = Math.max(lv[k], 3); river[k] = 0; }
+  if (!site) site = { i: HALF - 2, j: HALF - 2, L: 3 };
+  for (let a = 0; a < 5; a++) for (let b = 0; b < 4; b++) { const k = idx(site.i + a, site.j + b); lv[k] = site.L; river[k] = 0; }
 
-  // tiles
-  const geo = G.box.clone().translate(0, -0.5, 0);
-  const vc = [], pos = geo.attributes.position, nor = geo.attributes.normal;
-  for (let v = 0; v < pos.count; v++) { const ny = nor.getY(v); const s = ny > 0.5 ? 1 : ny < -0.5 ? 0.55 : 0.8; vc.push(s, s, s); }
+  // terrain tiles
+  const geo = G.box.clone().translate(0, -0.5, 0), vc = [], nor = geo.attributes.normal;
+  for (let v = 0; v < nor.count; v++) { const ny = nor.getY(v), s = ny > 0.5 ? 1 : ny < -0.5 ? 0.6 : 0.86; vc.push(s, s, s); }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(vc, 3));
   tilesMesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), SIZE * SIZE);
-  tilesMesh.receiveShadow = true; tilesMesh.castShadow = true;
-  refreshTiles();
+  tilesMesh.receiveShadow = tilesMesh.castShadow = true;
+  const _m = new THREE.Matrix4(), _c = new THREE.Color(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
+  for (let i = 0; i < SIZE; i++) for (let j = 0; j < SIZE; j++) {
+    const k = idx(i, j), L = lv[k], top = L * STEP;
+    tilesMesh.setMatrixAt(k, _m.compose(_p.set(wx(i), top, wx(j)), _q, _s.set(1, top + 3, 1)));
+    _c.set(river[k] ? '#c3d2cc' : TILE_COL[L]).offsetHSL(0, 0, (fbm(i * 0.9 + 3, j * 0.9 + 5) - 0.5) * 0.05);
+    tilesMesh.setColorAt(k, _c);
+  }
   world.add(tilesMesh);
 
-  buildCabin(site.i, site.j);
-  const fire = { i: site.i + 1, j: site.j + 3 };
-  buildCampfire(fire.i, fire.j);
-  player.pos.set(wx(site.i), 0, wx(site.j + 3)); player.y = topAt(site.i, site.j + 3);
-  player.goal = player.pending = null;
-  const reserved = new Set([idx(site.i, site.j + 2), idx(site.i + 1, site.j + 2), idx(site.i, site.j + 3)]);
+  // ink contour along every terrace edge that drops away
+  const seg = [];
+  for (let i = 0; i < SIZE; i++) for (let j = 0; j < SIZE; j++) {
+    const t = lv[idx(i, j)] * STEP; if (lv[idx(i, j)] < 2) continue;
+    const x = wx(i), z = wx(j), y = t + 0.004;
+    const nb = (a, b) => inb(a, b) ? lv[idx(a, b)] * STEP : -1;
+    if (nb(i + 1, j) < t) seg.push(x + 0.5, y, z - 0.5, x + 0.5, y, z + 0.5);
+    if (nb(i - 1, j) < t) seg.push(x - 0.5, y, z - 0.5, x - 0.5, y, z + 0.5);
+    if (nb(i, j + 1) < t) seg.push(x - 0.5, y, z + 0.5, x + 0.5, y, z + 0.5);
+    if (nb(i, j - 1) < t) seg.push(x - 0.5, y, z - 0.5, x + 0.5, y, z - 0.5);
+  }
+  const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
+  world.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.55 })));
 
-  // scatter nature
+  // map-style dashed ripples around the coast
+  const dashes = [];
+  for (let i = 0; i < SIZE; i++) for (let j = 0; j < SIZE; j++) {
+    if (lv[idx(i, j)] > 1 || river[idx(i, j)]) continue;
+    let nd = 9, ni = 0, nj = 0;
+    for (let a = -3; a <= 3; a++) for (let b = -3; b <= 3; b++) {
+      if (!inb(i + a, j + b) || lv[idx(i + a, j + b)] < 2) continue;
+      const d = Math.max(Math.abs(a), Math.abs(b)); if (d < nd) { nd = d; ni = a; nj = b; }
+    }
+    if (nd > 3 || nd === 9 || R() < 0.25) continue;
+    const ang = Math.atan2(nj, ni);
+    dashes.push([wx(i) + rand(-0.25, 0.25), wx(j) + rand(-0.25, 0.25), -ang + Math.PI / 2, nd]);
+  }
+  const dm = new THREE.InstancedMesh(G.box, new THREE.MeshBasicMaterial({ color: '#8d9794', transparent: true, opacity: 0.7 }), dashes.length);
+  dashes.forEach(([x, z, a, nd], n) => dm.setMatrixAt(n, _m.compose(_p.set(x, SEA + 0.03, z), _q.clone().setFromAxisAngle(new THREE.Vector3(0, 1, 0), a), _s.set(0.34 - nd * 0.04, 0.01, 0.045))));
+  dm.raycast = () => {};
+  world.add(dm);
+
+  // stipple dots on the ground, like pen texture
+  const dots = [];
+  for (let n = 0; n < 520; n++) {
+    const i = Math.floor(rand(0, SIZE)), j = Math.floor(rand(0, SIZE)), L = lv[idx(i, j)];
+    if (L < 2 || river[idx(i, j)]) continue;
+    dots.push(wx(i) + rand(-0.48, 0.48), L * STEP + 0.006, wx(j) + rand(-0.48, 0.48));
+  }
+  const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.Float32BufferAttribute(dots, 3));
+  const dp = new THREE.Points(dg, new THREE.PointsMaterial({ color: INK, size: 2, sizeAttenuation: false, transparent: true, opacity: 0.45 }));
+  dp.raycast = () => {}; world.add(dp);
+
+  // homestead
+  buildCabin(site.i, site.j);
+  buildCampfire(site.i + 1, site.j + 3);
+  if (saved?.beds) saved.beds.forEach(b => { if (inb(b.i, b.j) && !occ[idx(b.i, b.j)] && lv[idx(b.i, b.j)] >= 2) makeBed(b.i, b.j, b.plant); });
+  else for (let a = 2; a < 5; a++) for (let b = 0; b < 2; b++) makeBed(site.i + a, site.j + b);
+  player.pos.set(wx(site.i + 2), 0, wx(site.j + 2)); player.y = topAt(site.i + 2, site.j + 2);
+  player.goal = player.pending = null;
+  const reserved = new Set();
+  for (let a = 0; a < 5; a++) for (let b = 2; b < 4; b++) reserved.add(idx(site.i + a, site.j + b));
+  buildDock();
+
+  // scenery: sparse, calm, clustered
   const fx = rand(0, 50), fz = rand(0, 50);
   for (let i = 0; i < SIZE; i++) for (let j = 0; j < SIZE; j++) {
     const k = idx(i, j), L = lv[k];
-    if (occ[k] || reserved.has(k) || L < 2) continue;
+    if (occ[k] || deck[k] || reserved.has(k) || L < 2) continue;
     const forest = fbm(i * 0.22 + fx, j * 0.22 + fz), r = R();
-    if (L === 2) { if (r < 0.06) spawn('rock', i, j); else if (r < 0.16) spawn('drytuft', i, j); continue; }
-    if (L === 7) { if (r < 0.3) spawn('snowpine', i, j); else if (r < 0.4) spawn('rock', i, j); continue; }
-    if (forest > 0.55 && r < 0.55) {
-      const high = L >= 5;
-      const roll = R();
-      spawn(high ? (L === 6 && roll < 0.4 ? 'snowpine' : roll < 0.8 ? 'pine' : 'snag') : roll < 0.6 ? 'tree' : roll < 0.9 ? 'pine' : 'snag', i, j);
-    } else if (r < 0.07) spawn(L >= 5 ? 'pine' : 'tree', i, j);
-    else if (r < 0.11) spawn('rock', i, j);
-    else if (r < 0.15) spawn('bush', i, j);
-    else if (r < 0.19 + (forest > 0.5 ? 0.06 : 0)) spawn(forest > 0.5 ? 'mush' : 'flower', i, j);
-    else if (r < 0.3) spawn('tuft', i, j);
+    const put = (kind, blocking) => place(kind, i, j, SCENERY[kind](), blocking);
+    if (L === 2) { if (r < 0.05) put('rock', true); else if (r < 0.14) put('tuft', false); continue; }
+    if (L === 7) { if (r < 0.3) put('snowpine', true); continue; }
+    if (forest > 0.56 && r < 0.5) { const q = R(); put(L >= 6 ? 'snowpine' : q < 0.62 ? 'pine' : q < 0.82 ? 'snag' : 'tree', true); }
+    else if (r < 0.04) put(R() < 0.5 ? 'tree' : 'pine', true);
+    else if (r < 0.07) put('rock', true);
+    else if (r < 0.2) put('tuft', false);
   }
 
-  // critters
-  const nb = 2 + Math.floor(rand(0, 2));
-  for (let n = 0, tries = 0; n < nb && tries < 400; tries++) {
-    const i = Math.floor(rand(1, SIZE - 1)), j = Math.floor(rand(1, SIZE - 1));
-    if (!walkable(i, j, 99) || lv[idx(i, j)] < 3 || Math.hypot(i - fire.i, j - fire.j) < 5) continue;
-    const m = bear(n > 0 && R() < 0.5);
-    const c = { mesh: m, x: wx(i), z: wx(j), y: topAt(i, j), tx: null, tz: null, wait: rand(0, 3), walk: 0 };
-    world.add(m); critters.push(c); n++;
+  // four wild strains, each with a home patch spread around the island
+  homes = [];
+  const cands = [];
+  for (let i = 1; i < SIZE - 1; i++) for (let j = 1; j < SIZE - 1; j++) if (lv[idx(i, j)] >= 3 && lv[idx(i, j)] < 7 && !river[idx(i, j)] && Math.hypot(i - site.i - 2, j - site.j - 2) > 4) cands.push({ i, j });
+  for (let s = 0; s < WILD.length; s++) {
+    let bestC = cands[0], bd = -1;
+    for (let t = 0; t < 60; t++) {
+      const c = pick(cands); if (!c) break;
+      const dmin = Math.min(Math.hypot(c.i - site.i - 2, c.j - site.j - 2) * (s < 2 ? 0.4 : 1), ...homes.map(h => Math.hypot(c.i - h.i, c.j - h.j)));
+      if (dmin > bd) { bd = dmin; bestC = c; }
+    }
+    homes.push(bestC || { i: site.i, j: site.j + 3 });
   }
+  for (let s = 0; s < WILD.length; s++) for (let n = 0; n < 3; n++) spawnWild(s);
 
   // fireflies
   const fp = [];
@@ -498,242 +742,344 @@ function generate(seed) {
   }
   const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.Float32BufferAttribute(fp, 3));
   fg.userData.base = fp.slice();
-  fireflies = new THREE.Points(fg, new THREE.PointsMaterial({ color: '#e8ff8a', size: 3, sizeAttenuation: false, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+  fireflies = new THREE.Points(fg, new THREE.PointsMaterial({ color: '#f3ffb0', size: 3, sizeAttenuation: false, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+  fireflies.raycast = () => {};
   world.add(fireflies);
 }
 
-const _m = new THREE.Matrix4(), _c = new THREE.Color(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
-function refreshTiles() {
-  for (let i = 0; i < SIZE; i++) for (let j = 0; j < SIZE; j++) {
-    const k = idx(i, j), L = lv[k], top = L * STEP;
-    _p.set(wx(i), top, wx(j)); _s.set(1, top + 3, 1);
-    tilesMesh.setMatrixAt(k, _m.compose(_p, _q, _s));
-    _c.set(river[k] ? '#a9d8c6' : TILE_COL[L]);
-    const jit = (fbm(i * 0.9 + 3, j * 0.9 + 5) - 0.5) * 0.12 + ((i * 7 + j * 13) % 5 - 2) * 0.008;
-    _c.offsetHSL(0, 0, jit);
-    tilesMesh.setColorAt(k, _c);
-  }
-  tilesMesh.instanceMatrix.needsUpdate = true;
-  tilesMesh.instanceColor.needsUpdate = true;
-}
-
-/* ---------- water ---------- */
+/* ================= water ================= */
 const waterGeo = new THREE.PlaneGeometry(140, 140, 70, 70).rotateX(-Math.PI / 2);
 const waterBase = waterGeo.attributes.position.array.slice();
-const waterMat = new THREE.MeshLambertMaterial({ color: '#7fbfb5', transparent: true, opacity: 0.78, flatShading: true });
+const waterMat = new THREE.MeshLambertMaterial({ color: '#cbd5d1', transparent: true, opacity: 0.86, flatShading: true });
 const water = new THREE.Mesh(waterGeo, waterMat);
-water.position.y = SEA; water.receiveShadow = true;
+water.position.y = SEA; water.receiveShadow = true; water.raycast = () => {};
 scene.add(water);
 
-/* ---------- placed slabs ---------- */
-const SLAB = { wood: { top: '#c89a62', side: '#a8763f' }, stone: { top: '#aeb2a4', side: '#8b8f82' } };
-const blocks = new THREE.Group(); scene.add(blocks);
-function slabMesh(type, i, j, n) {
-  const m = new THREE.Mesh(G.slab, [0, 1, 2, 3, 4, 5].map(f => mat(f === 2 ? SLAB[type].top : SLAB[type].side)));
-  m.castShadow = m.receiveShadow = true;
-  m.position.set(wx(i), lv[idx(i, j)] * STEP + n * STEP, wx(j));
-  m.userData.block = { i, j, n, type };
-  return m;
-}
-function rebuildColumn(i, j) {
-  for (const m of [...blocks.children]) if (m.userData.block.i === i && m.userData.block.j === j) blocks.remove(m);
-  stacks[idx(i, j)].forEach((t, n) => blocks.add(slabMesh(t, i, j, n)));
-}
+/* ================= game state ================= */
+let coins = 0, basket = [], spores = [], bedsItem = 0, journal = new Map(), order = null, selected = 'hand';
+let stats = { planted: 0, hybrids: 0, sold: 0, orders: 0 };
 
-/* ---------- inventory + HUD ---------- */
-const inv = { wood: 0, stone: 0, mushroom: 0, flower: 0, berry: 0 };
-const SLOTS = [
-  { id: 'hand', label: 'Hand', key: '1' },
-  { id: 'wood', label: 'Wood slab', key: '2' },
-  { id: 'stone', label: 'Stone slab', key: '3' },
-];
-const POUCH = ['mushroom', 'berry', 'flower'];
-let selected = 'hand';
-const bar = document.getElementById('bar');
-function icon(kind) {
-  const c = document.createElement('canvas'); c.width = c.height = 16;
-  const x = c.getContext('2d');
-  const px = (col, ...rects) => { x.fillStyle = col; rects.forEach(r => x.fillRect(...r)); };
-  if (kind === 'hand') { px('#2e2b25', [4, 5, 9, 9]); px('#e8c4a0', [5, 6, 7, 7], [4, 3, 2, 3], [6, 2, 2, 4], [8, 2, 2, 4], [10, 3, 2, 4]); }
-  if (kind === 'wood') { px('#2e2b25', [1, 5, 14, 8]); px('#c89a62', [2, 6, 12, 3]); px('#a8763f', [2, 9, 12, 3]); px('#8a5a2c', [5, 7, 3, 1], [9, 10, 4, 1]); }
-  if (kind === 'stone') { px('#2e2b25', [1, 5, 14, 8]); px('#aeb2a4', [2, 6, 12, 3]); px('#8b8f82', [2, 9, 12, 3]); px('#6f7368', [4, 7, 2, 1], [10, 10, 2, 1]); }
-  if (kind === 'mushroom') { px('#2e2b25', [3, 3, 10, 6], [6, 9, 4, 5]); px('#d9573f', [4, 4, 8, 4]); px('#f3ecd8', [6, 5, 2, 1], [9, 6, 1, 1], [7, 9, 2, 4]); }
-  if (kind === 'berry') { px('#2e2b25', [3, 5, 5, 5], [8, 7, 5, 5]); px('#c94f5c', [4, 6, 3, 3], [9, 8, 3, 3]); px('#6a9a55', [6, 3, 4, 2]); }
-  if (kind === 'flower') { px('#6f8f55', [7, 8, 2, 6]); px('#e59ab8', [5, 3, 6, 2], [4, 5, 8, 2], [5, 7, 6, 1]); px('#f2cf5b', [7, 5, 2, 2]); }
-  return c;
+function addSpores(g, n) {
+  const name = nameOf(g), s = spores.find(s => s.name === name);
+  if (s) { s.n += n; if (valueOf(g) > valueOf(s.g)) s.g = g; }
+  else spores.push({ name, g, n });
+}
+function discover(g, at) {
+  const name = nameOf(g), j = journal.get(name);
+  if (!j) {
+    journal.set(name, { g, count: 1 });
+    toast(`New strain for the journal: ${name}`);
+    return true;
+  }
+  j.count++; if (valueOf(g) > valueOf(j.g)) j.g = g;
+  return false;
+}
+function makeOrder() {
+  const t = stats.orders, o = {};
+  const reachable = t === 0 ? ['Ember', 'Amber', 'Rose', 'Orchid', 'Moss', 'Jade', 'Cobalt', 'Indigo'] : COLOR_NAMES;
+  o.color = reachable[Math.floor(mr(0, reachable.length))];
+  if (t >= 1 && Math.random() < 0.5) o.shape = Math.floor(mr(0, 4));
+  if (t >= 2 && Math.random() < 0.45) o.pattern = Math.floor(mr(1, 3));
+  if (t >= 4 && Math.random() < 0.25) o.glow = true;
+  o.reward = 20 + t * 5 + (o.shape !== undefined ? 12 : 0) + (o.pattern !== undefined ? 12 : 0) + (o.glow ? 40 : 0);
+  return o;
+}
+const describe = o => [o.glow ? 'Glowing' : '', o.pattern !== undefined ? PATTERNS[o.pattern] : '', o.color, o.shape !== undefined ? SHAPES[o.shape] : 'mushroom'].filter(Boolean).join(' ');
+const matches = (o, g) => hueName(g.hue) === o.color && (o.shape === undefined || g.shape === o.shape) && (o.pattern === undefined || g.pattern === o.pattern) && (!o.glow || g.glow);
+
+/* ================= HUD ================= */
+const $ = id => document.getElementById(id);
+const bar = $('bar');
+function slotList() {
+  const list = [{ id: 'hand', label: 'Hand: walk and pick', icon: () => iconCanvas('hand') }];
+  if (bedsItem > 0) list.push({ id: 'bed', label: `Log bed (${bedsItem})`, icon: () => iconCanvas('bed'), n: bedsItem });
+  for (const s of spores) if (s.n > 0) list.push({ id: s.name, label: `${s.name} spores (${s.n})`, icon: () => portrait(s.g), n: s.n });
+  return list;
 }
 function renderBar() {
-  bar.innerHTML = '';
-  for (const s of SLOTS) {
+  const list = slotList();
+  if (!list.find(s => s.id === selected)) selected = 'hand';
+  bar.replaceChildren(...list.map((s, n) => {
     const b = document.createElement('button');
-    b.className = 'slot'; b.title = `${s.label} (${s.key})`; b.setAttribute('aria-pressed', selected === s.id);
-    b.setAttribute('aria-label', s.id === 'hand' ? 'Hand: walk and gather' : `${s.label}: ${inv[s.id]}`);
-    b.append(icon(s.id));
-    const k = document.createElement('span'); k.className = 'key'; k.textContent = s.key; b.append(k);
-    if (s.id !== 'hand') { const n = document.createElement('span'); n.className = 'n'; n.textContent = inv[s.id]; b.append(n); }
+    b.className = 'slot'; b.title = s.label; b.setAttribute('aria-label', s.label); b.setAttribute('aria-pressed', selected === s.id);
+    b.append(s.icon());
+    if (n < 9) { const k = document.createElement('span'); k.className = 'key'; k.textContent = n + 1; b.append(k); }
+    if (s.n !== undefined) { const c = document.createElement('span'); c.className = 'n'; c.textContent = s.n; b.append(c); }
     b.onclick = () => { selected = s.id; renderBar(); };
-    bar.append(b);
-  }
-  const sep = document.createElement('div'); sep.className = 'sep'; bar.append(sep);
-  for (const p of POUCH) {
-    const d = document.createElement('div'); d.className = 'slot pouch'; d.title = p; d.setAttribute('aria-label', `${p}: ${inv[p]}`);
-    d.append(icon(p));
-    const n = document.createElement('span'); n.className = 'n'; n.textContent = inv[p]; d.append(n);
-    bar.append(d);
-  }
+    return b;
+  }));
+  $('coin-n').textContent = coins;
+  $('journal-btn').textContent = `Journal ${journal.size}`;
+  renderNotes();
 }
-renderBar();
+const STEPS = [
+  ['Pick two different wild mushrooms', () => journal.size >= 2],
+  ['Choose spores in the hotbar and plant them in the log beds', () => stats.planted >= 1],
+  ['Leave an empty bed touching two grown mushrooms. Their spores cross in it', () => stats.hybrids >= 1],
+  ['Sell mushrooms at the boat on the pier', () => stats.sold >= 1],
+  ["Fill the buyer's order", () => stats.orders >= 1],
+  ['Breed a glowing strain', () => [...journal.values()].some(j => j.g.glow)],
+];
+function renderNotes() {
+  const firstOpen = STEPS.findIndex(([, done]) => !done());
+  $('notes').innerHTML = `<h2>Field notes</h2><ol>${STEPS.map(([t, done], n) => {
+    const d = done();
+    return `<li class="${d ? 'done' : n === firstOpen ? 'now' : ''}"><span>${d ? '✓' : n + 1 + '.'}</span><span>${t}</span></li>`;
+  }).join('')}${firstOpen === -1 ? '<li class="now"><span>✦</span><span>Keep breeding. The journal has room for hundreds of strains.</span></li>' : ''}</ol>
+  <div class="keys">Mushrooms grow faster at night and near water. WASD or click to walk · Q/E rotate · scroll zoom · J journal</div>`;
+}
 
-const toastEl = document.getElementById('toast'); let toastT;
-function toast(msg) { toastEl.textContent = msg; toastEl.style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => (toastEl.style.opacity = 0), 1600); }
+const toastEl = $('toast'); let toastT;
+function toast(msg) { toastEl.textContent = msg; toastEl.style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => (toastEl.style.opacity = 0), 2200); }
 function popText(text, at) {
   const v = at.clone().project(camera);
   const d = document.createElement('div'); d.className = 'pop'; d.textContent = text;
   d.style.left = (v.x + 1) / 2 * innerWidth + 'px'; d.style.top = (1 - v.y) / 2 * innerHeight + 'px';
-  document.body.append(d); setTimeout(() => d.remove(), 1200);
+  document.body.append(d); setTimeout(() => d.remove(), 1400);
 }
 
-/* ---------- particles ---------- */
+/* ---- panels: market + journal ---- */
+const panel = $('panel');
+let panelKind = null;
+function closePanel() { panel.hidden = true; panelKind = null; }
+function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); Object.assign(e, attrs); e.append(...kids); return e; }
+function header(title) {
+  const close = el('button', { className: 'chip close', textContent: '×', title: 'Close (Esc)', onclick: closePanel });
+  close.setAttribute('aria-label', 'Close');
+  return el('header', {}, el('h2', { textContent: title }), close);
+}
+function openMarket() {
+  panelKind = 'market'; panel.hidden = false;
+  const groups = new Map();
+  basket.forEach(g => { const n = nameOf(g), v = valueOf(g); if (!groups.has(n)) groups.set(n, { g, items: [] }); groups.get(n).items.push(g); });
+  const orderMatch = basket.filter(g => matches(order, g)).sort((a, b) => valueOf(b) - valueOf(a))[0];
+  const kids = [header('Market boat')];
+  kids.push(el('div', { className: 'order' },
+    el('div', { className: 'meta', textContent: 'The buyer is looking for' }),
+    el('div', { className: 'want', textContent: describe(order) }),
+    el('div', { className: 'meta', textContent: `Pays ${order.reward} coins on top of the usual price.` }),
+    el('div', {}, el('button', { className: 'chip', textContent: orderMatch ? `Deliver ${nameOf(orderMatch)}` : 'Nothing in your basket matches yet', disabled: !orderMatch, onclick: () => deliver(orderMatch) }))));
+  kids.push(el('h3', { textContent: `Your basket · ${basket.length}` }));
+  if (!groups.size) kids.push(el('div', { className: 'empty', textContent: 'Your basket is empty. Harvest grown mushrooms from beds, or pick wild ones.' }));
+  for (const [name, { g, items }] of groups) {
+    const v = valueOf(g);
+    kids.push(el('div', { className: 'row' }, portrait(g),
+      el('div', { className: 'nm' }, name, el('div', { className: 'meta', textContent: `×${items.length} · ${v} coins each · gen ${g.gen}` })),
+      el('div', { className: 'acts' },
+        el('button', { className: 'chip', textContent: 'Sell 1', onclick: () => sell([items[0]]) }),
+        items.length > 1 ? el('button', { className: 'chip', textContent: `All ${v * items.length}`, onclick: () => sell(items) }) : '')));
+  }
+  kids.push(el('h3', { textContent: 'Buy' }));
+  const buyRow = (label, meta, price, fn, icon) => el('div', { className: 'row' }, icon,
+    el('div', { className: 'nm' }, label, el('div', { className: 'meta', textContent: meta })),
+    el('div', { className: 'acts' }, el('button', { className: 'chip', textContent: `${price} coins`, disabled: coins < price, onclick: () => { if (coins < price) return; coins -= price; fn(); renderBar(); openMarket(); save(); } })));
+  kids.push(buyRow('Log bed', 'Place it on any open ground, then plant spores in it.', BED_PRICE, () => { bedsItem++; toast('Log bed added to your hotbar'); }, iconCanvas('bed')));
+  const wildG = WILD[Math.floor((Date.now() / 60000) % WILD.length)];
+  kids.push(buyRow(`${nameOf(wildG)} spores`, 'A packet of 3 wild spores, in case the patch is picked clean.', WILD_PACK_PRICE, () => addSpores(wildG, 3), portrait(wildG)));
+  const gg = { hue: (Math.floor(Date.now() / 60000) * 47) % 360, shape: Math.floor(Date.now() / 60000) % 4, w: 0.5, h: 0.5, pattern: 0, glow: true, gen: 0 };
+  kids.push(buyRow('Glowing spores', 'A rare trade from the mainland. Cross it with your own strains.', GLOW_PRICE, () => addSpores(gg, 1), portrait(gg)));
+  panel.replaceChildren(...kids);
+}
+function sell(items) {
+  let sum = 0;
+  for (const g of items) { const k = basket.indexOf(g); if (k >= 0) { basket.splice(k, 1); sum += valueOf(g); } }
+  coins += sum; stats.sold += items.length;
+  toast(`Sold for ${sum} coins`);
+  renderBar(); openMarket(); save();
+}
+function deliver(g) {
+  const k = basket.indexOf(g); if (k < 0) return;
+  basket.splice(k, 1);
+  const pay = valueOf(g) + order.reward;
+  coins += pay; stats.orders++; stats.sold++;
+  toast(`Order filled: ${pay} coins`);
+  order = makeOrder();
+  renderBar(); openMarket(); save();
+}
+function openJournal() {
+  panelKind = 'journal'; panel.hidden = false;
+  const entries = [...journal.entries()].sort((a, b) => valueOf(b[1].g) - valueOf(a[1].g));
+  const kids = [header(`Journal · ${journal.size} strains`)];
+  kids.push(el('div', { className: 'meta', textContent: 'Every strain you have harvested. Strains are named by glow, pattern, colour and cap shape.' }));
+  if (!entries.length) kids.push(el('div', { className: 'empty', textContent: 'No strains yet. Wild mushrooms grow in small patches around the island.' }));
+  else kids.push(el('div', { className: 'grid' }, ...entries.map(([name, { g, count }]) => el('div', { className: 'card' }, portrait(g),
+    el('div', { className: 'nm', textContent: name }), el('div', { className: 'meta', textContent: `gen ${g.gen} · ${valueOf(g)}c · picked ${count}` })))));
+  panel.replaceChildren(...kids);
+}
+
+/* ================= particles ================= */
 const bits = [];
 function burst(at, color, n = 10) {
   for (let k = 0; k < n; k++) {
-    const m = new THREE.Mesh(G.bit, mat(color));
-    m.position.copy(at).add(new THREE.Vector3(rand(-0.2, 0.2), rand(0, 0.5), rand(-0.2, 0.2)));
-    m.userData.v = new THREE.Vector3(rand(-1.2, 1.2), rand(1.5, 3), rand(-1.2, 1.2));
-    m.userData.life = rand(0.5, 0.9);
+    const m = new THREE.Mesh(G.bit, new THREE.MeshBasicMaterial({ color }));
+    m.position.copy(at).add(new THREE.Vector3(mr(-0.15, 0.15), mr(0, 0.3), mr(-0.15, 0.15)));
+    m.userData.v = new THREE.Vector3(mr(-1, 1), mr(1.5, 2.8), mr(-1, 1)); m.userData.life = mr(0.5, 0.9);
     scene.add(m); bits.push(m);
   }
 }
+const capHex = g => '#' + new THREE.Color().setHSL(g.hue / 360, 0.88, 0.52).getHexString();
 
-/* ---------- actions ---------- */
-function playerCenter() { return new THREE.Vector3(player.pos.x, player.y, player.pos.z); }
-function inReach(i, j) { return Math.hypot(wx(i) - player.pos.x, wx(j) - player.pos.z) <= REACH; }
-
-function harvest(e) {
-  const def = KINDS[e.kind];
-  if (!def || e.growth < 1) { toast('Still growing'); return; }
-  e.hp--; e.shake = 0.3;
-  const at = e.mesh.position.clone().add(new THREE.Vector3(0, 0.5, 0));
-  burst(at, def.color, 5);
-  if (e.hp > 0) return;
-  burst(at, def.color, 12);
-  despawn(e);
-  const got = Object.entries(def.yield);
-  got.forEach(([item, n]) => { inv[item] += n; });
-  if (got.length) popText(got.map(([item, n]) => `+${n} ${item}`).join('  '), at);
-  if (def.regrow) spawn(e.kind, e.i, e.j, 0.01);
-  renderBar();
+/* ================= actions ================= */
+const inReach = (i, j) => Math.hypot(wx(i) - player.pos.x, wx(j) - player.pos.z) <= REACH;
+function harvestWild(e) {
+  const at = e.mesh.position.clone().add(new THREE.Vector3(0, 0.3, 0));
+  disposeModel(e.mesh); remove(e);
+  basket.push(e.g); addSpores(e.g, 2);
+  discover(e.g, at);
+  burst(at, capHex(e.g), 12); popText('+1 mushroom  +2 spores', at);
+  renderBar(); save();
 }
-function place(i, j) {
-  const type = selected === 'hand' ? (inv.wood ? 'wood' : 'stone') : selected;
+function harvestBed(bed) {
+  const g = bed.plant.g, at = bed.mesh.position.clone().add(new THREE.Vector3(0, 0.4, 0));
+  clearBed(bed);
+  basket.push(g); addSpores(g, 2);
+  discover(g, at);
+  burst(at, capHex(g), 14); popText(`+${valueOf(g)}c mushroom  +2 spores`, at);
+  renderBar(); save();
+}
+function plantSelected(bed) {
+  const s = spores.find(s => s.name === selected);
+  if (!s || s.n <= 0) return;
+  s.n--; stats.planted++;
+  plantBed(bed, s.g, 0);
+  burst(bed.mesh.position.clone().add(new THREE.Vector3(0, 0.15, 0)), '#6f675d', 6);
+  renderBar(); save();
+}
+function placeBed(i, j) {
   const k = idx(i, j);
-  if (inv[type] <= 0) { toast(`No ${type} left. Gather some ${type === 'wood' ? 'trees' : 'rocks'}.`); return; }
-  if (occ[k]) { if (occ[k].blocking || KINDS[occ[k].kind]?.hp > 1) { toast('Something is in the way'); return; } despawn(occ[k]); }
-  if (stacks[k].length >= 4) { toast('That stack is tall enough'); return; }
-  stacks[k].push(type); inv[type]--;
-  rebuildColumn(i, j); renderBar();
-  burst(new THREE.Vector3(wx(i), topAt(i, j), wx(j)), SLAB[type].top, 6);
+  if (bedsItem <= 0) return;
+  if (occ[k] || deck[k] || lv[k] < 2 || river[k]) { toast('Log beds need open, dry ground'); return; }
+  bedsItem--; makeBed(i, j); renderBar(); save();
 }
-function breakTop(i, j) {
-  const s = stacks[idx(i, j)];
-  if (!s.length) return false;
-  const type = s.pop(); inv[type]++;
-  const at = new THREE.Vector3(wx(i), topAt(i, j) + 0.2, wx(j));
-  rebuildColumn(i, j); renderBar(); burst(at, SLAB[type].side, 8); popText(`+1 ${type}`, at);
-  return true;
+function pickUpBed(bed) {
+  if (bed.plant) { toast('Harvest it first'); return; }
+  remove(bed); bedsItem++; renderBar(); save();
 }
 function runPending() {
   const p = player.pending; if (!p) return;
-  const e = p.ent;
-  const i = e ? e.i : p.i, j = e ? e.j : p.j;
+  const e = p.ent, i = e ? e.i : p.i, j = e ? e.j : p.j;
   if (!inReach(i, j)) return;
-  player.pending = null; player.goal = null;
+  player.pending = player.goal = null;
   player.facing = Math.atan2(wx(i) - player.pos.x, wx(j) - player.pos.z);
-  if (p.type === 'harvest') { if (ents.has(e)) harvest(e); }
-  else if (p.type === 'place') place(i, j);
-  else if (p.type === 'break') breakTop(i, j);
+  if (p.type === 'wild' && ents.has(e)) harvestWild(e);
+  else if (p.type === 'harvest' && ents.has(e) && e.plant?.growth >= 1) harvestBed(e);
+  else if (p.type === 'plant' && ents.has(e) && !e.plant) plantSelected(e);
+  else if (p.type === 'pickup' && ents.has(e)) pickUpBed(e);
+  else if (p.type === 'bed') placeBed(i, j);
+  else if (p.type === 'market') openMarket();
 }
 
-/* ---------- picking ---------- */
+/* ================= picking + input ================= */
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 function pickAt(ev) {
   ndc.set(ev.clientX / innerWidth * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hits = ray.intersectObjects([world, blocks], true);
-  for (const h of hits) {
-    if (h.object === water || h.object === fireflies) continue;
+  for (const h of ray.intersectObject(world, true)) {
     const u = h.object.userData;
-    if (u.block) return { kind: 'block', i: u.block.i, j: u.block.j, point: h.point };
     if (u.ent) return { kind: 'ent', ent: u.ent, i: u.ent.i, j: u.ent.j, point: h.point };
+    if (u.tile) return { kind: 'tile', i: u.tile.i, j: u.tile.j, point: h.point };
     if (h.object === tilesMesh) { const k = h.instanceId; return { kind: 'tile', i: Math.floor(k / SIZE), j: k % SIZE, point: h.point }; }
   }
   return null;
 }
 const cursor = new THREE.LineLoop(
-  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.48, 0, -0.48), new THREE.Vector3(0.48, 0, -0.48), new THREE.Vector3(0.48, 0, 0.48), new THREE.Vector3(-0.48, 0, 0.48)]),
-  new THREE.LineBasicMaterial({ color: '#fffbe8', transparent: true, opacity: 0.85, depthTest: false })
-);
+  new THREE.BufferGeometry().setFromPoints([[-0.46, -0.46], [0.46, -0.46], [0.46, 0.46], [-0.46, 0.46]].map(([x, z]) => new THREE.Vector3(x, 0, z))),
+  new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.8, depthTest: false }));
 cursor.renderOrder = 10; cursor.visible = false; scene.add(cursor);
 
+function describeHit(h) {
+  if (!h) return '';
+  if (h.kind === 'ent') {
+    const e = h.ent;
+    if (e.kind === 'wild') return `${nameOf(e.g)} · wild · ${valueOf(e.g)}c`;
+    if (e.kind === 'bed') {
+      if (!e.plant) return spores.find(s => s.name === selected) ? `Plant ${selected}` : 'Empty log bed';
+      if (e.plant.growth >= 1) return `${nameOf(e.plant.g)} · ready · ${valueOf(e.plant.g)}c`;
+      return `${nameOf(e.plant.g)} · ${Math.floor(e.plant.growth * 100)}%${e.wet ? ' · damp' : ''}`;
+    }
+    if (e.kind === 'market') return 'Market boat · sell and buy';
+    if (e.kind === 'cabin') return 'Cabin · open journal';
+    if (e.kind === 'fire') return 'Campfire';
+    return '';
+  }
+  return selected === 'bed' ? 'Place log bed' : '';
+}
+const tip = $('tip');
 const canvas = renderer.domElement;
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('pointermove', ev => {
   const h = pickAt(ev);
-  cursor.visible = !!h && ev.pointerType === 'mouse';
+  const mouse = ev.pointerType === 'mouse';
+  cursor.visible = !!h && mouse;
+  const text = mouse ? describeHit(h) : '';
+  tip.hidden = !text;
+  if (text) { tip.textContent = text; tip.style.left = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = ev.clientY + 16 + 'px'; }
   if (!h) return;
   cursor.position.set(wx(h.i), topAt(h.i, h.j) + 0.02, wx(h.j));
-  cursor.material.color.set(inReach(h.i, h.j) ? '#fffbe8' : '#e8c9a0');
+  cursor.material.opacity = inReach(h.i, h.j) ? 0.85 : 0.35;
 });
+canvas.addEventListener('pointerleave', () => { tip.hidden = true; cursor.visible = false; });
 canvas.addEventListener('pointerdown', ev => {
+  if (!panel.hidden) closePanel();
   const h = pickAt(ev); if (!h) return;
   const { i, j } = h;
-  const walkTo = pending => {
-    player.pending = pending;
-    player.goal = new THREE.Vector2(wx(i), wx(j)); player.stuck = 0;
-    runPending();
-  };
-  if (ev.button === 2) {
-    if (stacks[idx(i, j)].length) walkTo({ type: 'break', i, j });
-    else if (h.kind !== 'ent') walkTo({ type: 'place', i, j });
-    return;
+  const go = pending => { player.pending = pending; player.goal = new THREE.Vector2(wx(i), wx(j)); player.stuck = 0; runPending(); };
+  if (h.kind === 'ent') {
+    const e = h.ent;
+    if (e.kind === 'bed') {
+      if (ev.button === 2) return go({ type: 'pickup', ent: e });
+      if (e.plant?.growth >= 1) return go({ type: 'harvest', ent: e });
+      if (e.plant) return toast(`${nameOf(e.plant.g)} is ${Math.floor(e.plant.growth * 100)}% grown`);
+      if (spores.find(s => s.name === selected)) return go({ type: 'plant', ent: e });
+      return toast(spores.some(s => s.n) ? 'Choose spores in the hotbar, then click the bed' : 'You need spores. Pick a wild mushroom first');
+    }
+    if (e.kind === 'wild') return go({ type: 'wild', ent: e });
+    if (e.kind === 'market') return go({ type: 'market', ent: e });
+    if (e.kind === 'cabin') return openJournal();
+    if (e.kind === 'fire') return toast('The fire crackles. Mushrooms like the dark, damp nights here.');
   }
-  if (h.kind === 'ent' && KINDS[h.ent.kind]) return walkTo({ type: 'harvest', ent: h.ent });
-  if (h.kind === 'ent') { toast(h.ent.kind === 'cabin' ? 'Your cabin. Smoke means someone kept the stove going.' : 'The campfire crackles.'); return; }
-  if (selected !== 'hand') return walkTo({ type: 'place', i, j });
-  if (h.kind === 'block' && !walkable(i, j, player.y) && inReach(i, j)) return walkTo({ type: 'break', i, j });
-  player.pending = null;
-  player.goal = new THREE.Vector2(h.point.x, h.point.z); player.stuck = 0;
+  if (selected === 'bed' && h.kind === 'tile') return go({ type: 'bed', i, j });
+  player.pending = null; player.goal = new THREE.Vector2(h.point.x, h.point.z); player.stuck = 0;
 });
-addEventListener('wheel', ev => { cam.zoom = clamp(cam.zoom * (ev.deltaY > 0 ? 0.9 : 1.1), 0.55, 2.4); }, { passive: true });
+addEventListener('wheel', ev => { if (panel.hidden) cam.zoom = clamp(cam.zoom * (ev.deltaY > 0 ? 0.9 : 1.1), 0.55, 2.6); }, { passive: true });
 
 const keys = new Set();
 addEventListener('keydown', ev => {
   if (ev.target.tagName === 'BUTTON' && (ev.key === ' ' || ev.key === 'Enter')) return;
-  const k = ev.key.toLowerCase(); keys.add(k);
+  const k = ev.key.toLowerCase();
+  if (k === 'escape') return closePanel();
+  keys.add(k);
   if (k === 'q') rotate(-1);
   if (k === 'e') rotate(1);
   if (k === 't') skipTime();
-  if (k === 'h') { const h = document.getElementById('help'); h.hidden = !h.hidden; }
-  const s = SLOTS.find(s => s.key === k); if (s) { selected = s.id; renderBar(); }
+  if (k === 'j') panelKind === 'journal' ? closePanel() : openJournal();
+  if (/^[1-9]$/.test(k)) { const s = slotList()[+k - 1]; if (s) { selected = s.id; renderBar(); } }
 });
 addEventListener('keyup', ev => keys.delete(ev.key.toLowerCase()));
 addEventListener('blur', () => keys.clear());
 function rotate(d) { cam.targetAngle += d * Math.PI / 2; }
-let clock = 7 / 24;
-function skipTime() { clock += 0.25; }
-document.getElementById('rot-l').onclick = () => rotate(-1);
-document.getElementById('rot-r').onclick = () => rotate(1);
-document.getElementById('time').onclick = skipTime;
-document.getElementById('regen').onclick = () => { generate(Math.floor(Math.random() * 1e9)); blocks.clear(); Object.keys(inv).forEach(k => (inv[k] = 0)); renderBar(); toast(`You wash up on ${islandName} Island`); };
+let clock = 8 / 24, dayNo = 1, lastH = 8;
+function skipTime() { const before = clock; clock += 0.25; growAll(0.25 * DAY_LEN, before); }
+$('rot-l').onclick = () => rotate(-1);
+$('rot-r').onclick = () => rotate(1);
+$('time').onclick = skipTime;
+$('journal-btn').onclick = () => (panelKind === 'journal' ? closePanel() : openJournal());
+let regenArmed = false;
+$('regen').onclick = () => {
+  if (!regenArmed) { regenArmed = true; $('regen').textContent = 'Lose progress?'; setTimeout(() => { regenArmed = false; $('regen').textContent = 'New island'; }, 3000); return; }
+  regenArmed = false; $('regen').textContent = 'New island';
+  newGame(Math.floor(Math.random() * 1e9));
+  toast(`You arrive on ${islandName} with an empty basket`);
+};
 
-/* ---------- movement ---------- */
+/* ================= movement ================= */
 function tryMove(dx, dz) {
   let moved = 0;
   for (const [mx, mz] of [[dx, 0], [0, dz]]) {
     if (!mx && !mz) continue;
     const nx = player.pos.x + mx, nz = player.pos.z + mz;
     const px = nx + Math.sign(mx) * 0.18, pz = nz + Math.sign(mz) * 0.18;
-    const ci = ti(player.pos.x), cj = ti(player.pos.z), cy = topAt(ci, cj);
+    const cy = topAt(ti(player.pos.x), ti(player.pos.z));
     if (walkable(ti(px), ti(pz), cy) && walkable(ti(nx), ti(nz), cy)) { player.pos.x = nx; player.pos.z = nz; moved += Math.abs(mx) + Math.abs(mz); }
   }
   return moved;
@@ -741,31 +1087,30 @@ function tryMove(dx, dz) {
 function updatePlayer(dt) {
   const fwd = new THREE.Vector2(-Math.sin(cam.angle), -Math.cos(cam.angle)), right = new THREE.Vector2(-fwd.y, fwd.x);
   let ix = 0, iz = 0;
-  if (keys.has('w') || keys.has('arrowup')) { ix += fwd.x; iz += fwd.y; }
-  if (keys.has('s') || keys.has('arrowdown')) { ix -= fwd.x; iz -= fwd.y; }
-  if (keys.has('d') || keys.has('arrowright')) { ix += right.x; iz += right.y; }
-  if (keys.has('a') || keys.has('arrowleft')) { ix -= right.x; iz -= right.y; }
+  if (panel.hidden) {
+    if (keys.has('w') || keys.has('arrowup')) { ix += fwd.x; iz += fwd.y; }
+    if (keys.has('s') || keys.has('arrowdown')) { ix -= fwd.x; iz -= fwd.y; }
+    if (keys.has('d') || keys.has('arrowright')) { ix += right.x; iz += right.y; }
+    if (keys.has('a') || keys.has('arrowleft')) { ix -= right.x; iz -= right.y; }
+  }
   if (ix || iz) { player.goal = null; player.pending = null; }
   else if (player.goal) {
     ix = player.goal.x - player.pos.x; iz = player.goal.y - player.pos.z;
     if (Math.hypot(ix, iz) < 0.08) { player.goal = null; ix = iz = 0; }
   }
-  const ci = ti(player.pos.x), cj = ti(player.pos.z);
-  const wet = lv[idx(ci, cj)] <= 1 && !stacks[idx(ci, cj)].length;
+  const ci = ti(player.pos.x), cj = ti(player.pos.z), wet = !deck[idx(ci, cj)] && lv[idx(ci, cj)] <= 1;
   const len = Math.hypot(ix, iz);
   if (len > 0) {
-    const sp = (wet ? 1.4 : 2.6) * dt;
-    const step = Math.min(sp, player.goal ? len : sp);
+    const sp = (wet ? 1.4 : 2.6) * dt, step = Math.min(sp, player.goal ? len : sp);
     const moved = tryMove(ix / len * step, iz / len * step);
     player.facing = Math.atan2(ix, iz);
     player.walk += dt * (wet ? 7 : 11);
     if (player.goal) {
-      if (moved < step * 0.2) { player.stuck += dt; if (player.stuck > 0.25) { if (player.pending) toast("Can't reach that from here"); player.goal = null; player.pending = null; } }
+      if (moved < step * 0.2) { player.stuck += dt; if (player.stuck > 0.25) { if (player.pending) toast("Can't reach that from here"); player.goal = player.pending = null; } }
       else player.stuck = 0;
     }
   } else player.walk = 0;
   runPending();
-
   const ty = topAt(ti(player.pos.x), ti(player.pos.z)) - (wet ? 0.12 : 0);
   player.y = lerp(player.y, ty, 1 - Math.exp(-dt * 14));
   pmesh.position.set(player.pos.x, player.y + (len > 0 ? Math.abs(Math.sin(player.walk)) * 0.03 : 0), player.pos.z);
@@ -775,139 +1120,157 @@ function updatePlayer(dt) {
   pmesh.userData.legs[0].rotation.x = sw; pmesh.userData.legs[1].rotation.x = -sw;
 }
 
-function updateCritters(dt) {
-  for (const c of critters) {
-    if (c.tx === null) {
-      c.wait -= dt;
-      if (c.wait <= 0) {
-        const i = ti(c.x) + Math.round(rand(-3, 3)), j = ti(c.z) + Math.round(rand(-3, 3));
-        if (walkable(i, j, 99) && lv[idx(i, j)] >= 2) { c.tx = wx(i); c.tz = wx(j); }
-        else c.wait = 0.5;
-      }
-      c.walk = 0;
-    } else {
-      const dx = c.tx - c.x, dz = c.tz - c.z, d = Math.hypot(dx, dz);
-      if (d < 0.05) { c.tx = null; c.wait = rand(2, 6); continue; }
-      const s = Math.min(d, 0.7 * dt), nx = c.x + dx / d * s, nz = c.z + dz / d * s;
-      const cy = topAt(ti(c.x), ti(c.z));
-      if (walkable(ti(nx), ti(nz), cy) && lv[idx(ti(nx), ti(nz))] >= 2) { c.x = nx; c.z = nz; c.walk += dt * 8; }
-      else { c.tx = null; c.wait = 1; }
-      c.mesh.rotation.y = Math.atan2(-dz, dx);
+/* ================= growth + crossing ================= */
+let nightF = 0, crossTimer = 0, wildTimer = 0;
+function growAll(seconds, fromClock = clock) {
+  for (const e of ents) {
+    if (e.kind !== 'bed' || !e.plant || e.plant.growth >= 1) continue;
+    const rate = (1 + nightF * 0.6) * (e.wet ? 1.25 : 1) / GROW_TIME;
+    const before = e.plant.growth;
+    e.plant.growth = Math.min(1, before + seconds * rate);
+    setPlantScale(e);
+    if (before < 1 && e.plant.growth >= 1) burst(e.mesh.position.clone().add(new THREE.Vector3(0, 0.3, 0)), '#fbf7ee', 5);
+  }
+}
+function tryCrosses() {
+  for (const e of ents) {
+    if (e.kind !== 'bed' || e.plant) continue;
+    const parents = [];
+    for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
+      const n = (a || b) && inb(e.i + a, e.j + b) ? occ[idx(e.i + a, e.j + b)] : null;
+      if (n?.kind === 'bed' && n.plant?.growth >= 1) parents.push(n.plant.g);
     }
-    c.y = lerp(c.y, topAt(ti(c.x), ti(c.z)), 1 - Math.exp(-dt * 10));
-    c.mesh.position.set(c.x, c.y, c.z);
-    c.mesh.userData.legs.forEach((l, k) => (l.rotation.z = Math.sin(c.walk + (k % 2) * Math.PI) * 0.5 * (c.tx === null ? 0 : 1)));
+    if (parents.length < 2 || Math.random() > 0.12) continue;
+    const p1 = parents.splice(Math.floor(mr(0, parents.length)), 1)[0], p2 = parents[Math.floor(mr(0, parents.length))];
+    plantBed(e, cross(p1, p2), 0);
+    stats.hybrids++;
+    toast(nameOf(p1) === nameOf(p2) ? 'Spores drifted into an empty bed' : `A cross is sprouting: ${hueName(p1.hue)} × ${hueName(p2.hue)}`);
+    burst(e.mesh.position.clone().add(new THREE.Vector3(0, 0.2, 0)), '#fbf7ee', 8);
+    renderNotes(); save();
   }
 }
 
-/* ---------- day / night ---------- */
+/* ================= day / night ================= */
 const C = s => new THREE.Color(s);
-const DAY = { sky: C('#eef3ff'), gnd: C('#9aa47a'), bg: C('#cfd8b8'), sea: C('#7fbfb5') };
-const NIGHT = { sky: C('#33405e'), gnd: C('#1b2322'), bg: C('#18211f'), sea: C('#274a52') };
-const DUSK = C('#ffb37a'), NOON = C('#fff3dc');
-let dayNo = 1, lastH = 7;
+const DAY = { sky: C('#d9e2ee'), gnd: C('#e8e1d2'), bg: C('#e3ddd0'), sea: C('#cbd5d1') };
+const NIGHT = { sky: C('#3a4560'), gnd: C('#1d2222'), bg: C('#1b2024'), sea: C('#2c3a40') };
+const DUSK = C('#ffc39a'), NOON = C('#fff6e6');
 function updateSky(dt) {
   clock += dt / DAY_LEN;
   const h = (clock % 1) * 24;
   if (h < lastH) dayNo++;
   lastH = h;
-  const el = Math.sin((h - 6) / 24 * Math.PI * 2);
-  const day = smooth(-0.12, 0.25, el);
-  const az = (h - 6) / 12 * Math.PI;
+  const el = Math.sin((h - 6) / 24 * Math.PI * 2), day = smooth(-0.12, 0.25, el), az = (h - 6) / 12 * Math.PI;
+  nightF = 1 - day;
   sun.position.set(-Math.cos(az) * 26, Math.max(el, 0.12) * 24 + 6, 14 - Math.sin(az) * 4).add(sun.target.position);
-  sun.intensity = day * 2.6;
+  sun.intensity = day * 2.4;
   sun.color.copy(DUSK).lerp(NOON, smooth(0.05, 0.55, el));
-  moon.intensity = (1 - day) * 0.55;
-  hemi.intensity = 0.35 + day * 0.5;
+  moon.intensity = nightF * 0.6;
+  hemi.intensity = 0.4 + day * 0.7;
   hemi.color.copy(NIGHT.sky).lerp(DAY.sky, day);
   hemi.groundColor.copy(NIGHT.gnd).lerp(DAY.gnd, day);
   scene.background.copy(NIGHT.bg).lerp(DAY.bg, day);
   scene.fog.color.copy(scene.background);
   waterMat.color.copy(NIGHT.sea).lerp(DAY.sea, day);
-  if (windowMat) windowMat.emissiveIntensity = (1 - day) * 1.6;
-  if (fireLight) fireLight.intensity = (1 + (1 - day) * 9) * (0.85 + Math.sin(performance.now() * 0.02) * 0.08 + Math.random() * 0.1);
-  if (fireflies) fireflies.material.opacity = (1 - day) * 0.95;
-  const hh = Math.floor(h), mm = Math.floor((h - hh) * 60 / 10) * 10;
-  document.getElementById('clock').textContent = `Day ${dayNo} · ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  if (windowMat) windowMat.emissiveIntensity = nightF * 1.6;
+  if (fireLight) fireLight.intensity = (1 + nightF * 9) * (0.85 + Math.sin(performance.now() * 0.02) * 0.08 + Math.random() * 0.1);
+  if (fireflies) fireflies.material.opacity = nightF * 0.95;
+  const pulse = 0.85 + Math.sin(performance.now() * 0.003) * 0.15;
+  for (const m of glowMats) m.emissiveIntensity = 0.3 + nightF * 1.3 * pulse;
+  for (const m of capMats) m.emissiveIntensity = 0.22 + nightF * 0.3;
+  const hh = Math.floor(h), mm = Math.floor((h - hh) * 6) * 10;
+  $('clock').textContent = `Day ${dayNo} · ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${nightF > 0.5 ? ' · night growth' : ''}`;
 }
 
-/* ---------- camera ---------- */
+/* ================= camera ================= */
 function updateCamera(dt) {
   cam.angle = lerp(cam.angle, cam.targetAngle, 1 - Math.exp(-dt * 8));
   cam.target.lerp(new THREE.Vector3(player.pos.x, player.y, player.pos.z), 1 - Math.exp(-dt * 4));
   const D = 40;
   camera.position.set(cam.target.x + Math.sin(cam.angle) * D, cam.target.y + D * 0.85, cam.target.z + Math.cos(cam.angle) * D);
   camera.lookAt(cam.target);
-  const aspect = innerWidth / innerHeight, view = (aspect < 1 ? 12 : 9) / cam.zoom;
+  const aspect = innerWidth / innerHeight, view = (aspect < 1 ? 11 : 8.5) / cam.zoom;
   camera.left = -view * aspect; camera.right = view * aspect; camera.top = view; camera.bottom = -view;
   camera.updateProjectionMatrix();
   sun.target.position.set(cam.target.x, 0, cam.target.z);
 }
 
-/* ---------- main loop ---------- */
+/* ================= save / load ================= */
+function save() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      seed, coins, basket, spores, bedsItem, order, stats, clock, dayNo, journal: [...journal.entries()],
+      beds: [...ents].filter(e => e.kind === 'bed').map(b => ({ i: b.i, j: b.j, plant: b.plant ? { g: b.plant.g, growth: b.plant.growth } : null })),
+    }));
+  } catch { /* storage unavailable: progress lasts for this visit only */ }
+}
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); return s && typeof s.seed === 'number' ? s : null; } catch { return null; }
+}
+function newGame(sd, saved) {
+  coins = saved?.coins ?? 0; basket = saved?.basket ?? []; spores = saved?.spores ?? []; bedsItem = saved?.bedsItem ?? 0;
+  journal = new Map(saved?.journal ?? []); stats = saved?.stats ?? { planted: 0, hybrids: 0, sold: 0, orders: 0 };
+  order = saved?.order ?? null; clock = saved?.clock ?? 8 / 24; dayNo = saved?.dayNo ?? 1; lastH = (clock % 1) * 24;
+  if (!order) order = makeOrder();
+  selected = 'hand';
+  generate(sd, saved);
+  cam.target.set(player.pos.x, player.y, player.pos.z);
+  closePanel(); renderBar(); save();
+}
+
+/* ================= main loop ================= */
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const timer = new THREE.Clock();
+let saveTimer = 0;
 function frame() {
   const dt = Math.min(timer.getDelta(), 0.05), t = timer.elapsedTime;
   updatePlayer(dt);
-  updateCritters(dt);
   updateSky(dt);
   updateCamera(dt);
+  growAll(dt);
+  if ((crossTimer += dt) > 1) { crossTimer = 0; tryCrosses(); }
+  if ((wildTimer += dt) > 14) {
+    wildTimer = 0;
+    if ([...ents].filter(e => e.kind === 'wild').length < 12) spawnWild(Math.floor(mr(0, WILD.length)));
+  }
+  if ((saveTimer += dt) > 5) { saveTimer = 0; save(); }
 
-  // water swell
   if (!reduced) {
     const a = waterGeo.attributes.position.array;
-    for (let v = 0; v < a.length; v += 3) {
-      const x = waterBase[v], z = waterBase[v + 2];
-      a[v + 1] = Math.sin(x * 0.7 + t * 1.1) * 0.035 + Math.cos(z * 0.8 + t * 0.9) * 0.035;
-    }
+    for (let v = 0; v < a.length; v += 3) a[v + 1] = Math.sin(waterBase[v] * 0.7 + t * 1.1) * 0.02 + Math.cos(waterBase[v + 2] * 0.8 + t * 0.9) * 0.02;
     waterGeo.attributes.position.needsUpdate = true;
     waterGeo.computeVertexNormals();
+    if (boat) { boat.position.y = SEA - 0.05 + Math.sin(t * 1.3) * 0.025; boat.rotation.x = Math.sin(t * 0.9) * 0.03; }
   }
-  // entities: shake + regrowth
-  for (const e of ents) {
-    if (e.shake > 0) { e.shake -= dt; e.mesh.rotation.z = Math.sin(e.shake * 60) * 0.08 * (e.shake / 0.3); }
-    if (e.growth < 1) {
-      e.growth = Math.min(1, e.growth + dt / 45);
-      e.mesh.scale.setScalar(e.baseScale * Math.max(0.2, e.growth));
-      if (e.growth >= 1) {
-        e.blocking = KINDS[e.kind].blocking;
-        const pi = ti(player.pos.x), pj = ti(player.pos.z);
-        if (e.blocking && pi === e.i && pj === e.j) { e.growth = 0.98; e.blocking = false; }
-      }
-    }
-  }
-  // chimney smoke
+  // ripe mushrooms sway gently so they read as "ready"
+  for (const e of ents) if (e.kind === 'bed' && e.plant?.growth >= 1) e.plant.model.rotation.z = Math.sin(t * 2.2 + e.i + e.j) * 0.06;
   for (const p of smoke) {
     const u = p.userData; u.t = (u.t + dt * 0.12) % 1;
     p.position.copy(u.base).add(new THREE.Vector3(u.t * 1.6 + Math.sin(u.t * 9 + t) * 0.15, u.t * 2.4, -u.t * 0.6));
     p.scale.setScalar(0.5 + u.t * 1.8);
     p.material.opacity = 0.75 * (1 - u.t) * smooth(0, 0.08, u.t);
   }
-  // campfire flames
-  flames.forEach((f, k) => { f.scale.y = (k ? 0.2 : 0.32) * (0.85 + Math.sin(t * (12 + k * 5)) * 0.15); f.rotation.y = t * (k ? -3 : 2); });
-  // fireflies drift
+  flames.forEach((f, k) => { f.scale.y = (k ? 0.19 : 0.3) * (0.85 + Math.sin(t * (12 + k * 5)) * 0.15); f.rotation.y = t * (k ? -3 : 2); });
   if (fireflies && fireflies.material.opacity > 0.01) {
     const a = fireflies.geometry.attributes.position.array, b = fireflies.geometry.userData.base;
     for (let v = 0; v < a.length; v += 3) { a[v] = b[v] + Math.sin(t * 0.7 + v) * 0.3; a[v + 1] = b[v + 1] + Math.sin(t * 1.3 + v * 2) * 0.15; a[v + 2] = b[v + 2] + Math.cos(t * 0.6 + v) * 0.3; }
     fireflies.geometry.attributes.position.needsUpdate = true;
   }
-  // particles
   for (let k = bits.length - 1; k >= 0; k--) {
     const m = bits[k], u = m.userData;
     u.life -= dt; u.v.y -= 9 * dt; m.position.addScaledVector(u.v, dt); m.rotation.x += dt * 6;
     m.scale.setScalar(Math.max(0, u.life / 0.9));
-    if (u.life <= 0) { scene.remove(m); bits.splice(k, 1); }
+    if (u.life <= 0) { scene.remove(m); m.material.dispose(); bits.splice(k, 1); }
   }
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 
 addEventListener('resize', () => renderer.setSize(innerWidth, innerHeight));
-generate(Math.floor(Math.random() * 1e9));
-cam.target.set(player.pos.x, player.y, player.pos.z);
+const saved = load();
+newGame(saved ? saved.seed : Math.floor(Math.random() * 1e9), saved);
 frame();
-setTimeout(() => toast(`You wash up on ${islandName} Island`), 400);
+setTimeout(() => toast(saved ? `Back on ${islandName}` : `Welcome to ${islandName}. Wild mushrooms grow in patches around the island.`), 400);
 </script>
 </body>
 </html>
