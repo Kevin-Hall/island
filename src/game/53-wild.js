@@ -5,28 +5,20 @@
    debris kind of their own: chop one down with the axe and its stump stays to be dug out.
    Also here: where the Island Heart stood in saves from before you planted your own driftseed, and desire paths.
    ========================================================= */
-// the wild trees change with the real seasons. Four kinds (instanced debris variants): 0 and 2 round broadleaf trees,
-// 1 an evergreen pine, 3 a flowering/fruiting tree. Spring: fresh green with blossom (3 is a cherry in bloom); summer: deep
-// green (3 carries red fruit); autumn: amber, scarlet and gold; winter: bare branches dusted with snow, and snowy pines.
-const TREE_COLS={spring:[[0x8ed06a,0x5aa846,0x356e32],null,[0x82c460,0x4f9a40,0x2e662e],[0xffd8e6,0xf4a8c4,0xd07a9a]],
-  summer:[[0x64ae44,0x3e8634,0x21562a],null,[0x589e3e,0x347630,0x1c4c28],[0x6eb44a,0x428c36,0x245c2a]],
-  autumn:[[0xf4a444,0xe8803a,0xc85e24],null,[0xec6a4a,0xc8402a,0x982a22],[0xf6d060,0xe0b040,0xb08a28]]};
+// the wild trees change with the real seasons; the kinds themselves (oak, pine, maple, cherry, apple, pear, peach, birch,
+// spruce, poplar) are in 41b-treesp. Winter strips the broadleaf trees to bare, snow-dusted branches.
 function bareTree(p,R,snow){trunkP(p,R,0x6a5444,0.9,0.13,0x4e3e32);
   for(let i=0;i<7;i++){const a=i/7*6.283+R()*0.4,tl=0.55+R()*0.4,L=0.55+R()*0.3,y=0.95+R()*0.5,x=Math.cos(a)*Math.sin(tl)*L*0.5,z=Math.sin(a)*Math.sin(tl)*L*0.5;
     p.push(P(CYL6,0x5e4a3c,x,y+Math.cos(tl)*L*0.5,z,Math.sin(a)*tl,0,-Math.cos(a)*tl,0.05,L,0.05));
     const tx=Math.cos(a)*Math.sin(tl)*L,ty=y+Math.cos(tl)*L,tz=Math.sin(a)*Math.sin(tl)*L;for(let k=0;k<2;k++){const b2=a+(k?0.6:-0.6);p.push(P(CYL6,0x6a5444,tx+Math.cos(b2)*0.12,ty+0.1,tz+Math.sin(b2)*0.12,Math.sin(b2)*0.7,0,-Math.cos(b2)*0.7,0.03,0.3,0.03));}
     if(snow)p.push(P(SPH_LO,0xf4f8fa,tx,ty+0.03,tz,0,R()*3,0,0.16,0.07,0.16));}
   if(snow)p.push(P(SPH_LO,0xf4f8fa,0,1.02,0,0,0,0,0.34,0.09,0.34));}
-function wildTreeParts(v){const s=season(),R=mulberry(hi(v,31,S.worldSeed|0)),p=[];v%=4;
-  if(v===1)return treeParts(s==='winter'?'snowpine':'pine',R,0x9a9ea8).map(q=>Object.assign(q,{x:q.x*0.78,y:q.y*0.78,z:q.z*0.78,sx:q.sx*0.78,sy:q.sy*0.78,sz:q.sz*0.78}));
-  if(s==='winter'){bareTree(p,R,true);return p;}
-  // a small round-crowned tree on a clear trunk, about a tile across (a lollipop, like a storybook island's)
-  const cols=TREE_COLS[s][v],cy=1.08,rd=0.42;trunkP(p,R,0x7a5230,0.62,0.12,0x5e3e24);canopy(p,R,cols,0,cy,0,rd);
-  if(s==='spring'&&v===0)dots(p,R,10,0,cy+0.2,0,0.6,0.4,[0xffffff,0xfbe0ea],0xf6d04a,0.07);
-  if(s==='summer'&&v===3)fruit(p,R,5,0xe0402e,0,cy,0,rd);
-  if(s==='autumn'&&v===3)fruit(p,R,4,0xf08a2a,0,cy,0,rd);
-  if(s==='autumn')for(let i=0;i<6;i++)p.push(P(SPH_XS,cols[i%3],(R()-0.5)*1.6,0.02,(R()-0.5)*1.6,0,R()*3,0,0.16,0.02,0.11));
-  return p;}
+function wildTreeParts(v){const s=season(),R=mulberry(hi(v,31,S.worldSeed|0)),p=[];
+  if(treeSp(v).id==='pine')return PINE_TREE(s,R);speciesParts(v,s,R,p);return p;}
+// which kind grows where: pine and spruce stands (with the odd birch), little wild orchards, and mixed broadleaf woods
+function wildSpecies(x,z,R){const sd=(S.worldSeed|0)%1000,n1=vnoise(x*0.5+31,z*0.5-17,sd+11),n2=vnoise(x*0.45-9,z*0.45+23,sd+29),r=R();
+  const sp=n1>0.66?(r<0.5?1:r<0.82?8:7):n2>0.7?[4,4,5,6,3][Math.floor(R()*5)]:[0,0,0,0,2,2,2,7,7,9,9,3,4,5,6,1][Math.floor(r*16)];
+  return sp+(TREE_SP[sp].shapes>1&&R()<0.4?TREE_NS:0);}
 const wildTreeKinds=()=>['wild',season()];
 
 // (old saves only) the heart's clearing: inland grass well away from the landing beach, with room around it
@@ -55,10 +47,10 @@ function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S
     else if(forest&&!wet(x,z))kd=r<0.34?'tree':r<0.42?'bush':null;
     else if(thicket)kd=r<0.1?'tree':r<0.22?'bush':r<0.25?'weed':null;
     else kd=r<0.022?'weed':r<0.03?'twig':r<0.04?'rock':r<0.055?'bush':null;
-    if(!kd)continue;const d=newDebris(x,z,kd);d.v=Math.floor(R()*(kd==='tree'?4:3));d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}
+    if(!kd)continue;const d=newDebris(x,z,kd);d.v=kd==='tree'?wildSpecies(x,z,R):Math.floor(R()*3);d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}
   // two or three grand old trees standing alone in the meadows: landmarks you can see from across the island
   {let n=0;for(const [x,z] of shuffle(isl.grass.slice(),R)){if(n>=3)break;if(keep.has(K(x,z))||farmQ(x,z)<1.3||townQ(x,z)>0.7||wet(x,z))continue;
-    if(S.debris.some(d=>Math.abs(d.x-x)<=2&&Math.abs(d.z-z)<=2))continue;const d=newDebris(x,z,'tree');d.v=[0,2,3][n%3];d.r=R()*6.28;d.sc=1.75+R()*0.3;d.grand=1;S.debris.push(d);n++;}}}
+    if(S.debris.some(d=>Math.abs(d.x-x)<=2&&Math.abs(d.z-z)<=2))continue;const d=newDebris(x,z,'tree');d.v=[10,12,3][n%3];d.r=R()*6.28;d.sc=1.75+R()*0.3;d.grand=1;S.debris.push(d);n++;}}}
 
 /* ---- paths wear in where you walk: every step onto a grass tile counts, and a well-trodden tile turns to path ---- */
 const PATH_WEAR=10;

@@ -95,6 +95,6 @@ function layAcornfield(){const occ=new Set(),K2=(x,z)=>K(x,z),grass=(x,z)=>landM
     else if(n>0.72)kd=r<0.26?'tree':r<0.31?'bush':null;                            // copses in the meadows
     else kd=r<0.022?'tree':r<0.04?'bush':r<0.046?'rock':null;                     // the odd lone tree
     if(!kd)continue;const d=newDebris(x,z,kd);d.r=R()*6.28;
-    if(kd==='tree'){d.v=(z<-24||lv)&&R()<0.62||R()<0.14?1:[0,2,3][Math.floor(R()*3)];d.sc=0.85+R()*0.3;}else d.v=Math.floor(R()*3);S.debris.push(d);}
+    if(kd==='tree'){d.v=(z<-24||lv)&&R()<0.62||R()<0.14?(R()<0.7?1:8):wildSpecies(x,z,R);d.sc=0.85+R()*0.3;}else d.v=Math.floor(R()*3);S.debris.push(d);}
   rebuildHome();}
 if(S.acornNew){delete S.acornNew;setTimeout(()=>toast('Welcome to <b>Acornfield</b>: the village square, Cottage Lane, the farm, the flower gardens, the harbour and the north woods. Your own save is kept safe: open Settings and tap <b>Restore my save</b> to go back.','rare',ICON.sprout),1600);}

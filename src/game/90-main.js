@@ -13,11 +13,15 @@ function frame(now){
     const dx=vil.tx-vil.x,dz=vil.tz-vil.z,d=Math.hypot(dx,dz);
     if(d>0.04){const sp=Math.min(d,dt*4.3*(buffOn('tail')?1.3:1)),nx=vil.x+dx/d*sp,nz=vil.z+dz/d*sp;
       if(landMap.get(K(Math.round(nx),Math.round(nz)))==='river'&&landMap.get(K(Math.round(vil.x),Math.round(vil.z)))!=='river'){vil.tx=vil.x;vil.tz=vil.z;vil.path=null;}
-      else{vil.x=nx;vil.z=nz;villager.rotation.y=Math.atan2(dx,dz);}}
+      else{const [cx,cz]=collideStep(vil.x,vil.z,nx,nz),moved=Math.hypot(cx-vil.x,cz-vil.z);
+        // walking into something solid: slide along it; if that gets nowhere for a moment, stop (and only do what you came
+        // for if you're close enough to it)
+        vil.stuck=moved<sp*0.3?(vil.stuck||0)+dt:0;vil.x=cx;vil.z=cz;villager.rotation.y=Math.atan2(dx,dz);
+        if(vil.stuck>0.3){vil.stuck=0;const far=vil.path&&vil.path.length?9:Math.hypot(vil.tx-vil.x,vil.tz-vil.z);vil.path=null;if(far>0.9)vil.cb=null;vil.tx=vil.x;vil.tz=vil.z;}}}
     else if(vil.path&&vil.path.length){const p=vil.path.shift();vil.tx=p[0];vil.tz=p[1];}
     else{if(vil.cb){const cb=vil.cb;vil.cb=null;cb();}
       else if(!fishing){vil.idle+=dt;if(vil.idle>7+Math.random()*4){vil.idle=0;const isl=curIsl();if(isl){const tx=Math.round(vil.x+(Math.random()-0.5)*5),tz=Math.round(vil.z+(Math.random()-0.5)*5);
-        if(islMap.get(K(tx,tz))===isl.id&&isLand(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)&&lineClear(vil.x,vil.z,tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}}}
+        if(islMap.get(K(tx,tz))===isl.id&&isLand(tx,tz)&&!solidR(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)&&lineClear(vil.x,vil.z,tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}}}
     if(!S.sea){const ty=surfY(vil.x,vil.z)||0.15;if(ty-vil.y>0.3&&vil.hop<=0)vil.hop=0.4;vil.y=lerp(vil.y,ty,Math.min(1,dt*10));vil.hop=Math.max(0,vil.hop-dt);
       if(playerLimbs)swingLimbs(playerLimbs,tt*11,d>0.04?0.7:0);
       villager.position.set(vil.x,vil.y+(d>0.04?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.4*Math.PI)*0.3*(vil.hop>0),vil.z);

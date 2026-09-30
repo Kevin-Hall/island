@@ -256,6 +256,12 @@ function icFind(x,key,F){const col=icHex(F&&F.col||'#d8c8a8'),dk=icHex(F&&F.dk||
     case'berries':return icPlant(x,{kind:'berry',col:'#6a4ab0'},'berries');
     case'clover4':return icPlant(x,{kind:'clover',col:'#5aae44'},'clover4');
     case'apple':return icPlant(x,{kind:'fruit',col:'#d8403a'},'apple');
+    case'pear':icFill(x,q=>{q.beginPath();q.moveTo(50,26);q.bezierCurveTo(38,26,40,46,32,58);q.bezierCurveTo(22,74,32,92,50,92);q.bezierCurveTo(68,92,78,74,68,58);q.bezierCurveTo(60,46,62,26,50,26);},'#c8cc4a',{gloss:[40,62,7,11,-0.3]});
+      icFill(x,icEll(64,72,9,12,0.3),'#e08c3c',{flat:true,line:false,a:0.35});icLine(x,'#6a4428',3,[50,28,54,14]);icLeaf(x,54,18,20,7,-0.5,'#4e9a3a');return;
+    case'peach':icFill(x,icCirc(50,60,30),'#f6a468',{gloss:[38,46,9,7,-0.4]});icFill(x,icEll(62,66,16,18,0.2),'#dc4646',{flat:true,line:false,a:0.45});icLine(x,'#c8504a',1.6,[50,32,48,56,50,88]);
+      icLeaf(x,50,30,24,8,-2.4,'#5a9a3e');icLeaf(x,50,30,22,7,-0.7,'#4a8a36');return;
+    case'cherries':icLine(x,'#4e7a2e',2.4,[50,14,34,58]);icLine(x,'#4e7a2e',2.4,[50,14,64,62]);icLeaf(x,50,16,24,8,-0.3,'#4e9a3a');
+      icFill(x,icCirc(32,68,15),'#c8202e',{gloss:[27,62,4,3,-0.4]});icFill(x,icCirc(64,72,15),'#b81a2a',{gloss:[59,66,4,3,-0.4]});return;
     case'clam':return icShellFan(x,'#b8b4c8','#8a86a0');
     case'geode':icFill(x,icCirc(50,54,32),'#7a7680',{gloss:[38,40,10,6,-0.4]});icFill(x,icCirc(50,54,22),'#f0ecf4',{lw:1.6});for(let i=0;i<8;i++){const a=i*0.785;icFill(x,q=>{q.beginPath();q.moveTo(50,54);q.lineTo(50+Math.cos(a-0.3)*20,54+Math.sin(a-0.3)*20);q.lineTo(50+Math.cos(a+0.3)*20,54+Math.sin(a+0.3)*20);q.closePath();},i%2?'#9a6ad0':'#b88ae8',{lw:1});}
       icFill(x,icCirc(50,54,6),'#6a3a9a',{lw:1});return;
@@ -361,6 +367,6 @@ function paintItemIcon(key){const [c,x]=(()=>{const c=document.createElement('ca
     else icMisc(x,key);}catch(e){console.warn('icon',key,e);return null;}
   const o=document.createElement('canvas');o.width=o.height=IC;const g=o.getContext('2d');g.shadowColor='rgba(80,52,24,0.3)';g.shadowBlur=IC*0.04;g.shadowOffsetY=IC*0.03;g.drawImage(c,0,0);return o.toDataURL();}
 // swap the pixel icons for painted ones, lazily
-{const keys=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),'g:mushroom','g:truffle','g:acorn','g:pinecone','g:berries','g:clover4','g:apple','g:clam','g:geode','g:oldcoin',...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','shell','star','heart','sprout','boat','rod','hammer','chart','can','shop','mystery','dex','bag','fish','fly','crawl'];
+{const keys=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),'g:mushroom','g:truffle','g:acorn','g:pinecone','g:berries','g:clover4','g:apple','g:pear','g:peach','g:cherries','g:clam','g:geode','g:oldcoin',...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','shell','star','heart','sprout','boat','rod','hammer','chart','can','shop','mystery','dex','bag','fish','fly','crawl'];
   for(const k of [...new Set(keys)]){const old=ICON[k];Object.defineProperty(ICON,k,{configurable:true,enumerable:true,get(){const v=paintItemIcon(k)||old;Object.defineProperty(ICON,k,{value:v,writable:true,configurable:true,enumerable:true});return v;},set(v){/* a later pixel sprite for the same thing: keep the painted one */}});}}
 shellHTML=`<img class="px" src="${ICON.shell}" alt="">`;

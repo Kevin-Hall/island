@@ -3,20 +3,33 @@
    ========================================================= */
 function walkTo(x,z){const dx=x-vil.x,dz=z-vil.z,d=Math.hypot(dx,dz)||1;routeVil(x-dx/d*0.62,z-dz/d*0.62);vil.idle=0;vil.cb=null;}
 function goTo(x,z,cb){routeVil(x,z);vil.idle=0;vil.cb=cb||null;}
-// only rivers block walking (the villager hops up cliffs); detour over a bridge with a small A* when needed
+// rivers block walking (the villager hops up cliffs), and so does anything solid standing on a tile: trees, bushes,
+// rocks and stumps, buildings and fixed decor, and placed furniture (not rugs, flower patches or floors). Each solid tile
+// is a circle the player (radius PLAYER_R) slides round; routeVil finds a way round them with a small A* when needed
 const walkable=(x,z)=>{const t=landMap.get(K(x,z));return t==='grass'||t==='sand'||t==='bridge';};
-function lineClear(x0,z0,x1,z1){const n=Math.ceil(Math.hypot(x1-x0,z1-z0)/0.2);for(let i=1;i<=n;i++){if(landMap.get(K(Math.round(x0+(x1-x0)*i/n),Math.round(z0+(z1-z0)*i/n)))==='river')return false;}return true;}
+const SOLID_R={tree:0.32,bush:0.3,rock:0.34,boulder:0.4,stump:0.3},WALK_OVER=new Set(['flowers','cattail','rug','clover']),PLAYER_R=0.2;
+function solidR(x,z){if(S.sea||inside)return 0;const k=K(x,z);if(islMap.get(k)!==0)return 0;
+  const e=debMesh.get(k);if(e&&e.d&&SOLID_R[e.d.k])return SOLID_R[e.d.k];
+  if(fixedAt(x,z))return 0.4;const o=objAt(x,z);if(o&&!WALK_OVER.has(o.k))return 0.4;return 0;}
+// is (px,pz) clear of every solid near it? (ignoring any solid the point (ix,iz) is already inside, so you can always walk out)
+function pointClear(px,pz,ix,iz){const rx=Math.round(px),rz=Math.round(pz);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const x=rx+a,z=rz+b,r=solidR(x,z);if(!r)continue;const R=r+PLAYER_R;
+  if(Math.hypot(px-x,pz-z)<R&&!(ix!==undefined&&Math.hypot(ix-x,iz-z)<R))return false;}return true;}
+function lineClear(x0,z0,x1,z1){const n=Math.ceil(Math.hypot(x1-x0,z1-z0)/0.2);for(let i=1;i<=n;i++){const px=x0+(x1-x0)*i/n,pz=z0+(z1-z0)*i/n;if(landMap.get(K(Math.round(px),Math.round(pz)))==='river'||!pointClear(px,pz,x0,z0))return false;}return true;}
+// slide a step out of any solid it runs into (the solid you're already inside, if any, lets you out)
+function collideStep(ox,oz,nx,nz){const rx=Math.round(nx),rz=Math.round(nz);for(let it=0;it<2;it++)for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const x=rx+a,z=rz+b,r=solidR(x,z);if(!r)continue;const R=r+PLAYER_R;
+    if(Math.hypot(ox-x,oz-z)<R)continue;const d=Math.hypot(nx-x,nz-z);if(d<R&&d>1e-4){nx=x+(nx-x)/d*R;nz=z+(nz-z)/d*R;}}
+  return [nx,nz];}
 // a tiny binary min-heap keyed on element[3]
 function heapPush(h,n){h.push(n);let i=h.length-1;while(i>0){const p=(i-1)>>1;if(h[p][3]<=h[i][3])break;[h[p],h[i]]=[h[i],h[p]];i=p;}}
 function heapPop(h){const top=h[0],last=h.pop();if(h.length){h[0]=last;let i=0;for(;;){const l=i*2+1,r=l+1;let m=i;if(l<h.length&&h[l][3]<h[m][3])m=l;if(r<h.length&&h[r][3]<h[m][3])m=r;if(m===i)break;[h[m],h[i]]=[h[i],h[m]];i=m;}}return top;}
-function landPath(sx,sz,tx,tz,opt={}){const W=(x,z)=>walkable(x,z)&&!(opt.block&&opt.block(x,z)&&!(x===tx&&z===tz));if(!W(tx,tz))return null;const open=[[sx,sz,0,0]],g=new Map([[K(sx,sz),0]]),from=new Map();let it=0;
+function landPath(sx,sz,tx,tz,opt={}){const W=(x,z)=>walkable(x,z)&&!(opt.block&&opt.block(x,z)&&!(x===tx&&z===tz)&&!(x===sx&&z===sz));if(!W(tx,tz))return null;const open=[[sx,sz,0,0]],g=new Map([[K(sx,sz),0]]),from=new Map();let it=0;
   while(open.length&&it++<(opt.max||5000)){const [x,z,gc]=heapPop(open);if(gc>g.get(K(x,z)))continue;
     if(x===tx&&z===tz){const p=[[x,z]];let k=K(x,z);while(from.has(k)){const q=from.get(k);p.unshift(q);k=K(q[0],q[1]);}return p;}
     for(const [dx,dz] of opt.four?[[1,0],[-1,0],[0,1],[0,-1]]:[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){const nx=x+dx,nz=z+dz;if(!W(nx,nz))continue;if(dx&&dz&&(!W(x+dx,z)||!W(x,z+dz)))continue;
       const ng=gc+(dx&&dz?1.414:1)*(opt.cost?opt.cost(nx,nz,x,z):1),k=K(nx,nz);if(g.has(k)&&g.get(k)<=ng)continue;g.set(k,ng);from.set(k,[x,z]);heapPush(open,[nx,nz,ng,ng+Math.hypot(tx-nx,tz-nz)]);}}
   return null;}
 function routeVil(tx,tz){vil.path=null;const sx=Math.round(vil.x),sz=Math.round(vil.z);
-  if(!S.sea&&walkable(sx,sz)&&riverList.length&&!lineClear(vil.x,vil.z,tx,tz)){const p=landPath(sx,sz,Math.round(tx),Math.round(tz));
+  if(!S.sea&&walkable(sx,sz)&&!lineClear(vil.x,vil.z,tx,tz)){const p=landPath(sx,sz,Math.round(tx),Math.round(tz),{block:(x,z)=>solidR(x,z)>0});
     if(p){const all=[...p.slice(1,-1),[tx,tz]],pts=[];let cx=vil.x,cz=vil.z,i=0;
       while(i<all.length){let j=all.length-1;while(j>i&&!lineClear(cx,cz,all[j][0],all[j][1]))j--;pts.push(all[j]);cx=all[j][0];cz=all[j][1];i=j+1;}
       const f=pts.shift();vil.tx=f[0];vil.tz=f[1];vil.path=pts;return;}}

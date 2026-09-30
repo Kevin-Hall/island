@@ -9,7 +9,7 @@
    ========================================================= */
 Object.assign(FINDS,{
   mushroom:{name:'Forest Mushroom',price:40,w:0,bio:['wild']},acorn:{name:'Acorn',price:8,w:0,bio:['wild']},pinecone:{name:'Pinecone',price:10,w:0,bio:['wild']},
-  berries:{name:'Wild Berries',price:30,w:0,bio:['wild']},clover4:{name:'Four-leaf Clover',price:250,w:0,bio:['wild']},apple:{name:'Apple',price:35,w:0,bio:['wild']},
+  berries:{name:'Wild Berries',price:30,w:0,bio:['wild']},clover4:{name:'Four-leaf Clover',price:250,w:0,bio:['wild']},apple:{name:'Apple',price:35,w:0,bio:['wild']},pear:{name:'Pear',price:40,w:0,bio:['wild']},peach:{name:'Peach',price:45,w:0,bio:['wild']},cherries:{name:'Cherries',price:30,w:0,bio:['wild']},
   clam:{name:'Clam',price:45,w:0,bio:['wild']},geode:{name:'Geode',price:220,w:0,bio:['wild']},oldcoin:{name:'Old Coin',price:400,w:0,bio:['wild']},
   truffle:{name:'Truffle',price:600,w:0,bio:['wild']}});
 // dig spots and clam bubbles live among the finds (so they're saved and drawn the same way) but aren't items themselves:
@@ -37,7 +37,7 @@ function forageParts(k,p){switch(k){
   case'berries':bushClump(p,mulberry(7),[0x86c858,0x4a8a38,0x285a26],0.34);for(let i=0;i<7;i++){const a=i*0.9;p.push(P(SPH_XS,i%2?0x6a3a9a:0xd83848,Math.cos(a)*0.1,0.16+(i%3)*0.03,Math.sin(a)*0.1,0,0,0,0.06,0.06,0.06));}break;
   case'clover4':for(let i=0;i<4;i++){const a=i*1.571+0.4;p.push(P(SPH_LO,0x4fa84a,Math.cos(a)*0.06,0.08,Math.sin(a)*0.06,0,a,0,0.1,0.02,0.07));}p.push(P(CYL5,0x3d7a2c,0,0.04,0,0,0,0,0.012,0.08,0.012));
     p.push(P(SPH_XS,0xfff6c0,0,0.09,0,0,0,0,0.03,0.03,0.03));break;
-  case'apple':p.push(PG(SPH_LO,0xe84a3a,0xa82a24,0,0.09,0,0,0,0,0.18,0.17,0.18),P(CYL5,0x6a4428,0,0.19,0,0,0,0.3,0.015,0.05,0.015),P(SPH_XS,0x5aa84a,0.03,0.2,0,0,0,0.6,0.06,0.02,0.04),P(SPH_XS,0xffffff,-0.04,0.13,0.05,0,0,0,0.04,0.03,0.03));break;
+  case'apple':case'pear':case'peach':case'cherries':{const q=fruitModel(k,null);for(const o of q)o.y+=k==='pear'?0.19:0.145;/* lying on the grass */p.push(...q);break;}
   case'clam':p.push(PG(SPH_LO,0xe8e0d4,0xa8a098,0,0.04,0,0,0,0,0.2,0.08,0.16));break;
   case'geode':p.push(PG(SPH,0xa8a4b4,0x6a6874,0,0.08,0,0,0,0,0.24,0.16,0.22),P(OCT,0xb88ae8,0.02,0.14,0.04,0.3,0.5,0,0.08,0.1,0.08));break;
   case'oldcoin':p.push(P(CYL8,0xe0b040,0,0.02,0,0,0,0,0.16,0.02,0.16),P(CYL8,0xc8952a,0,0.035,0,0,0,0,0.1,0.01,0.1));break;
@@ -55,7 +55,7 @@ function forageSpawn(quiet,n=1){const isl=islands[0];if(!isl||!S.wild)return;con
     if(R()<0.22){const ex=FORAGE_EXTRA.filter(q=>dexOk(FINDS[q],isl)&&(!FINDS[q].rare||R()<0.25));if(ex.length){k=pickR(ex);if(FINDS[k].at==='tree'&&trees.length){const t=pickR(trees);at=openBy(t.x,t.z);}else{const c=pickR(isl.grass);if(c&&freeTile(...c)&&!TOWN.path.has(K(...c)))at=c;}
       if(k&&at&&!findAt(...at))S.finds.push({k,x:at[0],z:at[1],shiny:R()<0.05?1:undefined});continue;}}
     if(r<0.24&&trees.length&&s!=='winter'){const t=pickR(trees);at=openBy(t.x,t.z);k=R()<(s==='autumn'?0.5:0.8)?'mushroom':null;}
-    else if(r<0.42&&trees.length){const t=pickR(trees);at=openBy(t.x,t.z);k=t.v%4===1?'pinecone':'acorn';}
+    else if(r<0.42&&trees.length){const t=pickR(trees);at=openBy(t.x,t.z);k=treeSp(t.v).con?'pinecone':'acorn';}
     else if(r<0.54&&bushes.length&&s!=='winter'){const b=pickR(bushes);at=openBy(b.x,b.z);k='berries';}
     else if(r<0.74){const c=pickR(isl.grass);if(c&&freeTile(...c)&&!TOWN.path.has(K(...c)))at=c;k=R()<0.06?'clover4':'dig';}
     else{const c=pickR(isl.sand);if(c&&freeTile(...c))at=c;k='bubbles';}
@@ -70,16 +70,38 @@ function dropFind(k,x,z){const at=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1]].map(
 function spawnBugAt(x,z,crawl){const isl=curIsl();if(!isl)return;const ids=Object.keys(BUGS).filter(k=>(BUGS[k].kind==='crawl')===crawl&&BUGS[k].time!=='night'&&BUGS[k].bio.includes(isl.biome));if(!ids.length)return;
   const id=pickR(ids),g=bugGroup(BUGS[id]);g.scale.setScalar(BUG_SCALE);scene.add(g);g.position.set(x,topY(x,z)+(crawl?0:1.2),z);bugs.push({id,g,hx:x,hz:z,t:0,life:30+Math.random()*20,ph:Math.random()*6.28,out:0,isl:isl.id,crawl});}
 function shakeTree(d){const x=d.x,z=d.z,y=topY(x,z),m=debMesh.get(K(x,z));if(m)m.shake=0.6;SFX.pop();noise(0.25,0.05,1400);
-  const s=season(),cols=d.v%4===1?[0x3e8a44,0x2a6a34]:s==='autumn'?[0xe8803a,0xf4a444]:[0x6ab84a,0x4a9a3a];
+  const s=season(),sp=treeSp(d.v),con=sp.con,cols=con?[0x3e8a44,0x2a6a34]:s==='autumn'?[0xe8803a,0xf4a444]:s==='spring'&&(sp.id==='cherry'||sp.id==='peach')?[0xf8c8d8,0xffe4ee]:[0x6ab84a,0x4a9a3a];
   for(let i=0;i<10;i++)emit(x+(Math.random()-0.5)*1.2,y+1.4+Math.random()*0.5,z+(Math.random()-0.5)*1.2,{vx:(Math.random()-0.5)*0.6,vy:-0.3,vz:(Math.random()-0.5)*0.6,life:1.4,max:1.4,size:0.06,color:cols[i%2],g:0.6});
+  if(fruitOn(d)&&m){dropTreeFruit(d,m);jrNote('shake');return;}// down comes the fruit
   const sh=shakeLeft(x,z);if(sh.n>=2){floatText(x,y+1.4,z,'rustle…');return;}sh.n++;jrNote('shake');
-  const r=Math.random(),pine=d.v%4===1;
+  const r=Math.random(),pine=con;
   if(r<0.3){dropFind(pine?'pinecone':'acorn',x,z);floatText(x,y+1.4,z,pine?'A pinecone!':'An acorn!');}
   else if(r<0.45){gain('m:wood');floatText(x,y+1.4,z,'+1 Wood (a branch)');}
-  else if(r<0.58&&d.v%4===3&&s==='summer'){dropFind('apple',x,z);floatText(x,y+1.4,z,'An apple!','gold');}
   else if(r<0.72){spawnBugAt(x+(Math.random()-0.5),z+(Math.random()-0.5),true);floatText(x,y+1.4,z,'Something fell out!');}
   else if(r<0.84){critterAt('bird',x,z,true);floatText(x,y+1.4,z,'Tweet!');}
   else floatText(x,y+1.4,z,'rustle…');}
+// fruit shaken loose: each one drops from where it hung, bounces once and rolls out onto a free tile round the tree,
+// where it lies as a find to pick up. The tree grows new fruit a few days later (fruitOn, 74-life)
+const fallers=[];
+function dropTreeFruit(d,e){const sp=treeSp(d.v),k=sp.fruit,x=d.x,z=d.z,sc=e.sc,w=e.vr?e.vr.w:1,h=e.vr?e.vr.h:1,c=Math.cos(e.r),s=Math.sin(e.r);
+  (S.fruitT||(S.fruitT={}))[K(x,z)]=S.day;debLOD(e.gr);
+  const tiles=shuffle([[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]].map(([a,b])=>[x+a,z+b]).filter(([a,b])=>isLand(a,b)&&freeTile(a,b)&&!findAt(a,b)&&!debrisAt(a,b)),Math.random);
+  const slots=fruitSlots(d.v),R=mulberry(hi(d.v,93,S.worldSeed|0)),batch={left:slots.length,finds:[]};let n=0;
+  for(const [lx,ly,lz] of slots){const px=lx*sc*w,pz=lz*sc*w,wx=e.x+px*c+pz*s,wz=e.z-px*s+pz*c,wy=e.y+(ly+0.05)*sc*h;
+    const g=new T.Group();g.add(M(fruitModel(k,R)));g.position.set(wx,wy,wz);scene.add(g);
+    const t=tiles.length?tiles.shift():null;let tx,tz;if(t){tx=t[0]+(hash(t[0],t[1])-0.5)*0.3;tz=t[1]+(hash(t[1],t[0])-0.5)*0.3;batch.finds.push({k,x:t[0],z:t[1]});}else{const a=Math.random()*6.283;tx=wx+Math.cos(a)*0.3;tz=wz+Math.sin(a)*0.3;}
+    fallers.push({g,k,batch,x:wx,y:wy,z:wz,vx:0,vy:0,vz:0,tx,tz,keep:!!t,wait:0.05+n*0.12+Math.random()*0.1,st:0,t:0,spin:(Math.random()-0.5)*8});n++;}
+  const nf=batch.finds.length;floatText(x,topY(x,z)+1.6,z,nf?(nf>1?nf+' '+FINDS[k].name.toLowerCase()+(k==='cherries'?'':'s')+'!':'A '+FINDS[k].name.toLowerCase()+'!'):'The fruit rolled away…',nf?'gold':'');}
+function updateFallers(dt){for(let i=fallers.length-1;i>=0;i--){const f=fallers[i],g=f.g;
+  if(f.wait>0){f.wait-=dt;g.rotation.z=Math.sin(f.wait*40)*0.2;continue;}// a wobble on its stem, then it lets go
+  f.t+=dt;const gy=topY(Math.round(f.x),Math.round(f.z))+0.14;/* where the stem end sits with the fruit resting on the grass */f.vy-=9.8*dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.z+=f.vz*dt;g.rotation.x+=f.spin*dt*(f.st?0.5:1);
+  if(f.y<=gy){f.y=gy;if(f.st===0){f.st=1;tone(420+Math.random()*120,0.05,'sine',0.05);burst(f.x,gy-0.1,f.z,0x7aa84a,3,0.6,0.04);
+      // bounce once, aimed so it comes down again on its tile
+      const tb=0.34;f.vy=9.8*tb/2;f.vx=(f.tx-f.x)/tb;f.vz=(f.tz-f.z)/tb;}
+    else if(f.st===1){f.st=2;f.vx=f.vy=f.vz=0;f.x=f.tx;f.z=f.tz;f.spin=0;g.rotation.set(0,g.rotation.y,0);tone(360,0.04,'sine',0.03);}}
+  g.position.set(f.x,f.y,f.z);
+  if(f.st===2){f.t2=(f.t2||0)+dt;if(!f.keep)g.scale.setScalar(Math.max(0.01,1-f.t2*2));
+    if(f.t2>(f.keep?0.15:0.5)){scene.remove(g);fallers.splice(i,1);const b=f.batch;if(--b.left===0&&b.finds.length){for(const q of b.finds)if(!findAt(q.x,q.z))S.finds.push(q);syncLife();}}}}}
 function rustleBush(d){const x=d.x,z=d.z,y=topY(x,z),m=debMesh.get(K(x,z));if(m)m.shake=0.5;noise(0.2,0.05,1800);
   for(let i=0;i<6;i++)emit(x+(Math.random()-0.5)*0.6,y+0.5,z+(Math.random()-0.5)*0.6,{vx:(Math.random()-0.5)*0.8,vy:0.6,vz:(Math.random()-0.5)*0.8,life:0.8,max:0.8,size:0.05,color:0x5aa84a,g:2});
   const sh=shakeLeft(x,z);if(sh.n>=2){floatText(x,y+0.9,z,'rustle…');return;}sh.n++;jrNote('rustle');const s=season(),r=Math.random();
@@ -100,7 +122,7 @@ function digSpot(f){S.finds=S.finds.filter(q=>q!==f);syncLife();jrNote('dig');co
 let leafT=0;
 function driftLeaves(dt){leafT-=dt;if(leafT>0)return;leafT=0.35+Math.random()*0.5;const s=season();if(s==='winter')return;
   const near=S.debris.filter(d=>d.k==='tree'&&Math.abs(d.x-vil.x)<11&&Math.abs(d.z-vil.z)<9);if(!near.length)return;const t=pickR(near),y=topY(t.x,t.z)+1.3*(t.sc||1);
-  const col=s==='autumn'?pickR([0xe8803a,0xf4a444,0xc8402a]):s==='spring'&&t.v%4===3?pickR([0xf8c8d8,0xffe4ee]):pickR([0x6ab84a,0x8ad05a,0x4a9a3a]);
+  const col=s==='autumn'?pickR([0xe8803a,0xf4a444,0xc8402a]):s==='spring'&&(treeSp(t.v).id==='cherry'||treeSp(t.v).id==='peach')?pickR([0xf8c8d8,0xffe4ee]):pickR([0x6ab84a,0x8ad05a,0x4a9a3a]);
   emit(t.x+(Math.random()-0.5)*0.9,y,t.z+(Math.random()-0.5)*0.9,{vx:0.15,vy:-0.28,vz:0.05,life:5,max:5,size:0.055,color:col,g:0,sw:0.9,ph:Math.random()*6.28,spin:1});}
 let forageT=5;
 let forageOff=false; // (tests switch it off so nothing appears under their taps)

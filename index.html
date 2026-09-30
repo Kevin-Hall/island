@@ -1575,6 +1575,12 @@ function icFind(x,key,F){const col=icHex(F&&F.col||'#d8c8a8'),dk=icHex(F&&F.dk||
     case'berries':return icPlant(x,{kind:'berry',col:'#6a4ab0'},'berries');
     case'clover4':return icPlant(x,{kind:'clover',col:'#5aae44'},'clover4');
     case'apple':return icPlant(x,{kind:'fruit',col:'#d8403a'},'apple');
+    case'pear':icFill(x,q=>{q.beginPath();q.moveTo(50,26);q.bezierCurveTo(38,26,40,46,32,58);q.bezierCurveTo(22,74,32,92,50,92);q.bezierCurveTo(68,92,78,74,68,58);q.bezierCurveTo(60,46,62,26,50,26);},'#c8cc4a',{gloss:[40,62,7,11,-0.3]});
+      icFill(x,icEll(64,72,9,12,0.3),'#e08c3c',{flat:true,line:false,a:0.35});icLine(x,'#6a4428',3,[50,28,54,14]);icLeaf(x,54,18,20,7,-0.5,'#4e9a3a');return;
+    case'peach':icFill(x,icCirc(50,60,30),'#f6a468',{gloss:[38,46,9,7,-0.4]});icFill(x,icEll(62,66,16,18,0.2),'#dc4646',{flat:true,line:false,a:0.45});icLine(x,'#c8504a',1.6,[50,32,48,56,50,88]);
+      icLeaf(x,50,30,24,8,-2.4,'#5a9a3e');icLeaf(x,50,30,22,7,-0.7,'#4a8a36');return;
+    case'cherries':icLine(x,'#4e7a2e',2.4,[50,14,34,58]);icLine(x,'#4e7a2e',2.4,[50,14,64,62]);icLeaf(x,50,16,24,8,-0.3,'#4e9a3a');
+      icFill(x,icCirc(32,68,15),'#c8202e',{gloss:[27,62,4,3,-0.4]});icFill(x,icCirc(64,72,15),'#b81a2a',{gloss:[59,66,4,3,-0.4]});return;
     case'clam':return icShellFan(x,'#b8b4c8','#8a86a0');
     case'geode':icFill(x,icCirc(50,54,32),'#7a7680',{gloss:[38,40,10,6,-0.4]});icFill(x,icCirc(50,54,22),'#f0ecf4',{lw:1.6});for(let i=0;i<8;i++){const a=i*0.785;icFill(x,q=>{q.beginPath();q.moveTo(50,54);q.lineTo(50+Math.cos(a-0.3)*20,54+Math.sin(a-0.3)*20);q.lineTo(50+Math.cos(a+0.3)*20,54+Math.sin(a+0.3)*20);q.closePath();},i%2?'#9a6ad0':'#b88ae8',{lw:1});}
       icFill(x,icCirc(50,54,6),'#6a3a9a',{lw:1});return;
@@ -1680,7 +1686,7 @@ function paintItemIcon(key){const [c,x]=(()=>{const c=document.createElement('ca
     else icMisc(x,key);}catch(e){console.warn('icon',key,e);return null;}
   const o=document.createElement('canvas');o.width=o.height=IC;const g=o.getContext('2d');g.shadowColor='rgba(80,52,24,0.3)';g.shadowBlur=IC*0.04;g.shadowOffsetY=IC*0.03;g.drawImage(c,0,0);return o.toDataURL();}
 // swap the pixel icons for painted ones, lazily
-{const keys=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),'g:mushroom','g:truffle','g:acorn','g:pinecone','g:berries','g:clover4','g:apple','g:clam','g:geode','g:oldcoin',...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','shell','star','heart','sprout','boat','rod','hammer','chart','can','shop','mystery','dex','bag','fish','fly','crawl'];
+{const keys=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),'g:mushroom','g:truffle','g:acorn','g:pinecone','g:berries','g:clover4','g:apple','g:pear','g:peach','g:cherries','g:clam','g:geode','g:oldcoin',...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','shell','star','heart','sprout','boat','rod','hammer','chart','can','shop','mystery','dex','bag','fish','fly','crawl'];
   for(const k of [...new Set(keys)]){const old=ICON[k];Object.defineProperty(ICON,k,{configurable:true,enumerable:true,get(){const v=paintItemIcon(k)||old;Object.defineProperty(ICON,k,{value:v,writable:true,configurable:true,enumerable:true});return v;},set(v){/* a later pixel sprite for the same thing: keep the painted one */}});}}
 shellHTML=`<img class="px" src="${ICON.shell}" alt="">`;
 /* =========================================================
@@ -2317,6 +2323,114 @@ function levelOf(isl,x,z){
   const d=islDist(isl,x,z),R=isl.r,n=vnoise(x,z,isl.seed);let l=0;
   if(d<R*0.62&&n>0.45)l=1;if(R>6.4&&d<R*0.36&&n>0.52)l=2;if(R>9.5&&d<R*0.3&&n>0.5)l=3;if(R>9.5&&l===0&&d<R*0.5&&n>0.62)l=1;return l;}
 const GRASS_SLAB=new T.BoxGeometry(1,0.14,1);
+/* =========================================================
+   Wild tree species. The home island's woods mix ten kinds (a debris tree's v: species = v%10, shape = floor(v/10)):
+   0 oak, 1 pine, 2 maple, 3 cherry, 4 apple, 5 pear, 6 peach, 7 birch, 8 spruce, 9 poplar. The broadleaf kinds come in
+   two crown shapes, and every tree also gets its own size, width, lean of colour and turn (TREE_VAR, per instance), so a
+   grove never repeats. Fruit trees blossom in spring and carry fruit in season: the fruit is a separate batch drawn over
+   the tree (fruitParts), so shaking one can knock its fruit off (77-forage) until it grows back a few days later.
+   ========================================================= */
+const TREE_NS=10;
+const TREE_SP=[
+  {id:'oak',name:'Oak',shapes:2},{id:'pine',name:'Pine',shapes:1,con:1},{id:'maple',name:'Maple',shapes:2},{id:'cherry',name:'Cherry',shapes:1,fruit:'cherries',fs:['summer']},
+  {id:'apple',name:'Apple',shapes:2,fruit:'apple',fs:['summer','autumn']},{id:'pear',name:'Pear',shapes:1,fruit:'pear',fs:['summer','autumn']},
+  {id:'peach',name:'Peach',shapes:1,fruit:'peach',fs:['summer']},{id:'birch',name:'Birch',shapes:2},{id:'spruce',name:'Spruce',shapes:1,con:1},{id:'poplar',name:'Poplar',shapes:1}];
+const treeSp=v=>TREE_SP[(v|0)%TREE_NS],treeShape=v=>Math.floor((v|0)/TREE_NS)%2;
+// leaf colours [light, mid, dark] by season
+const SP_COLS={
+  oak:{spring:[0x8ed06a,0x5aa846,0x356e32],summer:[0x64ae44,0x3e8634,0x21562a],autumn:[0xf4a444,0xe8803a,0xc85e24]},
+  maple:{spring:[0x82c460,0x4f9a40,0x2e662e],summer:[0x589e3e,0x347630,0x1c4c28],autumn:[0xec6a4a,0xc8402a,0x982a22]},
+  cherry:{spring:[0xffd8e6,0xf4a8c4,0xd07a9a],summer:[0x6eb44a,0x428c36,0x245c2a],autumn:[0xf6d060,0xe0b040,0xb08a28]},
+  apple:{spring:[0x9ad870,0x62ac48,0x3a7234],summer:[0x74b84c,0x4a9038,0x285e2a],autumn:[0xc8c050,0x9aa03a,0x6a7a2a]},
+  pear:{spring:[0x94d06c,0x5ea446,0x366c32],summer:[0x6aae48,0x44883a,0x245a2c],autumn:[0xe89a3a,0xc8602a,0x8a3a22]},
+  peach:{spring:[0xffc0cc,0xf08aa4,0xc05a7a],summer:[0x86c054,0x5a9a3e,0x346a2e],autumn:[0xe8b848,0xc88a30,0x8a5a22]},
+  birch:{spring:[0xc0e88a,0x8ecc5e,0x5a9a40],summer:[0x9ad464,0x6cb048,0x3e7a34],autumn:[0xfae070,0xf0c040,0xc08a20]},
+  poplar:{spring:[0x9ad46a,0x68aa48,0x3c7434],summer:[0x6aac4a,0x46883a,0x265a2c],autumn:[0xf6d25a,0xe0aa38,0xa87a24]}};
+// scale a set of parts about a point (for stretching a crown taller or wider)
+function scaleParts(p,from,sx,sy,sz,cx,cy,cz){for(let i=from;i<p.length;i++){const q=p[i];q.x=cx+(q.x-cx)*sx;q.y=cy+(q.y-cy)*sy;q.z=cz+(q.z-cz)*sz;q.sx*=sx;q.sy*=sy;q.sz*=sz;}}
+function blossom(p,R,n,cx,cy,cz,rad,cols){dots(p,R,n,cx,cy+rad*0.2,cz,rad*1.7,rad*1.5,cols,0xf6d04a,0.075);}
+// a branch from (x0,y0,z0) to (x1,y1,z1)
+function limb(p,col,x0,y0,z0,x1,y1,z1,w){const dx=x1-x0,dy=y1-y0,dz=z1-z0,L=Math.hypot(dx,dy,dz);
+  p.push(P(CYL6,col,(x0+x1)/2,(y0+y1)/2,(z0+z1)/2,Math.atan2(Math.hypot(dx,dz),dy),Math.atan2(dx,dz),0,w,L,w));}
+// builds one species; returns the crowns [cx,cy,cz,rad] that fruit hangs from
+function speciesParts(v,s,R,p){const sp=treeSp(v),sh=treeShape(v),id=sp.id,C=SP_COLS[id]&&SP_COLS[id][s],cr=[];
+  const bare=s==='winter';
+  switch(id){
+    case'oak':case'maple':{if(bare){bareTree(p,R,true);break;}
+      if(sh===0){trunkP(p,R,0x7a5230,0.62,0.12,0x5e3e24);const n=p.length;canopy(p,R,C,0,1.08,0,0.42);if(id==='maple')scaleParts(p,n,0.92,1.18,0.92,0,1.08,0);cr.push([0,1.08,0,0.42]);}
+      else{// a broad old tree: the trunk forks into two big limbs, each under its own crown
+        trunkP(p,R,0x74502e,0.5,0.14,0x5a3a22);limb(p,0x6a4428,0,0.7,0,-0.3,1.05,0.05,0.09);limb(p,0x6a4428,0,0.7,0,0.28,1.15,-0.05,0.085);
+        canopy(p,R,C,-0.3,1.12,0.05,0.36);canopy(p,R,C,0.3,1.28,-0.05,0.34);canopy(p,R,C,0,1.45,0.02,0.24);cr.push([-0.3,1.12,0.05,0.36],[0.3,1.28,-0.05,0.34]);}
+      if(s==='spring'&&id==='oak'&&sh===0)dots(p,R,8,0,1.28,0,0.6,0.4,[0xffffff,0xfbe0ea],0xf6d04a,0.06);
+      if(s==='autumn')for(let i=0;i<6;i++)p.push(P(SPH_XS,C[i%3],(R()-0.5)*1.6,0.02,(R()-0.5)*1.6,0,R()*3,0,0.16,0.02,0.11));break;}
+    case'cherry':{if(bare){bareTree(p,R,true);break;}trunkP(p,R,0x6a4436,0.62,0.12,0x4e3228);canopy(p,R,C,0,1.08,0,0.42);cr.push([0,1.08,0,0.42]);
+      if(s==='spring')for(let i=0;i<6;i++)lf(p,[0xf8c8d8,0xffe4ee][i%2],(R()-0.5)*1.5,0.02,(R()-0.5)*1.5,R()*6.28,0,0.1,0.08,0.02);/* petals on the grass */break;}
+    case'apple':{if(bare){bareTree(p,R,true);break;}// short and spreading: a low, wide, flattened crown on a stout, leaning trunk
+      const lean=(R()-0.5)*0.16;trunkP(p,R,0x6e4a30,0.4,0.13,0x523622);limb(p,0x62422a,0,0.55,0,lean-0.25,0.85,0.1,0.08);limb(p,0x62422a,0,0.55,0,lean+0.25,0.9,-0.08,0.08);
+      const n=p.length,cy=sh?1.02:0.96;canopy(p,R,C,lean,cy,0,sh?0.4:0.46);scaleParts(p,n,sh?1.05:1.18,sh?0.9:0.74,sh?1.05:1.18,lean,cy,0);cr.push([lean,cy,0,sh?0.4:0.46,sh?0.9:0.74,sh?1.05:1.18]);
+      if(s==='spring')blossom(p,R,26,lean,cy,0,sh?0.42:0.52,[0xffffff,0xffe8f0,0xfad0dc]);break;}
+    case'pear':{if(bare){bareTree(p,R,true);break;}// upright, with a tall teardrop crown
+      trunkP(p,R,0x5e4232,0.78,0.11,0x463024);const n=p.length;canopy(p,R,C,0,1.3,0,0.38);scaleParts(p,n,0.9,1.35,0.9,0,1.3,0);cr.push([0,1.3,0,0.38,1.35,0.9]);
+      if(s==='spring')blossom(p,R,24,0,1.36,0,0.36,[0xffffff,0xf4f4ea]);break;}
+    case'peach':{if(bare){bareTree(p,R,true);break;}// a little open-centred tree: three slim stems in a vase, each with a small crown
+      p.push(PG(SPH_LO,0x5a3a2c,0x6a4636,0,0.05,0,0,0,0,0.36,0.22,0.36));const a0=R()*6.283;
+      for(let i=0;i<3;i++){const a=a0+i*2.094+(R()-0.5)*0.4,x=Math.cos(a)*0.34,z=Math.sin(a)*0.34,y=0.98+R()*0.14;limb(p,0x6a4436,Math.cos(a)*0.05,0.05,Math.sin(a)*0.05,x*0.9,y-0.14,z*0.9,0.075);canopy(p,R,C,x,y,z,0.26);cr.push([x,y,z,0.26]);}
+      if(s==='spring')for(const c of cr)blossom(p,R,9,c[0],c[1],c[2],0.26,[0xffc4d4,0xf8a0b8,0xffe0e8]);break;}
+    case'birch':{// slender white trunks with dark marks and a light, airy crown of small clumps
+      const stems=sh?2:1;for(let k=0;k<stems;k++){const ox=stems>1?(k?0.14:-0.12):0,lean=stems>1?(k?0.1:-0.1):0,h=sh?(k?1.25:1.05):1.2;
+        p.push(PG(STRUNK,0xf4f0e8,0xc8c0b4,ox+lean*h*0.5,h/2,0,0,0,-lean,0.14,h,0.14));
+        for(let i=0;i<5;i++){const y=0.15+i*h/5.5+R()*0.08,a=R()*6.283;p.push(P(BOX,0x3a3434,ox+lean*y+Math.cos(a)*0.055,y,Math.sin(a)*0.055,0,-a,0,0.045,0.025,0.06));}
+        if(bare){for(let i=0;i<4;i++){const a=i*1.57+R(),y=h*0.7+i*0.1;limb(p,0x6a5a52,ox+lean*y,y,0,ox+lean*y+Math.cos(a)*0.32,y+0.28,Math.sin(a)*0.32,0.025);p.push(P(SPH_LO,0xf4f8fa,ox+lean*y+Math.cos(a)*0.32,y+0.3,Math.sin(a)*0.32,0,0,0,0.1,0.05,0.1));}continue;}
+        for(let i=0;i<9;i++){const a=R()*6.283,r=0.1+R()*0.2,y=h*0.6+R()*0.62,rad=0.17+R()*0.07;const cx=ox+lean*y+Math.cos(a)*r,cz=Math.sin(a)*r;
+          p.push(PG(SPH_LO,i%2?C[0]:C[1],C[2],cx,y,cz,0,a,0,rad*2.4,rad*2,rad*2.4));}
+        p.push(PG(SPH_LO,C[0],C[1],ox+lean*(h+0.3),h+0.32,0,0,0,0,0.26,0.3,0.26));}break;}
+    case'spruce':{const sn=bare,tip=0x7ab87a,mid=0x2e6e4a,base=0x163a2c;// tall and narrow: many tiers tapering to a spire
+      p.push(PG(STRUNK,0x6a4430,0x4e3022,0,0.3,0,0,0,0,0.24,0.6,0.24));
+      for(let i=0;i<6;i++){const t=i/5,y=0.4+i*0.36,rad=0.62-t*0.46,h=0.6-t*0.12,top=lerpHex(mid,tip,0.2+t*0.45),bot=lerpHex(base,mid,t*0.35);
+        p.push(PG(SCONE,top,bot,0,y+h/2,0,0,R(),0,rad*2,h,rad*2));if(sn)p.push(PG(SCONE,0xffffff,0xdce8f2,0,y+h*0.68,0,0,R(),0,rad*1.6,h*0.62,rad*1.6));}
+      p.push(P(CONE5,sn?0xffffff:tip,0,2.55,0,0,0,0,0.14,0.34,0.14));break;}
+    case'poplar':{if(bare){trunkP(p,R,0x6a5a48,1.1,0.1,0x4e4234);for(let i=0;i<8;i++){const a=i*0.8,y=0.8+i*0.16;limb(p,0x5e5044,Math.cos(a)*0.04,y,Math.sin(a)*0.04,Math.cos(a)*0.2,y+0.45,Math.sin(a)*0.2,0.025);}break;}
+      trunkP(p,R,0x6a5a48,0.42,0.1,0x4e4234);const n=p.length;canopy(p,R,C,0,1.42,0,0.34);scaleParts(p,n,0.74,2.2,0.74,0,1.42,0);break;}
+  }
+  return cr;}
+const PINE_TREE=(s,R)=>treeParts(s==='winter'?'snowpine':'pine',R,0x9a9ea8).map(q=>Object.assign(q,{x:q.x*0.78,y:q.y*0.78,z:q.z*0.78,sx:q.sx*0.78,sy:q.sy*0.78,sz:q.sz*0.78}));
+
+// ---- fruit: realistic little models hanging from the crown ----
+// each fruit model sits with its stem end at the origin, hanging down (so it can be dropped as a mesh on its own too)
+function fruitModel(k,R,p=[],x=0,y=0,z=0){const r=R?R():0.5;
+  switch(k){
+    case'apple':{const warm=r<0.35;// a red apple with a yellow-green shoulder, a dimple, a stem and a leaf
+      p.push(PG(SPH,warm?0xf0b850:0xe0483a,warm?0xd0342a:0xa4202a,x,y-0.075,z,0,r*6,0,0.15,0.135,0.15),P(SPH_XS,0x5a2a1a,x,y-0.012,z,0,0,0,0.04,0.02,0.04),
+        P(CYL5,0x5a3a22,x,y+0.012,z,0,0,0.25,0.012,0.05,0.012),P(LEAF0,0x4e9a3a,x+0.035,y+0.02,z,0,r*6,0.9,0.05,0.012,0.09));break;}
+    case'pear':{const bl=r<0.4;
+      p.push(PG(SPH,bl?0xe0c050:0xc8d050,bl?0xc07a30:0x98a838,x,y-0.12,z,0,0,0,0.15,0.14,0.15),PG(SPH_LO,bl?0xe8cc5a:0xd0d858,bl?0xe0c050:0xc8d050,x,y-0.05,z,0,0,0,0.095,0.12,0.095),
+        P(CYL5,0x5a3a22,x+0.008,y+0.005,z,0,0,0.3,0.012,0.05,0.012));break;}
+    case'peach':p.push(PG(SPH,0xf8b070,0xe0584a,x,y-0.075,z,0,r*6,0,0.15,0.145,0.145),P(LEAF0,0x5a9a3e,x-0.03,y+0.005,z,0,r*6,-0.7,0.045,0.012,0.11),P(LEAF0,0x4a8a36,x+0.03,y+0.005,z,0,r*6+2,0.7,0.04,0.012,0.1));break;
+    case'cherries':// a pair on two stems joined at the top
+      p.push(P(CYL5,0x4e7a2e,x-0.025,y-0.045,z,0,0,-0.5,0.008,0.1,0.008),P(CYL5,0x4e7a2e,x+0.025,y-0.045,z,0,0,0.5,0.008,0.1,0.008),
+        PG(SPH_LO,0xd8283a,0x7a0e1a,x-0.05,y-0.11,z,0,0,0,0.075,0.07,0.075),PG(SPH_LO,0xd8283a,0x7a0e1a,x+0.05,y-0.1,z,0,0,0,0.075,0.07,0.075),P(LEAF0,0x4e9a3a,x,y+0.005,z,0,r*6,0.3,0.045,0.01,0.09));break;
+  }
+  return p;}
+const FRUIT_N={apple:4,pear:4,peach:4,cherries:5};
+// where a tree's fruit hangs (tree-local): spread round the lower half of its crowns, poking out of the foliage
+function fruitSlots(v){const sp=treeSp(v),s=season();if(!sp.fruit)return[];const R=mulberry(hi(v,91,S.worldSeed|0)),cr=speciesParts(v,s,mulberry(hi(v,31,S.worldSeed|0)),[]);
+  if(!cr.length)return[];const n=FRUIT_N[sp.fruit],out=[],a0=R()*6.283;
+  for(let i=0;i<n;i++){const c=cr[i%cr.length],[cx,cy,cz,rad]=c,sy=c[4]||1,sx=c[5]||1,a=a0+i/n*6.283*(cr.length>1?cr.length:1)+(R()-0.5)*0.6,h=-0.55+R()*0.5;
+    // on the skin of the crown's lower half, just proud of the leaves
+    const rr=rad*1.62*sx*Math.sqrt(1-h*h*0.6);out.push([cx+Math.cos(a)*rr,cy+h*rad*1.2*sy,cz+Math.sin(a)*rr]);}
+  return out;}
+function fruitParts(v){const sp=treeSp(v),R=mulberry(hi(v,93,S.worldSeed|0)),p=[];for(const [x,y,z] of fruitSlots(v))fruitModel(sp.fruit,R,p,x,y+0.05,z);return p;}
+// does this species carry fruit right now?
+const fruitSeason=v=>{const sp=treeSp(v);return !!(sp.fruit&&sp.fs.includes(season()));};
+
+// ---- per-tree variance, drawn from the tile so it's stable (and needs nothing saved) ----
+function treeVar(d){const h1=hash(d.x*1.31+7,d.z*0.77-3),h2=hash(d.z*1.13+1,d.x*0.91+5),h3=hash(d.x+d.z*3.1,d.z-d.x);
+  const con=treeSp(d.v).con;return{w:(con?0.88:0.86)+h1*(con?0.2:0.3),h:0.9+h2*0.22,tint:[0.9+h3*0.18,0.94+h1*0.1,0.9+h2*0.14]};}
+// fruit is drawn with the same gentle wind sway as the leaves it hangs among (so it never drifts off its branch)
+const fruitMat=new T.MeshToonMaterial({gradientMap:grad,vertexColors:true});
+fruitMat.onBeforeCompile=sh=>{sh.uniforms.uT=leafU.uT;sh.uniforms.uWind=leafU.uWind;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uT;uniform float uWind;')
+    .replace('#include <begin_vertex>','#include <begin_vertex>\n{vec4 lp=vec4(transformed,1.);\n#ifdef USE_INSTANCING\nlp=instanceMatrix*lp;\n#endif\nvec3 wp=(modelMatrix*lp).xyz;\nfloat hh=max(0.,transformed.y-.45),gu=.6+.4*sin(uT*.35+wp.x*.08+wp.z*.05);\ntransformed.x+=sin(uT*1.6+wp.x*.7+wp.z*.4)*.028*hh*gu*uWind;transformed.z+=cos(uT*1.3+wp.z*.6)*.022*hh*gu*uWind;}');};
 // fuzzy grass: clumps of thin tapered blades, instanced over every grass tile; they sway in the wind and part around the villager
 const grassU={uTime:{value:0},uWind:{value:1},uPl:{value:new T.Vector3(0,-99,0)}};
 let nearT=0; // near-grass rebuild timer (see updateNearGrass); set to 0 to rebuild next frame
@@ -3141,28 +3255,20 @@ function floorMeshes(list){const by=new Map();for(const o of list){if(!by.has(o.
    debris kind of their own: chop one down with the axe and its stump stays to be dug out.
    Also here: where the Island Heart stood in saves from before you planted your own driftseed, and desire paths.
    ========================================================= */
-// the wild trees change with the real seasons. Four kinds (instanced debris variants): 0 and 2 round broadleaf trees,
-// 1 an evergreen pine, 3 a flowering/fruiting tree. Spring: fresh green with blossom (3 is a cherry in bloom); summer: deep
-// green (3 carries red fruit); autumn: amber, scarlet and gold; winter: bare branches dusted with snow, and snowy pines.
-const TREE_COLS={spring:[[0x8ed06a,0x5aa846,0x356e32],null,[0x82c460,0x4f9a40,0x2e662e],[0xffd8e6,0xf4a8c4,0xd07a9a]],
-  summer:[[0x64ae44,0x3e8634,0x21562a],null,[0x589e3e,0x347630,0x1c4c28],[0x6eb44a,0x428c36,0x245c2a]],
-  autumn:[[0xf4a444,0xe8803a,0xc85e24],null,[0xec6a4a,0xc8402a,0x982a22],[0xf6d060,0xe0b040,0xb08a28]]};
+// the wild trees change with the real seasons; the kinds themselves (oak, pine, maple, cherry, apple, pear, peach, birch,
+// spruce, poplar) are in 41b-treesp. Winter strips the broadleaf trees to bare, snow-dusted branches.
 function bareTree(p,R,snow){trunkP(p,R,0x6a5444,0.9,0.13,0x4e3e32);
   for(let i=0;i<7;i++){const a=i/7*6.283+R()*0.4,tl=0.55+R()*0.4,L=0.55+R()*0.3,y=0.95+R()*0.5,x=Math.cos(a)*Math.sin(tl)*L*0.5,z=Math.sin(a)*Math.sin(tl)*L*0.5;
     p.push(P(CYL6,0x5e4a3c,x,y+Math.cos(tl)*L*0.5,z,Math.sin(a)*tl,0,-Math.cos(a)*tl,0.05,L,0.05));
     const tx=Math.cos(a)*Math.sin(tl)*L,ty=y+Math.cos(tl)*L,tz=Math.sin(a)*Math.sin(tl)*L;for(let k=0;k<2;k++){const b2=a+(k?0.6:-0.6);p.push(P(CYL6,0x6a5444,tx+Math.cos(b2)*0.12,ty+0.1,tz+Math.sin(b2)*0.12,Math.sin(b2)*0.7,0,-Math.cos(b2)*0.7,0.03,0.3,0.03));}
     if(snow)p.push(P(SPH_LO,0xf4f8fa,tx,ty+0.03,tz,0,R()*3,0,0.16,0.07,0.16));}
   if(snow)p.push(P(SPH_LO,0xf4f8fa,0,1.02,0,0,0,0,0.34,0.09,0.34));}
-function wildTreeParts(v){const s=season(),R=mulberry(hi(v,31,S.worldSeed|0)),p=[];v%=4;
-  if(v===1)return treeParts(s==='winter'?'snowpine':'pine',R,0x9a9ea8).map(q=>Object.assign(q,{x:q.x*0.78,y:q.y*0.78,z:q.z*0.78,sx:q.sx*0.78,sy:q.sy*0.78,sz:q.sz*0.78}));
-  if(s==='winter'){bareTree(p,R,true);return p;}
-  // a small round-crowned tree on a clear trunk, about a tile across (a lollipop, like a storybook island's)
-  const cols=TREE_COLS[s][v],cy=1.08,rd=0.42;trunkP(p,R,0x7a5230,0.62,0.12,0x5e3e24);canopy(p,R,cols,0,cy,0,rd);
-  if(s==='spring'&&v===0)dots(p,R,10,0,cy+0.2,0,0.6,0.4,[0xffffff,0xfbe0ea],0xf6d04a,0.07);
-  if(s==='summer'&&v===3)fruit(p,R,5,0xe0402e,0,cy,0,rd);
-  if(s==='autumn'&&v===3)fruit(p,R,4,0xf08a2a,0,cy,0,rd);
-  if(s==='autumn')for(let i=0;i<6;i++)p.push(P(SPH_XS,cols[i%3],(R()-0.5)*1.6,0.02,(R()-0.5)*1.6,0,R()*3,0,0.16,0.02,0.11));
-  return p;}
+function wildTreeParts(v){const s=season(),R=mulberry(hi(v,31,S.worldSeed|0)),p=[];
+  if(treeSp(v).id==='pine')return PINE_TREE(s,R);speciesParts(v,s,R,p);return p;}
+// which kind grows where: pine and spruce stands (with the odd birch), little wild orchards, and mixed broadleaf woods
+function wildSpecies(x,z,R){const sd=(S.worldSeed|0)%1000,n1=vnoise(x*0.5+31,z*0.5-17,sd+11),n2=vnoise(x*0.45-9,z*0.45+23,sd+29),r=R();
+  const sp=n1>0.66?(r<0.5?1:r<0.82?8:7):n2>0.7?[4,4,5,6,3][Math.floor(R()*5)]:[0,0,0,0,2,2,2,7,7,9,9,3,4,5,6,1][Math.floor(r*16)];
+  return sp+(TREE_SP[sp].shapes>1&&R()<0.4?TREE_NS:0);}
 const wildTreeKinds=()=>['wild',season()];
 
 // (old saves only) the heart's clearing: inland grass well away from the landing beach, with room around it
@@ -3191,10 +3297,10 @@ function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S
     else if(forest&&!wet(x,z))kd=r<0.34?'tree':r<0.42?'bush':null;
     else if(thicket)kd=r<0.1?'tree':r<0.22?'bush':r<0.25?'weed':null;
     else kd=r<0.022?'weed':r<0.03?'twig':r<0.04?'rock':r<0.055?'bush':null;
-    if(!kd)continue;const d=newDebris(x,z,kd);d.v=Math.floor(R()*(kd==='tree'?4:3));d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}
+    if(!kd)continue;const d=newDebris(x,z,kd);d.v=kd==='tree'?wildSpecies(x,z,R):Math.floor(R()*3);d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}
   // two or three grand old trees standing alone in the meadows: landmarks you can see from across the island
   {let n=0;for(const [x,z] of shuffle(isl.grass.slice(),R)){if(n>=3)break;if(keep.has(K(x,z))||farmQ(x,z)<1.3||townQ(x,z)>0.7||wet(x,z))continue;
-    if(S.debris.some(d=>Math.abs(d.x-x)<=2&&Math.abs(d.z-z)<=2))continue;const d=newDebris(x,z,'tree');d.v=[0,2,3][n%3];d.r=R()*6.28;d.sc=1.75+R()*0.3;d.grand=1;S.debris.push(d);n++;}}}
+    if(S.debris.some(d=>Math.abs(d.x-x)<=2&&Math.abs(d.z-z)<=2))continue;const d=newDebris(x,z,'tree');d.v=[10,12,3][n%3];d.r=R()*6.28;d.sc=1.75+R()*0.3;d.grand=1;S.debris.push(d);n++;}}}
 
 /* ---- paths wear in where you walk: every step onto a grass tile counts, and a well-trodden tile turns to path ---- */
 const PATH_WEAR=10;
@@ -4721,20 +4827,33 @@ function updateTills(dt){if(!tills.length||!soilIM)return;let ch=false;const key
    ========================================================= */
 function walkTo(x,z){const dx=x-vil.x,dz=z-vil.z,d=Math.hypot(dx,dz)||1;routeVil(x-dx/d*0.62,z-dz/d*0.62);vil.idle=0;vil.cb=null;}
 function goTo(x,z,cb){routeVil(x,z);vil.idle=0;vil.cb=cb||null;}
-// only rivers block walking (the villager hops up cliffs); detour over a bridge with a small A* when needed
+// rivers block walking (the villager hops up cliffs), and so does anything solid standing on a tile: trees, bushes,
+// rocks and stumps, buildings and fixed decor, and placed furniture (not rugs, flower patches or floors). Each solid tile
+// is a circle the player (radius PLAYER_R) slides round; routeVil finds a way round them with a small A* when needed
 const walkable=(x,z)=>{const t=landMap.get(K(x,z));return t==='grass'||t==='sand'||t==='bridge';};
-function lineClear(x0,z0,x1,z1){const n=Math.ceil(Math.hypot(x1-x0,z1-z0)/0.2);for(let i=1;i<=n;i++){if(landMap.get(K(Math.round(x0+(x1-x0)*i/n),Math.round(z0+(z1-z0)*i/n)))==='river')return false;}return true;}
+const SOLID_R={tree:0.32,bush:0.3,rock:0.34,boulder:0.4,stump:0.3},WALK_OVER=new Set(['flowers','cattail','rug','clover']),PLAYER_R=0.2;
+function solidR(x,z){if(S.sea||inside)return 0;const k=K(x,z);if(islMap.get(k)!==0)return 0;
+  const e=debMesh.get(k);if(e&&e.d&&SOLID_R[e.d.k])return SOLID_R[e.d.k];
+  if(fixedAt(x,z))return 0.4;const o=objAt(x,z);if(o&&!WALK_OVER.has(o.k))return 0.4;return 0;}
+// is (px,pz) clear of every solid near it? (ignoring any solid the point (ix,iz) is already inside, so you can always walk out)
+function pointClear(px,pz,ix,iz){const rx=Math.round(px),rz=Math.round(pz);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const x=rx+a,z=rz+b,r=solidR(x,z);if(!r)continue;const R=r+PLAYER_R;
+  if(Math.hypot(px-x,pz-z)<R&&!(ix!==undefined&&Math.hypot(ix-x,iz-z)<R))return false;}return true;}
+function lineClear(x0,z0,x1,z1){const n=Math.ceil(Math.hypot(x1-x0,z1-z0)/0.2);for(let i=1;i<=n;i++){const px=x0+(x1-x0)*i/n,pz=z0+(z1-z0)*i/n;if(landMap.get(K(Math.round(px),Math.round(pz)))==='river'||!pointClear(px,pz,x0,z0))return false;}return true;}
+// slide a step out of any solid it runs into (the solid you're already inside, if any, lets you out)
+function collideStep(ox,oz,nx,nz){const rx=Math.round(nx),rz=Math.round(nz);for(let it=0;it<2;it++)for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const x=rx+a,z=rz+b,r=solidR(x,z);if(!r)continue;const R=r+PLAYER_R;
+    if(Math.hypot(ox-x,oz-z)<R)continue;const d=Math.hypot(nx-x,nz-z);if(d<R&&d>1e-4){nx=x+(nx-x)/d*R;nz=z+(nz-z)/d*R;}}
+  return [nx,nz];}
 // a tiny binary min-heap keyed on element[3]
 function heapPush(h,n){h.push(n);let i=h.length-1;while(i>0){const p=(i-1)>>1;if(h[p][3]<=h[i][3])break;[h[p],h[i]]=[h[i],h[p]];i=p;}}
 function heapPop(h){const top=h[0],last=h.pop();if(h.length){h[0]=last;let i=0;for(;;){const l=i*2+1,r=l+1;let m=i;if(l<h.length&&h[l][3]<h[m][3])m=l;if(r<h.length&&h[r][3]<h[m][3])m=r;if(m===i)break;[h[m],h[i]]=[h[i],h[m]];i=m;}}return top;}
-function landPath(sx,sz,tx,tz,opt={}){const W=(x,z)=>walkable(x,z)&&!(opt.block&&opt.block(x,z)&&!(x===tx&&z===tz));if(!W(tx,tz))return null;const open=[[sx,sz,0,0]],g=new Map([[K(sx,sz),0]]),from=new Map();let it=0;
+function landPath(sx,sz,tx,tz,opt={}){const W=(x,z)=>walkable(x,z)&&!(opt.block&&opt.block(x,z)&&!(x===tx&&z===tz)&&!(x===sx&&z===sz));if(!W(tx,tz))return null;const open=[[sx,sz,0,0]],g=new Map([[K(sx,sz),0]]),from=new Map();let it=0;
   while(open.length&&it++<(opt.max||5000)){const [x,z,gc]=heapPop(open);if(gc>g.get(K(x,z)))continue;
     if(x===tx&&z===tz){const p=[[x,z]];let k=K(x,z);while(from.has(k)){const q=from.get(k);p.unshift(q);k=K(q[0],q[1]);}return p;}
     for(const [dx,dz] of opt.four?[[1,0],[-1,0],[0,1],[0,-1]]:[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){const nx=x+dx,nz=z+dz;if(!W(nx,nz))continue;if(dx&&dz&&(!W(x+dx,z)||!W(x,z+dz)))continue;
       const ng=gc+(dx&&dz?1.414:1)*(opt.cost?opt.cost(nx,nz,x,z):1),k=K(nx,nz);if(g.has(k)&&g.get(k)<=ng)continue;g.set(k,ng);from.set(k,[x,z]);heapPush(open,[nx,nz,ng,ng+Math.hypot(tx-nx,tz-nz)]);}}
   return null;}
 function routeVil(tx,tz){vil.path=null;const sx=Math.round(vil.x),sz=Math.round(vil.z);
-  if(!S.sea&&walkable(sx,sz)&&riverList.length&&!lineClear(vil.x,vil.z,tx,tz)){const p=landPath(sx,sz,Math.round(tx),Math.round(tz));
+  if(!S.sea&&walkable(sx,sz)&&!lineClear(vil.x,vil.z,tx,tz)){const p=landPath(sx,sz,Math.round(tx),Math.round(tz),{block:(x,z)=>solidR(x,z)>0});
     if(p){const all=[...p.slice(1,-1),[tx,tz]],pts=[];let cx=vil.x,cz=vil.z,i=0;
       while(i<all.length){let j=all.length-1;while(j>i&&!lineClear(cx,cz,all[j][0],all[j][1]))j--;pts.push(all[j]);cx=all[j][0];cz=all[j][1];i=j+1;}
       const f=pts.shift();vil.tx=f[0];vil.tz=f[1];vil.path=pts;return;}}
@@ -5034,17 +5153,23 @@ function debrisGeo(k,v,lo){const id=k+v+(k==='bush'?season():'')+(k==='tree'?wil
 // debLOD re-sorts the slots as you move; an entry out of range has i=-1.
 const debGroups=[];let lodAt=null,lodT=0;
 const lodR=tree=>tree?24+cam.dist*1.0:14+cam.dist*0.7;/* trees stand out on the horizon; bushes and rocks are specks by then */
-function debLOD(gr){const R2=lodR(!!gr.lo)**2;let a=0,b=0;for(const e of gr.es){const d2=(e.x-cam.tx)**2+(e.z-cam.tz)**2;if(d2>R2){e.i=-1;continue;}
-  e.im=gr.lo&&d2>81?gr.lo:gr.hi;/* full detail within 9 tiles */e.i=e.im===gr.hi?a++:b++;setDebrisMatrix(e,0);}gr.hi.count=a;if(gr.lo)gr.lo.count=b;}
+function debLOD(gr){const R2=lodR(!!gr.lo)**2;let a=0,b=0,f=0;for(const e of gr.es){const d2=(e.x-cam.tx)**2+(e.z-cam.tz)**2;if(d2>R2){e.i=-1;e.fi=-1;continue;}
+  e.im=gr.lo&&d2>81?gr.lo:gr.hi;/* full detail within 9 tiles */e.i=e.im===gr.hi?a++:b++;e.fi=gr.fr&&fruitOn(e.d)?f++:-1;setDebrisMatrix(e,0);}gr.hi.count=a;if(gr.lo)gr.lo.count=b;if(gr.fr)gr.fr.count=f;}
+// a fruit tree has fruit on it in season, on most trees, unless it was shaken off in the last few days
+function fruitOn(d){if(!d||d.k!=='tree'||!fruitSeason(d.v)||hash(d.x*2.1+1,d.z*1.7-2)>0.85)return false;const t=S.fruitT&&S.fruitT[K(d.x,d.z)];return t===undefined||S.day-t>=3;}
+function fruitGeo(v){const id='fruit'+v+season()+(S.worldSeed|0);return debGeo[id]||(debGeo[id]=merge(fruitParts(v)));}
 function syncDebris(){while(debrisRoot.children.length){const c=debrisRoot.children[0];debrisRoot.remove(c);c.dispose();}debMesh.clear();debGroups.length=0;lodAt=null;
   const groups=new Map();for(const d of S.debris){const id=d.k+d.v;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(d);}
   for(const [,list] of groups){const k=list[0].k,tree=k==='tree';
     const mk=lo=>{const im=new T.InstancedMesh(debrisGeo(k,list[0].v,lo),tree?leafMat:k==='bush'?bushMat:vcMat,list.length);
       /* trees cast real shadows near you; bushes rely on their soft blob shadow */im.castShadow=tree?!lo:k!=='bush';im.receiveShadow=true;im.frustumCulled=false;
       /* white instance colours: vcMat's cached program may expect them (r128 shares one program per material) */for(let i=0;i<list.length;i++)im.setColorAt(i,_c.setHex(0xffffff));debrisRoot.add(im);return im;};
-    const gr={hi:mk(false),lo:tree?mk(true):null,es:list.map(d=>{const e={im:null,i:-1,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};
+    const gr={hi:mk(false),lo:tree?mk(true):null,es:list.map(d=>{const e={im:null,i:-1,fi:-1,d,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,vr:tree?treeVar(d):null,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};
+    gr.es.forEach(e=>e.gr=gr);if(tree&&fruitSeason(list[0].v)){gr.fr=new T.InstancedMesh(fruitGeo(list[0].v),fruitMat,list.length);gr.fr.frustumCulled=false;gr.fr.castShadow=true;debrisRoot.add(gr.fr);}
     debLOD(gr);debGroups.push(gr);if(tree)addBlobs(list,0.62);else if(k==='bush')addBlobs(list,0.42);}}
-function setDebrisMatrix(e,tilt){if(e.i<0)return;_e.set(0,e.r,tilt,'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(e.x,e.y,e.z),_q,_s.set(e.sc||1,e.sc||1,e.sc||1));e.im.setMatrixAt(e.i,_m);e.im.instanceMatrix.needsUpdate=true;}
+function setDebrisMatrix(e,tilt){if(e.i<0)return;const sc=e.sc||1,w=e.vr?e.vr.w:1,h=e.vr?e.vr.h:1;_e.set(0,e.r,tilt,'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(e.x,e.y,e.z),_q,_s.set(sc*w,sc*h,sc*w));e.im.setMatrixAt(e.i,_m);e.im.instanceMatrix.needsUpdate=true;
+  if(e.vr&&e.im.instanceColor){e.im.setColorAt(e.i,_c.setRGB(...e.vr.tint));e.im.instanceColor.needsUpdate=true;}/* each tree a touch warmer, cooler, lighter or darker */
+  if(e.fi>=0){e.gr.fr.setMatrixAt(e.fi,_m);e.gr.fr.instanceMatrix.needsUpdate=true;}}
 function newDebris(x,z,k){return{x,z,k,v:Math.floor(Math.random()*3),r:Math.random()*6.28,hp:DEBRIS[k].hp};}
 function genDebris(){const R=mulberry(S.worldSeed^0xfa12);
   for(const [x,z] of islands[0].grass){if(farmQ(x,z)>1||Math.hypot(x-(FARM.x+5),z-(FARM.z-0.5))<2.4||!freeTile(x,z))continue;if(R()>0.68)continue;
@@ -5064,7 +5189,7 @@ function hitDebris(d){walkTo(d.x,d.z);vil.hop=0.2;d.hp--;const m=debMesh.get(K(d
   if(Math.random()<(d.k==='weed'||d.k==='bush'?0.08:0)){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+1;got.push('+1 '+CROPS[id].name+' seed');}
   floatText(d.x,1.1,d.z,got.join(' · '),'gold');SFX.pop();addXP(d.k==='boulder'||d.k==='stump'?2:1);burst(d.x,y,d.z,stone?0xc4c4d0:wood?0xb08050:0x8aba5a,14,1.8,0.08);
   if(!S.farmClear&&!S.debris.some(q=>farmQ(q.x,q.z)<1.05)){S.farmClear=1;SFX.level();toast('The whole farm field is cleared. Room for a proper harvest!','rare',ICON.sprout);}}
-function updateDebris(dt,tt){lodT-=dt;if(lodT<=0&&debGroups.length){lodT=0.4;if(!lodAt||Math.hypot(cam.tx-lodAt[0],cam.tz-lodAt[1])>1.5||Math.abs(cam.dist-lodAt[2])>3){lodAt=[cam.tx,cam.tz,cam.dist];for(const gr of debGroups)debLOD(gr);}}for(const e of debMesh.values())if(e.shake>0){e.shake=Math.max(0,e.shake-dt);setDebrisMatrix(e,e.shake>0?Math.sin(tt*60)*e.shake*0.35:0);}}
+function updateDebris(dt,tt){updateFallers(dt);lodT-=dt;if(lodT<=0&&debGroups.length){lodT=0.4;if(!lodAt||Math.hypot(cam.tx-lodAt[0],cam.tz-lodAt[1])>1.5||Math.abs(cam.dist-lodAt[2])>3){lodAt=[cam.tx,cam.tz,cam.dist];for(const gr of debGroups)debLOD(gr);}}for(const e of debMesh.values())if(e.shake>0){e.shake=Math.max(0,e.shake-dt);setDebrisMatrix(e,e.shake>0?Math.sin(tt*60)*e.shake*0.35:0);}}
 function syncLife(){syncDebris();
   while(lifeRoot.children.length){const c=lifeRoot.children[0];lifeRoot.remove(c);c.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
   S.finds=S.finds.filter(f=>isLand(f.x,f.z)&&FINDS[f.k]);S.weeds=S.weeds.filter(w=>isLand(w.x,w.z)&&!S.tiles[K(w.x,w.z)]);
@@ -5797,7 +5922,7 @@ function buildFish(id,F){const out=[],kind=fishKind(id,F),s=0.32+F.size*0.1,L=s*
    ========================================================= */
 Object.assign(FINDS,{
   mushroom:{name:'Forest Mushroom',price:40,w:0,bio:['wild']},acorn:{name:'Acorn',price:8,w:0,bio:['wild']},pinecone:{name:'Pinecone',price:10,w:0,bio:['wild']},
-  berries:{name:'Wild Berries',price:30,w:0,bio:['wild']},clover4:{name:'Four-leaf Clover',price:250,w:0,bio:['wild']},apple:{name:'Apple',price:35,w:0,bio:['wild']},
+  berries:{name:'Wild Berries',price:30,w:0,bio:['wild']},clover4:{name:'Four-leaf Clover',price:250,w:0,bio:['wild']},apple:{name:'Apple',price:35,w:0,bio:['wild']},pear:{name:'Pear',price:40,w:0,bio:['wild']},peach:{name:'Peach',price:45,w:0,bio:['wild']},cherries:{name:'Cherries',price:30,w:0,bio:['wild']},
   clam:{name:'Clam',price:45,w:0,bio:['wild']},geode:{name:'Geode',price:220,w:0,bio:['wild']},oldcoin:{name:'Old Coin',price:400,w:0,bio:['wild']},
   truffle:{name:'Truffle',price:600,w:0,bio:['wild']}});
 // dig spots and clam bubbles live among the finds (so they're saved and drawn the same way) but aren't items themselves:
@@ -5825,7 +5950,7 @@ function forageParts(k,p){switch(k){
   case'berries':bushClump(p,mulberry(7),[0x86c858,0x4a8a38,0x285a26],0.34);for(let i=0;i<7;i++){const a=i*0.9;p.push(P(SPH_XS,i%2?0x6a3a9a:0xd83848,Math.cos(a)*0.1,0.16+(i%3)*0.03,Math.sin(a)*0.1,0,0,0,0.06,0.06,0.06));}break;
   case'clover4':for(let i=0;i<4;i++){const a=i*1.571+0.4;p.push(P(SPH_LO,0x4fa84a,Math.cos(a)*0.06,0.08,Math.sin(a)*0.06,0,a,0,0.1,0.02,0.07));}p.push(P(CYL5,0x3d7a2c,0,0.04,0,0,0,0,0.012,0.08,0.012));
     p.push(P(SPH_XS,0xfff6c0,0,0.09,0,0,0,0,0.03,0.03,0.03));break;
-  case'apple':p.push(PG(SPH_LO,0xe84a3a,0xa82a24,0,0.09,0,0,0,0,0.18,0.17,0.18),P(CYL5,0x6a4428,0,0.19,0,0,0,0.3,0.015,0.05,0.015),P(SPH_XS,0x5aa84a,0.03,0.2,0,0,0,0.6,0.06,0.02,0.04),P(SPH_XS,0xffffff,-0.04,0.13,0.05,0,0,0,0.04,0.03,0.03));break;
+  case'apple':case'pear':case'peach':case'cherries':{const q=fruitModel(k,null);for(const o of q)o.y+=k==='pear'?0.19:0.145;/* lying on the grass */p.push(...q);break;}
   case'clam':p.push(PG(SPH_LO,0xe8e0d4,0xa8a098,0,0.04,0,0,0,0,0.2,0.08,0.16));break;
   case'geode':p.push(PG(SPH,0xa8a4b4,0x6a6874,0,0.08,0,0,0,0,0.24,0.16,0.22),P(OCT,0xb88ae8,0.02,0.14,0.04,0.3,0.5,0,0.08,0.1,0.08));break;
   case'oldcoin':p.push(P(CYL8,0xe0b040,0,0.02,0,0,0,0,0.16,0.02,0.16),P(CYL8,0xc8952a,0,0.035,0,0,0,0,0.1,0.01,0.1));break;
@@ -5843,7 +5968,7 @@ function forageSpawn(quiet,n=1){const isl=islands[0];if(!isl||!S.wild)return;con
     if(R()<0.22){const ex=FORAGE_EXTRA.filter(q=>dexOk(FINDS[q],isl)&&(!FINDS[q].rare||R()<0.25));if(ex.length){k=pickR(ex);if(FINDS[k].at==='tree'&&trees.length){const t=pickR(trees);at=openBy(t.x,t.z);}else{const c=pickR(isl.grass);if(c&&freeTile(...c)&&!TOWN.path.has(K(...c)))at=c;}
       if(k&&at&&!findAt(...at))S.finds.push({k,x:at[0],z:at[1],shiny:R()<0.05?1:undefined});continue;}}
     if(r<0.24&&trees.length&&s!=='winter'){const t=pickR(trees);at=openBy(t.x,t.z);k=R()<(s==='autumn'?0.5:0.8)?'mushroom':null;}
-    else if(r<0.42&&trees.length){const t=pickR(trees);at=openBy(t.x,t.z);k=t.v%4===1?'pinecone':'acorn';}
+    else if(r<0.42&&trees.length){const t=pickR(trees);at=openBy(t.x,t.z);k=treeSp(t.v).con?'pinecone':'acorn';}
     else if(r<0.54&&bushes.length&&s!=='winter'){const b=pickR(bushes);at=openBy(b.x,b.z);k='berries';}
     else if(r<0.74){const c=pickR(isl.grass);if(c&&freeTile(...c)&&!TOWN.path.has(K(...c)))at=c;k=R()<0.06?'clover4':'dig';}
     else{const c=pickR(isl.sand);if(c&&freeTile(...c))at=c;k='bubbles';}
@@ -5858,16 +5983,38 @@ function dropFind(k,x,z){const at=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1]].map(
 function spawnBugAt(x,z,crawl){const isl=curIsl();if(!isl)return;const ids=Object.keys(BUGS).filter(k=>(BUGS[k].kind==='crawl')===crawl&&BUGS[k].time!=='night'&&BUGS[k].bio.includes(isl.biome));if(!ids.length)return;
   const id=pickR(ids),g=bugGroup(BUGS[id]);g.scale.setScalar(BUG_SCALE);scene.add(g);g.position.set(x,topY(x,z)+(crawl?0:1.2),z);bugs.push({id,g,hx:x,hz:z,t:0,life:30+Math.random()*20,ph:Math.random()*6.28,out:0,isl:isl.id,crawl});}
 function shakeTree(d){const x=d.x,z=d.z,y=topY(x,z),m=debMesh.get(K(x,z));if(m)m.shake=0.6;SFX.pop();noise(0.25,0.05,1400);
-  const s=season(),cols=d.v%4===1?[0x3e8a44,0x2a6a34]:s==='autumn'?[0xe8803a,0xf4a444]:[0x6ab84a,0x4a9a3a];
+  const s=season(),sp=treeSp(d.v),con=sp.con,cols=con?[0x3e8a44,0x2a6a34]:s==='autumn'?[0xe8803a,0xf4a444]:s==='spring'&&(sp.id==='cherry'||sp.id==='peach')?[0xf8c8d8,0xffe4ee]:[0x6ab84a,0x4a9a3a];
   for(let i=0;i<10;i++)emit(x+(Math.random()-0.5)*1.2,y+1.4+Math.random()*0.5,z+(Math.random()-0.5)*1.2,{vx:(Math.random()-0.5)*0.6,vy:-0.3,vz:(Math.random()-0.5)*0.6,life:1.4,max:1.4,size:0.06,color:cols[i%2],g:0.6});
+  if(fruitOn(d)&&m){dropTreeFruit(d,m);jrNote('shake');return;}// down comes the fruit
   const sh=shakeLeft(x,z);if(sh.n>=2){floatText(x,y+1.4,z,'rustle…');return;}sh.n++;jrNote('shake');
-  const r=Math.random(),pine=d.v%4===1;
+  const r=Math.random(),pine=con;
   if(r<0.3){dropFind(pine?'pinecone':'acorn',x,z);floatText(x,y+1.4,z,pine?'A pinecone!':'An acorn!');}
   else if(r<0.45){gain('m:wood');floatText(x,y+1.4,z,'+1 Wood (a branch)');}
-  else if(r<0.58&&d.v%4===3&&s==='summer'){dropFind('apple',x,z);floatText(x,y+1.4,z,'An apple!','gold');}
   else if(r<0.72){spawnBugAt(x+(Math.random()-0.5),z+(Math.random()-0.5),true);floatText(x,y+1.4,z,'Something fell out!');}
   else if(r<0.84){critterAt('bird',x,z,true);floatText(x,y+1.4,z,'Tweet!');}
   else floatText(x,y+1.4,z,'rustle…');}
+// fruit shaken loose: each one drops from where it hung, bounces once and rolls out onto a free tile round the tree,
+// where it lies as a find to pick up. The tree grows new fruit a few days later (fruitOn, 74-life)
+const fallers=[];
+function dropTreeFruit(d,e){const sp=treeSp(d.v),k=sp.fruit,x=d.x,z=d.z,sc=e.sc,w=e.vr?e.vr.w:1,h=e.vr?e.vr.h:1,c=Math.cos(e.r),s=Math.sin(e.r);
+  (S.fruitT||(S.fruitT={}))[K(x,z)]=S.day;debLOD(e.gr);
+  const tiles=shuffle([[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]].map(([a,b])=>[x+a,z+b]).filter(([a,b])=>isLand(a,b)&&freeTile(a,b)&&!findAt(a,b)&&!debrisAt(a,b)),Math.random);
+  const slots=fruitSlots(d.v),R=mulberry(hi(d.v,93,S.worldSeed|0)),batch={left:slots.length,finds:[]};let n=0;
+  for(const [lx,ly,lz] of slots){const px=lx*sc*w,pz=lz*sc*w,wx=e.x+px*c+pz*s,wz=e.z-px*s+pz*c,wy=e.y+(ly+0.05)*sc*h;
+    const g=new T.Group();g.add(M(fruitModel(k,R)));g.position.set(wx,wy,wz);scene.add(g);
+    const t=tiles.length?tiles.shift():null;let tx,tz;if(t){tx=t[0]+(hash(t[0],t[1])-0.5)*0.3;tz=t[1]+(hash(t[1],t[0])-0.5)*0.3;batch.finds.push({k,x:t[0],z:t[1]});}else{const a=Math.random()*6.283;tx=wx+Math.cos(a)*0.3;tz=wz+Math.sin(a)*0.3;}
+    fallers.push({g,k,batch,x:wx,y:wy,z:wz,vx:0,vy:0,vz:0,tx,tz,keep:!!t,wait:0.05+n*0.12+Math.random()*0.1,st:0,t:0,spin:(Math.random()-0.5)*8});n++;}
+  const nf=batch.finds.length;floatText(x,topY(x,z)+1.6,z,nf?(nf>1?nf+' '+FINDS[k].name.toLowerCase()+(k==='cherries'?'':'s')+'!':'A '+FINDS[k].name.toLowerCase()+'!'):'The fruit rolled away…',nf?'gold':'');}
+function updateFallers(dt){for(let i=fallers.length-1;i>=0;i--){const f=fallers[i],g=f.g;
+  if(f.wait>0){f.wait-=dt;g.rotation.z=Math.sin(f.wait*40)*0.2;continue;}// a wobble on its stem, then it lets go
+  f.t+=dt;const gy=topY(Math.round(f.x),Math.round(f.z))+0.14;/* where the stem end sits with the fruit resting on the grass */f.vy-=9.8*dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.z+=f.vz*dt;g.rotation.x+=f.spin*dt*(f.st?0.5:1);
+  if(f.y<=gy){f.y=gy;if(f.st===0){f.st=1;tone(420+Math.random()*120,0.05,'sine',0.05);burst(f.x,gy-0.1,f.z,0x7aa84a,3,0.6,0.04);
+      // bounce once, aimed so it comes down again on its tile
+      const tb=0.34;f.vy=9.8*tb/2;f.vx=(f.tx-f.x)/tb;f.vz=(f.tz-f.z)/tb;}
+    else if(f.st===1){f.st=2;f.vx=f.vy=f.vz=0;f.x=f.tx;f.z=f.tz;f.spin=0;g.rotation.set(0,g.rotation.y,0);tone(360,0.04,'sine',0.03);}}
+  g.position.set(f.x,f.y,f.z);
+  if(f.st===2){f.t2=(f.t2||0)+dt;if(!f.keep)g.scale.setScalar(Math.max(0.01,1-f.t2*2));
+    if(f.t2>(f.keep?0.15:0.5)){scene.remove(g);fallers.splice(i,1);const b=f.batch;if(--b.left===0&&b.finds.length){for(const q of b.finds)if(!findAt(q.x,q.z))S.finds.push(q);syncLife();}}}}}
 function rustleBush(d){const x=d.x,z=d.z,y=topY(x,z),m=debMesh.get(K(x,z));if(m)m.shake=0.5;noise(0.2,0.05,1800);
   for(let i=0;i<6;i++)emit(x+(Math.random()-0.5)*0.6,y+0.5,z+(Math.random()-0.5)*0.6,{vx:(Math.random()-0.5)*0.8,vy:0.6,vz:(Math.random()-0.5)*0.8,life:0.8,max:0.8,size:0.05,color:0x5aa84a,g:2});
   const sh=shakeLeft(x,z);if(sh.n>=2){floatText(x,y+0.9,z,'rustle…');return;}sh.n++;jrNote('rustle');const s=season(),r=Math.random();
@@ -5888,7 +6035,7 @@ function digSpot(f){S.finds=S.finds.filter(q=>q!==f);syncLife();jrNote('dig');co
 let leafT=0;
 function driftLeaves(dt){leafT-=dt;if(leafT>0)return;leafT=0.35+Math.random()*0.5;const s=season();if(s==='winter')return;
   const near=S.debris.filter(d=>d.k==='tree'&&Math.abs(d.x-vil.x)<11&&Math.abs(d.z-vil.z)<9);if(!near.length)return;const t=pickR(near),y=topY(t.x,t.z)+1.3*(t.sc||1);
-  const col=s==='autumn'?pickR([0xe8803a,0xf4a444,0xc8402a]):s==='spring'&&t.v%4===3?pickR([0xf8c8d8,0xffe4ee]):pickR([0x6ab84a,0x8ad05a,0x4a9a3a]);
+  const col=s==='autumn'?pickR([0xe8803a,0xf4a444,0xc8402a]):s==='spring'&&(treeSp(t.v).id==='cherry'||treeSp(t.v).id==='peach')?pickR([0xf8c8d8,0xffe4ee]):pickR([0x6ab84a,0x8ad05a,0x4a9a3a]);
   emit(t.x+(Math.random()-0.5)*0.9,y,t.z+(Math.random()-0.5)*0.9,{vx:0.15,vy:-0.28,vz:0.05,life:5,max:5,size:0.055,color:col,g:0,sw:0.9,ph:Math.random()*6.28,spin:1});}
 let forageT=5;
 let forageOff=false; // (tests switch it off so nothing appears under their taps)
@@ -7301,7 +7448,7 @@ function layAcornfield(){const occ=new Set(),K2=(x,z)=>K(x,z),grass=(x,z)=>landM
     else if(n>0.72)kd=r<0.26?'tree':r<0.31?'bush':null;                            // copses in the meadows
     else kd=r<0.022?'tree':r<0.04?'bush':r<0.046?'rock':null;                     // the odd lone tree
     if(!kd)continue;const d=newDebris(x,z,kd);d.r=R()*6.28;
-    if(kd==='tree'){d.v=(z<-24||lv)&&R()<0.62||R()<0.14?1:[0,2,3][Math.floor(R()*3)];d.sc=0.85+R()*0.3;}else d.v=Math.floor(R()*3);S.debris.push(d);}
+    if(kd==='tree'){d.v=(z<-24||lv)&&R()<0.62||R()<0.14?(R()<0.7?1:8):wildSpecies(x,z,R);d.sc=0.85+R()*0.3;}else d.v=Math.floor(R()*3);S.debris.push(d);}
   rebuildHome();}
 if(S.acornNew){delete S.acornNew;setTimeout(()=>toast('Welcome to <b>Acornfield</b>: the village square, Cottage Lane, the farm, the flower gardens, the harbour and the north woods. Your own save is kept safe: open Settings and tap <b>Restore my save</b> to go back.','rare',ICON.sprout),1600);}
 /* =========================================================
@@ -7446,11 +7593,15 @@ function frame(now){
     const dx=vil.tx-vil.x,dz=vil.tz-vil.z,d=Math.hypot(dx,dz);
     if(d>0.04){const sp=Math.min(d,dt*4.3*(buffOn('tail')?1.3:1)),nx=vil.x+dx/d*sp,nz=vil.z+dz/d*sp;
       if(landMap.get(K(Math.round(nx),Math.round(nz)))==='river'&&landMap.get(K(Math.round(vil.x),Math.round(vil.z)))!=='river'){vil.tx=vil.x;vil.tz=vil.z;vil.path=null;}
-      else{vil.x=nx;vil.z=nz;villager.rotation.y=Math.atan2(dx,dz);}}
+      else{const [cx,cz]=collideStep(vil.x,vil.z,nx,nz),moved=Math.hypot(cx-vil.x,cz-vil.z);
+        // walking into something solid: slide along it; if that gets nowhere for a moment, stop (and only do what you came
+        // for if you're close enough to it)
+        vil.stuck=moved<sp*0.3?(vil.stuck||0)+dt:0;vil.x=cx;vil.z=cz;villager.rotation.y=Math.atan2(dx,dz);
+        if(vil.stuck>0.3){vil.stuck=0;const far=vil.path&&vil.path.length?9:Math.hypot(vil.tx-vil.x,vil.tz-vil.z);vil.path=null;if(far>0.9)vil.cb=null;vil.tx=vil.x;vil.tz=vil.z;}}}
     else if(vil.path&&vil.path.length){const p=vil.path.shift();vil.tx=p[0];vil.tz=p[1];}
     else{if(vil.cb){const cb=vil.cb;vil.cb=null;cb();}
       else if(!fishing){vil.idle+=dt;if(vil.idle>7+Math.random()*4){vil.idle=0;const isl=curIsl();if(isl){const tx=Math.round(vil.x+(Math.random()-0.5)*5),tz=Math.round(vil.z+(Math.random()-0.5)*5);
-        if(islMap.get(K(tx,tz))===isl.id&&isLand(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)&&lineClear(vil.x,vil.z,tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}}}
+        if(islMap.get(K(tx,tz))===isl.id&&isLand(tx,tz)&&!solidR(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)&&lineClear(vil.x,vil.z,tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}}}
     if(!S.sea){const ty=surfY(vil.x,vil.z)||0.15;if(ty-vil.y>0.3&&vil.hop<=0)vil.hop=0.4;vil.y=lerp(vil.y,ty,Math.min(1,dt*10));vil.hop=Math.max(0,vil.hop-dt);
       if(playerLimbs)swingLimbs(playerLimbs,tt*11,d>0.04?0.7:0);
       villager.position.set(vil.x,vil.y+(d>0.04?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.4*Math.PI)*0.3*(vil.hop>0),vil.z);
@@ -7605,7 +7756,11 @@ if(/[?&]debug\b/.test(location.search)){
       const hx=Math.round(vil.x)+2,hz=Math.round(vil.z)+1;g.position.set(hx,topY(hx,hz)+0.4,hz);bugs.push({id,g,hx,hz,t:0,life:999,ph:0,out:0,isl:isl.id,crawl:false,still:true});return id;},
     bugAt:()=>{const b=bugs[bugs.length-1];const caught=Object.keys(S.alm).filter(k=>k.startsWith('b:')).length;if(!b)return{caught};const s=toScreen(b.g.position.x,b.g.position.y,b.g.position.z);return{x:s[0],y:s[1],n:bugs.length,caught,tool:S.tool};},
     camInfo:()=>({dist:cam.dist,pitch:cam.pitch,fov:camera.fov,pos:camera.position.toArray(),W,H,PX,hy:skyMat.uniforms.hy.value}),
-    critters:()=>{const o={};for(const c of critters){o[c.k]=(o[c.k]||0)+1;if(!isFinite(c.g.position.x+c.g.position.y+c.g.rotation.x+c.g.rotation.y))o.bad=(o.bad||0)+1;}return o;},spawnCritter:k=>spawnCritter(k),vilAt:()=>[vil.x,vil.z],critClear:()=>{for(let i=critters.length-1;i>=0;i--)dropCritter(i);},critStrip:(k,beh,st,times,size=150)=>times.map(sec=>{const g=critModel(k,1),c={k,v:1,g,x:0,z:0,y:0,state:st||'idle',t:0,wait:99,tx:40,tz:0,hx:40,hz:0,ph:0,fx:1,fz:0,hw:0,hp:0,out:0};if(beh){c.beh=beh;c.bt=99;}
+    critters:()=>{const o={};for(const c of critters){o[c.k]=(o[c.k]||0)+1;if(!isFinite(c.g.position.x+c.g.position.y+c.g.rotation.x+c.g.rotation.y))o.bad=(o.bad||0)+1;}return o;},spawnCritter:k=>spawnCritter(k),vilAt:()=>[vil.x,vil.z],critClear:()=>{for(let i=critters.length-1;i>=0;i--)dropCritter(i);},walkTest:()=>{const t=S.debris.filter(d=>d.k==='tree').sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];if(!t)return null;vil.x=vil.tx=t.x-2;vil.z=vil.tz=t.z;vil.path=null;goTo(t.x+2,t.z);return [t.x,t.z];},vilPos:()=>[vil.x,vil.z,vil.tx,vil.tz,vil.path&&vil.path.length],solidAt:(x,z)=>solidR(x,z),spGallery:(sea,size=140)=>{const o=S.seasonOv;S.seasonOv=sea||o;const out=[];for(let sp=0;sp<TREE_NS;sp++)for(let sh=0;sh<TREE_SP[sp].shapes;sh++){const v=sp+sh*TREE_NS,w=new T.Group(),t=new T.Mesh(merge(wildTreeParts(v)),leafMat);w.add(t);
+      const fp=fruitParts(v);if(fp.length&&fruitSeason(v))w.add(new T.Mesh(merge(fp),fruitMat));w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,1.6,0.06,1.6)]));out.push([TREE_SP[sp].name+(sh?' ii':''),snapThumb(w,size)]);}S.seasonOv=o;return out;},
+    fruitShow:k=>{const w=new T.Group();w.add(M(fruitModel(k,mulberry(3))));return snapThumb(w,120);},
+    fruitList:sp=>S.debris.filter(d=>d.k==='tree'&&fruitOn(d)&&treeSp(d.v).id===sp).sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z)).map(d=>[d.x,d.z]),shakeAt:(x,z)=>{const t=debrisAt(x,z);if(t)shakeTree(t);return !!t;},shakeNear:()=>{const t=S.debris.filter(d=>d.k==='tree'&&fruitOn(d)).sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];if(!t)return null;shakeTree(t);return [t.x,t.z,treeSp(t.v).id];},
+    fruitTrees:()=>S.debris.filter(d=>d.k==='tree'&&fruitOn(d)).length,species:()=>{const o={};for(const d of S.debris)if(d.k==='tree'){const n=treeSp(d.v).id;o[n]=(o[n]||0)+1;}return o;},critStrip:(k,beh,st,times,size=150)=>times.map(sec=>{const g=critModel(k,1),c={k,v:1,g,x:0,z:0,y:0,state:st||'idle',t:0,wait:99,tx:40,tz:0,hx:40,hz:0,ph:0,fx:1,fz:0,hw:0,hp:0,out:0};if(beh){c.beh=beh;c.bt=99;}
       let hs=[0,1];for(let t=0;t<sec;t+=1/60){c.t+=1/60;hs=rigCritter(c,1/60,t);if(c.state==='gone')break;}g.position.set(0,hs[0],0);g.scale.set(1,hs[1],1);g.rotation.y=2.36;
       const w=new T.Group();w.add(g);w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,k==='deer'?1.6:0.8,0.06,k==='deer'?1.6:0.8)]));return snapThumb(w,size);}),critShow:(k,x,z,beh,st)=>{for(const q in CRIT)CRIT[q].flee=0;const c=critterAt(k,x,z,false);c.t=2;c.wait=99;if(beh){c.beh=beh;c.bt=99;}if(st==='move'){c.tx=x+40;c.tz=z;c.state='move';c.hx=x+40;}if(st==='flee'){c.fx=1;c.fz=0;c.state='flee';c.t=0.5;c.hw=0;}c.g.rotation.y=1.2;return critters.length-1;},
     treeGallery:(size=200)=>{const out=[],so=S.seasonOv;const add=(name,parts,sm)=>{const w=new T.Group();w.add(M(parts));const box=new T.Mesh(sm?new T.BoxGeometry(1.3,1.3,1.3):new T.BoxGeometry(2.4,3.4,2.4));box.position.y=sm?0.5:1.5;box.visible=false;w.add(box);w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,2,0.06,2)]));out.push([name,snapThumb(w,size)]);};
