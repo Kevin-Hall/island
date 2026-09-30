@@ -69,7 +69,8 @@ function buildIsland(isl){
     landMap.set(k,t);islMap.set(k,isl.id);isl.keys.push(k);
     if(t==='grass'){const l=levelOf(isl,x,z);if(l)lvlMap.set(k,l);}
     (t==='grass'?isl.grass:t==='sand'?isl.sand:t==='s1'?a1:a2).push([x,z]);}
-  if(isl.riverN)carveRivers(isl,g);
+  if(isl.riverN||isl.home&&S.terra&&Object.values(S.terra).includes(-1))carveRivers(isl,g);
+  if(isl.home)reefDirty=true;/* the reef's seabed follows the coast (76c-swim) */
   shapeBeach(isl);
   if(isl.home){layoutTown(isl);setPathMask(TOWN.path);musShow.g=null;musShow.sig='';refreshMuseumShow();}
   // grass tiles: a grassy slab on top of a dirt or rock cliff, like the tiers of Wild World

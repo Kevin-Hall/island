@@ -11,7 +11,8 @@ const TOOLS=[
   {k:'seeds', name:'Seeds',        tip:'Plant in dug soil (tap again to choose a seed)'},
   {k:'axe',   name:'Axe',          tip:'Chop trees, stumps, bushes and twigs for wood'},
   {k:'net',   name:'Net',          tip:'Catch bugs'},
-  {k:'rod',   name:'Fishing Rod',  tip:'Tap the water to cast'}];
+  {k:'rod',   name:'Fishing Rod',  tip:'Tap the water to cast'},
+  {k:'terra', name:'Landscaping',  tip:'Raise or lower the land a tier (tap the tool again to switch); hold and drag to brush',lv:8}];
 const TOOL_OF={};for(const t of TOOLS)TOOL_OF[t.k]=t;
 // which tool clears each kind of farm debris (weeds come up with any tool)
 const DEBRIS_TOOL={weed:null,twig:'axe',bush:'axe',stump:'axe',rock:'shovel',boulder:'shovel',tree:'axe'};
@@ -20,12 +21,13 @@ const toolIcon=k=>PIX[k]||(k==='seeds'?seedIcon(S.seed):ICON[k]); // the pixel s
 /* ---- tool bar ---- */
 // the ring fans out up and to the left of the corner button: three tools close in, the rest in a wider arc
 const fanAng=(i,n)=>i<3?[204,234,264][i]:198+(i-3)*72/Math.max(1,n-4);
-function renderTools(){const n=TOOLS.length;$('tools').innerHTML=TOOLS.map((t,i)=>`<button class="tool${S.tool===t.k?' on':''}" data-tool="${t.k}" style="--a:${fanAng(i,n)}deg;--r:${i<3?88:158}px" aria-label="${t.name}" title="${t.name} (${i+1})"><img class="pix" src="${toolIcon(t.k)}" alt=""><span>${t.name}</span></button>`).join('');
+const toolsHave=()=>TOOLS.filter(t=>!t.lv||level()>=t.lv);/* the Landscaping tool waits for its Island Heart level */
+function renderTools(){const TL=toolsHave(),n=TL.length;$('tools').innerHTML=TL.map((t,i)=>`<button class="tool${S.tool===t.k?' on':''}" data-tool="${t.k}" style="--a:${fanAng(i,n)}deg;--r:${i<3?88:158}px" aria-label="${t.name}" title="${t.name} (${i+1})"><img class="pix" src="${toolIcon(t.k)}" alt=""><span>${t.k==='terra'?(terraMode()==='raise'?'Raise land':'Lower land'):t.name}</span></button>`).join('');
   $('icoTool').src=toolIcon(S.tool);$('bTool').title=TOOL_OF[S.tool]?TOOL_OF[S.tool].name:'Tools';}
-function equip(k){if(!TOOL_OF[k])return;if(S.tool===k&&k==='seeds'){openSheet('seeds');return;}
+function equip(k){if(!TOOL_OF[k]||!toolsHave().includes(TOOL_OF[k]))return;if(S.tool===k&&k==='seeds'){openSheet('seeds');return;}if(S.tool===k&&k==='terra'){terraToggle();return;}
   S.tool=k;SFX.ui();renderTools();showApps(false);showHeld();floatText(vil.x,1.25,vil.z,TOOL_OF[k].name);save();}
 $('tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(b)equip(b.dataset.tool);});
-window.addEventListener('keydown',e=>{if(sheet||inside||e.target.tagName==='INPUT')return;const i=+e.key-1;if(i>=0&&i<TOOLS.length)equip(TOOLS[i].k);});
+window.addEventListener('keydown',e=>{if(sheet||inside||e.target.tagName==='INPUT')return;const i=+e.key-1,TL=toolsHave();if(i>=0&&i<TL.length)equip(TL[i].k);});
 // tap-to-do: the thing you tap picks the tool (Animal Crossing / Club Penguin style), so you rarely need the tool bar
 function autoTool(k){if(S.tool===k||!TOOL_OF[k])return;S.tool=k;renderTools();showHeld();}
 let hintAt=0;function toolHint(msg,k){const now=performance.now();if(now-hintAt<2500)return;hintAt=now;toast(msg,'',k?toolIcon(k):undefined);}
@@ -38,8 +40,9 @@ const HELD_PARTS={
   can:[P(CYL12,0xe0883a,0,0.02,0.1,0,0,0,0.17,0.15,0.15),P(CYL12,0xb8662a,0,0.1,0.1,0,0,0,0.12,0.02,0.1),P(CYL6,0xe0883a,0,0.06,0.23,1.0,0,0,0.03,0.18,0.03),P(BOX,0xb8662a,0,0.13,0.07,0,0,0,0.03,0.08,0.1)],
   seeds:[P(ICO2,0xd8b078,0,0.0,0.06,0,0,0,0.12,0.14,0.11),P(BOX,0x8a5a3a,0,0.07,0.06,0,0,0,0.07,0.02,0.07)],
   net:[P(CYL6,0x9a6a3a,0,0.26,0,0,0,0,0.03,0.56,0.03),P(CYL12,0x8a6a44,0,0.62,0,1.57,0,0,0.26,0.02,0.26),P(CYL12,0xf4f4ee,0,0.62,0.005,1.57,0,0,0.22,0.02,0.22)],
-  rod:[P(CYL6,0x9a7a4a,0,0.45,0,0,0,0,0.025,0.95,0.025),P(CYL12,0x5a5a6a,0,0.08,0.03,0,0,1.57,0.06,0.03,0.06)]};
-const HELD_TILT={hoe:0.5,shovel:0.55,axe:0.35,can:0.1,seeds:0,net:0.45,rod:0.85};
+  rod:[P(CYL6,0x9a7a4a,0,0.45,0,0,0,0,0.025,0.95,0.025),P(CYL12,0x5a5a6a,0,0.08,0.03,0,0,1.57,0.06,0.03,0.06)],
+  terra:[P(CYL6,0x9a6a3a,0,0.22,0,0,0,0,0.04,0.48,0.04),P(BOX,0x5a8a3a,0,0.5,0,0,0,0,0.2,0.1,0.06),P(BOX,0xb8bcc8,0,0.46,0.035,0,0,0,0.22,0.16,0.02)]};
+const HELD_TILT={hoe:0.5,shovel:0.55,axe:0.35,can:0.1,seeds:0,net:0.45,rod:0.85,terra:0.5};
 const toolHold=new T.Group();toolHold.position.set(0.3,0.22,0.08);toolHold.scale.setScalar(1.35);villager.add(toolHold);
 const heldMesh={};for(const k in HELD_PARTS){const m=M(HELD_PARTS[k]);m.castShadow=true;m.visible=false;toolHold.add(m);heldMesh[k]=m;}
 function showHeld(){for(const k in heldMesh)heldMesh[k].visible=S.tool===k;}
@@ -53,6 +56,7 @@ const TOOL_ANIM={
   can:{d:0.6,hit:0.3,k:[[0,0,0,0,0],[0.25,0.95,0,0.04,0.12],[0.75,1.0,0.1,0.04,0.14],[1,0,0,0,0]]},/* tip and pour */
   seeds:{d:0.42,hit:0.5,k:[[0,0,0,0,0],[0.35,-0.6,0,0.04,-0.06],[0.55,0.7,0,0.06,0.16],[1,0,0,0,0]]},/* a scattering toss */
   rod:{d:0.4,hit:0.5,k:[[0,0,0,0,0],[0.5,0.5,0,0,0.12],[1,0,0,0,0]]},
+  terra:{d:0.5,hit:0.5,k:[[0,0,0,0,0],[0.38,-1.6,0,0.1,-0.2],[0.5,1.2,0,-0.1,0.4],[0.7,1.0,0,-0.1,0.34],[1,0,0,0,0]]},/* a big two-handed thump */
   hand:{d:0.3,hit:0.45,k:[[0,0,0,0,0],[0.45,0,0,0,0.3],[1,0,0,0,0]]}};/* reach out */
 let anim=null,poseLean=0,fishLean=0;
 function swingTool(onHit){if(anim&&anim.hit)fireHit(anim);anim={A:TOOL_ANIM[S.tool]||TOOL_ANIM.hand,t:0,t0:performance.now(),hit:onHit||null};}
@@ -71,6 +75,7 @@ function actAt(x,z,fn){const run=()=>{villager.rotation.y=Math.atan2(x-vil.x,z-v
   if(Math.hypot(x-vil.x,z-vil.z)<1.1){vil.tx=vil.x;vil.tz=vil.z;vil.path=null;vil.cb=null;run();return;}
   walkTo(x,z);vil.cb=run;}
 function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
+  if(tool==='terra'&&isl&&isl.home){terraTap(x,z);return;}
   {const fd=findAt(x,z);if(fd&&(fd.k==='dig'||fd.k==='bubbles')){autoTool('shovel');actAt(x,z,()=>{digStab(x,z,0.6);/* two stabs: the hole opens, then whatever's buried comes up */swingTool(()=>{digStab(x,z,1);digSpot(fd);});});return;}if(fd){actAt(x,z,()=>collectFind(fd));return;}const pl=plantAt(x,z);if(pl){actAt(x,z,()=>pickPlant(pl));return;}}
   if(isl&&!isl.home&&nearHeart(isl,x,z)){actAt(x,z,()=>heartTap(isl));return;}
   if(!isl||!isl.home){goTo(x,z);return;}

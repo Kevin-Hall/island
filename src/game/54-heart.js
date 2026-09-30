@@ -16,6 +16,7 @@ const HEART_UNLOCKS=[
   {lv:7, k:'hall',   name:'Town hall',       icon:'task',  desc:'A home for the daily requests and island news.'},
   {lv:7, k:'vh2',    name:'A third plot',    icon:'heart', desc:'Another neighbour arrives the next morning.'},
   {lv:8, k:'light',  name:'Lighthouse',      icon:'boat',  desc:'Its beam guides you home at night.'},
+  {lv:8, k:'terra',  name:'Landscaping',     icon:'hammer',desc:'A new tool: raise and lower the land, one cliff tier at a time.'},
   {lv:9, k:'vh3',    name:'A fourth plot',   icon:'heart', desc:'Another neighbour arrives the next morning.'},
   {lv:10,k:'vh4',    name:'A fifth plot',    icon:'heart', desc:'Another neighbour arrives the next morning.'},
   {lv:11,k:'vh5',    name:'The last plot',   icon:'heart', desc:'Your village is complete.'}];

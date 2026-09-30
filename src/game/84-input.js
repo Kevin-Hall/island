@@ -31,10 +31,12 @@ function onTap(cx,cy){buzz(6);
         else{const d=Math.hypot(hit.x-S.boat.x,hit.z-S.boat.z)||1,ux=(S.boat.x-hit.x)/d,uz=(S.boat.z-hit.z)/d;sailTo(hit.x+ux*1.2,hit.z+uz*1.2,isl.id,isl.home?'Home':(S.disc[isl.id]?isl.name:''));}}}
     else{const w=waterPoint(cx,cy);if(w)sailTo(w.x,w.z,null,'');}
     return;}
+  if(swim.on&&swim.uw>0.5){clearAction();swimTap(cx,cy);return;}/* under water: swim, or catch what you tapped */
   if(tapLife(cx,cy)){clearAction();updateHUD();return;}
   if(hit&&hit.river){clearAction();const ri=islandAt(hit.x,hit.z),here0=curIsl();if(!ri||!here0||ri.id!==here0.id)return;
     autoTool('rod');
     if(ri.lava){toast('That lava is far too hot to fish in!');return;}startFishing(hit.x,hit.z);return;}
+  if(!hit&&swimTap(cx,cy)){clearAction();return;}/* into the sea (or on across it) */
   if(!hit){clearAction();const w=waterPoint(cx,cy);if(w&&!isLand(Math.round(w.x),Math.round(w.z))){autoTool('rod');startFishing(w.x,w.z);}return;}
   if(!$('actionBar').hidden)clearAction();
   const here=curIsl(),there=islandAt(hit.x,hit.z);
@@ -54,10 +56,10 @@ const ptrs=new Map();let drag=null,pinch=null,paint=null,holdT=null;
 function paintMode(x,z){if(!onHome(x,z))return null;const tool=S.tool,d=debrisAt(x,z);
   if(d)return !DEBRIS_TOOL[d.k]||DEBRIS_TOOL[d.k]===tool?'clear':null;
   if(fixedAt(x,z)||objAt(x,z))return null;const t=S.tiles[K(x,z)];
-  switch(tool){case'hoe':case'shovel':return canTill(x,z)?'till':null;case'can':return t?'water':null;case'seeds':return t&&!t.crop?'plant':null;
+  switch(tool){case'terra':return terraPlan(x,z,terraMode()).why?null:'terra';case'hoe':case'shovel':return canTill(x,z)?'till':null;case'can':return t?'water':null;case'seeds':return t&&!t.crop?'plant':null;
     case'hand':return t&&t.crop?(t.crop.p>=1?'harvest':'tend'):null;}
   return null;}
-const PAINT_LBL={till:'Tilling',plant:'Planting',water:'Watering',harvest:'Harvesting',tend:'Tending',clear:'Clearing'};
+const PAINT_LBL={terra:'Landscaping',till:'Tilling',plant:'Planting',water:'Watering',harvest:'Harvesting',tend:'Tending',clear:'Clearing'};
 function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!onHome(x,z))return;paint.done.add(k);const t=S.tiles[k];let did=false;
   switch(paint.mode){
     case'till':if(canTill(x,z)){S.tiles[k]={w:S.rain?1:0,crop:null};tillFx(x,z);SFX.till();paint.soil=did=true;}break;
@@ -65,9 +67,10 @@ function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!
     case'water':if(t&&!t.w){t.w=1;for(let i=0;i<5;i++)emit(x+(Math.random()-0.5)*0.5,1.2,z+(Math.random()-0.5)*0.5,{vy:-1,life:0.5,max:0.5,size:0.06,color:0x8ac4ff,g:6});if(paint.n%3===0)SFX.water();paint.soil=did=true;}break;
     case'harvest':if(t&&t.crop&&t.crop.p>=1){harvest(k,x,z);did=true;}break;
     case'tend':if(t&&t.crop&&t.crop.p<1&&t.crop.td!==S.day){const c=t.crop,s0=stageOf(c.p);c.td=S.day;c.p=Math.min(0.995,c.p+0.08);if(stageOf(c.p)!==s0)syncCrop(k);hearts(x,0.9,z);tone(880+paint.n*40,0.06,'triangle',0.03);did=true;}break;
+    case'terra':if(!terraPlan(x,z,terraMode()).why){(paint.terra||(paint.terra=[])).push([x,z]);cursorAt(x,z,0xffe08a);sparkle(x,topY(x,z)+0.2,z,0xfff0c0);paint.n++;}return;/* brushed now, changed all at once when you let go */
     case'clear':{const d=debrisAt(x,z);if(d&&(!DEBRIS_TOOL[d.k]||DEBRIS_TOOL[d.k]===S.tool)){hitDebris(d);did=true;}break;}}
   if(did){paint.n++;cursorAt(x,z);walkTo(x,z);swingTool();if(paint.soil){rebuildSoil();paint.soil=false;}}}
-function endPaint(){if(!paint)return;const n=paint.n,m=paint.mode;paint=null;clearAction();updateHUD();if(n>1)floatText(vil.x,1.3,vil.z,PAINT_LBL[m]+' ×'+n);}
+function endPaint(){if(!paint)return;const n=paint.n,m=paint.mode,tl=paint.terra;paint=null;if(m==='terra'&&tl){clearAction();terraApply(tl,terraMode());updateHUD();return;}clearAction();updateHUD();if(n>1)floatText(vil.x,1.3,vil.z,PAINT_LBL[m]+' ×'+n);}
 function pinchDist(){const [a,b]=[...ptrs.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1;}
 canvas.addEventListener('pointerdown',e=>{if(wheelOpen())showApps(false);canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===1){drag={sx:e.clientX,sy:e.clientY,lx:e.clientX,ly:e.clientY,moved:false};clearTimeout(holdT);

@@ -116,6 +116,7 @@ function rockP(p,R,col,s){const top=0x7e8494,side=0x5e6474,base=0x2e323c,a0=R()*
 function vnoise(x,z,seed){const X=Math.floor(x/3),Z=Math.floor(z/3),fx=x/3-X,fz=z/3-Z,o=seed%997;const h=(a,b)=>hash(a*1.7+o,b*2.3-o);
   const sx=fx*fx*(3-2*fx),sz=fz*fz*(3-2*fz);return lerp(lerp(h(X,Z),h(X+1,Z),sx),lerp(h(X,Z+1),h(X+1,Z+1),sx),sz);}
 function levelOf(isl,x,z){
+  if(isl.home&&S.terra){const v=S.terra[K(x,z)];if(v!==undefined&&v>=0)return v;}/* landscaped (72b-terraform) */
   if(isl.home){if(farmQ(x,z)<1.2)return 0;const n=vnoise(x,z,S.worldSeed|0),hx=hash(S.worldSeed%97,3)<0.5?-9:9;
     const cl=S.home&&S.home.cliff,c1=cl?cl[0]:0.29,two=cl?cl[1]:1; // a chosen island sets how far north its cliffs start, and whether there's a second tier
     const hs=homeScale();if(two&&z<-(c1+0.37)*TOWN_D*hs+n*2.4&&Math.abs(x-hx*TOWN_W*hs/16)<(6+n*2.5)*hs)return 2;return z<-c1*TOWN_D*hs+(n-0.5)*3.6?1:0;}
