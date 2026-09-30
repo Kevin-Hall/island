@@ -86,5 +86,5 @@ function furnParts(kind,g,R,seed){let p=[];const paint=PAINT[seed%PAINT.length];
       p.push(P(BOX,FW,0,1.44,0,0,0,0,1.1,0.08,0.1));g.add(M(p));
       const seat=M([P(BOX,0xe8dcc0,-0.34,-0.46,0,0,0,0,0.02,0.92,0.02),P(BOX,0xe8dcc0,0.34,-0.46,0,0,0,0,0.02,0.92,0.02),P(BOX,paint,0,-0.92,0,0,0,0,0.76,0.05,0.3),P(BOX,paint,0,-0.74,-0.14,-0.2,0,0,0.76,0.32,0.04),
         P(BOX,0xf8f0e0,-0.18,-0.86,0,0,0,0,0.22,0.08,0.22)]);seat.position.y=1.4;g.add(seat);g.userData.anim=t=>{seat.rotation.x=Math.sin(t*1.3+seed)*0.12;};return true;}
-    default:return false;}
+    default:if(!potPlant(kind,p,seed))return false;/* potted plants: 50d-plants */}
   g.add(M(p));return true;}

@@ -52,7 +52,7 @@ function popHold(g,x,z,sc=1,y0){g.traverse(o=>{if(o.isMesh)o.castShadow=false;})
 function updatePops(dt){for(let i=pops.length-1;i>=0;i--){const p=pops[i];p.t+=dt;const g=p.g,hx=vil.x,hz=vil.z,hy=vil.y+1.05;
   if(p.t<0.45){const u=p.t/0.45;g.position.set(lerp(p.x0,hx,u),lerp(p.y0,hy,u)+Math.sin(u*Math.PI)*0.9,lerp(p.z0,hz,u));g.rotation.y+=dt*8;}
   else if(p.t<1.2){g.position.set(hx,hy+Math.sin((p.t-0.45)*9)*0.03,hz);g.rotation.y+=dt*1.5;}
-  else{const s=Math.max(0,1-(p.t-1.2)/0.25)*(p.sc||0.7);g.scale.setScalar(s);g.position.set(hx,hy,hz);if(s<=0){scene.remove(g);g.traverse(o=>{if(o.geometry)o.geometry.dispose();});pops.splice(i,1);}}}}
+  else{const s=Math.max(0,1-(p.t-1.2)/0.25)*(p.sc||0.7);g.scale.setScalar(s);g.position.set(hx,hy,hz);if(s<=0){scene.remove(g);g.traverse(o=>{if(o.geometry&&!o.geometry.userData.keep)o.geometry.dispose();});pops.splice(i,1);}}}}
 function harvest(k,x,z){
   const t=S.tiles[k],c=t.crop,C=CROPS[c.t],V=VAR[c.v||'normal'];const key=c.t+'|'+V.id;popCrop(c.t,x,z);
   const first=gain(key);S.harvested++;

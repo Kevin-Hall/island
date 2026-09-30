@@ -5,6 +5,7 @@ const canvas=$('c');
 const renderer=new T.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
 renderer.setPixelRatio(1);
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap; // soft-edged little shadows
+renderer.shadowMap.autoUpdate=false;let shadowFrame=0;/* the shadow map is redrawn every other frame (90-main): the sun barely moves, and it halves the cost of the shadow pass */
 const scene=new T.Scene();const skyHz=new T.Color(0xbfe0ff),skyZen=new T.Color(0x3c8ce8),skyGlow=new T.Color(0xffffff);let skyGA=0;
 scene.fog=new T.Fog(0xbfe0ff,40,150);
 const NEAR=1.5,FAR=640;
@@ -150,7 +151,7 @@ const ICO0=new T.IcosahedronGeometry(0.5,0),CYL5=new T.CylinderGeometry(0.5,0.5,
 /* smooth-shaded shapes (their own rounded normals are kept, so the toon ramp paints soft bands across them instead of
    facets): the rounded crowns, bushes, pebbles and critters that give the island its soft, cosy look */
 const smoothG=g=>{g.userData.smooth=true;return g;};
-const SPH=smoothG(new T.SphereGeometry(0.5,14,10)),SPH_LO=smoothG(new T.SphereGeometry(0.5,8,6)),SPH_XS=smoothG(new T.SphereGeometry(0.5,6,4)),
+const SPH=smoothG(new T.SphereGeometry(0.5,12,8)),SPH_LO=smoothG(new T.SphereGeometry(0.5,8,6)),SPH_XS=smoothG(new T.SphereGeometry(0.5,6,4)),
   SCONE=smoothG(new T.ConeGeometry(0.5,1,16,1,true)),SCONE_LO=smoothG(new T.ConeGeometry(0.5,1,8,1,true)),STRUNK=smoothG(new T.CylinderGeometry(0.36,0.5,1,10,1,true)),SCYL=smoothG(new T.CylinderGeometry(0.5,0.5,1,10));
 function lodGeo(p){const g=p.geo,big=Math.max(p.sx,p.sy,p.sz),rad=Math.max(p.sx,p.sz);
   if(g===SPH)return big<0.12?SPH_XS:big<0.35?SPH_LO:g;if(g===SPH_LO)return big<0.12?SPH_XS:g;

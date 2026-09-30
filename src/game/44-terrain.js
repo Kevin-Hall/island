@@ -19,12 +19,17 @@ function cullIslands(){const view=cam.dist+110;for(const isl of islands){const b
     // wild plants are small: only draw them when you're reasonably close (each one is its own mesh)
     if(isl.group)isl.group.visible=vis;if(isl.pgroup)isl.pgroup.visible=vis&&cam.dist+Math.max(0,d)<60;
     // level of detail for trees: light meshes when the island is far away or you're zoomed well out (with a little hysteresis)
-    const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>56:far>61;if(isl.veg&&low!==isl.lowOn){isl.lowOn=low;for(const [hi,lo] of isl.veg){hi.visible=!low;if(lo)lo.visible=low;}for(const [hi,lo] of isl.floraLod||[]){hi.visible=!low&&!isl.farOn;if(lo)lo.visible=low&&!isl.farOn;}}
+    const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>56:far>61,lv=low?(far>(isl.vegLv===2?92:100)?2:1):0;/* 0 full, 1 light, 2 horizon */
+    if(isl.veg&&lv!==isl.vegLv){isl.vegLv=lv;for(const [hi,lo,fa] of isl.veg){hi.visible=lv===0;if(lo)lo.visible=lv===1||lv===2&&!fa;if(fa)fa.visible=lv===2;}
+      if(isl.tMesh)for(const k of ['underG','underS'])if(isl.tMesh[k])isl.tMesh[k].visible=lv<2;/* the little corner notches vanish on the horizon */
+      if(isl.riverG)isl.riverG.children.forEach((o,i)=>{if(i>1)o.visible=lv<2;});/* keep the river's bed and water, drop its pebbles, reeds and lilies */}
+    if(isl.veg&&low!==isl.lowOn)isl.lowOn=low;
+    {const fl=far>(isl.floraLow?30:34);/* flowers go to their light twins sooner: they're specks once you zoom out */if(fl!==isl.floraLow){isl.floraLow=fl;for(const [hi,lo] of isl.floraLod||[]){hi.visible=!fl&&!isl.farOn;if(lo)lo.visible=fl&&!isl.farOn;}}}
     // far from you, an island is just its land, water and trees: the pebbles, reeds, flowers, grass tufts and the rest are
     // too small to see from out there, so they aren't drawn until you come near
     if(!isl.home&&isl.group){const far2=d>16;if(isl.farOn!==far2){isl.farOn=far2;
       if(!isl.detail){const veg=new Set((isl.veg||[]).flat()),fl=new Set((isl.floraLod||[]).flat());isl.detail=isl.group.children.filter(o=>!o.userData.core&&!veg.has(o)&&!fl.has(o));}
-      for(const o of isl.detail)o.visible=!far2;for(const [hi,lo] of isl.floraLod||[]){hi.visible=!far2&&!isl.lowOn;if(lo)lo.visible=!far2&&!!isl.lowOn;}}}
+      for(const o of isl.detail)o.visible=!far2;for(const [hi,lo] of isl.floraLod||[]){hi.visible=!far2&&!isl.floraLow;if(lo)lo.visible=!far2&&!!isl.floraLow;}}}
     const sh=vis&&d<32;if(isl.group&&isl.shadowOn!==sh){isl.shadowOn=sh;if(!isl.casters){isl.casters=[];isl.group.traverse(o=>{if(o.castShadow)isl.casters.push(o);});}for(const o of isl.casters)o.castShadow=sh;}}}
 // terrain baker: collects tiles (a geometry scaled and placed without rotation, a colour, optional sand corner heights) into one mesh
 const _flatGeo=new Map();const flatGeo=g=>{let n=_flatGeo.get(g);if(!n){n=g.index?g.toNonIndexed():g;_flatGeo.set(g,n);}return n;};
@@ -99,7 +104,7 @@ function bakeTerrain(isl,g,only){const B=islandBiome(isl),by=new Map();const slo
 function buildIsland(isl){
   if(isl.group){scene.remove(isl.group);isl.group.traverse(o=>{if(o.isInstancedMesh)o.dispose();else if(o.geometry&&!Object.values(RTILE).includes(o.geometry)&&o.geometry!==TILE_PLANE&&o.geometry!==BOX&&o.geometry!==POOL_GEO&&o.geometry!==BLADES)o.geometry.dispose();});}
   if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);riverSurf.delete(k);bridgeY.delete(k);}
-  const g=new T.Group();isl.group=g;isl.heartG=null;isl.residentG=null;isl.flats=[];isl.veg=[];isl.lowOn=false;isl.casters=null;isl.shadowOn=undefined;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
+  const g=new T.Group();isl.group=g;isl.heartG=null;isl.residentG=null;isl.flats=[];isl.veg=[];isl.vegLv=undefined;isl.floraLow=undefined;isl.lowOn=false;isl.casters=null;isl.shadowOn=undefined;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
   const span=Math.ceil(islR(isl)/0.62+3),B=islandBiome(isl);
   for(let x=isl.home?Math.min(isl.cx-span,farmWest()):isl.cx-span;x<=isl.cx+span;x++)for(let z=isl.cz-span;z<=isl.cz+span;z++){
     const t=tileTypeI(isl,x,z);if(!t)continue;const k=K(x,z);

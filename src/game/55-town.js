@@ -18,6 +18,9 @@ function flowerHead(p,sp,c,x,y,z,R){
     default:bloom(p,c,0xf6d04a,x,y,z,0.1,10,0.15);}}
 // stem heights: ankle-high next to the villager (~0.9 tall), like Animal Crossing flowers
 const FLOWER_H={tulip:0.15,rose:0.14,cosmos:0.19,pansy:0.07,lily:0.17,hyacinth:0.09,daisy:0.12};
+// flowers are only a few pixels on screen, so they're built from the lightest versions of each shape (a round petal
+// is 20 triangles, not 320): there are hundreds of them across the island
+const FLORA_LITE=new Map([[LEAF0,LEAF8]/* a petal or leaf: 8 triangles, not 20 */,[ICO2,OCT],[ICO,OCT],[ICO0,OCT],[SPH,SPH_XS],[SPH_LO,SPH_XS],[CYL12,CYL5],[CYL8,CYL5],[CYL6,CYL5],[CONE8,CONE5],[CONE6,CONE5]]);
 const FLORA_KEYS=[],FLORA_GEOS=[],FLORA_LO=[];/* FLORA_LO: the far version (no stems, a third of the leaves and petals) */
 for(const sp in FLOWER_SP)FLOWER_SP[sp].forEach((c,ci)=>{const R=mulberry(hi(sp.length,ci,31)),p=[];
   for(let s=0;s<3;s++){const a=s*2.1+R(),r=s?0.14+R()*0.06:0.02,x=Math.cos(a)*r,z=Math.sin(a)*r,h=FLOWER_H[sp]*(0.85+R()*0.3);stemP(p,0x4f8a34,x,z,h);
@@ -25,10 +28,10 @@ for(const sp in FLOWER_SP)FLOWER_SP[sp].forEach((c,ci)=>{const R=mulberry(hi(sp.
     else if(sp==='pansy'||sp==='hyacinth')for(let k=0;k<3;k++)lf(p,GREENS[k%4],x,0.01,z,a+k*2.1,0.35,0.1,0.07);
     else{lf(p,GREENS[s%4],x,h*0.35,z,a,0.45,0.12,0.06);lf(p,GREENS[(s+2)%4],x,h*0.55,z,a+2.6,0.45,0.1,0.05);}
     flowerHead(p,sp,c,x,h,z,R);}
-  FLORA_KEYS.push(sp+ci);FLORA_GEOS.push(merge(p));FLORA_LO.push(merge(p.filter((q,i)=>q.geo!==CYL6&&q.geo!==CYL12&&(q.geo!==LEAF0||i%3===0))));});
+  FLORA_KEYS.push(sp+ci);FLORA_GEOS.push(merge(p.map(q=>Object.assign({},q,{geo:FLORA_LITE.get(q.geo)||q.geo}))));FLORA_LO.push(merge(p.filter((q,i)=>q.geo!==CYL6&&q.geo!==CYL12&&(q.geo!==LEAF0||i%3===0))));});
 function floraIndex(x,z){const sps=Object.keys(FLOWER_SP),sp=sps[Math.floor(hash(Math.floor(x/5)+11,Math.floor(z/5)-3)*sps.length)],cols=FLOWER_SP[sp];
   const ci=Math.floor(hash(Math.floor(x/3)-5,Math.floor(z/3)+9)*cols.length);return FLORA_KEYS.indexOf(sp+ci);}
-const CLOVER_GEO=(()=>{const R=mulberry(5),p=[];for(let i=0;i<7;i++){const cx=(R()-0.5)*0.55,cz=(R()-0.5)*0.55,y=0.03+R()*0.04,r0=R()*6.28;for(let j=0;j<3;j++)lf(p,GREENS[(i+j)%4],cx,y,cz,r0+j*2.09,0.12,0.09,0.08);if(i===2)bloom(p,0xffffff,0xf2c8d8,cx,y+0.05,cz,0.04,6,0.9);}return merge(p);})();
+const CLOVER_GEO=(()=>{const R=mulberry(5),p=[];for(let i=0;i<7;i++){const cx=(R()-0.5)*0.55,cz=(R()-0.5)*0.55,y=0.03+R()*0.04,r0=R()*6.28;for(let j=0;j<3;j++)lf(p,GREENS[(i+j)%4],cx,y,cz,r0+j*2.09,0.12,0.09,0.08);if(i===2)bloom(p,0xffffff,0xf2c8d8,cx,y+0.05,cz,0.04,6,0.9);}return merge(p.map(q=>Object.assign({},q,{geo:FLORA_LITE.get(q.geo)||q.geo})));})();
 const PEBBLE_GEO=merge([P(ICO,0xb8b4ac,0,0.02,0,0,0.3,0,0.14,0.07,0.11),P(ICO,0xa09c94,0.1,0.015,0.06,0,1,0,0.09,0.05,0.08),P(ICO,0xc8c4bc,-0.08,0.015,0.07,0,2,0,0.07,0.04,0.06)]);
 const DOCK={x:1,z:12};
 function scaleParts(ps,s){return ps.map(p=>Object.assign({},p,{x:p.x*s,y:p.y*s,z:p.z*s,sx:p.sx*s,sy:p.sy*s,sz:p.sz*s}));}

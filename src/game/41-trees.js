@@ -47,7 +47,12 @@ function lowParts(parts){let n=0,m=0;const out=[];for(const p of parts){
   else if(p.geo===BOX&&p.sx<0.06&&p.sz>0.1){if(m++%2)continue;out.push(Object.assign({},p,{sz:p.sz*2}));}/* palm frond stems: every other, doubled */
   else out.push(p);}return out;}
 // adds an island's trees as a detailed mesh plus a light one; cullIslands shows one or the other by viewing distance
-function addVeg(isl,g,parts){if(!parts.length)return;const hi=M(parts,leafMat),lo=M(lowParts(parts),leafMat);lo.visible=false;g.add(hi,lo);(isl.veg||(isl.veg=[])).push([hi,lo]);}
+// the far-off version, for islands out on the horizon: just the big shapes (crowns, trunks, palm fronds) in their lightest form
+const FAR_GEO=new Map([[SPH,SPH_XS],[SPH_LO,SPH_XS],[ICO2,ICO0],[ICO,ICO0],[STRUNK,CYL5],[SCONE,SCONE_LO],[CYL12,CYL5],[CYL8,CYL5],[CYL6,CYL5],[CONE12,CONE5],[CONE8,CONE5],[CONE6,CONE5]]);
+function farParts(parts){const out=[];for(const p of parts){if(p.lo==='drop')continue;
+  if(p.geo===LEAF_CARD){if(p.lo==='wide')out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.8}));continue;}
+  if(Math.max(p.sx,p.sy,p.sz)<0.28)continue;const g=FAR_GEO.get(p.geo);out.push(g?Object.assign({},p,{geo:g}):p);}return out;}
+function addVeg(isl,g,parts){if(!parts.length)return;const hi=M(parts,leafMat),lo=M(lowParts(parts),leafMat),fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;lo.visible=false;g.add(hi,lo);if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([hi,lo,fa]);}
 // beach tiles a palm can stand on: flat sand (not the slope into the water), spread a few tiles apart
 function palmSpots(isl,R,n,ok){const out=[];for(const [x,z] of shuffle(isl.sand.slice(),R)){if(out.length>=n)break;const c=SAND_CH.get(K(x,z));if(!c||Math.min(...c)<0.17||!ok(x,z))continue;
   if(out.some(([a,b])=>Math.abs(a-x)+Math.abs(b-z)<3))continue;out.push([x,z]);}return out;}

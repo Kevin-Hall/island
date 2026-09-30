@@ -184,7 +184,7 @@ function applyUw(dt,tt){
   const on=k>0.02;uwSurf.visible=on;uwSnow.visible=on;for(const r of uwRays)r.visible=on;updateSchools(dt,tt,on&&swim.uw>0.3);if(reefG)reefG.visible=swim.on;
   audioMuffle(k>0.5);
   // under water, the rest of the archipelago and the sun's shadows are lost in the blue: don't draw them (a big saving on a phone)
-  renderer.shadowMap.autoUpdate=k<0.5;if(k>0.5)for(const isl of islands)if(!isl.home&&isl.group)isl.group.visible=false;
+  swim.noShadow=k>0.5;if(k>0.5)for(const isl of islands)if(!isl.home&&isl.group)isl.group.visible=false;
   // the camera: glides down with you and closes in; the ceiling it may not rise past comes down with it, so it slips
   // under the surface part-way down (and back up through it on the way home), never popping
   const e=swim.uw*swim.uw*(3-2*swim.uw);

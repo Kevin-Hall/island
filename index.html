@@ -1756,6 +1756,7 @@ const canvas=$('c');
 const renderer=new T.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
 renderer.setPixelRatio(1);
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap; // soft-edged little shadows
+renderer.shadowMap.autoUpdate=false;let shadowFrame=0;/* the shadow map is redrawn every other frame (90-main): the sun barely moves, and it halves the cost of the shadow pass */
 const scene=new T.Scene();const skyHz=new T.Color(0xbfe0ff),skyZen=new T.Color(0x3c8ce8),skyGlow=new T.Color(0xffffff);let skyGA=0;
 scene.fog=new T.Fog(0xbfe0ff,40,150);
 const NEAR=1.5,FAR=640;
@@ -1901,7 +1902,7 @@ const ICO0=new T.IcosahedronGeometry(0.5,0),CYL5=new T.CylinderGeometry(0.5,0.5,
 /* smooth-shaded shapes (their own rounded normals are kept, so the toon ramp paints soft bands across them instead of
    facets): the rounded crowns, bushes, pebbles and critters that give the island its soft, cosy look */
 const smoothG=g=>{g.userData.smooth=true;return g;};
-const SPH=smoothG(new T.SphereGeometry(0.5,14,10)),SPH_LO=smoothG(new T.SphereGeometry(0.5,8,6)),SPH_XS=smoothG(new T.SphereGeometry(0.5,6,4)),
+const SPH=smoothG(new T.SphereGeometry(0.5,12,8)),SPH_LO=smoothG(new T.SphereGeometry(0.5,8,6)),SPH_XS=smoothG(new T.SphereGeometry(0.5,6,4)),
   SCONE=smoothG(new T.ConeGeometry(0.5,1,16,1,true)),SCONE_LO=smoothG(new T.ConeGeometry(0.5,1,8,1,true)),STRUNK=smoothG(new T.CylinderGeometry(0.36,0.5,1,10,1,true)),SCYL=smoothG(new T.CylinderGeometry(0.5,0.5,1,10));
 function lodGeo(p){const g=p.geo,big=Math.max(p.sx,p.sy,p.sz),rad=Math.max(p.sx,p.sz);
   if(g===SPH)return big<0.12?SPH_XS:big<0.35?SPH_LO:g;if(g===SPH_LO)return big<0.12?SPH_XS:g;
@@ -2286,7 +2287,12 @@ function lowParts(parts){let n=0,m=0;const out=[];for(const p of parts){
   else if(p.geo===BOX&&p.sx<0.06&&p.sz>0.1){if(m++%2)continue;out.push(Object.assign({},p,{sz:p.sz*2}));}/* palm frond stems: every other, doubled */
   else out.push(p);}return out;}
 // adds an island's trees as a detailed mesh plus a light one; cullIslands shows one or the other by viewing distance
-function addVeg(isl,g,parts){if(!parts.length)return;const hi=M(parts,leafMat),lo=M(lowParts(parts),leafMat);lo.visible=false;g.add(hi,lo);(isl.veg||(isl.veg=[])).push([hi,lo]);}
+// the far-off version, for islands out on the horizon: just the big shapes (crowns, trunks, palm fronds) in their lightest form
+const FAR_GEO=new Map([[SPH,SPH_XS],[SPH_LO,SPH_XS],[ICO2,ICO0],[ICO,ICO0],[STRUNK,CYL5],[SCONE,SCONE_LO],[CYL12,CYL5],[CYL8,CYL5],[CYL6,CYL5],[CONE12,CONE5],[CONE8,CONE5],[CONE6,CONE5]]);
+function farParts(parts){const out=[];for(const p of parts){if(p.lo==='drop')continue;
+  if(p.geo===LEAF_CARD){if(p.lo==='wide')out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.8}));continue;}
+  if(Math.max(p.sx,p.sy,p.sz)<0.28)continue;const g=FAR_GEO.get(p.geo);out.push(g?Object.assign({},p,{geo:g}):p);}return out;}
+function addVeg(isl,g,parts){if(!parts.length)return;const hi=M(parts,leafMat),lo=M(lowParts(parts),leafMat),fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;lo.visible=false;g.add(hi,lo);if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([hi,lo,fa]);}
 // beach tiles a palm can stand on: flat sand (not the slope into the water), spread a few tiles apart
 function palmSpots(isl,R,n,ok){const out=[];for(const [x,z] of shuffle(isl.sand.slice(),R)){if(out.length>=n)break;const c=SAND_CH.get(K(x,z));if(!c||Math.min(...c)<0.17||!ok(x,z))continue;
   if(out.some(([a,b])=>Math.abs(a-x)+Math.abs(b-z)<3))continue;out.push([x,z]);}return out;}
@@ -2682,12 +2688,17 @@ function cullIslands(){const view=cam.dist+110;for(const isl of islands){const b
     // wild plants are small: only draw them when you're reasonably close (each one is its own mesh)
     if(isl.group)isl.group.visible=vis;if(isl.pgroup)isl.pgroup.visible=vis&&cam.dist+Math.max(0,d)<60;
     // level of detail for trees: light meshes when the island is far away or you're zoomed well out (with a little hysteresis)
-    const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>56:far>61;if(isl.veg&&low!==isl.lowOn){isl.lowOn=low;for(const [hi,lo] of isl.veg){hi.visible=!low;if(lo)lo.visible=low;}for(const [hi,lo] of isl.floraLod||[]){hi.visible=!low&&!isl.farOn;if(lo)lo.visible=low&&!isl.farOn;}}
+    const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>56:far>61,lv=low?(far>(isl.vegLv===2?92:100)?2:1):0;/* 0 full, 1 light, 2 horizon */
+    if(isl.veg&&lv!==isl.vegLv){isl.vegLv=lv;for(const [hi,lo,fa] of isl.veg){hi.visible=lv===0;if(lo)lo.visible=lv===1||lv===2&&!fa;if(fa)fa.visible=lv===2;}
+      if(isl.tMesh)for(const k of ['underG','underS'])if(isl.tMesh[k])isl.tMesh[k].visible=lv<2;/* the little corner notches vanish on the horizon */
+      if(isl.riverG)isl.riverG.children.forEach((o,i)=>{if(i>1)o.visible=lv<2;});/* keep the river's bed and water, drop its pebbles, reeds and lilies */}
+    if(isl.veg&&low!==isl.lowOn)isl.lowOn=low;
+    {const fl=far>(isl.floraLow?30:34);/* flowers go to their light twins sooner: they're specks once you zoom out */if(fl!==isl.floraLow){isl.floraLow=fl;for(const [hi,lo] of isl.floraLod||[]){hi.visible=!fl&&!isl.farOn;if(lo)lo.visible=fl&&!isl.farOn;}}}
     // far from you, an island is just its land, water and trees: the pebbles, reeds, flowers, grass tufts and the rest are
     // too small to see from out there, so they aren't drawn until you come near
     if(!isl.home&&isl.group){const far2=d>16;if(isl.farOn!==far2){isl.farOn=far2;
       if(!isl.detail){const veg=new Set((isl.veg||[]).flat()),fl=new Set((isl.floraLod||[]).flat());isl.detail=isl.group.children.filter(o=>!o.userData.core&&!veg.has(o)&&!fl.has(o));}
-      for(const o of isl.detail)o.visible=!far2;for(const [hi,lo] of isl.floraLod||[]){hi.visible=!far2&&!isl.lowOn;if(lo)lo.visible=!far2&&!!isl.lowOn;}}}
+      for(const o of isl.detail)o.visible=!far2;for(const [hi,lo] of isl.floraLod||[]){hi.visible=!far2&&!isl.floraLow;if(lo)lo.visible=!far2&&!!isl.floraLow;}}}
     const sh=vis&&d<32;if(isl.group&&isl.shadowOn!==sh){isl.shadowOn=sh;if(!isl.casters){isl.casters=[];isl.group.traverse(o=>{if(o.castShadow)isl.casters.push(o);});}for(const o of isl.casters)o.castShadow=sh;}}}
 // terrain baker: collects tiles (a geometry scaled and placed without rotation, a colour, optional sand corner heights) into one mesh
 const _flatGeo=new Map();const flatGeo=g=>{let n=_flatGeo.get(g);if(!n){n=g.index?g.toNonIndexed():g;_flatGeo.set(g,n);}return n;};
@@ -2762,7 +2773,7 @@ function bakeTerrain(isl,g,only){const B=islandBiome(isl),by=new Map();const slo
 function buildIsland(isl){
   if(isl.group){scene.remove(isl.group);isl.group.traverse(o=>{if(o.isInstancedMesh)o.dispose();else if(o.geometry&&!Object.values(RTILE).includes(o.geometry)&&o.geometry!==TILE_PLANE&&o.geometry!==BOX&&o.geometry!==POOL_GEO&&o.geometry!==BLADES)o.geometry.dispose();});}
   if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);riverSurf.delete(k);bridgeY.delete(k);}
-  const g=new T.Group();isl.group=g;isl.heartG=null;isl.residentG=null;isl.flats=[];isl.veg=[];isl.lowOn=false;isl.casters=null;isl.shadowOn=undefined;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
+  const g=new T.Group();isl.group=g;isl.heartG=null;isl.residentG=null;isl.flats=[];isl.veg=[];isl.vegLv=undefined;isl.floraLow=undefined;isl.lowOn=false;isl.casters=null;isl.shadowOn=undefined;isl.keys=[];isl.grass=[];isl.sand=[];const a1=[],a2=[];
   const span=Math.ceil(islR(isl)/0.62+3),B=islandBiome(isl);
   for(let x=isl.home?Math.min(isl.cx-span,farmWest()):isl.cx-span;x<=isl.cx+span;x++)for(let z=isl.cz-span;z<=isl.cz+span;z++){
     const t=tileTypeI(isl,x,z);if(!t)continue;const k=K(x,z);
@@ -3246,7 +3257,7 @@ function furnParts(kind,g,R,seed){let p=[];const paint=PAINT[seed%PAINT.length];
       p.push(P(BOX,FW,0,1.44,0,0,0,0,1.1,0.08,0.1));g.add(M(p));
       const seat=M([P(BOX,0xe8dcc0,-0.34,-0.46,0,0,0,0,0.02,0.92,0.02),P(BOX,0xe8dcc0,0.34,-0.46,0,0,0,0,0.02,0.92,0.02),P(BOX,paint,0,-0.92,0,0,0,0,0.76,0.05,0.3),P(BOX,paint,0,-0.74,-0.14,-0.2,0,0,0.76,0.32,0.04),
         P(BOX,0xf8f0e0,-0.18,-0.86,0,0,0,0,0.22,0.08,0.22)]);seat.position.y=1.4;g.add(seat);g.userData.anim=t=>{seat.rotation.x=Math.sin(t*1.3+seed)*0.12;};return true;}
-    default:return false;}
+    default:if(!potPlant(kind,p,seed))return false;/* potted plants: 50d-plants */}
   g.add(M(p));return true;}
 /* =========================================================
    Floors: paving, decking and paths you lay tile by tile. A floor is its own layer under the decor (BUILD[k].floor),
@@ -3313,6 +3324,121 @@ function floorMeshes(list){const by=new Map();for(const o of list){if(!by.has(o.
     arr.forEach((o,i)=>{_e.set(0,o.r||0,0);_q.setFromEuler(_e);_v.set(o.x,topY(o.x,o.z)+0.005,o.z);_s.set(1,1,1);_m.compose(_v,_q,_s);im.setMatrixAt(i,_m);});
     im.receiveShadow=true;im.castShadow=false;im.frustumCulled=false;im.userData.noThumb=true;out.push(im);}
   return out;}
+/* =========================================================
+   Potted plants: a set of houseplants and garden pots to dot around the island (and your porch), in the muted,
+   earthy greens of a hand-painted plant sheet. Each is one tile, built from plain parts in its own kind of pot
+   (terracotta, stone, glazed white, charcoal, sage green, clay, cream) with a saucer and a disc of soil, so it merges
+   into the decor batch like everything else. furnParts (50b) hands any "pot_" kind here. They're sold on the Shop's
+   Plants tab (BUILD[k].plant).
+   ========================================================= */
+const POTS={terra:[0xc07a52,0x8a4e34,0xd0906a],stone:[0xa8a298,0x74706a,0xbab4aa],white:[0xece6da,0xb4ac9e,0xf8f4ec],dark:[0x40363a,0x221c20,0x54484c],
+  green:[0x6a8a62,0x3e5a40,0x7e9c74],clay:[0x8a6c5c,0x5a4438,0x9c7e6c],cream:[0xd8ccb4,0xa89c86,0xe6dcc6]};
+const PGR=[0x2e4628,0x40602e,0x56783a,0x6c8e44,0x86a452,0xa4b868];/* leaf greens, dark to light */
+const POT_GEO=new T.CylinderGeometry(0.5,0.38,1,12),POT_BOWL=new T.CylinderGeometry(0.5,0.3,1,12);
+// a pot with its rim, soil and saucer; returns the height of the soil
+function pot(p,st,r,h,bowl){const [c,d,l]=POTS[st];p.push(PG(bowl?POT_BOWL:POT_GEO,c,d,0,h/2,0,0,0,0,r*2,h,r*2),PG(CYL12,l,c,0,h-0.012,0,0,0,0,r*2.1,0.055,r*2.1),
+  P(CYL12,0x4a3626,0,h+0.01,0,0,0,0,r*1.84,0.02,r*1.84),P(CYL12,d,0,0.012,0,0,0,0,r*1.75,0.024,r*1.75));return h+0.02;}
+// a leaf from (x,y,z) heading `a` round and `up` above level, len long, wid wide (a flattened diamond, dark at its root)
+function pleaf(p,col,x,y,z,a,up,len,wid,th=0.02){const c=Math.cos(up);p.push(PG(LEAF0,col,lerpHex(col,0x1a2a14,0.35),x+Math.sin(a)*len*0.45*c,y+Math.sin(up)*len*0.45,z+Math.cos(a)*len*0.45*c,-up,a,0,wid,th,len));}
+function stalk(p,col,x0,y0,z0,x1,y1,z1,w){limb(p,col,x0,y0,z0,x1,y1,z1,w);}
+function potPlant(kind,p,seed){const R=mulberry(hi(kind.length,seed|0,41));
+  switch(kind){
+    case'pot_monstera':{const y=pot(p,'terra',0.2,0.26);// big split leaves on long stems, fanning out
+      for(let i=0;i<10;i++){const a=i/10*6.283+R()*0.4,up=0.3+R()*0.7,L=0.2+R()*0.18,sx=Math.sin(a)*L*Math.cos(up),sz=Math.cos(a)*L*Math.cos(up),sy=y+Math.sin(up)*L+0.12;
+        stalk(p,0x5a7a36,0,y,0,sx,sy,sz,0.018);const col=PGR[i%3];pleaf(p,col,sx,sy,sz,a,-0.2+R()*0.3,0.34,0.3,0.025);
+        for(const s of [-1,1])p.push(P(BOX,lerpHex(col,0x1a2a14,0.5),sx+Math.sin(a)*0.1+Math.cos(a)*s*0.06,sy-0.03,sz+Math.cos(a)*0.1-Math.sin(a)*s*0.06,0,a+s*0.9,0,0.012,0.012,0.09));}/* the splits */
+      return true;}
+    case'pot_snake':{const y=pot(p,'stone',0.17,0.34);// tall stiff blades with yellow edges
+      for(let i=0;i<8;i++){const a=i/8*6.283+R()*0.5,r=0.04+R()*0.06,h=0.42+R()*0.3,up=1.3+R()*0.2;
+        pleaf(p,0xc8c060,Math.sin(a)*r,y,Math.cos(a)*r,a,up,h,0.1,0.018);pleaf(p,i%2?PGR[1]:PGR[2],Math.sin(a)*r*1.02,y+0.01,Math.cos(a)*r*1.02,a,up,h*0.97,0.085,0.026);}
+      return true;}
+    case'pot_fiddle':{const y=pot(p,'cream',0.18,0.3);// a slim trunk with big fiddle-shaped leaves up its top half
+      stalk(p,0x6a5038,0,y,0,0.02,y+0.72,0.01,0.035);
+      for(let i=0;i<15;i++){const t=i/14,a=i*2.4,yy=y+0.26+t*0.5;pleaf(p,PGR[1+(i%3)],0.01,yy,0,a,0.3-t*0.3,0.3,0.24,0.025);}
+      return true;}
+    case'pot_paradise':{const y=pot(p,'dark',0.2,0.36);// tall stems each ending in a long paddle leaf
+      for(let i=0;i<8;i++){const a=i/8*6.283+R()*0.3,lean=0.12+R()*0.12,h=0.5+R()*0.45,tx=Math.sin(a)*lean,tz=Math.cos(a)*lean;stalk(p,0x5a7a3a,0,y,0,tx,y+h,tz,0.018);
+        pleaf(p,PGR[1+(i%3)],tx,y+h-0.06,tz,a,0.95+R()*0.3,0.52,0.2,0.022);}
+      return true;}
+    case'pot_fern':{const y=pot(p,'stone',0.19,0.24);// a fountain of arching fronds
+      for(let i=0;i<22;i++){const a=i/22*6.283+R()*0.3,up=0.15+R()*0.7,L=0.32+R()*0.14;const col=PGR[1+(i%3)];
+        pleaf(p,col,0,y+0.02,0,a,up,L*0.6,0.1);const ex=Math.sin(a)*L*0.55*Math.cos(up),ez=Math.cos(a)*L*0.55*Math.cos(up),ey=y+0.02+Math.sin(up)*L*0.55;pleaf(p,col,ex,ey,ez,a,up-0.8,L*0.55,0.09);}
+      return true;}
+    case'pot_pothos':{const y=pot(p,'white',0.16,0.24,true);// heart leaves, and vines trailing over the rim to the ground
+      for(let i=0;i<20;i++){const a=R()*6.283,r=Math.sqrt(R())*0.15,yy=y+0.03+(1-r/0.15)*0.1;pleaf(p,[0x5e8a3a,0x7ea246,0x96b24e][i%3],Math.sin(a)*r,yy,Math.cos(a)*r,a,0.1+R()*0.4,0.16,0.14);}
+      for(let v=0;v<5;v++){const a=v*1.26+R()*0.5;let x=Math.sin(a)*0.16,z=Math.cos(a)*0.16,yy=y;
+        for(let k=0;k<5;k++){const nx=x+Math.sin(a)*0.06,nz=z+Math.cos(a)*0.06,ny=Math.max(0.03,yy-0.07-k*0.01);stalk(p,0x5e7e36,x,yy,z,nx,ny,nz,0.01);pleaf(p,k%2?0x6e9a40:0x8eac4c,nx,ny,nz,a+(k%2?0.9:-0.9),-0.3,0.12,0.1);x=nx;z=nz;yy=ny;}}
+      return true;}
+    case'pot_succulent':{const y=pot(p,'terra',0.13,0.14,true);// an echeveria rosette, blue-green with blushing tips
+      for(let ring=0;ring<3;ring++){const n=8-ring*2,rr=0.1-ring*0.03,up=0.35+ring*0.35;
+        for(let i=0;i<n;i++){const a=i/n*6.283+ring*0.4;p.push(PG(SPH_LO,ring===2?0xb0d0b8:0x9cc0a8,0x6a8a78,Math.sin(a)*rr*0.6,y+0.03+ring*0.02,Math.cos(a)*rr*0.6,-up,a,0,0.06,0.03,0.12),
+          P(SPH_XS,0xd88a9a,Math.sin(a)*rr*1.15,y+0.04+ring*0.03+Math.sin(up)*0.04,Math.cos(a)*rr*1.15,0,0,0,0.025,0.02,0.025));}}
+      return true;}
+    case'pot_jade':{const y=pot(p,'clay',0.16,0.18,true);// a little jade tree: stout branches and plump round leaves
+      stalk(p,0x7a6a4a,0,y,0,0,y+0.14,0,0.05);
+      for(let i=0;i<6;i++){const a=i*1.05+R()*0.4,ex=Math.sin(a)*0.14,ez=Math.cos(a)*0.14,ey=y+0.22+R()*0.12;stalk(p,0x8a7a52,0,y+0.12,0,ex,ey,ez,0.028);
+        for(let k=0;k<10;k++){const b=R()*6.283,r=0.02+R()*0.07;p.push(PG(SPH_LO,k%2?0x6e9a4a:0x86ac5a,0x4a6a32,ex+Math.sin(b)*r,ey+0.02+R()*0.05,ez+Math.cos(b)*r,0,b,0.5,0.06,0.035,0.07));}}
+      return true;}
+    case'pot_rubber':{const y=pot(p,'dark',0.17,0.3);// dark, glossy oval leaves up a single stem
+      stalk(p,0x5a4a3a,0,y,0,0,y+0.6,0,0.03);
+      for(let i=0;i<12;i++){const a=i*2.3,yy=y+0.1+i*0.045;pleaf(p,i%2?0x3a4e2e:0x2e4228,0,yy,0,a,0.4-i*0.03,0.28,0.15,0.028);}
+      p.push(P(SPH_XS,0xb04a3a,0,y+0.64,0,0,0,0,0.03,0.07,0.03));/* the red new-leaf sheath */return true;}
+    case'pot_pilea':{const y=pot(p,'white',0.15,0.18);// coin leaves on thin stalks
+      for(let i=0;i<18;i++){const a=R()*6.283,up=0.4+R()*1,L=0.1+R()*0.16,x=Math.sin(a)*L*Math.cos(up),z=Math.cos(a)*L*Math.cos(up),yy=y+Math.sin(up)*L+0.06;
+        stalk(p,0x7a9a4a,0,y+0.04,0,x,yy,z,0.008);p.push(PG(CYL8,i%2?0x7aa04a:0x5e8a3c,0x3e6030,x,yy,z,0.5-up*0.3,a,0,0.12,0.012,0.12));}
+      return true;}
+    case'pot_money':{const y=pot(p,'white',0.19,0.26);// a braided trunk and hands of glossy leaves
+      for(let s=0;s<3;s++){let px=0,pz=0;for(let k=0;k<5;k++){const a=s*2.09+k*1.2,nx=Math.sin(a)*0.03,nz=Math.cos(a)*0.03;stalk(p,0x9a7a52,px,y+k*0.11,pz,nx,y+(k+1)*0.11,nz,0.024);px=nx;pz=nz;}}
+      for(let i=0;i<9;i++){const a=i/9*6.283+R()*0.3,rr=0.1+R()*0.08,cx=Math.sin(a)*rr,cz=Math.cos(a)*rr,cy=y+0.56+R()*0.16;stalk(p,0x6a8a3a,0,y+0.55,0,cx,cy,cz,0.012);
+        for(let k=0;k<6;k++)pleaf(p,PGR[1+(k%3)],cx,cy,cz,a+(k-2.5)*0.55,0.15,0.18,0.08);}
+      return true;}
+    case'pot_spider':{const y=pot(p,'terra',0.15,0.2);// arching striped leaves, with a baby plant dangling on a runner
+      for(let i=0;i<14;i++){const a=i/14*6.283+R()*0.3,up=0.3+R()*0.6;pleaf(p,0x7ea24a,0,y+0.02,0,a,up,0.3,0.05);pleaf(p,0xf0f0d8,0,y+0.025,0,a,up,0.28,0.018,0.03);}
+      for(let b=0;b<2;b++){const a=b*3+1,x=Math.sin(a)*0.3,z=Math.cos(a)*0.3;stalk(p,0x9ab060,Math.sin(a)*0.12,y+0.05,Math.cos(a)*0.12,x,y-0.1,z,0.008);
+        for(let k=0;k<5;k++)pleaf(p,0x8eb454,x,y-0.1,z,k*1.26,0.4,0.1,0.03);}
+      return true;}
+    case'pot_cactus':{const y=pot(p,'terra',0.14,0.18);// a ribbed column with two arms and a pink flower
+      p.push(PG(SPH,0x5e8a4a,0x3e6036,0,y+0.2,0,0,0,0,0.17,0.46,0.17));for(let i=0;i<6;i++){const a=i/6*6.283;p.push(P(BOX,0x4a7038,Math.sin(a)*0.078,y+0.2,Math.cos(a)*0.078,0,a,0,0.01,0.34,0.012));}
+      for(const s of [-1,1]){p.push(PG(SPH_LO,0x5e8a4a,0x3e6036,s*0.11,y+0.2+s*0.04,0,0,0,0,0.08,0.08,0.08),PG(SPH_LO,0x5e8a4a,0x3e6036,s*0.14,y+0.28+s*0.04,0,0,0,0,0.075,0.18,0.075));}
+      p.push(P(SPH_XS,0xf08aa8,0,y+0.44,0,0,0,0,0.07,0.04,0.07),P(SPH_XS,0xf6d04a,0,y+0.46,0,0,0,0,0.025,0.02,0.025));return true;}
+    case'pot_zz':{const y=pot(p,'green',0.16,0.24);// upright stems lined with small glossy leaflets
+      for(let i=0;i<6;i++){const a=i/6*6.283+R()*0.3,lean=0.08+R()*0.06,h=0.36+R()*0.18,tx=Math.sin(a)*lean,tz=Math.cos(a)*lean;stalk(p,0x4e6a34,0,y,0,tx,y+h,tz,0.014);
+        for(let k=1;k<6;k++){const t=k/6,x=tx*t,z=tz*t,yy=y+h*t;for(const s of [-1,1])pleaf(p,k%2?0x3e5a2c:0x4e7036,x,yy,z,a+s*1.3,0.4,0.08,0.045);}}
+      return true;}
+    case'pot_calathea':{const y=pot(p,'cream',0.18,0.26);// broad oval leaves painted light and dark
+      for(let i=0;i<8;i++){const a=i/8*6.283+R()*0.3,up=0.55+R()*0.4,L=0.14+R()*0.1,x=Math.sin(a)*L*Math.cos(up),z=Math.cos(a)*L*Math.cos(up),yy=y+Math.sin(up)*L+0.05;
+        stalk(p,0x7a4a5a,0,y,0,x,yy,z,0.012);pleaf(p,0x3e5a34,x,yy,z,a,0.2,0.26,0.16,0.022);pleaf(p,0x8eb060,x,yy+0.006,z,a,0.2,0.2,0.07,0.024);}
+      return true;}
+    case'pot_herbs':{const y=pot(p,'terra',0.16,0.16,true);// a bushy pot of basil
+      p.push(P(SPH,0x4e8a34,0,y+0.08,0,0,0,0,0.28,0.2,0.28));/* a leafy core so the dome reads solid */
+      for(let i=0;i<34;i++){const a=R()*6.283,r=Math.sqrt(R())*0.16,yy=y+0.03+Math.sqrt(Math.max(0,1-(r/0.17)**2))*0.16;pleaf(p,[0x4e8a34,0x62a03e,0x78b04a][i%3],Math.sin(a)*r,yy,Math.cos(a)*r,a,0.1+R()*0.5,0.1,0.08,0.02);}
+      return true;}
+    case'pot_palm':{const y=pot(p,'clay',0.18,0.28);// a parlour palm: feathery fronds on slim stems
+      for(let i=0;i<5;i++){const a=i/5*6.283+R()*0.4,lean=0.1+R()*0.12,h=0.4+R()*0.25,tx=Math.sin(a)*lean,tz=Math.cos(a)*lean;stalk(p,0x6a7a3a,0,y,0,tx,y+h,tz,0.013);
+        for(let k=0;k<7;k++){const t=k/7,x=tx+Math.sin(a)*t*0.22,z=tz+Math.cos(a)*t*0.22,yy=y+h+0.04-t*t*0.18;for(const s of [-1,1])pleaf(p,PGR[2+(k%2)],x,yy,z,a+s*1.2,-0.2,0.12-t*0.05,0.03);}}
+      return true;}
+    case'pot_olive':{const y=pot(p,'green',0.2,0.26);// a little olive tree: a twisting trunk and a cloud of silvery leaves
+      let px=0,pz=0,py=y;for(let k=0;k<4;k++){const nx=(R()-0.5)*0.12,nz=(R()-0.5)*0.12,ny=py+0.14;stalk(p,0x8a7458,px,py,pz,nx,ny,nz,0.035-k*0.005);px=nx;pz=nz;py=ny;}
+      for(let c=0;c<7;c++){const a=c*0.9+R(),cx=px+Math.sin(a)*0.16,cz=pz+Math.cos(a)*0.14,cy=py+0.06+R()*0.1;stalk(p,0x8a7458,px,py-0.02,pz,cx,cy,cz,0.015);
+        for(let k=0;k<12;k++){const b=R()*6.283;pleaf(p,k%2?0x9aa87a:0x7a8c5e,cx+Math.sin(b)*0.07,cy+(R()-0.3)*0.06,cz+Math.cos(b)*0.05,b,0.3,0.1,0.035);}}
+      return true;}
+    case'pot_grass':{const y=pot(p,'terra',0.15,0.22);// a pot of fine ornamental grass
+      for(let i=0;i<22;i++){const a=R()*6.283,r=R()*0.06,up=1.1+R()*0.35;pleaf(p,i%3?0x8aa488:0x6e8c6a,Math.sin(a)*r,y,Math.cos(a)*r,a,up,0.34+R()*0.2,0.025,0.012);}
+      return true;}
+  }
+  return false;}
+// the shop's plant list: key, name, price, level, height (for tapping), description
+const POT_PLANTS=[['monstera','Monstera',420,2,0.7,'Big split leaves, a jungle in a pot.'],['snake','Snake Plant',220,1,0.9,'Tall striped blades. Impossible to kill.'],
+  ['fiddle','Fiddle-leaf Fig',520,3,1.1,'A slender trunk and big, fiddle-shaped leaves.'],['paradise','Bird of Paradise',680,3,1.3,'Tall paddle leaves on long stems.'],
+  ['fern','Boston Fern',260,1,0.6,'A fountain of soft, arching fronds.'],['pothos','Pothos',180,1,0.5,'Heart-shaped leaves trailing over the rim.'],
+  ['succulent','Echeveria',120,1,0.3,'A little blue-green rosette with blushing tips.'],['jade','Jade Plant',300,2,0.6,'A tiny tree of plump, round leaves.'],
+  ['rubber','Rubber Plant',360,2,0.9,'Dark, glossy leaves up a single stem.'],['pilea','Pilea',200,1,0.5,'Round coin leaves on thin stalks.'],
+  ['money','Money Tree',480,3,1.0,'A braided trunk and hands of glossy leaves.'],['spider','Spider Plant',180,1,0.5,'Arching striped leaves, with a baby plant dangling.'],
+  ['cactus','Cactus',150,1,0.6,'A ribbed column with a pink flower on top.'],['zz','ZZ Plant',280,2,0.7,'Upright stems lined with glossy leaflets.'],
+  ['calathea','Calathea',340,2,0.6,'Broad leaves painted light and dark.'],['herbs','Basil Pot',90,1,0.35,'A bushy pot of basil for the kitchen window.'],
+  ['palm','Parlour Palm',400,2,0.8,'Feathery fronds on slim stems.'],['olive','Olive Tree',640,4,1.0,'A twisting little tree with silvery leaves.'],
+  ['grass','Ornamental Grass',160,1,0.6,'Fine blue-green blades that sway.']];
+for(const [k,name,cost,lvl,h,desc] of POT_PLANTS){BUILD['pot_'+k]={name,cost,lvl,multi:true,plant:true,desc};OBJ_H['pot_'+k]=h;}
 /* =========================================================
    The wild island. A game started by arriving at sea (S.scratch) begins on untouched land: forests, thickets, rocky
    ground under the cliffs and open meadows, laid out by noise from the world seed and the island's style. Nothing is
@@ -3526,6 +3652,9 @@ function flowerHead(p,sp,c,x,y,z,R){
     default:bloom(p,c,0xf6d04a,x,y,z,0.1,10,0.15);}}
 // stem heights: ankle-high next to the villager (~0.9 tall), like Animal Crossing flowers
 const FLOWER_H={tulip:0.15,rose:0.14,cosmos:0.19,pansy:0.07,lily:0.17,hyacinth:0.09,daisy:0.12};
+// flowers are only a few pixels on screen, so they're built from the lightest versions of each shape (a round petal
+// is 20 triangles, not 320): there are hundreds of them across the island
+const FLORA_LITE=new Map([[LEAF0,LEAF8]/* a petal or leaf: 8 triangles, not 20 */,[ICO2,OCT],[ICO,OCT],[ICO0,OCT],[SPH,SPH_XS],[SPH_LO,SPH_XS],[CYL12,CYL5],[CYL8,CYL5],[CYL6,CYL5],[CONE8,CONE5],[CONE6,CONE5]]);
 const FLORA_KEYS=[],FLORA_GEOS=[],FLORA_LO=[];/* FLORA_LO: the far version (no stems, a third of the leaves and petals) */
 for(const sp in FLOWER_SP)FLOWER_SP[sp].forEach((c,ci)=>{const R=mulberry(hi(sp.length,ci,31)),p=[];
   for(let s=0;s<3;s++){const a=s*2.1+R(),r=s?0.14+R()*0.06:0.02,x=Math.cos(a)*r,z=Math.sin(a)*r,h=FLOWER_H[sp]*(0.85+R()*0.3);stemP(p,0x4f8a34,x,z,h);
@@ -3533,10 +3662,10 @@ for(const sp in FLOWER_SP)FLOWER_SP[sp].forEach((c,ci)=>{const R=mulberry(hi(sp.
     else if(sp==='pansy'||sp==='hyacinth')for(let k=0;k<3;k++)lf(p,GREENS[k%4],x,0.01,z,a+k*2.1,0.35,0.1,0.07);
     else{lf(p,GREENS[s%4],x,h*0.35,z,a,0.45,0.12,0.06);lf(p,GREENS[(s+2)%4],x,h*0.55,z,a+2.6,0.45,0.1,0.05);}
     flowerHead(p,sp,c,x,h,z,R);}
-  FLORA_KEYS.push(sp+ci);FLORA_GEOS.push(merge(p));FLORA_LO.push(merge(p.filter((q,i)=>q.geo!==CYL6&&q.geo!==CYL12&&(q.geo!==LEAF0||i%3===0))));});
+  FLORA_KEYS.push(sp+ci);FLORA_GEOS.push(merge(p.map(q=>Object.assign({},q,{geo:FLORA_LITE.get(q.geo)||q.geo}))));FLORA_LO.push(merge(p.filter((q,i)=>q.geo!==CYL6&&q.geo!==CYL12&&(q.geo!==LEAF0||i%3===0))));});
 function floraIndex(x,z){const sps=Object.keys(FLOWER_SP),sp=sps[Math.floor(hash(Math.floor(x/5)+11,Math.floor(z/5)-3)*sps.length)],cols=FLOWER_SP[sp];
   const ci=Math.floor(hash(Math.floor(x/3)-5,Math.floor(z/3)+9)*cols.length);return FLORA_KEYS.indexOf(sp+ci);}
-const CLOVER_GEO=(()=>{const R=mulberry(5),p=[];for(let i=0;i<7;i++){const cx=(R()-0.5)*0.55,cz=(R()-0.5)*0.55,y=0.03+R()*0.04,r0=R()*6.28;for(let j=0;j<3;j++)lf(p,GREENS[(i+j)%4],cx,y,cz,r0+j*2.09,0.12,0.09,0.08);if(i===2)bloom(p,0xffffff,0xf2c8d8,cx,y+0.05,cz,0.04,6,0.9);}return merge(p);})();
+const CLOVER_GEO=(()=>{const R=mulberry(5),p=[];for(let i=0;i<7;i++){const cx=(R()-0.5)*0.55,cz=(R()-0.5)*0.55,y=0.03+R()*0.04,r0=R()*6.28;for(let j=0;j<3;j++)lf(p,GREENS[(i+j)%4],cx,y,cz,r0+j*2.09,0.12,0.09,0.08);if(i===2)bloom(p,0xffffff,0xf2c8d8,cx,y+0.05,cz,0.04,6,0.9);}return merge(p.map(q=>Object.assign({},q,{geo:FLORA_LITE.get(q.geo)||q.geo})));})();
 const PEBBLE_GEO=merge([P(ICO,0xb8b4ac,0,0.02,0,0,0.3,0,0.14,0.07,0.11),P(ICO,0xa09c94,0.1,0.015,0.06,0,1,0,0.09,0.05,0.08),P(ICO,0xc8c4bc,-0.08,0.015,0.07,0,2,0,0.07,0.04,0.06)]);
 const DOCK={x:1,z:12};
 function scaleParts(ps,s){return ps.map(p=>Object.assign({},p,{x:p.x*s,y:p.y*s,z:p.z*s,sx:p.sx*s,sy:p.sy*s,sz:p.sz*s}));}
@@ -4950,7 +5079,7 @@ function popHold(g,x,z,sc=1,y0){g.traverse(o=>{if(o.isMesh)o.castShadow=false;})
 function updatePops(dt){for(let i=pops.length-1;i>=0;i--){const p=pops[i];p.t+=dt;const g=p.g,hx=vil.x,hz=vil.z,hy=vil.y+1.05;
   if(p.t<0.45){const u=p.t/0.45;g.position.set(lerp(p.x0,hx,u),lerp(p.y0,hy,u)+Math.sin(u*Math.PI)*0.9,lerp(p.z0,hz,u));g.rotation.y+=dt*8;}
   else if(p.t<1.2){g.position.set(hx,hy+Math.sin((p.t-0.45)*9)*0.03,hz);g.rotation.y+=dt*1.5;}
-  else{const s=Math.max(0,1-(p.t-1.2)/0.25)*(p.sc||0.7);g.scale.setScalar(s);g.position.set(hx,hy,hz);if(s<=0){scene.remove(g);g.traverse(o=>{if(o.geometry)o.geometry.dispose();});pops.splice(i,1);}}}}
+  else{const s=Math.max(0,1-(p.t-1.2)/0.25)*(p.sc||0.7);g.scale.setScalar(s);g.position.set(hx,hy,hz);if(s<=0){scene.remove(g);g.traverse(o=>{if(o.geometry&&!o.geometry.userData.keep)o.geometry.dispose();});pops.splice(i,1);}}}}
 function harvest(k,x,z){
   const t=S.tiles[k],c=t.crop,C=CROPS[c.t],V=VAR[c.v||'normal'];const key=c.t+'|'+V.id;popCrop(c.t,x,z);
   const first=gain(key);S.harvested++;
@@ -5245,7 +5374,11 @@ function tentBeside(sx,sz,loose){let best=null,bd=1e9;for(let dx=-8;dx<=7;dx++)f
    Beach finds & weeds (saved)
    ========================================================= */
 const lifeRoot=new T.Group();scene.add(lifeRoot);
-function findGroup(k,seed){const p=[],g=new T.Group();
+// each kind of find is built once and shared (a beach of shells is one model many times over, not a rebuild per pickup)
+const FIND_GEO=new Map();
+function findGroup(k,seed){const ck=k==='weed'?'weed'+((seed|0)%5):k,c=FIND_GEO.get(ck),g=new T.Group();
+  if(c){const m=new T.Mesh(c[0],c[1]);m.castShadow=m.receiveShadow=true;m.frustumCulled=false;g.add(m);return g;}
+  const p=[];
   switch(k){
     case'shell':p.push(P(ICO,0xf6d6d0,0,0.05,0,0,0,0,0.28,0.09,0.26),P(BOX,0xf0a0a8,0,0.09,0,0,0,0,0.04,0.03,0.24),P(BOX,0xf0a0a8,0.08,0.08,0,0,0.3,0,0.03,0.03,0.2),P(BOX,0xf0a0a8,-0.08,0.08,0,0,-0.3,0,0.03,0.03,0.2));break;
     case'frostshell':p.push(P(ICO,0xd8f0ff,0,0.05,0,0,0,0,0.28,0.09,0.26),P(BOX,0x8ac8f0,0,0.09,0,0,0,0,0.04,0.03,0.24),P(BOX,0x8ac8f0,0.08,0.08,0,0,0.3,0,0.03,0.03,0.2),P(BOX,0x8ac8f0,-0.08,0.08,0,0,-0.3,0,0.03,0.03,0.2));break;
@@ -5269,7 +5402,7 @@ function findGroup(k,seed){const p=[],g=new T.Group();
     case'weed':p.push(...debrisParts('weed',mulberry(seed),seed%3));break;
     default:forageParts(k,p);
   }
-  g.add(M(p,k==='starfrag'||k==='mushroom'?lumMat:vcMat));/* mushrooms glow softly at night */return g;}
+  const m=M(p,k==='starfrag'||k==='mushroom'?lumMat:vcMat);/* mushrooms glow softly at night */m.geometry.userData.keep=1;FIND_GEO.set(ck,[m.geometry,m.material]);g.add(m);return g;}
 function findAt(x,z){return S.finds.find(f=>f.x===x&&f.z===z)||null;}
 function weedAt(x,z){return S.weeds.find(f=>f.x===x&&f.z===z)||null;}
 let weedSlow=new Set();
@@ -5278,7 +5411,7 @@ const DEBRIS={weed:{hp:1},twig:{hp:1},bush:{hp:2},rock:{hp:2},stump:{hp:3},bould
 const debGeo={},debMesh=new Map(),debrisRoot=new T.Group();scene.add(debrisRoot);
 // a soft round shadow blob under every tree and bush (cheap: one instanced disc per batch), so they sit on the ground
 const BLOB_GEO=new T.CircleGeometry(0.5,12).rotateX(-Math.PI/2),blobMat=new T.MeshBasicMaterial({color:0x1e3a2e,transparent:true,opacity:0.3,depthWrite:false});
-function addBlobs(list,r){const sb=new T.InstancedMesh(BLOB_GEO,blobMat,list.length);sb.frustumCulled=false;sb.renderOrder=1;
+function addBlobs(list,r){if(!list.length)return;const sb=new T.InstancedMesh(BLOB_GEO,blobMat,list.length);sb.frustumCulled=false;sb.renderOrder=1;
   list.forEach((d,i)=>{const s=(d.sc||1)*r;_e.set(0,0,0);_q.setFromEuler(_e);_m.compose(_v.set(d.x+0.12,topY(d.x,d.z)+0.015,d.z+0.1),_q,_s.set(s*2.2,1,s*1.7));sb.setMatrixAt(i,_m);});
   sb.instanceMatrix.needsUpdate=true;debrisRoot.add(sb);}
 function debrisAt(x,z){return S.debris.find(d=>d.x===x&&d.z===z)||null;}
@@ -5307,27 +5440,28 @@ function bushParts(v){const s=season(),R=mulberry(hi(v,57,S.worldSeed|0)),p=[],c
     p.push(P(SPH_XS,s==='autumn'?0x6a3a8a:0xd83848,x,y,z,0,0,0,0.08,0.08,0.08));}
   if(s==='winter')p.push(PG(SPH_LO,0xffffff,0xdce8f2,0,0.52*sc,0,0,0,0,0.78*sc,0.3*sc,0.78*sc));
   return p;}
-function debrisGeo(k,v,lo){const id=k+v+(k==='bush'?season():'')+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo':''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v);debGeo[id]=merge(lo?lowParts(parts):parts);}return debGeo[id];}
+function debrisGeo(k,v,lo){const id=k+v+(k==='bush'?season():'')+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo'+lo:''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v);debGeo[id]=merge(lo==='far'?farParts(parts):lo?lowParts(parts):parts);}return debGeo[id];}
 // debris is drawn instanced: one batch per model variant (a handful of draw calls for the whole field); debMesh maps a tile to its slot
 // debris is drawn instanced, one batch per model variant; debMesh maps a tile to its slot. Only what's in range of the camera
 // is drawn (the range widens as you zoom out), and wild trees come in two builds: full detail near you, lighter further off.
 // debLOD re-sorts the slots as you move; an entry out of range has i=-1.
 const debGroups=[];let lodAt=null,lodT=0;
 const lodR=tree=>tree?24+cam.dist*1.0:14+cam.dist*0.7;/* trees stand out on the horizon; bushes and rocks are specks by then */
-function debLOD(gr){const R2=lodR(!!gr.lo)**2;let a=0,b=0,f=0;for(const e of gr.es){const d2=(e.x-cam.tx)**2+(e.z-cam.tz)**2;if(d2>R2){e.i=-1;e.fi=-1;continue;}
-  e.im=gr.lo&&d2>81?gr.lo:gr.hi;/* full detail within 9 tiles */e.i=e.im===gr.hi?a++:b++;e.fi=gr.fr&&fruitOn(e.d)?f++:-1;setDebrisMatrix(e,0);}gr.hi.count=a;if(gr.lo)gr.lo.count=b;if(gr.fr)gr.fr.count=f;}
+function debLOD(gr){const R2=lodR(!!gr.lo)**2;let a=0,b=0,c=0,f=0;for(const e of gr.es){const d2=(e.x-cam.tx)**2+(e.z-cam.tz)**2;if(d2>R2){e.i=-1;e.fi=-1;continue;}
+  e.im=gr.lo&&d2>64?gr.lo:gr.hi;/* full detail within 8 tiles */e.i=e.im===gr.hi?a++:b++;e.fi=gr.fr&&fruitOn(e.d)?f++:-1;setDebrisMatrix(e,0);}gr.hi.count=a;gr.hi.visible=a>0;if(gr.lo){gr.lo.count=b;gr.lo.visible=b>0;}if(gr.fa){gr.fa.count=c;gr.fa.visible=c>0;}/* an empty batch still costs a draw call */if(gr.fr){gr.fr.count=f;gr.fr.visible=f>0;}}
 // a fruit tree has fruit on it in season, on most trees, unless it was shaken off in the last few days
 function fruitOn(d){if(!d||d.k!=='tree'||!fruitSeason(d.v)||hash(d.x*2.1+1,d.z*1.7-2)>0.85)return false;const t=S.fruitT&&S.fruitT[K(d.x,d.z)];return t===undefined||S.day-t>=3;}
 function fruitGeo(v){const id='fruit'+v+season()+(S.worldSeed|0);return debGeo[id]||(debGeo[id]=merge(fruitParts(v)));}
-function syncDebris(){while(debrisRoot.children.length){const c=debrisRoot.children[0];debrisRoot.remove(c);c.dispose();}debMesh.clear();debGroups.length=0;lodAt=null;
+function syncDebris(){const blobT=[],blobB=[];while(debrisRoot.children.length){const c=debrisRoot.children[0];debrisRoot.remove(c);c.dispose();}debMesh.clear();debGroups.length=0;lodAt=null;
   const groups=new Map();for(const d of S.debris){const id=d.k+d.v;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(d);}
   for(const [,list] of groups){const k=list[0].k,tree=k==='tree';
     const mk=lo=>{const im=new T.InstancedMesh(debrisGeo(k,list[0].v,lo),tree?leafMat:k==='bush'?bushMat:vcMat,list.length);
       /* trees cast real shadows near you; bushes rely on their soft blob shadow */im.castShadow=tree?!lo:k!=='bush';im.receiveShadow=true;im.frustumCulled=false;
       /* white instance colours: vcMat's cached program may expect them (r128 shares one program per material) */for(let i=0;i<list.length;i++)im.setColorAt(i,_c.setHex(0xffffff));debrisRoot.add(im);return im;};
-    const gr={hi:mk(false),lo:tree?mk(true):null,es:list.map(d=>{const e={im:null,i:-1,fi:-1,d,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,vr:tree?treeVar(d):null,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};
+    const gr={hi:mk(false),lo:tree?mk(true):null,fa:tree?mk('far'):null,es:list.map(d=>{const e={im:null,i:-1,fi:-1,d,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,vr:tree?treeVar(d):null,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};
     gr.es.forEach(e=>e.gr=gr);if(tree&&fruitSeason(list[0].v)){gr.fr=new T.InstancedMesh(fruitGeo(list[0].v),fruitMat,list.length);gr.fr.frustumCulled=false;gr.fr.castShadow=true;debrisRoot.add(gr.fr);}
-    debLOD(gr);debGroups.push(gr);if(tree)addBlobs(list,0.62);else if(k==='bush')addBlobs(list,0.42);}}
+    debLOD(gr);debGroups.push(gr);if(tree)blobT.push(...list);else if(k==='bush')blobB.push(...list);}
+  addBlobs(blobT,0.62);addBlobs(blobB,0.42);/* one soft-shadow batch for all the trees, one for the bushes */}
 function setDebrisMatrix(e,tilt){if(e.i<0)return;const sc=e.sc||1,w=e.vr?e.vr.w:1,h=e.vr?e.vr.h:1;_e.set(0,e.r,tilt,'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(e.x,e.y,e.z),_q,_s.set(sc*w,sc*h,sc*w));e.im.setMatrixAt(e.i,_m);e.im.instanceMatrix.needsUpdate=true;
   if(e.vr&&e.im.instanceColor){e.im.setColorAt(e.i,_c.setRGB(...e.vr.tint));e.im.instanceColor.needsUpdate=true;}/* each tree a touch warmer, cooler, lighter or darker */
   if(e.fi>=0){e.gr.fr.setMatrixAt(e.fi,_m);e.gr.fr.instanceMatrix.needsUpdate=true;}}
@@ -5350,9 +5484,13 @@ function hitDebris(d){walkTo(d.x,d.z);vil.hop=0.2;d.hp--;const m=debMesh.get(K(d
   if(Math.random()<(d.k==='weed'||d.k==='bush'?0.08:0)){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+1;got.push('+1 '+CROPS[id].name+' seed');}
   floatText(d.x,1.1,d.z,got.join(' · '),'gold');SFX.pop();addXP(d.k==='boulder'||d.k==='stump'?2:1);burst(d.x,y,d.z,stone?0xc4c4d0:wood?0xb08050:0x8aba5a,14,1.8,0.08);
   if(!S.farmClear&&!S.debris.some(q=>farmQ(q.x,q.z)<1.05)){S.farmClear=1;SFX.level();toast('The whole farm field is cleared. Room for a proper harvest!','rare',ICON.sprout);}}
-function updateDebris(dt,tt){updateFallers(dt);lodT-=dt;if(lodT<=0&&debGroups.length){lodT=0.4;if(!lodAt||Math.hypot(cam.tx-lodAt[0],cam.tz-lodAt[1])>1.5||Math.abs(cam.dist-lodAt[2])>3){lodAt=[cam.tx,cam.tz,cam.dist];for(const gr of debGroups)debLOD(gr);}}for(const e of debMesh.values())if(e.shake>0){e.shake=Math.max(0,e.shake-dt);setDebrisMatrix(e,e.shake>0?Math.sin(tt*60)*e.shake*0.35:0);}}
+let lifeLodAt=null;
+function lifeLOD(){const R2=(12+cam.dist*0.8)**2;for(const c of lifeRoot.children)c.visible=(c.position.x-cam.tx)**2+(c.position.z-cam.tz)**2<R2;
+  // crops: far ones aren't drawn, and only those near you cast shadows (each crop is its own little model, drawn twice with its shadow)
+  const C2=(14+cam.dist*0.7)**2;for(const {g} of cropMeshes.values()){const d2=(g.position.x-cam.tx)**2+(g.position.z-cam.tz)**2,sh=d2<110;g.visible=d2<C2;if(g.userData.sh!==sh){g.userData.sh=sh;g.traverse(o=>{if(o.isMesh)o.castShadow=sh;});}}}
+function updateDebris(dt,tt){updateFallers(dt);if(!lifeLodAt||Math.hypot(cam.tx-lifeLodAt[0],cam.tz-lifeLodAt[1])>1.5||Math.abs(cam.dist-lifeLodAt[2])>3){lifeLodAt=[cam.tx,cam.tz,cam.dist];lifeLOD();}lodT-=dt;if(lodT<=0&&debGroups.length){lodT=0.4;if(!lodAt||Math.hypot(cam.tx-lodAt[0],cam.tz-lodAt[1])>1.5||Math.abs(cam.dist-lodAt[2])>3){lodAt=[cam.tx,cam.tz,cam.dist];for(const gr of debGroups)debLOD(gr);}}for(const e of debMesh.values())if(e.shake>0){e.shake=Math.max(0,e.shake-dt);setDebrisMatrix(e,e.shake>0?Math.sin(tt*60)*e.shake*0.35:0);}}
 function syncLife(){syncDebris();
-  while(lifeRoot.children.length){const c=lifeRoot.children[0];lifeRoot.remove(c);c.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
+  while(lifeRoot.children.length){const c=lifeRoot.children[0];lifeRoot.remove(c);c.traverse(o=>{if(o.geometry&&!o.geometry.userData.keep)o.geometry.dispose();});}lifeLodAt=null;
   S.finds=S.finds.filter(f=>isLand(f.x,f.z)&&FINDS[f.k]);S.weeds=S.weeds.filter(w=>isLand(w.x,w.z)&&!S.tiles[K(w.x,w.z)]);
   for(const f of S.finds){const g=findGroup(f.k);g.position.set(f.x+(hash(f.x,f.z)-0.5)*0.3,topY(f.x,f.z),f.z+(hash(f.z,f.x)-0.5)*0.3);g.rotation.y=hash(f.x,f.z)*6.28;lifeRoot.add(g);}
   weedSlow=new Set();
@@ -6258,7 +6396,7 @@ function applyUw(dt,tt){
   const on=k>0.02;uwSurf.visible=on;uwSnow.visible=on;for(const r of uwRays)r.visible=on;updateSchools(dt,tt,on&&swim.uw>0.3);if(reefG)reefG.visible=swim.on;
   audioMuffle(k>0.5);
   // under water, the rest of the archipelago and the sun's shadows are lost in the blue: don't draw them (a big saving on a phone)
-  renderer.shadowMap.autoUpdate=k<0.5;if(k>0.5)for(const isl of islands)if(!isl.home&&isl.group)isl.group.visible=false;
+  swim.noShadow=k>0.5;if(k>0.5)for(const isl of islands)if(!isl.home&&isl.group)isl.group.visible=false;
   // the camera: glides down with you and closes in; the ceiling it may not rise past comes down with it, so it slips
   // under the surface part-way down (and back up through it on the way home), never popping
   const e=swim.uw*swim.uw*(3-2*swim.uw);
@@ -7202,10 +7340,10 @@ function renderSheet(){
     h+=`<div class="sellall"><button class="pbtn go" data-tsell="1">Sell to ${TRADER.name}</button></div><p class="note">Today's stock. It changes every morning.</p><div class="grid">`;
     for(const q of traderStock()){const I=stockInfo(q);h+=`<button class="card ${q.sold?'lock':''}" data-tbuy="${q.i}" ${q.sold?'disabled':''}><img class="px" src="${I.icon}" alt=""><span class="grow"><span class="nm">${I.name}</span><br><span class="sub">${q.sold?'Sold out today':I.desc}</span></span><span class="price">${q.sold?'':sh(q.price)}</span></button>`;}
     h+='</div>';}
-  else if(sheet.kind==='shop'){$('sheetTitle').textContent='Shop';tabs([['decor','Decor'],['island','Island']]);
+  else if(sheet.kind==='shop'){$('sheetTitle').textContent='Shop';tabs([['decor','Decor'],['plants','Plants'],['island','Island']]);
     if(!built('shop'))h+=`<p class="note">${S.scratch?'You don\'t have a store yet. It comes as a kit when your Island Heart reaches <b>level 3</b>, and you choose where to build it.':'The general store opens when your Island Heart reaches <b>level 3</b>.'} Until then, drop things off at the <b>outpost by the dock</b> to sell them, and buy seeds from the Seeds tool.</p>`;
-    else if(sheet.tab==='decor'){h+=`<p class="note">Buy something, then tap where it should go on your home island.</p><div class="sellall"><button class="pbtn go" data-sellshop="1">Sell things</button><button class="pbtn" data-edit="1">Move or store decor</button></div><div class="grid">`;
-      for(const k in BUILD){const B=BUILD[k],lock=B.lvl>lv,n=S.store[k]||0;if(B.craft)continue;
+    else if(sheet.tab==='decor'||sheet.tab==='plants'){const pl=sheet.tab==='plants';h+=`<p class="note">${pl?'Potted plants for your porch, garden and paths. Buy one, then tap where it should go.':'Buy something, then tap where it should go on your home island.'}</p><div class="sellall"><button class="pbtn go" data-sellshop="1">Sell things</button><button class="pbtn" data-edit="1">Move or store decor</button></div><div class="grid">`;
+      for(const k in BUILD){const B=BUILD[k],lock=B.lvl>lv,n=S.store[k]||0;if(B.craft||!!B.plant!==pl)continue;
         h+=`<button class="card ${lock?'lock':''}" data-buy="${k}" ${lock?'disabled':''}><img class="px" src="${THUMB[k]||''}" alt=""><span class="grow"><span class="nm">${B.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+B.lvl:(n?`${n} in storage — tap to place`:B.desc)}</span></span><span class="price">${n?'':sh(B.cost)}</span></button>`;}
       h+='</div>';}
     else{const L=null,HU=HOUSE_UP[S.house];
@@ -7520,7 +7658,7 @@ function fadeThen(fn,keep){const f=$('fade');f.classList.add('on');setTimeout(()
 function arrivalFrame(now){if(!arriving)return;const dt=Math.min(0.1,(now-arriving.last)/1000);arriving.last=now;arriving.t+=dt;tt+=dt;
   cam.yaw+=dt*0.06;cam.tx=-9;cam.tz=1;cam.dist=60;cam.pitch=0.6;applyCam();cullIslands();
   scene.fog.near=camD()+18;scene.fog.far=camD()+150;grassU.uTime.value=tt;riverU.uTime.value=tt;waterU.uT.value=tt;waterU.uCam.value.copy(camera.position);if(depthDirty)buildDepthTex();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
-  updateSky(dt,tt);updateSkyDome();renderer.setRenderTarget(rt);renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=true;
+  updateSky(dt,tt);updateSkyDome();renderer.setRenderTarget(rt);renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);renderer.autoClear=true;
   renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);requestAnimationFrame(arrivalFrame);}
 /* =========================================================
    New game setup
@@ -8112,9 +8250,10 @@ if(S.dreamNew){delete S.dreamNew;setTimeout(()=>toast('Welcome to <b>Driftseed H
    ========================================================= */
 let last=performance.now(),tt=0,saveT=0,hudT=0;
 const FRAME_STAT={calls:0,tris:0,logic:0,render:0};/* read by DS.perf() */
+let _pl=0;const PL=k=>{const t=performance.now();FRAME_STAT['p_'+k]=(FRAME_STAT['p_'+k]||0)*0.9+(t-_pl)*0.1;_pl=t;};/* where a frame's time goes, read by DS.perf() */
 function frame(now){
-  const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;
-  advance(dt*devSpeed);
+  const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;_pl=performance.now();
+  advance(dt*devSpeed);PL('advance');
   {const gT=wxGrey();rainMix=clamp(rainMix+Math.sign(gT-rainMix)*Math.min(Math.abs(gT-rainMix),dt*0.5),0,1);rainFall=clamp(rainFall+(S.rain?dt:-dt)*0.5,0,1);updateWeather(dt);}
   grassU.uTime.value=tt;leafU.uT.value=tt;leafU.uWind.value=S.rain?1.8:1;riverU.uTime.value=tt;waterU.uT.value=tt;waterU.uCam.value.copy(camera.position);if(depthDirty)buildDepthTex();
   {const ci=S.sea?null:curIsl();if(ci&&ci.falls)for(const [x,y,z] of ci.falls){if(Math.random()<dt*3&&Math.abs(x-cam.tx)<16&&Math.abs(z-cam.tz)<16)emit(x+(Math.random()-0.5)*0.8,y+0.05,z+(Math.random()-0.5)*0.3,{vy:0.5+Math.random()*0.5,life:0.6,max:0.6,size:0.07,color:ci.lava?0xffc070:0xf4fbff,g:2});}}grassU.uWind.value=1+rainMix*1.3;grassU.uPl.value.set(vil.x,S.sea?-99:vil.y,vil.z);
@@ -8138,31 +8277,32 @@ function frame(now){
         if(body&&!swim.on){body.scale.set(2-st*land,st*land,2-st*land);body.rotation.x=lerp(body.rotation.x,walk?0.1:poseLean,Math.min(1,dt*(walk?8:16)));}
         if(swim.on)swimPose(dt,tt,walk);}}
   }
-  wearPaths();
+  PL('move');wearPaths();
   updateBoat(dt,tt);
   if(S.sea){vil.hop=Math.max(0,vil.hop-dt);villager.position.set(vil.x,0.14+Math.sin(tt*1.5)*0.04+Math.sin(vil.hop/0.35*Math.PI)*0.3*(vil.hop>0),vil.z);if(!fishing)villager.rotation.y=S.boat.r;}
   if(introCam){introCam.t+=dt;const u=smooth(0,1,introCam.t/7);cam.dist=lerp(10,introCam.d,u);cam.pitch=lerp(0.22,introCam.p,u);cam.yaw=lerp(introCam.y-0.5,introCam.y,u);if(introCam.t>=7||drag||pinch)introCam=null;}
-  const k=paint?0:Math.min(1,dt*5);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;applyCam();cullIslands();updateNearGrass(dt); // hold the view still while drag-farming so tiles stay under the finger
+  const k=paint?0:Math.min(1,dt*5);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;PL('boat');applyCam();cullIslands();PL('cull');updateNearGrass(dt);PL('near'); // hold the view still while drag-farming so tiles stay under the finger
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
   fogW=lerp(fogW,wxNow()==='fog'&&!S.sea?1:0,Math.min(1,dt*0.6));scene.fog.near=Math.max(4,camD()+45-fogBoost*30-fogW*50);scene.fog.far=camD()+300-fogBoost*200-fogW*245;/* foggy days close the world in *//* a light haze: neighbouring islands stay green on the horizon */
-  updateSwim(dt,tt);updateReefLife(dt,tt);updateTerra(dt);/* after the fog, which it tints under water */
+  PL('timeTide');updateSwim(dt,tt);updateReefLife(dt,tt);updateTerra(dt);PL('swim');/* after the fog, which it tints under water */
   flushCrops();for(const {g} of cropMeshes.values())if(g.children.length)g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;
   updatePops(dt);updateFires(dt,tt);updateJournal(dt,tt);updatePitch(dt);updateTrader(dt,tt);updateSeaGuide(dt,tt);updateToolFx(dt);
+  PL('crops');
   // ripe crops twinkle now and then, so you can see what's ready
   for(const [k,{g,v,s}] of cropMeshes)if(s===3&&(!v||v==='normal')&&Math.random()<dt*0.12)sparkle(g.position.x,topY(Math.round(g.position.x),Math.round(g.position.z))+0.5,g.position.z,0xfffbe0);
   {let nr=0;for(const e of cropMeshes.values())if(e.s===3&&e.v&&e.v!=='normal')nr++;const pr=dt*1.6*Math.min(1,24/Math.max(1,nr)); // a field of rare crops glitters, but never more than a couple of dozen at once
   for(const {g,v,s} of cropMeshes.values())if(s===3&&v&&v!=='normal'&&Math.random()<pr)sparkle(g.position.x,0.8,g.position.z,v==='golden'?0xffe27a:v==='crystal'?0xbff4ff:v==='moonlit'?0xc8d4ff:0xffffff);}
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);
   for(const a of anims)a(tt,dt);
-  {let t0=performance.now();const lap=k=>{const t=performance.now();FRAME_STAT[k]=(FRAME_STAT[k]||0)*0.9+(t-t0)*0.1;t0=t;};/* smoothed per-system timings, read by DS.perf() */
+  PL('anims');{let t0=performance.now();const lap=k=>{const t=performance.now();FRAME_STAT[k]=(FRAME_STAT[k]||0)*0.9+(t-t0)*0.1;t0=t;};/* smoothed per-system timings, read by DS.perf() */
     updateLife(dt,tt);lap('life');updateAtmos(dt,tt);updateAmbience(dt,tt);lap('atmos');updateNPCs(dt,tt);lap('npcs');updateSeaLife(dt,tt);lap('sea');updateDebris(dt,tt);updateTool(dt);updateMuseumShow(dt,tt);updateLighthouse(dt,tt);lap('misc');}
   if(sprayT>0){sprayT-=dt;for(const o of S.objs)if(o.k==='sprinkler'&&Math.random()<0.8){const a=Math.random()*6.28;emit(o.x,topY(o.x,o.z)+0.4,o.z,{vx:Math.cos(a)*1.6,vy:1.6,vz:Math.sin(a)*1.6,life:0.6,max:0.6,size:0.05,color:0x9ad0ff,g:6});}}
   for(const c of clouds){const u=c.userData;u.ox+=dt*u.sp;const rx=((u.ox-cam.tx)%80+120)%80-40,rz=((u.oz-cam.tz)%80+120)%80-40;c.position.set(cam.tx+rx,11,cam.tz+rz);}
   const day=1-nightF;
   for(const g of gulls){const u=g.userData,a=tt*u.sp+u.ph;g.visible=day>0.3;g.position.set(cam.tx+Math.cos(a)*u.r,u.y+Math.sin(tt*0.7+u.ph)*0.3,cam.tz+Math.sin(a)*u.r*0.8);g.rotation.y=-a;g.rotation.z=0.25;
     const f=Math.sin(tt*7+u.ph)*0.5;u.wl.rotation.z=f;u.wr.rotation.z=-f;}
-  updateNpcBoat(dt,tt);
+  PL('systems');updateNpcBoat(dt,tt);
   _e.set(0,cam.yaw,0);_q.setFromEuler(_e);
   for(let i=0;i<GLINTS;i++){const g=glintData[i];const s=Math.pow(Math.max(0,Math.sin(tt*g.sp+g.ph)),6);const gx=cam.tx+((g.x-cam.tx)%70+105)%70-35,gz=cam.tz+((g.z-cam.tz)%70+105)%70-35;
     _m.compose(_v.set(gx,0.02,gz),_q,_s.set(s,1,s));glints.setMatrixAt(i,_m);}
@@ -8173,12 +8313,13 @@ function frame(now){
   if(rain.visible){const pa=rainGeo.attributes.position.array;for(let i=0;i<RAIN;i++){const r=rainData[i];r.y-=dt*16;r.x+=dt*2;if(r.y<0){r.y=12+Math.random()*2;r.x=cam.tx+(Math.random()-0.5)*30;r.z=cam.tz+(Math.random()-0.5)*30;}
     pa[i*6]=r.x;pa[i*6+1]=r.y;pa[i*6+2]=r.z;pa[i*6+3]=r.x-0.08;pa[i*6+4]=r.y+0.5;pa[i*6+5]=r.z;}rainGeo.attributes.position.needsUpdate=true;}
   if(cursorT>0){cursorT-=dt;cursor.visible=cursorT>0;cursor.position.y=(topY(Math.round(cursor.position.x),Math.round(cursor.position.z))||0.3)+0.1+Math.abs(Math.sin(tt*5))*0.04;}
-  updateParticles(dt);
+  PL('ambient');updateParticles(dt);PL('particles');
   hudT-=dt;if(hudT<=0){hudT=0.5;updateHUD();}
   tickShells(dt);
   saveT+=dt;if(saveT>5){saveT=0;save();}
-  const tLogic=performance.now();
-  updateSkyDome();uwSky();renderer.setRenderTarget(rt);if(inside){updateRoom(dt,tt);renderer.render(roomScene,roomCam);}else{renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.render(scene,camera);FRAME_STAT.calls=renderer.info.render.calls;FRAME_STAT.tris=renderer.info.render.triangles;renderer.autoClear=true;}FRAME_STAT.logic=tLogic-now;FRAME_STAT.render=performance.now()-tLogic;renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);
+  PL('hudSave');const tLogic=performance.now();
+  const shadowNow=!swim.noShadow&&(shadowFrame++&1)===0;
+  updateSkyDome();uwSky();renderer.setRenderTarget(rt);if(inside){updateRoom(dt,tt);renderer.shadowMap.needsUpdate=shadowNow;renderer.render(roomScene,roomCam);}else{renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.shadowMap.needsUpdate=shadowNow;/* (set just before the scene, or the sky pass would use it up) */renderer.render(scene,camera);FRAME_STAT.calls=renderer.info.render.calls;FRAME_STAT.tris=renderer.info.render.triangles;renderer.autoClear=true;}FRAME_STAT.logic=tLogic-now;FRAME_STAT.render=performance.now()-tLogic;renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);
   requestAnimationFrame(frame);
 }
 
@@ -8251,7 +8392,7 @@ if(/[?&]debug\b/.test(location.search)){
     islands:()=>islands.map(i=>({id:i.id,biome:i.biome,name:i.name,x:i.cx,z:i.cz,r:Math.round(islR(i)),grand:!!i.grand,river:(i.rtiles||[]).length})),
     screen:(x,z)=>toScreen(x,topY(x,z),z),
     npcScreen:i=>{const n=npcs[i];return toScreen(n.x,n.y+0.5,n.z);},
-    freeRow:(len=5)=>{for(const [x,z] of tileKeys()){let ok=true;for(let i=0;i<len&&ok;i++){const k=K(x+i,z);ok=canTill(x+i,z)&&farmQ(x+i,z)>1.3&&(lvlMap.get(k)||0)===(lvlMap.get(K(x,z))||0)&&!TOWN.bld.some(b=>Math.abs(b.x+0.5-(x+i))<4&&Math.abs(b.z+1-z)<4)&&!(S.boat&&Math.hypot(S.boat.x-(x+i),S.boat.z-z)<7);}if(ok)return[x,z];}return null;},
+    potGarden:()=>{const ks=POT_PLANTS.map(q=>'pot_'+q[0]),at=DS.freeRow(5);if(!at)return null;let i=0;for(let dz=0;dz<4&&i<ks.length;dz++)for(let dx=0;dx<5&&i<ks.length;dx++){const x=at[0]+dx,z=at[1]-dz;if(objAt(x,z))continue;S.objs.push({id:S.nextId++,k:ks[i++],x,z,r:0});}syncObjs();return at;},freeRow:(len=5)=>{for(const [x,z] of tileKeys()){let ok=true;for(let i=0;i<len&&ok;i++){const k=K(x+i,z);ok=canTill(x+i,z)&&farmQ(x+i,z)>1.3&&(lvlMap.get(k)||0)===(lvlMap.get(K(x,z))||0)&&!TOWN.bld.some(b=>Math.abs(b.x+0.5-(x+i))<4&&Math.abs(b.z+1-z)<4)&&!(S.boat&&Math.hypot(S.boat.x-(x+i),S.boat.z-z)<7);}if(ok)return[x,z];}return null;},
     give:(items)=>{Object.assign(S.inv,items||{'m:wood':14,'m:stone':11,'m:fiber':9,'g:shell':4,'f:sardine':2,'tomato|normal':3,'tomato|golden':1});updateHUD();},
     craft:i=>craft(i),sheet:(k,tab)=>openSheet(k,tab),closeSheet:()=>closeSheet(),
     enterHome:()=>enterHouse('home'),enterNpc:i=>{const n=npcs[i];enterHouse('vh',n.b,n);},leave:()=>leaveHouse(),
@@ -8290,7 +8431,7 @@ if(/[?&]debug\b/.test(location.search)){
     critters:()=>{const o={};for(const c of critters){o[c.k]=(o[c.k]||0)+1;if(!isFinite(c.g.position.x+c.g.position.y+c.g.rotation.x+c.g.rotation.y))o.bad=(o.bad||0)+1;}return o;},spawnCritter:k=>spawnCritter(k),vilAt:()=>[vil.x,vil.z],critClear:()=>{for(let i=critters.length-1;i>=0;i--)dropCritter(i);},walkTest:()=>{const t=S.debris.filter(d=>d.k==='tree').sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];if(!t)return null;vil.x=vil.tx=t.x-2;vil.z=vil.tz=t.z;vil.path=null;goTo(t.x+2,t.z);return [t.x,t.z];},vilPos:()=>[vil.x,vil.z,vil.tx,vil.tz,vil.path&&vil.path.length],solidAt:(x,z)=>solidR(x,z),setShells:n=>{S.shells=n;updateHUD();},terraTest:(mode,x,z)=>{const t0=performance.now();const sh=S.shells;terraApply([[x,z]],mode);return{ms:Math.round(performance.now()-t0),lvl:lvlMap.get(K(x,z))||0,type:landMap.get(K(x,z)),paid:sh-S.shells,terra:S.terra&&S.terra[K(x,z)]};},
     terraPlan:(mode,x,z)=>terraPlan(x,z,mode),coastGrass:()=>{const isl=islands[0];return isl.grass.filter(([x,z])=>!(lvlMap.get(K(x,z)))&&freeTile(x,z)&&!TOWN.path.has(K(x,z))&&[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>isSeaT(landMap.get(K(x+a,z+b))))).sort((a,b)=>Math.hypot(a[0]-vil.x,a[1]-vil.z)-Math.hypot(b[0]-vil.x,b[1]-vil.z))[0]||null;},
     freeGrass:()=>{const isl=islands[0];return isl.grass.filter(([x,z])=>freeTile(x,z)&&!S.tiles[K(x,z)]).sort((a,b)=>Math.hypot(a[0]-vil.x,a[1]-vil.z)-Math.hypot(b[0]-vil.x,b[1]-vil.z))[1]||null;},
-    swimRec:on=>{if(on){swim.rec=[];return 0;}const r=swim.rec;swim.rec=null;return r;},reefMs:()=>{const t=performance.now(),g=reefGen();let mx=0,n=0;for(;;){const a=performance.now(),r=g.next();mx=Math.max(mx,performance.now()-a);(window.__st=window.__st||[]).push(Math.round(performance.now()-a));n++;if(r.done)break;}const st=window.__st;window.__st=null;return{total:Math.round(performance.now()-t),longestStep:Math.round(mx),steps:n,st:st.join(" ")};},swimSpot:()=>{if(!reef||reefDirty)buildReef();const isl=islands[0];let best=null,bd=1e9;for(const [x,z] of isl.sand){if(Math.abs(x-DOCK.x)<4&&Math.abs(z-DOCK.z)<9)continue;for(const [dx,dz] of [[0,1],[1,0],[-1,0],[0,-1]]){const tx=x+dx*5,tz=z+dz*5;if(!swimmable(tx,tz)||!canDive(tx,tz)||isLand(x+dx,z+dz))continue;const sc=Math.abs(x-DOCK.x)+Math.abs(z-DOCK.z);if(sc<bd){bd=sc;best=[x,z,tx,tz];}}}return best;},
+    swimRec:on=>{if(on){swim.rec=[];return 0;}const r=swim.rec;swim.rec=null;return r;},sceneToon:()=>{const out={};for(const o of scene.children){if(!o.visible)continue;let n=0;o.traverseVisible(q=>{if(q.isMesh)n++;});if(!n)continue;const nm=o===debrisRoot?'debris':o===lifeRoot?'life':o===objRoot?'objs':o===cropRoot?'crops':(typeof cropRoot!=='undefined'&&o===cropRoot)?'crops':o===villager?'player':islands.some(i=>i.group===o)?'isl'+islands.findIndex(i=>i.group===o):npcs.some(q=>q.g===o)?'npc':'';const k=nm+(o.name||o.type)+(o.isGroup?'['+o.children.length+']':'')+':'+(o.material?o.material.type:'')+(o.geometry?'/'+(o.geometry.type):'');out[k]=(out[k]||0)+n;}return Object.entries(out).sort((a,b)=>b[1]-a[1]).slice(0,25);},plantThumbs:(size=160)=>POT_PLANTS.map(([k,n])=>[n,snapThumb(objGroup('pot_'+k,3,0),size)]),instList:()=>{const out=[];islands[0].group.traverseVisible(o=>{if(!o.isInstancedMesh)return;const g=o.geometry,n=(g.index?g.index.count:g.attributes.position.count)/3;out.push([o.material.type+(o===islands[0].gIM?'(grass)':FLORA_GEOS.includes(o.geometry)?'(flora'+FLORA_GEOS.indexOf(o.geometry)+')':FLORA_LO.includes(o.geometry)?'(floraLo)':o.geometry===CLOVER_GEO?'(clover)':o.geometry===PEBBLE_GEO?'(pebble)':''),Math.round(n),o.count,Math.round(n*o.count)]);});return out.sort((a,b)=>b[3]-a[3]).slice(0,12);},reefMs:()=>{const t=performance.now(),g=reefGen();let mx=0,n=0;for(;;){const a=performance.now(),r=g.next();mx=Math.max(mx,performance.now()-a);(window.__st=window.__st||[]).push(Math.round(performance.now()-a));n++;if(r.done)break;}const st=window.__st;window.__st=null;return{total:Math.round(performance.now()-t),longestStep:Math.round(mx),steps:n,st:st.join(" ")};},swimSpot:()=>{if(!reef||reefDirty)buildReef();const isl=islands[0];let best=null,bd=1e9;for(const [x,z] of isl.sand){if(Math.abs(x-DOCK.x)<4&&Math.abs(z-DOCK.z)<9)continue;for(const [dx,dz] of [[0,1],[1,0],[-1,0],[0,-1]]){const tx=x+dx*5,tz=z+dz*5;if(!swimmable(tx,tz)||!canDive(tx,tz)||isLand(x+dx,z+dz))continue;const sc=Math.abs(x-DOCK.x)+Math.abs(z-DOCK.z);if(sc<bd){bd=sc;best=[x,z,tx,tz];}}}return best;},
     swimState:()=>({under:!!swim.under,look:+(swim.look||0).toFixed(2),on:swim.on,depth:+swim.depth.toFixed(2),breath:+swim.breath.toFixed(2),uw:+swim.uw.toFixed(2),y:+vil.y.toFixed(2),x:+vil.x.toFixed(2),z:+vil.z.toFixed(2),reefD:+reefD(vil.x,vil.z).toFixed(2),R:+reefR().toFixed(2),life:seaLife.map(c=>c.k),tide:+tideK().toFixed(2),canDive:canDive(vil.x,vil.z)}),
     dive:on=>{if(on){if(divePress()){swim.hold=true;swim.up=false;}}else swim.hold=false;},rise:()=>surfaceNow(),swimTo:(x,z)=>swimTo(x,z),setBreath:b=>{swim.breath=b;},
     seaSpawn:(k,fw=2,rt=0,up=0.2)=>{const E=SEA[k],g=seaModel(k);scene.add(g);const sy=Math.sin(cam.yaw),cy=Math.cos(cam.yaw),x=vil.x-sy*fw+cy*rt,z=vil.z-cy*fw-sy*rt,y=E.zone==='floor'?seabedY(x,z)+0.04:vil.y+up;const c={k,E,g,cx:x,cz:z,x,z,y,y0:y,sc:SEA_TIERS[E.tier].sc,rad:0.3,ang:0,dir:1,sp:0.05,ph:0,t:5,out:0,life:999};seaLife.push(c);return seaLife.length;},

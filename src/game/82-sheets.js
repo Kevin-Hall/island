@@ -71,10 +71,10 @@ function renderSheet(){
     h+=`<div class="sellall"><button class="pbtn go" data-tsell="1">Sell to ${TRADER.name}</button></div><p class="note">Today's stock. It changes every morning.</p><div class="grid">`;
     for(const q of traderStock()){const I=stockInfo(q);h+=`<button class="card ${q.sold?'lock':''}" data-tbuy="${q.i}" ${q.sold?'disabled':''}><img class="px" src="${I.icon}" alt=""><span class="grow"><span class="nm">${I.name}</span><br><span class="sub">${q.sold?'Sold out today':I.desc}</span></span><span class="price">${q.sold?'':sh(q.price)}</span></button>`;}
     h+='</div>';}
-  else if(sheet.kind==='shop'){$('sheetTitle').textContent='Shop';tabs([['decor','Decor'],['island','Island']]);
+  else if(sheet.kind==='shop'){$('sheetTitle').textContent='Shop';tabs([['decor','Decor'],['plants','Plants'],['island','Island']]);
     if(!built('shop'))h+=`<p class="note">${S.scratch?'You don\'t have a store yet. It comes as a kit when your Island Heart reaches <b>level 3</b>, and you choose where to build it.':'The general store opens when your Island Heart reaches <b>level 3</b>.'} Until then, drop things off at the <b>outpost by the dock</b> to sell them, and buy seeds from the Seeds tool.</p>`;
-    else if(sheet.tab==='decor'){h+=`<p class="note">Buy something, then tap where it should go on your home island.</p><div class="sellall"><button class="pbtn go" data-sellshop="1">Sell things</button><button class="pbtn" data-edit="1">Move or store decor</button></div><div class="grid">`;
-      for(const k in BUILD){const B=BUILD[k],lock=B.lvl>lv,n=S.store[k]||0;if(B.craft)continue;
+    else if(sheet.tab==='decor'||sheet.tab==='plants'){const pl=sheet.tab==='plants';h+=`<p class="note">${pl?'Potted plants for your porch, garden and paths. Buy one, then tap where it should go.':'Buy something, then tap where it should go on your home island.'}</p><div class="sellall"><button class="pbtn go" data-sellshop="1">Sell things</button><button class="pbtn" data-edit="1">Move or store decor</button></div><div class="grid">`;
+      for(const k in BUILD){const B=BUILD[k],lock=B.lvl>lv,n=S.store[k]||0;if(B.craft||!!B.plant!==pl)continue;
         h+=`<button class="card ${lock?'lock':''}" data-buy="${k}" ${lock?'disabled':''}><img class="px" src="${THUMB[k]||''}" alt=""><span class="grow"><span class="nm">${B.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+B.lvl:(n?`${n} in storage — tap to place`:B.desc)}</span></span><span class="price">${n?'':sh(B.cost)}</span></button>`;}
       h+='</div>';}
     else{const L=null,HU=HOUSE_UP[S.house];
