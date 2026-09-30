@@ -33,7 +33,7 @@ function updateLife(dt,tt){
   for(const f of S.finds)if(Math.random()<dt*0.4&&Math.abs(f.x-vil.x)<30&&Math.abs(f.z-vil.z)<30)sparkle(f.x,topY(f.x,f.z)+0.15,f.z,0xf4f8ff);
   slowT-=dt;if(slowT<=0){slowT=0.5;
     const ep=plantEpoch();
-    for(const i of islands){if(i.home)continue;const d=Math.hypot(i.cx-cam.tx,i.cz-cam.tz);const vis=d<120;i.group.visible=vis;
+    for(const i of islands){if(i.home||!i.group)continue;const d=Math.hypot(i.cx-cam.tx,i.cz-cam.tz);const vis=d<120;i.group.visible=vis;
       if(vis&&d<70){if(!i.pgroup||i.pEpoch!==ep)syncPlants(i);}else if(i.pgroup&&d>90){scene.remove(i.pgroup);i.pgroup.traverse(o=>{if(o.geometry)o.geometry.dispose();});i.pgroup=null;}}
     checkDiscovery();const ci=curIsl();if((ci?ci.id:-1)!==ffIsl)placeFireflies(ci);}
   for(const i of islands){if(!i.pgroup)continue;for(const m of i.pgroup.children){const Pd=PLANTS[m.userData.plant.id];if(Pd.w<5&&Math.random()<dt*1.2)sparkle(m.position.x,0.8,m.position.z,0xfff0a0);}

@@ -24,7 +24,7 @@ function applyTime(){
   const dip=smooth(0,0.5,Math.abs(h-5.5))*smooth(0,0.5,Math.abs(h-19.25));
   sun.intensity=lerp(A.si,B.si,t)*(1-rm*0.55)*(0.25+0.75*dip);
   lerpCol(waterMat.color,'water',A,B,t,rm);lerpCol(s1Mat.color,'s1',A,B,t,rm);lerpCol(s2Mat.color,'s2',A,B,t,rm);lerpCol(glintMat.color,'gl',A,B,t);
-  lerpCol(skyHz,'hz',A,B,t,rm);lerpCol(skyZen,'zen',A,B,t,rm);lerpCol(skyGlow,'glow',A,B,t);skyGA=lerp(A.ga,B.ga,t)*(1-rm*0.8);scene.fog.color.copy(skyHz);
+  lerpCol(skyHz,'hz',A,B,t,rm);lerpCol(skyZen,'zen',A,B,t,rm);lerpCol(skyGlow,'glow',A,B,t);frTint();skyGA=lerp(A.ga,B.ga,t)*(1-rm*0.8);scene.fog.color.copy(skyHz);
   nightF=lerp(A.n,B.n,t);
   let tt;if(h>=5.5&&h<19.25)tt=(h-5.5)/13.75;else tt=((h-19.25+24)%24)/10.25;
   const az=lerp(-1.25,1.25,tt)+0.6,el=0.28+Math.sin(tt*Math.PI)*0.62; // the sun never climbs too high, so shadows stay long and soft

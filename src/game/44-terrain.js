@@ -20,7 +20,7 @@ function cullIslands(){const view=cam.dist+110;for(const isl of islands){const b
     if(isl.group)isl.group.visible=vis;if(isl.pgroup)isl.pgroup.visible=vis&&cam.dist+Math.max(0,d)<60;
     // level of detail for trees: light meshes when the island is far away or you're zoomed well out (with a little hysteresis)
     const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>56:far>61,lv=low?(far>(isl.vegLv===2?92:100)?2:1):0;/* 0 full, 1 light, 2 horizon */
-    if(isl.veg&&lv!==isl.vegLv){isl.vegLv=lv;for(const [hi,lo,fa] of isl.veg){hi.visible=lv===0;if(lo)lo.visible=lv===1||lv===2&&!fa;if(fa)fa.visible=lv===2;}
+    if(isl.veg&&lv!==isl.vegLv){isl.vegLv=lv;for(const e of isl.veg){if(!e[0]&&(lv<2||!e[2]))vegReal(isl,e);const [hi,lo,fa]=e;if(!hi){if(fa)fa.visible=true;continue;}hi.visible=lv===0;if(lo)lo.visible=lv===1||lv===2&&!fa;if(fa)fa.visible=lv===2;}
       if(isl.tMesh)for(const k of ['underG','underS'])if(isl.tMesh[k])isl.tMesh[k].visible=lv<2;/* the little corner notches vanish on the horizon */
       if(isl.riverG)isl.riverG.children.forEach((o,i)=>{if(i>1)o.visible=lv<2;});/* keep the river's bed and water, drop its pebbles, reeds and lilies */}
     if(isl.veg&&low!==isl.lowOn)isl.lowOn=low;
@@ -65,7 +65,7 @@ function shapeBeach(isl){const d=new Map(),H=[0.03,0.17,TOP.sand,TOP.sand];let q
   for(const [x,z] of isl.sand)SAND_CH.set(K(x,z),CORNERS.map(([sx,sz])=>H[Math.min(dOf(x,z),dOf(x+sx,z),dOf(x,z+sz),dOf(x+sx,z+sz))]));}
 // a wild home island's ground follows its zones: a darker, mossy floor under the woods, and brighter, sunnier grass in the
 // flower meadows (both blend in softly at the edges)
-function zoneGround(isl,x,z,col){if(!isl.home||!S.wild||S.home&&S.home.preset)return col;const fa=(S.home&&S.home.wild)||0.5,th=0.8-fa*0.25;
+function zoneGround(isl,x,z,col){if(isl.fr)return frHue(isl,x,z,col);if(!isl.home||!S.wild||S.home&&S.home.preset)return col;const fa=(S.home&&S.home.wild)||0.5,th=0.8-fa*0.25;
   const f=clamp((wildForest(x,z)-(th-0.14))/0.18,0,1),m=clamp((wildMeadow(x,z)-0.55)/0.1,0,1)*(1-f);
   _gc1.setHex(col);if(f>0)_gc1.lerp(_gc2.setHex(col).multiply(_a.setRGB(0.68,0.8,0.66)),f);if(m>0)_gc1.lerp(_gc2.setHex(col).multiply(_a.setRGB(1.1,1.08,0.9)),m*0.7);return _gc1.getHex();}
 // the ground of an island: grass tiles are a grassy slab on a dirt or rock cliff, like the tiers of Wild World; sand
@@ -167,7 +167,7 @@ function buildIsland(isl){
       isl.vent=[isl.cx,3,isl.cz];
     }
     pickHeart(isl,blocked);/* the withered heart tree (79-voyage) */
-    const gr=shuffle(isl.grass.slice(),R),n=Math.round(gr.length*(isl.grand?0.08:0.15));
+    const gr=shuffle(isl.grass.slice(),R),n=B.trees&&B.trees.length?Math.round(gr.length*(isl.grand?0.08:0.15)*(B.td??1)):0;
     let placed=0;for(const [x,z] of gr){if(placed>=n)break;if(blocked.has(K(x,z)))continue;
       tp.push(...shift(treeParts(B.trees[Math.floor(R()*B.trees.length)],R,B.rock),x+(R()-0.5)*0.3,topY(x,z),z+(R()-0.5)*0.3,R()*6.28));blocked.add(K(x,z));placed++;}
     const sa=shuffle(isl.sand.slice(),R);for(let i=0;i<Math.min(4,sa.length);i++){const [x,z]=sa[i];parts.push(...shift(treeParts(isl.biome==='swamp'?'reeds':'rock',R,B.rock),x,topY(x,z),z,R()*6));blocked.add(K(x,z));}
@@ -176,6 +176,7 @@ function buildIsland(isl){
         tp.push(...shift(treeParts(PALMS[Math.floor(R()*PALMS.length)],R,B.rock),x+(R()-0.5)*0.2,topY(x,z),z+(R()-0.5)*0.2,R()*6.28));blocked.add(K(x,z));}}
     if(parts.length)g.add(M(parts));addVeg(isl,g,tp);
     if(glowParts.length){const m=M(glowParts,lumMat);m.castShadow=false;g.add(m);}
+    if(isl.style)frDeco(isl,g,blocked);/* the frontier's strange decor (44b) */
     buildHeart(isl);
     isl.spots=gr.filter(([x,z])=>!blocked.has(K(x,z))).slice(0,Math.max(5,Math.min(isl.grand?30:18,Math.round(gr.length*0.18))));
   }
@@ -185,7 +186,7 @@ function buildIsland(isl){
   if(!isl.home&&B.tuft){const pts=[];for(const [x,z] of isl.grass){if(blocked.has(K(x,z)))continue;const h=hash(x*3.1,z*1.7);if(h<0.45){pts.push([x+(hash(z,x*2)-0.5)*0.7,topY(x,z),z+(hash(x+5,z)-0.5)*0.7]);if(h<0.15)pts.push([x+(hash(z*3,x)-0.5)*0.7,topY(x,z),z+(hash(x,z*7)-0.5)*0.7]);}}
     if(pts.length){const im=new T.InstancedMesh(TUFT_GEO,grassMat,pts.length);pts.forEach(([x,y,z],i)=>{_e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x,y,z),_q,_s.set(1,0.8+hash(z,x)*0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.set(B.tuft));});
       im.frustumCulled=false;im.receiveShadow=true;im.renderOrder=3;g.add(im);}}
-  scene.add(g);islandBounds(isl);rebuildLandList();
+  scene.add(g);islandBounds(isl);if(isl.fr)frLandAdd(isl);else rebuildLandList();
 }
 function islandAt(x,z){const id=islMap.get(K(Math.round(x),Math.round(z)));return id===undefined?null:islands[id];}
 function curIsl(){if(S.sea)return null;return islandAt(vil.x,vil.z);}

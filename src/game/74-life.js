@@ -148,7 +148,7 @@ function openBottle(){SFX.rare();const lv=level(),r=Math.random();let msg;
   else if(r<0.72){S.free.mystery=(S.free.mystery||0)+1;msg=`“Plant this under a full moon.” Inside: <b>a Mystery Seed</b>.`;}
   else if(r<0.85){gain('g:pearl');msg=`“The sea gave me two. One is yours.” Inside: <b>a Pearl</b>!`;}
   else{const und=islands.filter(i=>!S.disc[i.id]);if(und.length){const isl=und.sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z))[0];S.disc[isl.id]=1;
-      msg=`A torn sea chart! It marks <b>${isl.name}</b>, a ${BIOMES[isl.biome].name.toLowerCase()} island. It's on your Chart now.`;}
+      msg=`A torn sea chart! It marks <b>${isl.name}</b>, a ${islKind(isl).toLowerCase()} island. It's on your Chart now.`;}
     else{const n=200+lv*80;S.shells+=n;msg=`An old captain's log and <b>${fmt(n)} shells</b>.`;}}
   setAction(msg,[{label:'Keep it',cls:'go',fn:clearAction}],'Message in a Bottle');}
 

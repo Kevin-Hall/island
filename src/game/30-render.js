@@ -165,22 +165,26 @@ function P(geo,color,x=0,y=0,z=0,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1){return{geo,color
 // like P, but shaded from cBot (local bottom) to cTop (local top) — used for leaf cards
 function PG(geo,cTop,cBot,...rest){return Object.assign(P(geo,cTop,...rest),{c2:cBot});}
 function shift(parts,x,y,z,ry=0){const c=Math.cos(ry),s=Math.sin(ry);return parts.map(p=>Object.assign({},p,{x:x+p.x*c+p.z*s,y:y+p.y,z:z-p.x*s+p.z*c,ry:p.ry+ry}));}
+// each source shape is prepared once (flattened to plain triangles, normals worked out, heights for gradient parts), then
+// every part is transformed straight into the output arrays: no per-part geometry clones
+const _mergePrep=new WeakMap(),_nm3=new T.Matrix3();
+function mergePrep(g0){let r=_mergePrep.get(g0);if(r)return r;const g=g0.index?g0.toNonIndexed():g0.clone();if(!g0.userData.smooth)g.computeVertexNormals();
+  const pos=g.attributes.position.array,n=pos.length/3,ys=new Float32Array(n);let y0=1e9,y1=-1e9;for(let i=0;i<n;i++){const y=pos[i*3+1];ys[i]=y;if(y<y0)y0=y;if(y>y1)y1=y;}for(let i=0;i<n;i++)ys[i]=(ys[i]-y0)/((y1-y0)||1);
+  r={pos:Float32Array.from(pos),nor:Float32Array.from(g.attributes.normal.array),ys,n};g.dispose();_mergePrep.set(g0,r);return r;}
 function merge(parts){
-  const gs=[];let total=0;
-  for(const p of parts){
-    const g0=lodGeo(p),g=g0.index?g0.toNonIndexed():g0.clone();
-    if(!g0.userData.smooth)g.computeVertexNormals();
-    let ys=null;if(p.c2!==undefined){const a=g.attributes.position.array;ys=new Float32Array(a.length/3);let y0=1e9,y1=-1e9;for(let i=0;i<ys.length;i++){ys[i]=a[i*3+1];y0=Math.min(y0,ys[i]);y1=Math.max(y1,ys[i]);}for(let i=0;i<ys.length;i++)ys[i]=(ys[i]-y0)/((y1-y0)||1);}
-    _e.set(p.rx,p.ry,p.rz,'YXZ');_q.setFromEuler(_e);_v.set(p.x,p.y,p.z);_s.set(p.sx,p.sy,p.sz);_m.compose(_v,_q,_s);
-    g.applyMatrix4(_m);gs.push([g,p.color,ys,p.c2]);total+=g.attributes.position.count;
-  }
+  const preps=new Array(parts.length);let total=0;
+  for(let k=0;k<parts.length;k++){const r=mergePrep(lodGeo(parts[k]));preps[k]=r;total+=r.n;}
   const pos=new Float32Array(total*3),nor=new Float32Array(total*3),col=new Float32Array(total*3);let o=0;
   const cB=new T.Color();
-  for(const [g,color,ys,c2] of gs){
-    pos.set(g.attributes.position.array,o*3);nor.set(g.attributes.normal.array,o*3);_c.set(color);if(ys)cB.set(c2);
-    const n=g.attributes.position.count;for(let i=0;i<n;i++){if(ys){const t=ys[i];col[(o+i)*3]=cB.r+(_c.r-cB.r)*t;col[(o+i)*3+1]=cB.g+(_c.g-cB.g)*t;col[(o+i)*3+2]=cB.b+(_c.b-cB.b)*t;}else{col[(o+i)*3]=_c.r;col[(o+i)*3+1]=_c.g;col[(o+i)*3+2]=_c.b;}}
-    o+=n;g.dispose();
-  }
+  for(let k=0;k<parts.length;k++){const p=parts[k],r=preps[k],n=r.n,P0=r.pos,N0=r.nor;
+    _e.set(p.rx,p.ry,p.rz,'YXZ');_q.setFromEuler(_e);_v.set(p.x,p.y,p.z);_s.set(p.sx,p.sy,p.sz);_m.compose(_v,_q,_s);_nm3.getNormalMatrix(_m);
+    const e=_m.elements,q=_nm3.elements;_c.set(p.color);const grad=p.c2!==undefined;if(grad)cB.set(p.c2);
+    for(let i=0;i<n;i++){const i3=i*3,x=P0[i3],y=P0[i3+1],z=P0[i3+2],j=(o+i)*3;
+      pos[j]=e[0]*x+e[4]*y+e[8]*z+e[12];pos[j+1]=e[1]*x+e[5]*y+e[9]*z+e[13];pos[j+2]=e[2]*x+e[6]*y+e[10]*z+e[14];
+      const nx=N0[i3],ny=N0[i3+1],nz=N0[i3+2];let a=q[0]*nx+q[3]*ny+q[6]*nz,b=q[1]*nx+q[4]*ny+q[7]*nz,c=q[2]*nx+q[5]*ny+q[8]*nz;const l=Math.hypot(a,b,c)||1;
+      nor[j]=a/l;nor[j+1]=b/l;nor[j+2]=c/l;
+      if(grad){const t=r.ys[i];col[j]=cB.r+(_c.r-cB.r)*t;col[j+1]=cB.g+(_c.g-cB.g)*t;col[j+2]=cB.b+(_c.b-cB.b)*t;}else{col[j]=_c.r;col[j+1]=_c.g;col[j+2]=_c.b;}}
+    o+=n;}
   const out=new T.BufferGeometry();
   out.setAttribute('position',new T.BufferAttribute(pos,3));out.setAttribute('normal',new T.BufferAttribute(nor,3));
   out.setAttribute('color',new T.BufferAttribute(col,3));out.computeBoundingSphere();out.computeBoundingBox();return out;
@@ -248,17 +252,19 @@ const s1Mat=new T.MeshBasicMaterial({color:0x7ea6e8}),s2Mat=new T.MeshBasicMater
 // (the pixel pass turns them into little painted wave marks)
 // how far each patch of sea is from the nearest shore, one texel per tile (built from landMap by buildDepthTex): the
 // water shader uses it to fade from pale aqua at the sand, through turquoise, to deep blue, with a ragged pixel edge
-const DEPTH_N=400,DEPTH_X0=-200;let depthDirty=true;
+const DEPTH_N=400,DEPTH_X0=-200;let depthDirty=true,depthX0=DEPTH_X0,depthZ0=DEPTH_X0;/* the window follows you out to the frontier (depthFollow) */
 const depthTex=new T.DataTexture(new Uint8Array([255,255,255,255]),1,1,T.RGBAFormat);depthTex.needsUpdate=true;
 const waterU={uCam:{value:new T.Vector3()},uSky:{value:skyHz},uZen:{value:skyZen},uSunD:{value:new T.Vector3(0,1,0)},uGl:{value:1},uT:{value:0},uYaw:{value:0},uDepth:{value:depthTex},uDB:{value:new T.Vector3(DEPTH_X0,DEPTH_X0,1)},uS1:{value:s1Mat.color},uS2:{value:s2Mat.color}};
 function buildDepthTex(){depthDirty=false;const N=DEPTH_N,d=new Float32Array(N*N).fill(99);
-  for(const [k,t] of landMap){if(t!=='grass'&&t!=='sand'&&t!=='river'&&t!=='bridge')continue;const [x,z]=k.split(',').map(Number),i=x-DEPTH_X0,j=z-DEPTH_X0;if(i>=0&&j>=0&&i<N&&j<N)d[j*N+i]=0;}
+  for(const L of [landList,riverList])for(const q of L){const i=q[0]-depthX0,j=q[1]-depthZ0;if(i>=0&&j>=0&&i<N&&j<N)d[j*N+i]=0;}/* (land and rivers, 40-world) */
   // two-pass chamfer distance (rounder than steps along the grid)
   const D=1.414;for(let j=0;j<N;j++)for(let i=0;i<N;i++){let v=d[j*N+i];if(i)v=Math.min(v,d[j*N+i-1]+1);if(j){v=Math.min(v,d[(j-1)*N+i]+1);if(i)v=Math.min(v,d[(j-1)*N+i-1]+D);if(i<N-1)v=Math.min(v,d[(j-1)*N+i+1]+D);}d[j*N+i]=v;}
   for(let j=N-1;j>=0;j--)for(let i=N-1;i>=0;i--){let v=d[j*N+i];if(i<N-1)v=Math.min(v,d[j*N+i+1]+1);if(j<N-1){v=Math.min(v,d[(j+1)*N+i]+1);if(i<N-1)v=Math.min(v,d[(j+1)*N+i+1]+D);if(i)v=Math.min(v,d[(j+1)*N+i-1]+D);}d[j*N+i]=v;}
   const px=new Uint8Array(N*N*4);for(let i=0;i<N*N;i++){const v=Math.min(255,Math.round(d[i]*40));px[i*4]=px[i*4+1]=px[i*4+2]=v;px[i*4+3]=255;}
   const t=new T.DataTexture(px,N,N,T.RGBAFormat);t.magFilter=t.minFilter=T.LinearFilter;t.needsUpdate=true;
-  if(waterU.uDepth.value!==depthTex)waterU.uDepth.value.dispose();waterU.uDepth.value=t;waterU.uDB.value.set(DEPTH_X0,DEPTH_X0,N);}
+  if(waterU.uDepth.value!==depthTex)waterU.uDepth.value.dispose();waterU.uDepth.value=t;waterU.uDB.value.set(depthX0,depthZ0,N);}
+function depthFollow(){const cx=depthX0+DEPTH_N/2,cz=depthZ0+DEPTH_N/2;if(Math.abs(cam.tx-cx)<110&&Math.abs(cam.tz-cz)<110)return;
+  depthX0=Math.round(cam.tx/40)*40-DEPTH_N/2;depthZ0=Math.round(cam.tz/40)*40-DEPTH_N/2;if(Math.abs(depthX0-DEPTH_X0)<60&&Math.abs(depthZ0-DEPTH_X0)<60)depthX0=depthZ0=DEPTH_X0;depthDirty=true;}
 waterMat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,waterU);
   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
   sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;uniform vec3 uCam;uniform vec3 uSky;uniform vec3 uZen;uniform vec3 uSunD;uniform float uGl;uniform sampler2D uDepth;uniform vec3 uDB;uniform vec3 uS1;uniform vec3 uS2;')

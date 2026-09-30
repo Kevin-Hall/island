@@ -112,14 +112,14 @@ function renderSheet(){
         h+=`<div class="card"><img class="px ${n?'':'sil'}" src="${ICON[key]}" alt=""><span class="grow"><span class="nm">${n?I.name:'???'}</span><br><span class="sub">${pre==='s:'?SEA_TIERS[I.tier].n+' · ':I.w?rarity(I.w)+' · ':''}${whereStr(I,key)}${n&&I.price?' · '+fmt(I.price)+' shells':''}${pre==='f:'&&S.rec[id]?` · best ${S.rec[id]} kg`:''}</span></span>${n?`<span class="price">×${n}</span>`:''}</div>`;}
       h+='</div>';}}
   else if(sheet.kind==='chart'){$('sheetTitle').textContent='Sea Chart';tabs([]);
-    const disc=islands.filter(i=>S.disc[i.id]);
+    const disc=islands.filter(i=>S.disc[i.id]).sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z)).slice(0,40);/* the nearest, once the frontier has given you hundreds */
     h+=`<canvas id="chart" width="320" height="320"></canvas><p class="note">Tap an island you've found to travel there instantly. To discover new ones, sail out and tap the sea. Question marks are rumours of islands you haven't found yet: set sail for one and the markers at the edge of the screen will guide you.</p><div class="isles">`;
     {const und=islands.filter(i=>!S.disc[i.id]).sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z)).slice(0,3),dirs=['north','north-east','east','south-east','south','south-west','west','north-west'];
       for(const i of und){const d=Math.round(Math.hypot(i.cx-vil.x,i.cz-vil.z)),a=Math.atan2(i.cx-vil.x,-(i.cz-vil.z)),dir=dirs[((Math.round(a/(Math.PI/4))%8)+8)%8];
         h+=`<button class="card rumour" data-rumour="${i.id}"><img class="px" src="${ICON.chart}" alt=""><span class="grow"><span class="nm">Uncharted island</span><br><span class="sub">A rumour · about ${Math.round(d/10)*10} leagues ${dir}</span></span><span class="price">${unlocked('boat')?'Set sail':'Lv 4'}</span></button>`;}}
     for(const isl of disc){const d=Math.round(Math.hypot(isl.cx-vil.x,isl.cz-vil.z));const bio=isl.biome;
       let got=0,tot=0;if(!isl.home){for(const k in PLANTS)if(PLANTS[k].bio.includes(bio)){tot++;if(S.alm['p:'+k])got++;}for(const k in BUGS)if(BUGS[k].bio.includes(bio)){tot++;if(S.alm['b:'+k])got++;}}
-      h+=`<button class="card" data-isle="${isl.id}"><img class="px" src="${isl.home?ICON.sprout:ICON.chart}" alt=""><span class="grow"><span class="nm">${isl.name}</span><br><span class="sub">${isl.home?'Your island':BIOMES[bio].name+' island'} · ${d<4?'you are here':d+' leagues away'}${tot?` · ${got}/${tot} local plants & bugs`:''}</span></span></button>`;}
+      h+=`<button class="card" data-isle="${isl.id}"><img class="px" src="${isl.home?ICON.sprout:ICON.chart}" alt=""><span class="grow"><span class="nm">${isl.name}</span><br><span class="sub">${isl.home?'Your island':islKind(isl)+' island'} · ${d<4?'you are here':d+' leagues away'}${tot?` · ${got}/${tot} local plants & bugs`:''}</span></span></button>`;}
     h+='</div>';}
   else if(sheet.kind==='look'){$('sheetTitle').textContent='Your look';tabs([]);const L=S.look;
     h+=`<div class="looks">${Object.keys(LOOKS).map(sp=>`<button class="lk ${L.sp===sp?'on':''}" data-look="${sp}"><img src="${lookThumb(sp,sp===L.sp?L.fur:LOOKS[sp].fur[0],L.shirt)}" alt=""><span>${LOOKS[sp].name}</span></button>`).join('')}</div>`;
@@ -155,13 +155,15 @@ function renderSheet(){
   if(sheet.kind==='chart')drawChart();
 }
 function drawChart(){const cv=$('chart');if(!cv)return;const g=cv.getContext('2d'),N=320;g.imageSmoothingEnabled=false;
-  const disc=islands.filter(i=>S.disc[i.id]);let E=40;for(const i of disc)E=Math.max(E,Math.hypot(i.cx,i.cz)+14);E=Math.max(E,Math.hypot(vil.x,vil.z)+14);
+  // out on the frontier (44b) the chart centres on you and shows the sea round about, not the whole world
+  const far=Math.hypot(vil.x,vil.z)>frR0-40,ox=far?vil.x:0,oz=far?vil.z:0,inView=i=>!far||Math.hypot(i.cx-ox,i.cz-oz)<140;
+  const disc=islands.filter(i=>S.disc[i.id]&&inView(i));let E=40;if(far)E=130;else{for(const i of disc)E=Math.max(E,Math.hypot(i.cx,i.cz)+14);E=Math.max(E,Math.hypot(vil.x,vil.z)+14);}
   const und=islands.filter(i=>!S.disc[i.id]).sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z)).slice(0,3);
-  for(const i of und)E=Math.max(E,Math.hypot(i.cx,i.cz)+14);
-  const sc=(N/2-10)/E;const X=x=>N/2+x*sc,Y=z=>N/2+z*sc;
+  if(!far)for(const i of und)E=Math.max(E,Math.hypot(i.cx,i.cz)+14);
+  const sc=(N/2-10)/E;const X=x=>N/2+(x-ox)*sc,Y=z=>N/2+(z-oz)*sc;
   g.fillStyle='#3565cc';g.fillRect(0,0,N,N);g.fillStyle='rgba(255,255,255,.12)';for(let x=0;x<N;x+=20)for(let y=0;y<N;y+=20)g.fillRect(x,y,2,2);
   const px=2,hex=c=>'#'+c.toString(16).padStart(6,'0');
-  for(const isl of disc){const R=islR(isl)/0.62+2.2;const B=BIOMES[isl.biome];
+  for(const isl of disc){const R=islR(isl)/0.62+2.2;const B=islLook(isl);
     for(let wx=isl.home?Math.min(-R,farmWest()):-R;wx<=R;wx+=px/sc)for(let wz=-R;wz<=R;wz+=px/sc){const t=tileTypeI(isl,Math.round(isl.cx+wx),Math.round(isl.cz+wz));if(!t)continue;
       g.fillStyle=t==='grass'?hex(B.grass[0]):t==='sand'?hex(B.sand[0]):t==='s1'?'#7ea6e8':'#5584da';
       g.fillRect(Math.round(X(isl.cx+wx)/px)*px,Math.round(Y(isl.cz+wz)/px)*px,px,px);}}
@@ -171,7 +173,7 @@ function drawChart(){const cv=$('chart');if(!cv)return;const g=cv.getContext('2d
   for(const isl of disc){const R=islR(isl)/0.7;const y=Math.max(12,Y(isl.cz)-R*sc-5);g.fillStyle='#2b1e2e';g.fillText(isl.name,X(isl.cx)+1,y+1);g.fillStyle='#fff6e2';g.fillText(isl.name,X(isl.cx),y);}
   g.font='bold 16px "Fredoka", sans-serif';for(const i of und){const jx=(hash(i.id,1)-0.5)*16,jz=(hash(1,i.id)-0.5)*16;g.fillStyle='#2b1e2e';g.fillText('?',X(i.cx+jx)+1,Y(i.cz+jz)+6);g.fillStyle='#fff3c4';g.fillText('?',X(i.cx+jx),Y(i.cz+jz)+5);}
   g.fillStyle='#2b1e2e';g.fillRect(Math.round(X(vil.x))-4,Math.round(Y(vil.z))-4,8,8);g.fillStyle=S.sea?'#f6d04a':'#d8453a';g.fillRect(Math.round(X(vil.x))-2,Math.round(Y(vil.z))-2,4,4);
-  cv.onclick=e=>{const r=cv.getBoundingClientRect();const wx=((e.clientX-r.left)/r.width*N-N/2)/sc,wz=((e.clientY-r.top)/r.height*N-N/2)/sc;
+  cv.onclick=e=>{const r=cv.getBoundingClientRect();const wx=((e.clientX-r.left)/r.width*N-N/2)/sc+ox,wz=((e.clientY-r.top)/r.height*N-N/2)/sc+oz;
     let best=null,bd=1e9;for(const isl of disc){const d=Math.hypot(isl.cx-wx,isl.cz-wz);if(d<bd){bd=d;best=isl;}}if(best&&bd<18/sc+islR(best)){chartGo(best);}};}
 function chartGo(isl){if(!isl.home&&!unlocked('boat')){toast('You need your boat to reach other islands (Island Heart level 4).','',ICON.boat);return;}const here=curIsl();if(here&&here.id===isl.id){toast(`You're already on ${isl.name}.`);return;}closeSheet();fastTravel(isl);}
 $('sheetBody').addEventListener('input',e=>{if(e.target.id==='devHour'){setHour(Number(e.target.value));$('devHourLbl').textContent=clockStr(S.hour);applyTime();updateHUD();}});

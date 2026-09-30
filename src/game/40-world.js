@@ -60,10 +60,11 @@ function homeD(x,z){const a=Math.atan2(z,x);const f=1+0.10*Math.sin(3*a+0.7)+0.0
 const homeScale=()=>S.home&&S.home.scale||1; // a preset island can be bigger than the usual home island
 function islR(isl){return isl.home?TOWN_W*homeScale():isl.r;}
 function islDist(isl,x,z){if(isl.home)return townQ(x,z)*TOWN_W;const dx=x-isl.cx,dz=z-isl.cz,a=Math.atan2(dz,dx);
-  const f=1+0.12*Math.sin(3*a+isl.p1)+0.08*Math.sin(5*a+isl.p2)+0.06*Math.sin(2*a+isl.p3);return Math.hypot(dx*isl.sx,dz)/f;}
+  const wb=isl.wob||1,f=Math.max(0.35,1+(0.12*Math.sin(3*a+isl.p1)+0.08*Math.sin(5*a+isl.p2)+0.06*Math.sin(2*a+isl.p3))*wb+(wb>1?0.05*(wb-1)*Math.sin(9*a+isl.p1*2):0));/* frontier isles (44b) get wilder coasts */return Math.hypot(dx*isl.sx,dz)/f;}
 const TRANK={grass:4,sand:3,s1:2,s2:1};
 function tileTypeI(isl,x,z){const R=islR(isl),d=islDist(isl,x,z),b=BIOMES[isl.biome].beach||1.25;
   let t=d<R-b?'grass':d<R?'sand':d<R+1.0?'s1':d<R+2.1?'s2':null;
+  if(isl.hole){const e=R*isl.hole-d;/* an atoll: a lagoon of open water in the middle, ringed with beach */if(e>2.1)t=null;else if(e>1)t='s2';else if(e>0)t='s1';else if(e>-b)t='sand';}
   if(isl.home){const q=townQ(x,z),bw=(0.06+0.07*clamp(z/(TOWN_D*homeScale()),0,1))/Math.sqrt(homeScale());/* a narrow ribbon of beach, widest on the south shore */t=q<1-bw?'grass':q<1?'sand':q<1.07?'s1':q<1.15?'s2':null;}
   if(isl.home){const q=farmQ(x,z),f=q<0.83?'grass':q<1?'sand':q<1.13?'s1':q<1.28?'s2':null;if(f&&(!t||TRANK[f]>TRANK[t]))t=f;}
   return t;}

@@ -1916,22 +1916,26 @@ function P(geo,color,x=0,y=0,z=0,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1){return{geo,color
 // like P, but shaded from cBot (local bottom) to cTop (local top) — used for leaf cards
 function PG(geo,cTop,cBot,...rest){return Object.assign(P(geo,cTop,...rest),{c2:cBot});}
 function shift(parts,x,y,z,ry=0){const c=Math.cos(ry),s=Math.sin(ry);return parts.map(p=>Object.assign({},p,{x:x+p.x*c+p.z*s,y:y+p.y,z:z-p.x*s+p.z*c,ry:p.ry+ry}));}
+// each source shape is prepared once (flattened to plain triangles, normals worked out, heights for gradient parts), then
+// every part is transformed straight into the output arrays: no per-part geometry clones
+const _mergePrep=new WeakMap(),_nm3=new T.Matrix3();
+function mergePrep(g0){let r=_mergePrep.get(g0);if(r)return r;const g=g0.index?g0.toNonIndexed():g0.clone();if(!g0.userData.smooth)g.computeVertexNormals();
+  const pos=g.attributes.position.array,n=pos.length/3,ys=new Float32Array(n);let y0=1e9,y1=-1e9;for(let i=0;i<n;i++){const y=pos[i*3+1];ys[i]=y;if(y<y0)y0=y;if(y>y1)y1=y;}for(let i=0;i<n;i++)ys[i]=(ys[i]-y0)/((y1-y0)||1);
+  r={pos:Float32Array.from(pos),nor:Float32Array.from(g.attributes.normal.array),ys,n};g.dispose();_mergePrep.set(g0,r);return r;}
 function merge(parts){
-  const gs=[];let total=0;
-  for(const p of parts){
-    const g0=lodGeo(p),g=g0.index?g0.toNonIndexed():g0.clone();
-    if(!g0.userData.smooth)g.computeVertexNormals();
-    let ys=null;if(p.c2!==undefined){const a=g.attributes.position.array;ys=new Float32Array(a.length/3);let y0=1e9,y1=-1e9;for(let i=0;i<ys.length;i++){ys[i]=a[i*3+1];y0=Math.min(y0,ys[i]);y1=Math.max(y1,ys[i]);}for(let i=0;i<ys.length;i++)ys[i]=(ys[i]-y0)/((y1-y0)||1);}
-    _e.set(p.rx,p.ry,p.rz,'YXZ');_q.setFromEuler(_e);_v.set(p.x,p.y,p.z);_s.set(p.sx,p.sy,p.sz);_m.compose(_v,_q,_s);
-    g.applyMatrix4(_m);gs.push([g,p.color,ys,p.c2]);total+=g.attributes.position.count;
-  }
+  const preps=new Array(parts.length);let total=0;
+  for(let k=0;k<parts.length;k++){const r=mergePrep(lodGeo(parts[k]));preps[k]=r;total+=r.n;}
   const pos=new Float32Array(total*3),nor=new Float32Array(total*3),col=new Float32Array(total*3);let o=0;
   const cB=new T.Color();
-  for(const [g,color,ys,c2] of gs){
-    pos.set(g.attributes.position.array,o*3);nor.set(g.attributes.normal.array,o*3);_c.set(color);if(ys)cB.set(c2);
-    const n=g.attributes.position.count;for(let i=0;i<n;i++){if(ys){const t=ys[i];col[(o+i)*3]=cB.r+(_c.r-cB.r)*t;col[(o+i)*3+1]=cB.g+(_c.g-cB.g)*t;col[(o+i)*3+2]=cB.b+(_c.b-cB.b)*t;}else{col[(o+i)*3]=_c.r;col[(o+i)*3+1]=_c.g;col[(o+i)*3+2]=_c.b;}}
-    o+=n;g.dispose();
-  }
+  for(let k=0;k<parts.length;k++){const p=parts[k],r=preps[k],n=r.n,P0=r.pos,N0=r.nor;
+    _e.set(p.rx,p.ry,p.rz,'YXZ');_q.setFromEuler(_e);_v.set(p.x,p.y,p.z);_s.set(p.sx,p.sy,p.sz);_m.compose(_v,_q,_s);_nm3.getNormalMatrix(_m);
+    const e=_m.elements,q=_nm3.elements;_c.set(p.color);const grad=p.c2!==undefined;if(grad)cB.set(p.c2);
+    for(let i=0;i<n;i++){const i3=i*3,x=P0[i3],y=P0[i3+1],z=P0[i3+2],j=(o+i)*3;
+      pos[j]=e[0]*x+e[4]*y+e[8]*z+e[12];pos[j+1]=e[1]*x+e[5]*y+e[9]*z+e[13];pos[j+2]=e[2]*x+e[6]*y+e[10]*z+e[14];
+      const nx=N0[i3],ny=N0[i3+1],nz=N0[i3+2];let a=q[0]*nx+q[3]*ny+q[6]*nz,b=q[1]*nx+q[4]*ny+q[7]*nz,c=q[2]*nx+q[5]*ny+q[8]*nz;const l=Math.hypot(a,b,c)||1;
+      nor[j]=a/l;nor[j+1]=b/l;nor[j+2]=c/l;
+      if(grad){const t=r.ys[i];col[j]=cB.r+(_c.r-cB.r)*t;col[j+1]=cB.g+(_c.g-cB.g)*t;col[j+2]=cB.b+(_c.b-cB.b)*t;}else{col[j]=_c.r;col[j+1]=_c.g;col[j+2]=_c.b;}}
+    o+=n;}
   const out=new T.BufferGeometry();
   out.setAttribute('position',new T.BufferAttribute(pos,3));out.setAttribute('normal',new T.BufferAttribute(nor,3));
   out.setAttribute('color',new T.BufferAttribute(col,3));out.computeBoundingSphere();out.computeBoundingBox();return out;
@@ -1999,17 +2003,19 @@ const s1Mat=new T.MeshBasicMaterial({color:0x7ea6e8}),s2Mat=new T.MeshBasicMater
 // (the pixel pass turns them into little painted wave marks)
 // how far each patch of sea is from the nearest shore, one texel per tile (built from landMap by buildDepthTex): the
 // water shader uses it to fade from pale aqua at the sand, through turquoise, to deep blue, with a ragged pixel edge
-const DEPTH_N=400,DEPTH_X0=-200;let depthDirty=true;
+const DEPTH_N=400,DEPTH_X0=-200;let depthDirty=true,depthX0=DEPTH_X0,depthZ0=DEPTH_X0;/* the window follows you out to the frontier (depthFollow) */
 const depthTex=new T.DataTexture(new Uint8Array([255,255,255,255]),1,1,T.RGBAFormat);depthTex.needsUpdate=true;
 const waterU={uCam:{value:new T.Vector3()},uSky:{value:skyHz},uZen:{value:skyZen},uSunD:{value:new T.Vector3(0,1,0)},uGl:{value:1},uT:{value:0},uYaw:{value:0},uDepth:{value:depthTex},uDB:{value:new T.Vector3(DEPTH_X0,DEPTH_X0,1)},uS1:{value:s1Mat.color},uS2:{value:s2Mat.color}};
 function buildDepthTex(){depthDirty=false;const N=DEPTH_N,d=new Float32Array(N*N).fill(99);
-  for(const [k,t] of landMap){if(t!=='grass'&&t!=='sand'&&t!=='river'&&t!=='bridge')continue;const [x,z]=k.split(',').map(Number),i=x-DEPTH_X0,j=z-DEPTH_X0;if(i>=0&&j>=0&&i<N&&j<N)d[j*N+i]=0;}
+  for(const L of [landList,riverList])for(const q of L){const i=q[0]-depthX0,j=q[1]-depthZ0;if(i>=0&&j>=0&&i<N&&j<N)d[j*N+i]=0;}/* (land and rivers, 40-world) */
   // two-pass chamfer distance (rounder than steps along the grid)
   const D=1.414;for(let j=0;j<N;j++)for(let i=0;i<N;i++){let v=d[j*N+i];if(i)v=Math.min(v,d[j*N+i-1]+1);if(j){v=Math.min(v,d[(j-1)*N+i]+1);if(i)v=Math.min(v,d[(j-1)*N+i-1]+D);if(i<N-1)v=Math.min(v,d[(j-1)*N+i+1]+D);}d[j*N+i]=v;}
   for(let j=N-1;j>=0;j--)for(let i=N-1;i>=0;i--){let v=d[j*N+i];if(i<N-1)v=Math.min(v,d[j*N+i+1]+1);if(j<N-1){v=Math.min(v,d[(j+1)*N+i]+1);if(i<N-1)v=Math.min(v,d[(j+1)*N+i+1]+D);if(i)v=Math.min(v,d[(j+1)*N+i-1]+D);}d[j*N+i]=v;}
   const px=new Uint8Array(N*N*4);for(let i=0;i<N*N;i++){const v=Math.min(255,Math.round(d[i]*40));px[i*4]=px[i*4+1]=px[i*4+2]=v;px[i*4+3]=255;}
   const t=new T.DataTexture(px,N,N,T.RGBAFormat);t.magFilter=t.minFilter=T.LinearFilter;t.needsUpdate=true;
-  if(waterU.uDepth.value!==depthTex)waterU.uDepth.value.dispose();waterU.uDepth.value=t;waterU.uDB.value.set(DEPTH_X0,DEPTH_X0,N);}
+  if(waterU.uDepth.value!==depthTex)waterU.uDepth.value.dispose();waterU.uDepth.value=t;waterU.uDB.value.set(depthX0,depthZ0,N);}
+function depthFollow(){const cx=depthX0+DEPTH_N/2,cz=depthZ0+DEPTH_N/2;if(Math.abs(cam.tx-cx)<110&&Math.abs(cam.tz-cz)<110)return;
+  depthX0=Math.round(cam.tx/40)*40-DEPTH_N/2;depthZ0=Math.round(cam.tz/40)*40-DEPTH_N/2;if(Math.abs(depthX0-DEPTH_X0)<60&&Math.abs(depthZ0-DEPTH_X0)<60)depthX0=depthZ0=DEPTH_X0;depthDirty=true;}
 waterMat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,waterU);
   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
   sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;uniform vec3 uCam;uniform vec3 uSky;uniform vec3 uZen;uniform vec3 uSunD;uniform float uGl;uniform sampler2D uDepth;uniform vec3 uDB;uniform vec3 uS1;uniform vec3 uS2;')
@@ -2204,10 +2210,11 @@ function homeD(x,z){const a=Math.atan2(z,x);const f=1+0.10*Math.sin(3*a+0.7)+0.0
 const homeScale=()=>S.home&&S.home.scale||1; // a preset island can be bigger than the usual home island
 function islR(isl){return isl.home?TOWN_W*homeScale():isl.r;}
 function islDist(isl,x,z){if(isl.home)return townQ(x,z)*TOWN_W;const dx=x-isl.cx,dz=z-isl.cz,a=Math.atan2(dz,dx);
-  const f=1+0.12*Math.sin(3*a+isl.p1)+0.08*Math.sin(5*a+isl.p2)+0.06*Math.sin(2*a+isl.p3);return Math.hypot(dx*isl.sx,dz)/f;}
+  const wb=isl.wob||1,f=Math.max(0.35,1+(0.12*Math.sin(3*a+isl.p1)+0.08*Math.sin(5*a+isl.p2)+0.06*Math.sin(2*a+isl.p3))*wb+(wb>1?0.05*(wb-1)*Math.sin(9*a+isl.p1*2):0));/* frontier isles (44b) get wilder coasts */return Math.hypot(dx*isl.sx,dz)/f;}
 const TRANK={grass:4,sand:3,s1:2,s2:1};
 function tileTypeI(isl,x,z){const R=islR(isl),d=islDist(isl,x,z),b=BIOMES[isl.biome].beach||1.25;
   let t=d<R-b?'grass':d<R?'sand':d<R+1.0?'s1':d<R+2.1?'s2':null;
+  if(isl.hole){const e=R*isl.hole-d;/* an atoll: a lagoon of open water in the middle, ringed with beach */if(e>2.1)t=null;else if(e>1)t='s2';else if(e>0)t='s1';else if(e>-b)t='sand';}
   if(isl.home){const q=townQ(x,z),bw=(0.06+0.07*clamp(z/(TOWN_D*homeScale()),0,1))/Math.sqrt(homeScale());/* a narrow ribbon of beach, widest on the south shore */t=q<1-bw?'grass':q<1?'sand':q<1.07?'s1':q<1.15?'s2':null;}
   if(isl.home){const q=farmQ(x,z),f=q<0.83?'grass':q<1?'sand':q<1.13?'s1':q<1.28?'s2':null;if(f&&(!t||TRANK[f]>TRANK[t]))t=f;}
   return t;}
@@ -2292,7 +2299,11 @@ const FAR_GEO=new Map([[SPH,SPH_XS],[SPH_LO,SPH_XS],[ICO2,ICO0],[ICO,ICO0],[STRU
 function farParts(parts){const out=[];for(const p of parts){if(p.lo==='drop')continue;
   if(p.geo===LEAF_CARD){if(p.lo==='wide')out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.8}));continue;}
   if(Math.max(p.sx,p.sy,p.sz)<0.28)continue;const g=FAR_GEO.get(p.geo);out.push(g?Object.assign({},p,{geo:g}):p);}return out;}
-function addVeg(isl,g,parts){if(!parts.length)return;const hi=M(parts,leafMat),lo=M(lowParts(parts),leafMat),fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;lo.visible=false;g.add(hi,lo);if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([hi,lo,fa]);}
+function addVeg(isl,g,parts){if(!parts.length)return;
+  // a frontier island (44b) is built out on the horizon: only its far version is made now, the rest when you come near (vegReal)
+  if(isl.fr){const fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([null,null,fa,parts,g]);return;}
+  const hi=M(parts,leafMat),lo=M(lowParts(parts),leafMat),fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;lo.visible=false;g.add(hi,lo);if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([hi,lo,fa]);}
+function vegReal(isl,e){if(e[0])return;e[0]=M(e[3],leafMat);e[1]=M(lowParts(e[3]),leafMat);e[1].visible=false;e[4].add(e[0],e[1]);e[3]=null;isl.casters=null;isl.shadowOn=undefined;}
 // beach tiles a palm can stand on: flat sand (not the slope into the water), spread a few tiles apart
 function palmSpots(isl,R,n,ok){const out=[];for(const [x,z] of shuffle(isl.sand.slice(),R)){if(out.length>=n)break;const c=SAND_CH.get(K(x,z));if(!c||Math.min(...c)<0.17||!ok(x,z))continue;
   if(out.some(([a,b])=>Math.abs(a-x)+Math.abs(b-z)<3))continue;out.push([x,z]);}return out;}
@@ -2365,6 +2376,7 @@ function levelOf(isl,x,z){
   if(isl.home){if(farmQ(x,z)<1.2)return 0;const n=vnoise(x,z,S.worldSeed|0),hx=hash(S.worldSeed%97,3)<0.5?-9:9;
     const cl=S.home&&S.home.cliff,c1=cl?cl[0]:0.29,two=cl?cl[1]:1; // a chosen island sets how far north its cliffs start, and whether there's a second tier
     const hs=homeScale();if(two&&z<-(c1+0.37)*TOWN_D*hs+n*2.4&&Math.abs(x-hx*TOWN_W*hs/16)<(6+n*2.5)*hs)return 2;return z<-c1*TOWN_D*hs+(n-0.5)*3.6?1:0;}
+  if(isl.fr&&!(isl.biome==='volcano'&&Math.hypot(x-isl.cx,z-isl.cz)<3.2))return frLevel(isl,x,z);/* frontier islands: 44b */
   if(isl.biome==='swamp')return 0;
   if(isl.biome==='volcano'&&Math.hypot(x-isl.cx,z-isl.cz)<3.2)return 0;
   const d=islDist(isl,x,z),R=isl.r,n=vnoise(x,z,isl.seed);let l=0;
@@ -2542,7 +2554,7 @@ function updateNearGrass(dt){
   for(let dz=-Ri;dz<=Ri;dz++)for(let dx=-Ri;dx<=Ri;dx++){const d=Math.hypot(dx,dz);if(d>NEAR_R)continue;const x=cx+dx,z=cz+dz,k=K(x,z);
     if(landMap.get(k)!=='grass')continue;const isl=islandAt(x,z);if(!isl||NEAR_SKIP.has(isl.biome)||(isl.home&&S.wild&&season()==='winter'))continue;
     if(S.tiles[k]||TOWN.path.has(k)||(isl.blocked&&isl.blocked.has(k))||objAt(x,z)||floorAt(x,z)||fixedAt(x,z)||debrisAt(x,z))continue;
-    const f=Math.min(1,(NEAR_R-d)/2.5),gc=groundCol(BIOMES[isl.biome].grass,x,z,isl.seed);
+    const f=Math.min(1,(NEAR_R-d)/2.5),gc=groundCol(islLook(isl).grass,x,z,isl.seed);
     for(let j=0;j<NEAR_PER&&i<NEAR_MAX;j++,i++){clumpMat(x,z,j);if(f<1)_m.scale(_nv.set(f,f,f));nearIM.setMatrixAt(i,_m);nearIM.setColorAt(i,_c.setHex(gc).offsetHSL(0,0,(hash(x*3+j,z*5-j)-0.5)*0.05));}}
   nearIM.count=i;nearIM.instanceMatrix.needsUpdate=true;nearIM.instanceColor.needsUpdate=true;}
 // flowing water (or lava): a toon material whose colour shimmers with world position and time
@@ -2689,7 +2701,7 @@ function cullIslands(){const view=cam.dist+110;for(const isl of islands){const b
     if(isl.group)isl.group.visible=vis;if(isl.pgroup)isl.pgroup.visible=vis&&cam.dist+Math.max(0,d)<60;
     // level of detail for trees: light meshes when the island is far away or you're zoomed well out (with a little hysteresis)
     const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>56:far>61,lv=low?(far>(isl.vegLv===2?92:100)?2:1):0;/* 0 full, 1 light, 2 horizon */
-    if(isl.veg&&lv!==isl.vegLv){isl.vegLv=lv;for(const [hi,lo,fa] of isl.veg){hi.visible=lv===0;if(lo)lo.visible=lv===1||lv===2&&!fa;if(fa)fa.visible=lv===2;}
+    if(isl.veg&&lv!==isl.vegLv){isl.vegLv=lv;for(const e of isl.veg){if(!e[0]&&(lv<2||!e[2]))vegReal(isl,e);const [hi,lo,fa]=e;if(!hi){if(fa)fa.visible=true;continue;}hi.visible=lv===0;if(lo)lo.visible=lv===1||lv===2&&!fa;if(fa)fa.visible=lv===2;}
       if(isl.tMesh)for(const k of ['underG','underS'])if(isl.tMesh[k])isl.tMesh[k].visible=lv<2;/* the little corner notches vanish on the horizon */
       if(isl.riverG)isl.riverG.children.forEach((o,i)=>{if(i>1)o.visible=lv<2;});/* keep the river's bed and water, drop its pebbles, reeds and lilies */}
     if(isl.veg&&low!==isl.lowOn)isl.lowOn=low;
@@ -2734,7 +2746,7 @@ function shapeBeach(isl){const d=new Map(),H=[0.03,0.17,TOP.sand,TOP.sand];let q
   for(const [x,z] of isl.sand)SAND_CH.set(K(x,z),CORNERS.map(([sx,sz])=>H[Math.min(dOf(x,z),dOf(x+sx,z),dOf(x,z+sz),dOf(x+sx,z+sz))]));}
 // a wild home island's ground follows its zones: a darker, mossy floor under the woods, and brighter, sunnier grass in the
 // flower meadows (both blend in softly at the edges)
-function zoneGround(isl,x,z,col){if(!isl.home||!S.wild||S.home&&S.home.preset)return col;const fa=(S.home&&S.home.wild)||0.5,th=0.8-fa*0.25;
+function zoneGround(isl,x,z,col){if(isl.fr)return frHue(isl,x,z,col);if(!isl.home||!S.wild||S.home&&S.home.preset)return col;const fa=(S.home&&S.home.wild)||0.5,th=0.8-fa*0.25;
   const f=clamp((wildForest(x,z)-(th-0.14))/0.18,0,1),m=clamp((wildMeadow(x,z)-0.55)/0.1,0,1)*(1-f);
   _gc1.setHex(col);if(f>0)_gc1.lerp(_gc2.setHex(col).multiply(_a.setRGB(0.68,0.8,0.66)),f);if(m>0)_gc1.lerp(_gc2.setHex(col).multiply(_a.setRGB(1.1,1.08,0.9)),m*0.7);return _gc1.getHex();}
 // the ground of an island: grass tiles are a grassy slab on a dirt or rock cliff, like the tiers of Wild World; sand
@@ -2836,7 +2848,7 @@ function buildIsland(isl){
       isl.vent=[isl.cx,3,isl.cz];
     }
     pickHeart(isl,blocked);/* the withered heart tree (79-voyage) */
-    const gr=shuffle(isl.grass.slice(),R),n=Math.round(gr.length*(isl.grand?0.08:0.15));
+    const gr=shuffle(isl.grass.slice(),R),n=B.trees&&B.trees.length?Math.round(gr.length*(isl.grand?0.08:0.15)*(B.td??1)):0;
     let placed=0;for(const [x,z] of gr){if(placed>=n)break;if(blocked.has(K(x,z)))continue;
       tp.push(...shift(treeParts(B.trees[Math.floor(R()*B.trees.length)],R,B.rock),x+(R()-0.5)*0.3,topY(x,z),z+(R()-0.5)*0.3,R()*6.28));blocked.add(K(x,z));placed++;}
     const sa=shuffle(isl.sand.slice(),R);for(let i=0;i<Math.min(4,sa.length);i++){const [x,z]=sa[i];parts.push(...shift(treeParts(isl.biome==='swamp'?'reeds':'rock',R,B.rock),x,topY(x,z),z,R()*6));blocked.add(K(x,z));}
@@ -2845,6 +2857,7 @@ function buildIsland(isl){
         tp.push(...shift(treeParts(PALMS[Math.floor(R()*PALMS.length)],R,B.rock),x+(R()-0.5)*0.2,topY(x,z),z+(R()-0.5)*0.2,R()*6.28));blocked.add(K(x,z));}}
     if(parts.length)g.add(M(parts));addVeg(isl,g,tp);
     if(glowParts.length){const m=M(glowParts,lumMat);m.castShadow=false;g.add(m);}
+    if(isl.style)frDeco(isl,g,blocked);/* the frontier's strange decor (44b) */
     buildHeart(isl);
     isl.spots=gr.filter(([x,z])=>!blocked.has(K(x,z))).slice(0,Math.max(5,Math.min(isl.grand?30:18,Math.round(gr.length*0.18))));
   }
@@ -2854,7 +2867,7 @@ function buildIsland(isl){
   if(!isl.home&&B.tuft){const pts=[];for(const [x,z] of isl.grass){if(blocked.has(K(x,z)))continue;const h=hash(x*3.1,z*1.7);if(h<0.45){pts.push([x+(hash(z,x*2)-0.5)*0.7,topY(x,z),z+(hash(x+5,z)-0.5)*0.7]);if(h<0.15)pts.push([x+(hash(z*3,x)-0.5)*0.7,topY(x,z),z+(hash(x,z*7)-0.5)*0.7]);}}
     if(pts.length){const im=new T.InstancedMesh(TUFT_GEO,grassMat,pts.length);pts.forEach(([x,y,z],i)=>{_e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x,y,z),_q,_s.set(1,0.8+hash(z,x)*0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.set(B.tuft));});
       im.frustumCulled=false;im.receiveShadow=true;im.renderOrder=3;g.add(im);}}
-  scene.add(g);islandBounds(isl);rebuildLandList();
+  scene.add(g);islandBounds(isl);if(isl.fr)frLandAdd(isl);else rebuildLandList();
 }
 function islandAt(x,z){const id=islMap.get(K(Math.round(x),Math.round(z)));return id===undefined?null:islands[id];}
 function curIsl(){if(S.sea)return null;return islandAt(vil.x,vil.z);}
@@ -2863,6 +2876,196 @@ function regionAt(x,z){const [isl,d]=nearestIsland(x,z);return d<9?isl.biome:'op
 function landDist(x,z,isl){let bd=1e9;const tiles=isl?[...isl.grass,...isl.sand]:landList;for(const t of tiles){const d=(t[0]-x)**2+(t[1]-z)**2;if(d<bd)bd=d;}return Math.sqrt(bd);}
 function bioLabel(b){return b==='any'?'anywhere':b==='home'?'your island':b==='wild'?'the woods and meadows at home':b==='open'?'the open sea':BIOMES[b]?BIOMES[b].name.toLowerCase()+' isles':b;}
 
+/* =========================================================
+   The frontier: endless islands past the charted world
+   ========================================================= */
+// Past the last charted island the sea is cut into FR_C×FR_C cells. Each cell holds 0–3 islands rolled from the world
+// seed and the cell's index alone (frCell), so a cell always holds the same islands. A cell is rolled when you sail
+// near it; cells that hold islands are listed in S.front in the order they were rolled, so their islands keep their ids
+// (and with them S.disc, S.restore, S.picked) across saves. Islands are built as they come within FR_BUILD of you and
+// taken down again past FR_DROP (frStream), one build per tick so sailing never stalls for long.
+// The further out, the stranger: FR_TIERS are bands of distance past the charted world (frR0), and each band draws on
+// wilder styles (FSTY: palettes, giant decor, floating isles), wilder coasts (isl.wob, atolls) and taller land (frLevel).
+const FR_C=80,FR_GEN=250,FR_BUILD=170,FR_DROP=245;
+const FR_TIERS=[
+  {d:0,  name:'the Outer Isles', blurb:'Bigger islands, taller hills, trees like towers.'},
+  {d:230,name:'Strange Waters',  blurb:'Crystal, candy and mushroom isles. Nothing out here grows the way it should.'},
+  {d:520,name:'the Weird Sea',   blurb:'Floating islands, neon rock and the bones of something enormous.'},
+  {d:880,name:'the World’s Edge',blurb:'Rainbow ground, starlit void. The sea itself is changing colour.'}];
+// a style is the look of a strange island; `like` is the ordinary biome it plays as (its fish, bugs, plants and finds)
+const FSTY={
+  giant:  {tier:0,name:'Giant',deco:'giant'},
+  crystal:{tier:1,name:'Crystal',like:'snow',grass:[0xa8d8ec,0xbce4f2,0x98cce6],sand:[0xeef2fa,0xe2e8f6],cliff:0x7a7ac8,rock:0x9a9ae0,tuft:0x8ac8e0,trees:['ice','snowpine'],td:0.3,deco:'crystal',
+           names:[['Prism','Quartz','Glimmer','Shard','Opal','Gleam'],['Spires','Isle','Reach','Facet']]},
+  shroom: {tier:1,name:'Mushroom',like:'swamp',grass:[0x8a70b0,0x9a80bc,0x7a62a0],sand:[0xcab4a4,0xbea898],cliff:0x5a4a70,rock:0x7a6a90,tuft:0xb492d8,trees:['willow','bush'],td:0.25,deco:'shroom',
+           names:[['Spore','Puffcap','Morel','Toadstool','Truffle','Fungal'],['Hollow','Isle','Grove','Ring']]},
+  candy:  {tier:1,name:'Candy',like:'meadow',grass:[0xf6a6c8,0xfab8d6,0xf098c0],sand:[0xfff2dc,0xfae8cc],cliff:0xd07aa0,rock:0xf0d0e8,tuft:0xffc8e0,trees:['cherry'],td:0.2,deco:'candy',
+           names:[['Sugar','Gumdrop','Toffee','Taffy','Sherbet','Lolly'],['Isle','Bay','Drop','Cove']]},
+  bloom:  {tier:1,name:'Giant Bloom',like:'meadow',grass:[0x72c05a,0x80cc64,0x66b44e],sand:[0xf0dcaa,0xe8d29e],cliff:0x9a7050,rock:0xa8a0b0,tuft:0x5aa048,trees:['bush','flowerbed','oak'],td:0.35,deco:'bloom',
+           names:[['Petal','Nectar','Pollen','Posy','Blossom','Stamen'],['Isle','Garden','Knoll','Meadow']]},
+  coral:  {tier:1,name:'Coral',like:'tropic',grass:[0xf0a080,0xf4b090,0xe89474],sand:[0xfff0d0,0xf8e4c0],cliff:0xc86a5a,rock:0xf0c0a0,tuft:0xff9a7a,trees:['palm','palmfan'],td:0.3,deco:'coral',
+           names:[['Anemone','Polyp','Brine','Conch','Urchin','Kelp'],['Reef','Isle','Key','Shoal']]},
+  neon:   {tier:2,name:'Neon Obsidian',like:'volcano',grass:[0x2c2640,0x342c4a,0x261f36],sand:[0x1c1a28,0x24202e],cliff:0x1e1a2a,rock:0x2a2438,tuft:0x8a3ad8,trees:['basalt'],td:0.15,deco:'neon',
+           names:[['Neon','Void','Glitch','Umbra','Flux','Static'],['Shard','Isle','Maw','Rift']]},
+  sky:    {tier:2,name:'Sky',like:'meadow',grass:[0x8ad070,0x98da7a,0x7cc464],sand:[0xf2e2b8,0xe8d6a8],cliff:0x9a8a70,rock:0xb0a898,tuft:0x6ab850,trees:['oak','bush','pine'],td:0.5,deco:'sky',
+           names:[['Cloud','Zephyr','Gale','Nimbus','Soar','Drift'],['Isle','Heights','Perch','Eyrie']]},
+  bone:   {tier:2,name:'Bone',like:'autumn',grass:[0xa89878,0xb4a484,0x9c8c6c],sand:[0xe0d4bc,0xd4c8ae],cliff:0x7a6a58,rock:0xc8bca4,tuft:0xb8ac90,trees:['dead'],td:0.3,deco:'bones',
+           names:[['Ossuary','Rib','Marrow','Skull','Fang','Tusk'],['Isle','Rest','Barrow','Rise']]},
+  spire:  {tier:2,name:'Spire',like:'pine',grass:[0x4a8a5a,0x549466,0x42804e],sand:[0xc8b8a0,0xbcac94],cliff:0x6a6a78,rock:0x7a7a88,tuft:0x3a7a48,trees:['pine','pine','snowpine'],td:0.6,deco:'spire',shape:'spire',
+           names:[['Needle','Pinnacle','Stack','Tor','Steeple','Crag'],['Isle','Spires','Peaks','Teeth']]},
+  rainbow:{tier:3,name:'Rainbow',like:'meadow',grass:[0xf0a0a0,0xa0e0a0,0xa0b0f0],sand:[0xfff6e8,0xf6ecdc],cliff:0xb08ac8,rock:0xe8d8f8,tuft:0xffffff,trees:['cherry','bush'],td:0.25,deco:'rainbow',hue:1,
+           names:[['Prism','Spectrum','Chroma','Iris','Hue','Glee'],['Isle','Arc','Bow','Band']]},
+  void:   {tier:3,name:'Starlit Void',like:'snow',grass:[0x1c1a34,0x24203e,0x16142a],sand:[0x2c2844,0x342e4e],cliff:0x0e0c1a,rock:0x3a3458,tuft:0x9a9aff,trees:[],td:0,deco:'void',
+           names:[['Star','Nebula','Hush','Null','Comet','Aether'],['Isle','Rift','Veil','Deep']]}};
+let frR0=1e9,frT=0,frTier=-1;const frSeen=new Set();
+const frPast=(x,z)=>Math.hypot(x,z)-frR0; // how far past the charted world a point is
+function frTierAt(x,z){const d=frPast(x,z);let t=-1;FR_TIERS.forEach((T,i)=>{if(d>=T.d)t=i;});return t;}
+// the style of a new island at a given distance: mostly the band's own styles, some from the band before, the odd one from the next
+function frStyle(R,tier){if(tier<=0)return R()<0.35?'giant':R()<0.12?pickStyle(R,1):null;
+  const r=R(),t=r<0.62?Math.min(tier,3):r<0.9?tier-1:Math.min(3,tier+1);if(t<=0)return R()<0.5?'giant':null;return pickStyle(R,t);}
+function pickStyle(R,t){const ks=Object.keys(FSTY).filter(k=>FSTY[k].tier===t);return ks[Math.floor(R()*ks.length)];}
+// the islands in cell (i,j), placed so they stay inside the cell (so never touch a neighbour's) and outside the charted world
+function frCell(i,j){const R=mulberry(hi(S.worldSeed|0,i,j,0xf207)),out=[],cx0=i*FR_C,cz0=j*FR_C;
+  if(Math.hypot(cx0,cz0)+FR_C*0.72<frR0)return out;
+  const r0=R(),n=r0<0.16?0:r0<0.66?1:r0<0.9?2:3;
+  for(let k=0;k<n;k++){for(let t=0;t<14;t++){
+    const tier=Math.max(0,frTierAt(cx0,cz0)),w=clamp(frPast(cx0,cz0)/900,0,1);
+    let r=n===1?7+R()*(5+7*w):4.5+R()*(2.5+2*w);const sx=1-(R()-0.5)*(0.35+0.55*w),wob=1+R()*w*2.4;
+    const ext0=f=>r*f*Math.max(1,1/sx)*(1+0.26*wob)+3.2;if(ext0(1)>FR_C/2-5)r*=(FR_C/2-5)/ext0(1);const ext=ext0(1),room=FR_C/2-4-ext;
+    const x=Math.round(cx0+(R()-0.5)*2*Math.max(0,room)),z=Math.round(cz0+(R()-0.5)*2*Math.max(0,room));
+    const st=frStyle(R,tier),S0=st&&FSTY[st],biome=S0&&S0.like||BIOME_IDS[Math.floor(R()*BIOME_IDS.length)];
+    if(Math.hypot(x,z)-ext<frR0||out.some(o=>Math.hypot(o.cx-x,o.cz-z)<o.ext+ext+3))continue;
+    const hole=r>=9&&!(S0&&S0.shape)&&R()<0.1+0.2*w?0.3+R()*0.12:0;
+    const mode=S0&&S0.shape==='spire'?'spire':R()<0.25+0.2*w?'mesa':R()<0.3*w?'spire':'hills';
+    const tiers=mode==='spire'?Math.round(8+R()*(5+8*w)):Math.round(2+R()*(2+6*w));
+    const pk=[];for(let q=0,m=mode==='spire'?3+Math.floor(R()*4):0;q<m;q++){const a=R()*6.283,dd=R()*r*0.5;pk.push([x+Math.cos(a)*dd/sx,z+Math.sin(a)*dd,1.4+R()*1.8,tiers*(0.6+R()*0.4)]);}
+    const B=BIOMES[biome],nm=S0&&S0.names||B.names,name=nm[0][Math.floor(R()*nm[0].length)]+' '+nm[1][Math.floor(R()*nm[1].length)];
+    out.push({cx:x,cz:z,r,r0:r,ext,grass:[],sand:[],keys:[],sx,wob,hole,mode,tiers,pk,biome,style:st,name,fr:1,tier,w,grand:r>12,rw:1,
+      riverN:!hole&&r>=9&&mode!=='spire'&&biome!=='volcano'?1:0,p1:R()*6.28,p2:R()*6.28,p3:R()*6.28,seed:Math.floor(R()*1e9)});break;}}
+  return out;}
+// the land's height on a frontier island: rolling hills, flat-topped mesas, needle spires, or a ridge round an atoll
+function frLevel(isl,x,z){const d=islDist(isl,x,z),R=isl.r,n=vnoise(x,z,isl.seed),T=isl.tiers;let h;
+  if(isl.hole){const e=(d-R*isl.hole)/(R*(1-isl.hole));h=(1-Math.abs(e-0.5)*2)*T*(0.35+0.8*n);}
+  else if(isl.mode==='spire'){h=(n-0.5)*1.2;for(const [px,pz,pr,ph] of isl.pk){const q=Math.hypot(x-px,z-pz)/pr;if(q<1.6)h=Math.max(h,ph*(1-q/1.6)**0.9);}}
+  else if(isl.mode==='mesa'){const e=1-d/R;h=e>0.38+n*0.16?T:e>0.22?T*0.45:e>0.12?1:0;}
+  else h=Math.pow(clamp(1-d/R,0,1),0.8)*T*(0.5+0.9*n);
+  return clamp(Math.floor(h),0,T);}
+// the look of an island: its biome, overridden by its style's palette
+function islLook(isl){if(!isl.style)return BIOMES[isl.biome];if(isl._look)return isl._look;const F=FSTY[isl.style],o=Object.assign({},BIOMES[isl.biome]);
+  for(const k of ['grass','sand','cliff','rock','tuft','trees','td'])if(F[k])o[k]=F[k];return isl._look=o;}
+const islKind=isl=>isl.home?'Home':isl.style&&FSTY[isl.style].like?FSTY[isl.style].name:(isl.style?FSTY[isl.style].name+' ':'')+BIOMES[isl.biome].name;
+// the rainbow isles paint every tile its own hue
+function frHue(isl,x,z,col){if(!isl.style||!FSTY[isl.style].hue)return col;const h=((x*0.045+z*0.03+vnoise(x,z,isl.seed)*0.5)%1+1)%1;return _gc1.setHSL(h,0.55,0.72).getHex();}
+
+/* ---- streaming ---- */
+function frontierBoot(){frSeen.clear();frTier=-1;let m=0;for(const i of islands)if(!i.fr)m=Math.max(m,Math.hypot(i.cx,i.cz)+islR(i)/0.62+4);frR0=m+16;
+  for(const c of S.front||[])frAddCell(c,false);frStream(true);}
+function frAddCell(c,fresh){if(frSeen.has(c))return;frSeen.add(c);const [i,j]=c.split(',').map(Number),list=frCell(i,j);
+  if(fresh&&list.length)(S.front||(S.front=[])).push(c);for(const o of list){o.id=islands.length;o.cell=c;islands.push(o);}}
+const frPos=()=>S.sea&&S.boat?[S.boat.x,S.boat.z]:[vil.x,vil.z];
+function frStream(all){const [px,pz]=frPos();
+  if(Math.hypot(px,pz)>frR0-FR_GEN){const i0=Math.round(px/FR_C),j0=Math.round(pz/FR_C),r=Math.ceil(FR_GEN/FR_C);
+    for(let i=i0-r;i<=i0+r;i++)for(let j=j0-r;j<=j0+r;j++){if(Math.hypot(i*FR_C-px,j*FR_C-pz)>FR_GEN+FR_C*0.72)continue;const c=i+','+j;if(!frSeen.has(c))frAddCell(c,true);}}
+  let best=null,bd=1e9;const drop=[],here=curIsl();
+  for(const isl of islands){if(!isl.fr)continue;const d=Math.hypot(isl.cx-px,isl.cz-pz)-isl.ext;
+    if(isl.group){if(d>FR_DROP&&isl!==here&&!(sail&&sail.land===isl.id))drop.push(isl);}
+    else if(d<FR_BUILD){if(all)frBuild(isl,true);else if(d<bd){bd=d;best=isl;}}}
+  for(const isl of drop)frDrop(isl);if(drop.length)rebuildSeaGrid();
+  if(best)frBuild(best);if(all)rebuildSeaGrid();}
+function frBuild(isl,quiet){const t0=performance.now();buildIsland(isl);
+  if(!quiet){for(const k of isl.keys){if(!isLandT(landMap.get(k)))continue;const [x,z]=k.split(',').map(Number);for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)seaMargin.add(K(x+dx,z+dz));}
+    cullIslands();}
+  frBuild.ms=performance.now()-t0;(frBuild.log||(frBuild.log=[])).push([Math.round(frBuild.ms),isl.keys.length]);if(frBuild.log.length>300)frBuild.log.shift();
+  if(!quiet&&sail&&sail.land===isl.id&&S.sea)sailToIsland(isl);/* now the coast exists, steer for it properly */}
+function frDrop(isl){const g=isl.group;scene.remove(g);g.traverse(o=>{if(o.isInstancedMesh)o.dispose();
+    else if(o.geometry&&!Object.values(RTILE).includes(o.geometry)&&o.geometry!==TILE_PLANE&&o.geometry!==BOX&&o.geometry!==POOL_GEO&&o.geometry!==BLADES)o.geometry.dispose();});
+  if(isl.pgroup){scene.remove(isl.pgroup);isl.pgroup.traverse(o=>{if(o.geometry)o.geometry.dispose();});isl.pgroup=null;}
+  const riv=new Set();for(const k of isl.keys){if(landMap.get(k)==='river')riv.add(k);landMap.delete(k);islMap.delete(k);lvlMap.delete(k);riverSurf.delete(k);bridgeY.delete(k);SAND_CH.delete(k);CMASK.delete(k);}
+  Object.assign(isl,{group:null,keys:[],bc:null,edges:null,veg:[],grass:[],sand:[],tch:null,tMesh:null,riverG:null,heartG:null,residentG:null,casters:null,detail:null,flats:[],bob:null,floraLod:null,rtiles:null,falls:null});
+  landList=landList.filter(L=>L[3]!==isl.id);if(riv.size)riverList=riverList.filter(([x,z])=>!riv.has(K(x,z)));depthDirty=true;}
+// the land list (40-world) grows and shrinks by one island at a time out here, instead of being rebuilt from the whole map
+function frLandAdd(isl){depthDirty=true;for(const k of isl.keys){const t=landMap.get(k),[x,z]=k.split(',').map(Number);if(t==='river')riverList.push([x,z,riverSurf.get(k)]);else if(isLandT(t))landList.push([x,z,t,isl.id,topY(x,z)]);}}
+// crossing into a stranger band of sea
+function frCheckTier(){const [px,pz]=frPos(),t=frTierAt(px,pz);if(t===frTier)return;const up=t>frTier&&frTier!==-1||t>(S.frMax??-1);frTier=t;
+  if(t>=0&&up&&t>(S.frMax??-1)){S.frMax=t;const T=FR_TIERS[t];toast(`You've sailed into <b>${T.name}</b>. ${T.blurb}`,'rare',ICON.chart);SFX.discover();}}
+function updateFrontier(dt,tt){frT-=dt;if(frT<=0){frT=0.4;frStream(false);frCheckTier();}
+  for(const isl of islands)if(isl.bob&&isl.group&&isl.group.visible)isl.bob.forEach((m,i)=>{m.position.y=Math.sin(tt*0.55+i*2.1+isl.id)*0.32;});}
+// the sea (and a little of the sky) changes colour the further out you go
+const FR_SEA=[[0,0x3565cc,0],[230,0x2a9ab0,0.3],[520,0x6a4ad0,0.42],[880,0x9a3ab8,0.5],[1300,0x2a1a6a,0.55]];
+const _frc=new T.Color();
+function frTint(){if(frR0>1e8)return;const d=frPast(cam.tx,cam.tz);if(d<=0)return;let i=0;while(i<FR_SEA.length-2&&FR_SEA[i+1][0]<=d)i++;const A=FR_SEA[i],B=FR_SEA[i+1],t=clamp((d-A[0])/(B[0]-A[0]),0,1);
+  _frc.set(A[1]).lerp(_c.set(B[1]),t);const k=lerp(A[2],B[2],t);if(k<=0)return;
+  for(const c of [waterMat.color,s1Mat.color,s2Mat.color])c.lerp(_frc,k);skyHz.lerp(_frc,k*0.3);skyZen.lerp(_frc,k*0.45);}
+
+/* ---- strange decor ---- */
+function rodG(p,geo,col,x0,y0,z0,x1,y1,z1,w){const dx=x1-x0,dy=y1-y0,dz=z1-z0,L=Math.hypot(dx,dy,dz);
+  p.push(P(geo,col,(x0+x1)/2,(y0+y1)/2,(z0+z1)/2,Math.atan2(Math.hypot(dx,dz),dy),Math.atan2(dx,dz),0,w,L,w));}
+// a chain of rods along a list of points
+function chainG(p,geo,col,pts,w,cols){for(let i=0;i<pts.length-1;i++)rodG(p,geo,cols?cols[i%cols.length]:col,...pts[i],...pts[i+1],w*(cols?1:1-i/pts.length*0.4));}
+function frDeco(isl,g,blocked){const F=FSTY[isl.style];if(!F)return;const R=mulberry(isl.seed^0xdec0),p=[],gl=[],fl=[[],[]],veg=[],B=islLook(isl);
+  const free=shuffle(isl.grass.filter(([x,z])=>!blocked.has(K(x,z))),R),take=(n,sp=0)=>{const out=[];for(const t of free){if(out.length>=n)break;const [x,z]=t;
+      if(blocked.has(K(x,z)))continue;if(sp&&out.some(([a,b])=>Math.hypot(a-x,b-z)<sp))continue;out.push(t);for(let dx=-sp>>1;dx<=sp>>1;dx++)for(let dz=-sp>>1;dz<=sp>>1;dz++)blocked.add(K(x+dx,z+dz));}return out;};
+  const N=Math.max(4,Math.round(isl.grass.length/(isl.w>0.5?10:14))),Y=(x,z)=>topY(x,z)-0.02;
+  switch(F.deco){
+    case'giant':for(const [x,z] of take(Math.max(2,Math.round(N*0.5)),3)){const s=2+R()*1.6,kinds=B.trees||['oak'];veg.push(...shift(scaleParts(treeParts(kinds[Math.floor(R()*kinds.length)],R,B.rock),s),x,Y(x,z),z,R()*6.28));}break;
+    case'crystal':for(const [x,z] of take(N,2)){const y=Y(x,z),n=4+Math.floor(R()*5),big=R()<0.35?2.4:1.2;
+        for(let i=0;i<n;i++){const a=R()*6.28,t=0.15+R()*0.45,h=(1+R()*2.6)*big,w=(0.22+R()*0.2)*big,c=[0x4ac8ff,0x9a6aff,0xff6ac8,0x4ae8c0,0x6a8aff][Math.floor(R()*5)],ex=x+Math.sin(a)*t*h,ez=z+Math.cos(a)*t*h;
+          const glow=R()<0.3,L=glow?gl:p;rodG(L,CYL6,c,x+Math.sin(a)*0.1,y,z+Math.cos(a)*0.1,x+(ex-x)*0.78,y+h*0.78,z+(ez-z)*0.78,w);rodG(L,CONE6,c,x+(ex-x)*0.78,y+h*0.78,z+(ez-z)*0.78,ex,y+h,ez,w);}}break;
+    case'shroom':for(const [x,z] of take(N,3)){const y=Y(x,z),h=1.6+R()*4.2,cw=1.2+h*0.45+R()*0.8,cap=[0xd84a4a,0xa858d8,0xe8904a,0x6ae0d0,0xf0e0c8][Math.floor(R()*5)],glow=R()<0.35,lean=(R()-0.5)*0.4;
+        const tx=x+lean,tz=z+lean*0.5;rodG(p,CYL12,0xf2e8d4,x,y,z,tx,y+h,tz,0.28+h*0.06);p.push(P(SPH_LO,0xe8dcc4,x,y+0.1,z,0,0,0,0.9+h*0.12,0.4,0.9+h*0.12));
+        (glow?gl:p).push(P(SPH,cap,tx,y+h+cw*0.1,tz,0,0,0,cw,cw*0.5,cw));p.push(P(CYL12,0xe6d6bc,tx,y+h-0.02,tz,0,0,0,cw*0.9,0.12,cw*0.9));
+        for(let i=0;i<7;i++){const a=R()*6.28,e=0.3+R()*0.9;gl.push(P(SPH_XS,0xfff8ec,tx+Math.cos(a)*Math.sin(e)*cw*0.46,y+h+cw*0.1+Math.cos(e)*cw*0.24,tz+Math.sin(a)*Math.sin(e)*cw*0.46,0,0,0,0.22,0.1,0.22));}
+        for(let i=0;i<3;i++){const a=R()*6.28,d=0.8+R()*0.8,sx=x+Math.cos(a)*d,sz=z+Math.sin(a)*d,sh=0.3+R()*0.4;rodG(p,CYL8,0xf2e8d4,sx,y,sz,sx,y+sh,sz,0.1);p.push(P(SPH_LO,cap,sx,y+sh,sz,0,0,0,0.4,0.22,0.4));}}break;
+    case'candy':for(const [x,z] of take(N,2)){const y=Y(x,z),r=R(),c1=[0xff5a8a,0x5ac8ff,0xffc83a,0x8ae05a,0xc07aff][Math.floor(R()*5)];
+        if(r<0.4){const h=2+R()*2.2,rad=0.8+R()*0.7,ry=R()*6.28;rodG(p,CYL8,0xfaf6f0,x,y,z,x,y+h,z,0.12);
+          for(let k=0;k<4;k++)p.push(P(CYL12,k%2?0xffffff:c1,x+Math.sin(ry)*k*0.02,y+h+rad*0.8,z+Math.cos(ry)*k*0.02,Math.PI/2,ry,0,rad*2*(1-k*0.22),0.2,rad*2*(1-k*0.22)));}
+        else if(r<0.7){const h=2.4+R()*2,a=R()*6.28,pts=[[x,y,z],[x,y+h*0.5,z],[x,y+h,z]];for(let k=1;k<=5;k++){const t=k/5*Math.PI;pts.push([x+Math.sin(a)*(1-Math.cos(t))*0.5,y+h+Math.sin(t)*0.5,z+Math.cos(a)*(1-Math.cos(t))*0.5]);}
+          const pp=[];for(let i=0;i<pts.length-1;i++)for(let s=0;s<3;s++){const u=s/3,v=(s+1)/3,A=pts[i],Bq=pts[i+1];pp.push([[A[0]+(Bq[0]-A[0])*u,A[1]+(Bq[1]-A[1])*u,A[2]+(Bq[2]-A[2])*u],[A[0]+(Bq[0]-A[0])*v,A[1]+(Bq[1]-A[1])*v,A[2]+(Bq[2]-A[2])*v]]);}
+          pp.forEach(([A,Bq],i)=>rodG(p,CYL8,i%2?0xffffff:0xe83a4a,...A,...Bq,0.26));}
+        else for(let i=0;i<3;i++){const a=R()*6.28,d=R()*0.7,s=0.6+R()*0.8;p.push(P(SPH,[0xff6a9a,0x6ad0ff,0xffd04a,0x9ae86a,0xc08aff][Math.floor(R()*5)],x+Math.cos(a)*d,y+s*0.3,z+Math.sin(a)*d,0,0,0,s,s*1.1,s));}}break;
+    case'bloom':for(const [x,z] of take(N,2)){const y=Y(x,z),h=2+R()*3.4,a=R()*6.28,tx=x+Math.sin(a)*0.5,tz=z+Math.cos(a)*0.5,pc=[0xff6a8a,0xffb03a,0xb86aff,0xfff0f0,0xff4a4a,0x6aa8ff][Math.floor(R()*6)],pn=6+Math.floor(R()*3),pr=0.7+h*0.2;
+        chainG(veg,CYL8,0x4a9a3a,[[x,y,z],[x+Math.sin(a)*0.15,y+h*0.5,z+Math.cos(a)*0.15],[tx,y+h,tz]],0.16);
+        for(const s of [-1,1])veg.push(P(SPH_LO,0x5aac48,x+Math.sin(a+s*1.4)*0.5,y+h*0.3,z+Math.cos(a+s*1.4)*0.5,0,a+s*1.4,0.5*s,0.3,0.08,0.9));
+        for(let i=0;i<pn;i++){const b=i/pn*6.28;veg.push(P(SPH_LO,pc,tx+Math.cos(b)*pr*0.55,y+h,tz+Math.sin(b)*pr*0.55,0,-b,0,pr*0.55,0.12,pr*1.05));}
+        veg.push(P(SPH_LO,0xf6c83a,tx,y+h+0.08,tz,0,0,0,pr*0.55,0.3,pr*0.55));}break;
+    case'coral':for(const [x,z] of take(N,2)){const y=Y(x,z),c=[0xff7a6a,0xff9ac8,0xb87aff,0xffb04a][Math.floor(R()*4)];
+        const grow=(x0,y0,z0,a,e,L,d)=>{const x1=x0+Math.sin(e)*Math.sin(a)*L,y1=y0+Math.cos(e)*L,z1=z0+Math.sin(e)*Math.cos(a)*L;rodG(p,CYL8,c,x0,y0,z0,x1,y1,z1,0.26-d*0.05);
+          if(d>=3){p.push(P(SPH_XS,lerpHex(c,0xffffff,0.35),x1,y1,z1,0,0,0,0.3,0.3,0.3));return;}for(let k=0;k<2;k++)grow(x1,y1,z1,a+(k?1:-1)*(0.5+R()*0.6),Math.min(1.1,e+0.25+R()*0.2),L*0.78,d+1);};
+        grow(x,y,z,R()*6.28,0.1,0.9+R()*0.7,0);if(R()<0.4)p.push(P(SPH,lerpHex(c,0xffe0c0,0.4),x+0.9,y+0.3,z+0.6,0,0,0,1,0.7,1));}break;
+    case'neon':for(const [x,z] of take(N,2)){const y=Y(x,z),n=1+Math.floor(R()*3),gc=[0xff4ae0,0x3af0ff,0x9aff4a,0xffe04a][Math.floor(R()*4)];
+        for(let i=0;i<n;i++){const a=R()*6.28,d=i?0.6+R()*0.4:0,h=2+R()*4.5,w=0.5+R()*0.4,bx=x+Math.cos(a)*d,bz=z+Math.sin(a)*d,tx=bx+(R()-0.5)*0.8,tz=bz+(R()-0.5)*0.8;
+          rodG(p,CONE6,0x1a1628,bx,y,bz,tx,y+h,tz,w);for(let k=1;k<=3;k++){const t=k/4.5;gl.push(P(CYL12,gc,bx+(tx-bx)*t,y+h*t,bz+(tz-bz)*t,0,0,0,w*(1-t)*1.08,0.07,w*(1-t)*1.08));}}
+        if(R()<0.5)fl[Math.floor(R()*2)].push(P(SPH,gc,x,y+4+R()*3,z,0,0,0,0.5,0.5,0.5));}
+      fl.glow=1;break;
+    case'sky':for(const [x,z] of (()=>{/* floating isles don't need free ground under them */const o=[];for(const t of shuffle(isl.grass.slice(),R))if(o.length<Math.max(5,N)&&!o.some(([a,b])=>Math.hypot(a-t[0],b-t[1])<3.6))o.push(t);return o;})()){const y=Y(x,z)+3+R()*5,w=1.2+R()*2,L=fl[Math.floor(R()*2)];
+        L.push(P(CONE8,0x8a7a64,x,y-w*0.55,z,Math.PI,R()*3,0,w*1.9,w*1.2,w*1.9),P(CONE8,0x6a5a4a,x+0.2,y-w*1.1,z,Math.PI,R()*3,0,w*0.9,w*0.8,w*0.9),P(CYL12,B.grass[0],x,y+0.05,z,0,0,0,w*1.95,0.24,w*1.95));
+        if(R()<0.7)L.push(...shift(scaleParts(treeParts(R()<0.5?'oak':'pine',R,B.rock),0.8),x,y+0.15,z,R()*6.28));
+        if(R()<0.35){const a=R()*6.28,ex=x+Math.cos(a)*w*0.85,ez=z+Math.sin(a)*w*0.85;L.push(P(BOX,0xd8f0ff,ex,y-w*1.5,ez,0,a,0,0.3,w*3,0.12));}}
+      // and a few boulders hanging over the sea round the island
+      for(let i=0;i<6;i++){const a=R()*6.28,d=isl.r*(1.05+R()*0.4),x=isl.cx+Math.cos(a)*d/isl.sx,z=isl.cz+Math.sin(a)*d,y=3+R()*6,w=0.5+R()*0.9;fl[i%2].push(P(ICO,0x8a8278,x,y,z,R(),R(),R(),w*1.4,w,w*1.2),P(CYL12,B.grass[1],x,y+w*0.45,z,0,0,0,w*1.1,0.12,w*1.1));}break;
+    case'bones':{const sp=take(Math.max(1,Math.round(N*0.25)),6);for(const [x,z] of sp){const y=Y(x,z),a=R()*6.28,L=5+R()*5,ux=Math.sin(a),uz=Math.cos(a),vx=uz,vz=-ux,bc=0xece2cc;
+        for(let i=0;i<=10;i++){const t=i/10-0.5;p.push(P(SPH_LO,bc,x+ux*t*L,y+0.5+Math.sin(i*0.5)*0.1,z+uz*t*L,0,0,0,0.55,0.5,0.55));}
+        for(let i=1;i<8;i++){const t=i/8-0.5,bx=x+ux*t*L,bz=z+uz*t*L,hh=1.8+Math.sin(i/8*Math.PI)*1.8;
+          for(const s of [-1,1]){const pts=[];for(let k=0;k<=6;k++){const q=k/6*Math.PI*0.88;pts.push([bx+vx*s*Math.sin(q)*hh*0.62,y+0.5+(1-Math.cos(q))*hh*0.62,bz+vz*s*Math.sin(q)*hh*0.62]);}chainG(p,CYL8,bc,pts,0.22);}}
+        const hx=x+ux*(L/2+1.4),hz=z+uz*(L/2+1.4);p.push(P(SPH,bc,hx,y+1.1,hz,0,a,0,2.2,1.8,2.4),P(SPH_LO,0x2a2420,hx+vx*0.5+ux*0.9,y+1.4,hz+vz*0.5+uz*0.9,0,0,0,0.55,0.5,0.4),P(SPH_LO,0x2a2420,hx-vx*0.5+ux*0.9,y+1.4,hz-vz*0.5+uz*0.9,0,0,0,0.55,0.5,0.4),P(BOX,bc,hx+ux*0.9,y+0.3,hz+uz*0.9,0,a,0,1.3,0.35,1));
+        for(const s of [-1,1])chainG(p,CYL8,0xf6eedc,[[hx+vx*s*0.7+ux*0.8,y+0.6,hz+vz*s*0.7+uz*0.8],[hx+vx*s*1.1+ux*1.8,y+1.1,hz+vz*s*1.1+uz*1.8],[hx+vx*s*1+ux*2.4,y+2,hz+vz*s*1+uz*2.4]],0.3);}}break;
+    case'spire':for(const [x,z] of take(Math.round(N*0.4),3)){const y=Y(x,z),h=2.5+R()*3;rodG(p,CONE4,0x7a7a88,x,y,z,x,y+h,z,0.9);}
+      // sea stacks: rock columns standing out of the shallows, grass and a pine on top
+      {const sh=isl.keys.filter(k=>landMap.get(k)==='s2').map(k=>k.split(',').map(Number));for(const [x,z] of shuffle(sh,R).slice(0,5)){const h=3+R()*6,w=0.9+R()*0.9;
+        p.push(P(CYL8,0x6a6a78,x,h/2-0.5,z,0,R()*3,0,w,h+1,w*0.9),P(CYL8,B.grass[0],x,h+0.02,z,0,0,0,w*1.02,0.12,w*0.92));veg.push(...shift(treeParts('pine',R,B.rock),x,h+0.05,z,R()*6));}}break;
+    case'rainbow':{const cols=[0xff4a4a,0xff9a3a,0xffe04a,0x5ad05a,0x4aa8ff,0x6a5ad8,0xb05ad8],a=R()*3.14,ux=Math.cos(a),uz=Math.sin(a),rad=Math.min(isl.r*0.9,9),y0=topY(isl.cx,isl.cz);
+        cols.forEach((c,k)=>{const r=rad-k*0.38,pts=[];for(let i=0;i<=16;i++){const q=i/16*Math.PI;pts.push([isl.cx+ux*Math.cos(q)*r,y0-0.5+Math.sin(q)*r,isl.cz+uz*Math.cos(q)*r]);}chainG(gl,BOX,c,pts,0.38);});
+        for(const [x,z] of take(N,2)){const y=Y(x,z),c=[0xffb8d8,0xb8e8ff,0xfff0a8,0xc8ffc8,0xe0c8ff][Math.floor(R()*5)],h=1.6+R()*1.6;rodG(veg,CYL8,0xf8f0f8,x,y,z,x,y+h,z,0.18);
+          for(let i=0;i<5;i++)veg.push(P(SPH,c,x+(R()-0.5)*1.2,y+h+R()*0.6,z+(R()-0.5)*1.2,0,0,0,0.9+R()*0.5,0.8+R()*0.4,0.9+R()*0.5));}}break;
+    case'void':for(const [x,z] of take(N,2)){const y=Y(x,z),h=1.5+R()*2.8;rodG(p,CYL6,0x0c0a14,x,y,z,x+(R()-0.5)*0.4,y+h,z+(R()-0.5)*0.4,0.24);
+        for(let i=0;i<3;i++)gl.push(P(ICO0,[0xe8e8ff,0xc8b8ff,0xa8e8ff][i],x+(R()-0.5)*1,y+h+(R()-0.3)*0.8,z+(R()-0.5)*1,R(),R(),R(),0.8+R()*0.6,0.8+R()*0.6,0.8+R()*0.6));
+        if(R()<0.5){const L=fl[Math.floor(R()*2)],ry=y+4+R()*4,rr=0.9+R()*0.8;for(let i=0;i<14;i++){const b=i/14*6.28,b2=(i+1)/14*6.28;rodG(L,BOX,0xf0e8ff,x+Math.cos(b)*rr,ry+Math.sin(b)*rr,z,x+Math.cos(b2)*rr,ry+Math.sin(b2)*rr,z,0.12);}}}
+      for(const [x,z] of isl.grass)if(hash(x*3.3,z*1.9)<0.28)gl.push(P(ICO0,hash(z,x)<0.5?0xffffff:0xb8b0ff,x+(hash(x,z*5)-0.5)*0.8,topY(x,z)+0.04,z+(hash(z*7,x)-0.5)*0.8,0,hash(x,z)*6,0,0.12,0.06,0.12));
+      fl.glow=1;break;}
+  if(p.length){const m=M(p);m.userData.core=1;g.add(m);}
+  if(gl.length){const m=M(gl,lumMat);m.castShadow=false;m.userData.core=1;g.add(m);}
+  if(veg.length)addVeg(isl,g,veg);
+  isl.bob=[];for(const L of [fl[0],fl[1]])if(L.length){const m=M(L,fl.glow?lumMat:vcMat);m.userData.core=1;const w=new T.Group();w.add(m);w.userData.core=1;g.add(w);isl.bob.push(w);}}
 /* =========================================================
    Soil (tilled tiles)
    ========================================================= */
@@ -4646,7 +4849,7 @@ function applyTime(){
   const dip=smooth(0,0.5,Math.abs(h-5.5))*smooth(0,0.5,Math.abs(h-19.25));
   sun.intensity=lerp(A.si,B.si,t)*(1-rm*0.55)*(0.25+0.75*dip);
   lerpCol(waterMat.color,'water',A,B,t,rm);lerpCol(s1Mat.color,'s1',A,B,t,rm);lerpCol(s2Mat.color,'s2',A,B,t,rm);lerpCol(glintMat.color,'gl',A,B,t);
-  lerpCol(skyHz,'hz',A,B,t,rm);lerpCol(skyZen,'zen',A,B,t,rm);lerpCol(skyGlow,'glow',A,B,t);skyGA=lerp(A.ga,B.ga,t)*(1-rm*0.8);scene.fog.color.copy(skyHz);
+  lerpCol(skyHz,'hz',A,B,t,rm);lerpCol(skyZen,'zen',A,B,t,rm);lerpCol(skyGlow,'glow',A,B,t);frTint();skyGA=lerp(A.ga,B.ga,t)*(1-rm*0.8);scene.fog.color.copy(skyHz);
   nightF=lerp(A.n,B.n,t);
   let tt;if(h>=5.5&&h<19.25)tt=(h-5.5)/13.75;else tt=((h-19.25+24)%24)/10.25;
   const az=lerp(-1.25,1.25,tt)+0.6,el=0.28+Math.sin(tt*Math.PI)*0.62; // the sun never climbs too high, so shadows stay long and soft
@@ -5520,7 +5723,7 @@ function openBottle(){SFX.rare();const lv=level(),r=Math.random();let msg;
   else if(r<0.72){S.free.mystery=(S.free.mystery||0)+1;msg=`“Plant this under a full moon.” Inside: <b>a Mystery Seed</b>.`;}
   else if(r<0.85){gain('g:pearl');msg=`“The sea gave me two. One is yours.” Inside: <b>a Pearl</b>!`;}
   else{const und=islands.filter(i=>!S.disc[i.id]);if(und.length){const isl=und.sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z))[0];S.disc[isl.id]=1;
-      msg=`A torn sea chart! It marks <b>${isl.name}</b>, a ${BIOMES[isl.biome].name.toLowerCase()} island. It's on your Chart now.`;}
+      msg=`A torn sea chart! It marks <b>${isl.name}</b>, a ${islKind(isl).toLowerCase()} island. It's on your Chart now.`;}
     else{const n=200+lv*80;S.shells+=n;msg=`An old captain's log and <b>${fmt(n)} shells</b>.`;}}
   setAction(msg,[{label:'Keep it',cls:'go',fn:clearAction}],'Message in a Bottle');}
 
@@ -6732,7 +6935,7 @@ function planPath(sx,sz,tx,tz){
     pop=()=>{const top=heap[0],last=heap.pop();if(heap.length){heap[0]=last;let i=0;for(;;){const l=i*2+1,r=l+1;let m=i;if(l<heap.length&&heap[l].f<heap[m].f)m=l;if(r<heap.length&&heap[r].f<heap[m].f)m=r;if(m===i)break;[heap[m],heap[i]]=[heap[i],heap[m]];i=m;}}return top;};
   const gs=new Map(),came=new Map(),sk=K(x0,z0);gs.set(sk,0);push({x:x0,z:z0,f:hh(x0,z0)});let n=0,found=false;
   while(heap.length&&n<60000){const c=pop(),ck=K(c.x,c.z);n++;if(c.x===gx&&c.z===gz){found=true;break;}const cg=gs.get(ck);
-    for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){if(!dx&&!dz)continue;const nx=c.x+dx,nz=c.z+dz;if(Math.abs(nx)>300||Math.abs(nz)>300)continue;if(seaBlocked(nx,nz))continue;
+    for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){if(!dx&&!dz)continue;const nx=c.x+dx,nz=c.z+dz;if(Math.abs(nx-x0)>300||Math.abs(nz-z0)>300)continue;if(seaBlocked(nx,nz))continue;
       if(dx&&dz&&(seaBlocked(c.x+dx,c.z)||seaBlocked(c.x,c.z+dz)))continue;
       const nk=K(nx,nz),cost=(dx&&dz?1.414:1)*(seaMargin.has(nk)?4:1),ng=cg+cost;if(ng<(gs.get(nk)??1e9)){gs.set(nk,ng);came.set(nk,ck);push({x:nx,z:nz,f:ng+hh(nx,nz)});}}}
   if(!found)return null;
@@ -6778,7 +6981,7 @@ function updateSeaLife(dt,tt){
     if(dolph.t>T2+0.4){dolph=null;dolphins.forEach(g=>g.visible=false);}}}
 // instant travel to an island you've already found: the boat drops you off on its near shore
 function fastTravel(isl){sail=null;$('fade').classList.add('on');SFX.horn();
-  setTimeout(()=>{let bx,bz;
+  setTimeout(()=>{let bx,bz;if(isl.fr&&!isl.group){frBuild(isl);}
     if(isl.home){bx=DOCK.x+1.05;bz=isl.dockZ+2.4;}
     else{const L=Math.hypot(isl.cx,isl.cz)||1,ux=-isl.cx/L,uz=-isl.cz/L;let best=null,bs=-1e9;for(const [x,z] of isl.sand){const q=(x-isl.cx)*ux+(z-isl.cz)*uz;if(q>bs){bs=q;best=[x,z];}}
       if(!best)best=isl.grass[0];bx=best[0];bz=best[1];for(let i=0;i<16;i++){bx+=ux*0.5;bz+=uz*0.5;if(!seaMargin.has(K(Math.round(bx),Math.round(bz))))break;}}
@@ -6788,6 +6991,7 @@ function fastTravel(isl){sail=null;$('fade').classList.add('on');SFX.horn();
     setTimeout(()=>$('fade').classList.remove('on'),180);},650);}
 function sailHome(){const isl=islands[0];sailTo(DOCK.x+1.05,isl.dockZ+2.4,0,'Home');}
 function sailToIsland(isl){if(!S.sea){boardBoat(()=>sailToIsland(isl));return;}
+  if(!isl.group&&isl.fr){const d=Math.hypot(isl.cx-S.boat.x,isl.cz-S.boat.z)||1;/* not built yet (44b): head for it; it's built as you near it, and the course is set again then */sailTo(isl.cx-(isl.cx-S.boat.x)/d*(isl.ext+6),isl.cz-(isl.cz-S.boat.z)/d*(isl.ext+6),isl.id,isl.name);return;}
   let best=null,bd=1e9;for(const [x,z] of [...isl.sand,...isl.grass]){const d=(x-S.boat.x)**2+(z-S.boat.z)**2;if(d<bd){bd=d;best=[x,z];}}
   if(!best)return;const d=Math.sqrt(bd)||1,ux=(S.boat.x-best[0])/d,uz=(S.boat.z-best[1])/d;
   sailTo(best[0]+ux*1.3,best[1]+uz*1.3,isl.id,isl.home?'Home':isl.name);}
@@ -6830,8 +7034,10 @@ function updateFlotsam(dt,tt){
         else if(r<0.8){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+2;floatText(f.x,0.8,f.z,'+2 '+CROPS[id].name+' seeds','gold');SFX.pop();}
         else{const k=pickW(FINDS,k=>['glass','pearl','drift','fossil','amber'].includes(k));const first=gain('g:'+k);floatText(f.x,0.8,f.z,'+ '+FINDS[k].name,'gold');SFX.harvest();}}}
     else if(d>70){scene.remove(f.g);flots.splice(i,1);}}}
-function checkDiscovery(){const x=vil.x,z=vil.z;for(const isl of islands){if(S.disc[isl.id])continue;if(Math.hypot(x-isl.cx,z-isl.cz)<isl.r/0.7+30){S.disc[isl.id]=1;SFX.discover();
-  toast(`Discovered <b>${isl.name}</b> — a ${BIOMES[isl.biome].name.toLowerCase()} island!`,'rare',ICON.chart);addXP(20);}}}
+let discT=0;
+function checkDiscovery(){const x=vil.x,z=vil.z;for(const isl of islands){if(S.disc[isl.id])continue;if(Math.hypot(x-isl.cx,z-isl.cz)<isl.r/0.7+30){S.disc[isl.id]=1;
+  if(isl.fr&&performance.now()-discT<6000)continue;/* out on the frontier islands come thick and fast: one card at a time */discT=performance.now();SFX.discover();
+  toast(`Discovered <b>${isl.name}</b> — a ${islKind(isl).toLowerCase()} island!`,'rare',ICON.chart);addXP(20);}}}
 
 
 // ---- the villager sailboat: loops a sea route planned around the home island and farm field (never through land) ----
@@ -6888,7 +7094,7 @@ const RESTORE_N=3;
 const stageOf2=isl=>(S.restore&&S.restore[isl.id])||0;
 const restored=isl=>isl.home||stageOf2(isl)>=RESTORE_N;
 // wild islands look washed-out until their heart tree is restored
-function islandBiome(isl){const B=BIOMES[isl.biome];if(restored(isl))return B;return Object.assign({},B,{grass:B.grass.map(c=>lerpHex(c,0xa0a08e,0.42))});}
+function islandBiome(isl){const B=islLook(isl);if(restored(isl))return B;return Object.assign({},B,{grass:B.grass.map(c=>lerpHex(c,0xa0a08e,isl.style?0.18:0.42))});}
 
 /* ---- heart trees ---- */
 function pickHeart(isl,blocked){let best=null,bd=1e9;for(const [x,z] of isl.grass){if(blocked.has(K(x,z)))continue;const d=Math.hypot(x-isl.cx,z-isl.cz);if(d<bd){bd=d;best=[x,z];}}
@@ -7038,7 +7244,7 @@ function updateLife(dt,tt){
   for(const f of S.finds)if(Math.random()<dt*0.4&&Math.abs(f.x-vil.x)<30&&Math.abs(f.z-vil.z)<30)sparkle(f.x,topY(f.x,f.z)+0.15,f.z,0xf4f8ff);
   slowT-=dt;if(slowT<=0){slowT=0.5;
     const ep=plantEpoch();
-    for(const i of islands){if(i.home)continue;const d=Math.hypot(i.cx-cam.tx,i.cz-cam.tz);const vis=d<120;i.group.visible=vis;
+    for(const i of islands){if(i.home||!i.group)continue;const d=Math.hypot(i.cx-cam.tx,i.cz-cam.tz);const vis=d<120;i.group.visible=vis;
       if(vis&&d<70){if(!i.pgroup||i.pEpoch!==ep)syncPlants(i);}else if(i.pgroup&&d>90){scene.remove(i.pgroup);i.pgroup.traverse(o=>{if(o.geometry)o.geometry.dispose();});i.pgroup=null;}}
     checkDiscovery();const ci=curIsl();if((ci?ci.id:-1)!==ffIsl)placeFireflies(ci);}
   for(const i of islands){if(!i.pgroup)continue;for(const m of i.pgroup.children){const Pd=PLANTS[m.userData.plant.id];if(Pd.w<5&&Math.random()<dt*1.2)sparkle(m.position.x,0.8,m.position.z,0xfff0a0);}
@@ -7381,14 +7587,14 @@ function renderSheet(){
         h+=`<div class="card"><img class="px ${n?'':'sil'}" src="${ICON[key]}" alt=""><span class="grow"><span class="nm">${n?I.name:'???'}</span><br><span class="sub">${pre==='s:'?SEA_TIERS[I.tier].n+' · ':I.w?rarity(I.w)+' · ':''}${whereStr(I,key)}${n&&I.price?' · '+fmt(I.price)+' shells':''}${pre==='f:'&&S.rec[id]?` · best ${S.rec[id]} kg`:''}</span></span>${n?`<span class="price">×${n}</span>`:''}</div>`;}
       h+='</div>';}}
   else if(sheet.kind==='chart'){$('sheetTitle').textContent='Sea Chart';tabs([]);
-    const disc=islands.filter(i=>S.disc[i.id]);
+    const disc=islands.filter(i=>S.disc[i.id]).sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z)).slice(0,40);/* the nearest, once the frontier has given you hundreds */
     h+=`<canvas id="chart" width="320" height="320"></canvas><p class="note">Tap an island you've found to travel there instantly. To discover new ones, sail out and tap the sea. Question marks are rumours of islands you haven't found yet: set sail for one and the markers at the edge of the screen will guide you.</p><div class="isles">`;
     {const und=islands.filter(i=>!S.disc[i.id]).sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z)).slice(0,3),dirs=['north','north-east','east','south-east','south','south-west','west','north-west'];
       for(const i of und){const d=Math.round(Math.hypot(i.cx-vil.x,i.cz-vil.z)),a=Math.atan2(i.cx-vil.x,-(i.cz-vil.z)),dir=dirs[((Math.round(a/(Math.PI/4))%8)+8)%8];
         h+=`<button class="card rumour" data-rumour="${i.id}"><img class="px" src="${ICON.chart}" alt=""><span class="grow"><span class="nm">Uncharted island</span><br><span class="sub">A rumour · about ${Math.round(d/10)*10} leagues ${dir}</span></span><span class="price">${unlocked('boat')?'Set sail':'Lv 4'}</span></button>`;}}
     for(const isl of disc){const d=Math.round(Math.hypot(isl.cx-vil.x,isl.cz-vil.z));const bio=isl.biome;
       let got=0,tot=0;if(!isl.home){for(const k in PLANTS)if(PLANTS[k].bio.includes(bio)){tot++;if(S.alm['p:'+k])got++;}for(const k in BUGS)if(BUGS[k].bio.includes(bio)){tot++;if(S.alm['b:'+k])got++;}}
-      h+=`<button class="card" data-isle="${isl.id}"><img class="px" src="${isl.home?ICON.sprout:ICON.chart}" alt=""><span class="grow"><span class="nm">${isl.name}</span><br><span class="sub">${isl.home?'Your island':BIOMES[bio].name+' island'} · ${d<4?'you are here':d+' leagues away'}${tot?` · ${got}/${tot} local plants & bugs`:''}</span></span></button>`;}
+      h+=`<button class="card" data-isle="${isl.id}"><img class="px" src="${isl.home?ICON.sprout:ICON.chart}" alt=""><span class="grow"><span class="nm">${isl.name}</span><br><span class="sub">${isl.home?'Your island':islKind(isl)+' island'} · ${d<4?'you are here':d+' leagues away'}${tot?` · ${got}/${tot} local plants & bugs`:''}</span></span></button>`;}
     h+='</div>';}
   else if(sheet.kind==='look'){$('sheetTitle').textContent='Your look';tabs([]);const L=S.look;
     h+=`<div class="looks">${Object.keys(LOOKS).map(sp=>`<button class="lk ${L.sp===sp?'on':''}" data-look="${sp}"><img src="${lookThumb(sp,sp===L.sp?L.fur:LOOKS[sp].fur[0],L.shirt)}" alt=""><span>${LOOKS[sp].name}</span></button>`).join('')}</div>`;
@@ -7424,13 +7630,15 @@ function renderSheet(){
   if(sheet.kind==='chart')drawChart();
 }
 function drawChart(){const cv=$('chart');if(!cv)return;const g=cv.getContext('2d'),N=320;g.imageSmoothingEnabled=false;
-  const disc=islands.filter(i=>S.disc[i.id]);let E=40;for(const i of disc)E=Math.max(E,Math.hypot(i.cx,i.cz)+14);E=Math.max(E,Math.hypot(vil.x,vil.z)+14);
+  // out on the frontier (44b) the chart centres on you and shows the sea round about, not the whole world
+  const far=Math.hypot(vil.x,vil.z)>frR0-40,ox=far?vil.x:0,oz=far?vil.z:0,inView=i=>!far||Math.hypot(i.cx-ox,i.cz-oz)<140;
+  const disc=islands.filter(i=>S.disc[i.id]&&inView(i));let E=40;if(far)E=130;else{for(const i of disc)E=Math.max(E,Math.hypot(i.cx,i.cz)+14);E=Math.max(E,Math.hypot(vil.x,vil.z)+14);}
   const und=islands.filter(i=>!S.disc[i.id]).sort((a,b)=>Math.hypot(a.cx-vil.x,a.cz-vil.z)-Math.hypot(b.cx-vil.x,b.cz-vil.z)).slice(0,3);
-  for(const i of und)E=Math.max(E,Math.hypot(i.cx,i.cz)+14);
-  const sc=(N/2-10)/E;const X=x=>N/2+x*sc,Y=z=>N/2+z*sc;
+  if(!far)for(const i of und)E=Math.max(E,Math.hypot(i.cx,i.cz)+14);
+  const sc=(N/2-10)/E;const X=x=>N/2+(x-ox)*sc,Y=z=>N/2+(z-oz)*sc;
   g.fillStyle='#3565cc';g.fillRect(0,0,N,N);g.fillStyle='rgba(255,255,255,.12)';for(let x=0;x<N;x+=20)for(let y=0;y<N;y+=20)g.fillRect(x,y,2,2);
   const px=2,hex=c=>'#'+c.toString(16).padStart(6,'0');
-  for(const isl of disc){const R=islR(isl)/0.62+2.2;const B=BIOMES[isl.biome];
+  for(const isl of disc){const R=islR(isl)/0.62+2.2;const B=islLook(isl);
     for(let wx=isl.home?Math.min(-R,farmWest()):-R;wx<=R;wx+=px/sc)for(let wz=-R;wz<=R;wz+=px/sc){const t=tileTypeI(isl,Math.round(isl.cx+wx),Math.round(isl.cz+wz));if(!t)continue;
       g.fillStyle=t==='grass'?hex(B.grass[0]):t==='sand'?hex(B.sand[0]):t==='s1'?'#7ea6e8':'#5584da';
       g.fillRect(Math.round(X(isl.cx+wx)/px)*px,Math.round(Y(isl.cz+wz)/px)*px,px,px);}}
@@ -7440,7 +7648,7 @@ function drawChart(){const cv=$('chart');if(!cv)return;const g=cv.getContext('2d
   for(const isl of disc){const R=islR(isl)/0.7;const y=Math.max(12,Y(isl.cz)-R*sc-5);g.fillStyle='#2b1e2e';g.fillText(isl.name,X(isl.cx)+1,y+1);g.fillStyle='#fff6e2';g.fillText(isl.name,X(isl.cx),y);}
   g.font='bold 16px "Fredoka", sans-serif';for(const i of und){const jx=(hash(i.id,1)-0.5)*16,jz=(hash(1,i.id)-0.5)*16;g.fillStyle='#2b1e2e';g.fillText('?',X(i.cx+jx)+1,Y(i.cz+jz)+6);g.fillStyle='#fff3c4';g.fillText('?',X(i.cx+jx),Y(i.cz+jz)+5);}
   g.fillStyle='#2b1e2e';g.fillRect(Math.round(X(vil.x))-4,Math.round(Y(vil.z))-4,8,8);g.fillStyle=S.sea?'#f6d04a':'#d8453a';g.fillRect(Math.round(X(vil.x))-2,Math.round(Y(vil.z))-2,4,4);
-  cv.onclick=e=>{const r=cv.getBoundingClientRect();const wx=((e.clientX-r.left)/r.width*N-N/2)/sc,wz=((e.clientY-r.top)/r.height*N-N/2)/sc;
+  cv.onclick=e=>{const r=cv.getBoundingClientRect();const wx=((e.clientX-r.left)/r.width*N-N/2)/sc+ox,wz=((e.clientY-r.top)/r.height*N-N/2)/sc+oz;
     let best=null,bd=1e9;for(const isl of disc){const d=Math.hypot(isl.cx-wx,isl.cz-wz);if(d<bd){bd=d;best=isl;}}if(best&&bd<18/sc+islR(best)){chartGo(best);}};}
 function chartGo(isl){if(!isl.home&&!unlocked('boat')){toast('You need your boat to reach other islands (Island Heart level 4).','',ICON.boat);return;}const here=curIsl();if(here&&here.id===isl.id){toast(`You're already on ${isl.name}.`);return;}closeSheet();fastTravel(isl);}
 $('sheetBody').addEventListener('input',e=>{if(e.target.id==='devHour'){setHour(Number(e.target.value));$('devHourLbl').textContent=clockStr(S.hour);applyTime();updateHUD();}});
@@ -8255,7 +8463,7 @@ function frame(now){
   const dt=Math.min(0.1,(now-last)/1000);last=now;tt+=dt;_pl=performance.now();
   advance(dt*devSpeed);PL('advance');
   {const gT=wxGrey();rainMix=clamp(rainMix+Math.sign(gT-rainMix)*Math.min(Math.abs(gT-rainMix),dt*0.5),0,1);rainFall=clamp(rainFall+(S.rain?dt:-dt)*0.5,0,1);updateWeather(dt);}
-  grassU.uTime.value=tt;leafU.uT.value=tt;leafU.uWind.value=S.rain?1.8:1;riverU.uTime.value=tt;waterU.uT.value=tt;waterU.uCam.value.copy(camera.position);if(depthDirty)buildDepthTex();
+  grassU.uTime.value=tt;leafU.uT.value=tt;leafU.uWind.value=S.rain?1.8:1;riverU.uTime.value=tt;waterU.uT.value=tt;waterU.uCam.value.copy(camera.position);depthFollow();if(depthDirty)buildDepthTex();
   {const ci=S.sea?null:curIsl();if(ci&&ci.falls)for(const [x,y,z] of ci.falls){if(Math.random()<dt*3&&Math.abs(x-cam.tx)<16&&Math.abs(z-cam.tz)<16)emit(x+(Math.random()-0.5)*0.8,y+0.05,z+(Math.random()-0.5)*0.3,{vy:0.5+Math.random()*0.5,life:0.6,max:0.6,size:0.07,color:ci.lava?0xffc070:0xf4fbff,g:2});}}grassU.uWind.value=1+rainMix*1.3;grassU.uPl.value.set(vil.x,S.sea?-99:vil.y,vil.z);
   if(!S.sea){
     const dx=vil.tx-vil.x,dz=vil.tz-vil.z,d=Math.hypot(dx,dz);
@@ -8278,7 +8486,7 @@ function frame(now){
         if(swim.on)swimPose(dt,tt,walk);}}
   }
   PL('move');wearPaths();
-  updateBoat(dt,tt);
+  updateBoat(dt,tt);updateFrontier(dt,tt);
   if(S.sea){vil.hop=Math.max(0,vil.hop-dt);villager.position.set(vil.x,0.14+Math.sin(tt*1.5)*0.04+Math.sin(vil.hop/0.35*Math.PI)*0.3*(vil.hop>0),vil.z);if(!fishing)villager.rotation.y=S.boat.r;}
   if(introCam){introCam.t+=dt;const u=smooth(0,1,introCam.t/7);cam.dist=lerp(10,introCam.d,u);cam.pitch=lerp(0.22,introCam.p,u);cam.yaw=lerp(introCam.y-0.5,introCam.y,u);if(introCam.t>=7||drag||pinch)introCam=null;}
   const k=paint?0:Math.min(1,dt*5);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;PL('boat');applyCam();cullIslands();PL('cull');updateNearGrass(dt);PL('near'); // hold the view still while drag-farming so tiles stay under the finger
@@ -8331,6 +8539,7 @@ $('icoShell').src=PIX.shell;$('icoStar').src=PIX.star;$('icoBag').src=PIX.bag;$(
 let introCam=null;
 function bootGame(prebuilt){applyHomeStyle();seasonCheck();
 if(!prebuilt){genIslands();for(const isl of islands)buildIsland(isl);rebuildSeaGrid();}
+frontierBoot();/* the endless islands past the charted world (44b) */
 if(S.wv!==3){if(!isNew){S.sea=false;S.boat=null;S.picked={};vil.x=vil.tx=0.3;vil.z=vil.tz=2.1;}S.wv=3;}
 ensureBoat(true);if(S.sea&&isLand(Math.round(S.boat.x),Math.round(S.boat.z))){S.sea=false;S.boat=null;ensureBoat(false);}
 if(isNew)setupNew();
@@ -8392,6 +8601,18 @@ if(/[?&]debug\b/.test(location.search)){
     islands:()=>islands.map(i=>({id:i.id,biome:i.biome,name:i.name,x:i.cx,z:i.cz,r:Math.round(islR(i)),grand:!!i.grand,river:(i.rtiles||[]).length})),
     screen:(x,z)=>toScreen(x,topY(x,z),z),
     npcScreen:i=>{const n=npcs[i];return toScreen(n.x,n.y+0.5,n.z);},
+    frLog:()=>frBuild.log||[],frSail:(x,z)=>{sailTo(x,z);return !!sail;},frBoat:()=>S.boat&&[Math.round(S.boat.x),Math.round(S.boat.z),!!sail],
+    frInfo:()=>{const fr=islands.filter(i=>i.fr);return{R0:frR0,cells:frSeen.size,front:(S.front||[]).length,islands:fr.length,built:fr.filter(i=>i.group).length,lastMs:+(frBuild.ms||0).toFixed(1),tier:frTierAt(...frPos()),styles:fr.reduce((o,i)=>(o[i.style||i.biome]=(o[i.style||i.biome]||0)+1,o),{})};},
+    // put the boat out at sea, d tiles past the charted world at angle a, and stream the islands round it
+    frGo:(d,a=0.7)=>{const r=frR0+d,x=Math.cos(a)*r,z=Math.sin(a)*r;sail=null;S.sea=true;S.boat={x,z,r:0};vil.x=vil.tx=x;vil.z=vil.tz=z;cam.tx=x;cam.tz=z;introCam=null;frStream(true);const q=seaNear(Math.round(x),Math.round(z));if(q){S.boat.x=vil.x=vil.tx=cam.tx=q[0];S.boat.z=vil.z=vil.tz=cam.tz=q[1];}cullIslands();return DS.frInfo();},
+    // find (rolling cells outward if need be) an island of a style, sail up beside it and look at it
+    frVisit:(st,dist=18,yaw=0.6,pitch)=>{let isl=islands.find(i=>i.fr&&(i.style||i.biome)===st);
+      for(let r=1;!isl&&r<40;r++)for(let a=0;a<24&&!isl;a++){const d=frR0+r*FR_C*0.8,x=Math.cos(a/24*6.283)*d,z=Math.sin(a/24*6.283)*d;frAddCell(Math.round(x/FR_C)+','+Math.round(z/FR_C),true);isl=islands.find(i=>i.fr&&(i.style||i.biome)===st);}
+      if(!isl)return null;sail=null;S.sea=true;S.boat={x:isl.cx+isl.ext+3,z:isl.cz,r:0};vil.x=vil.tx=S.boat.x;vil.z=vil.tz=S.boat.z;frStream(true);if(!isl.group)frBuild(isl);cullIslands();
+      {let best=null,bd=1e9;for(const [x,z] of isl.grass){const d=Math.hypot(x-isl.cx,z-isl.cz);if(d<bd){bd=d;best=[x,z];}}if(best){S.sea=false;vil.x=vil.tx=best[0];vil.z=vil.tz=best[1];vil.path=null;}}
+      introCam=null;cam.tx=vil.x;cam.tz=vil.z;cam.yaw=yaw;cam.dist=dist;if(pitch)cam.pitch=pitch;return{id:isl.id,name:isl.name,kind:islKind(isl),r:+isl.r.toFixed(1),mode:isl.mode,tiers:isl.tiers,hole:isl.hole,ms:+(frBuild.ms||0).toFixed(1)};},
+    frRebuild:(n=8,ids)=>{const out=[];for(const isl of ids?ids.map(i=>islands[i]):islands.filter(i=>i.fr&&i.group).slice(0,n)){if(!isl.group)frBuild(isl);frDrop(isl);const t=performance.now();frBuild(isl);out.push([isl.name,+isl.r.toFixed(1),Math.round(performance.now()-t),isl.keys.length]);}return out;},
+    frIsl:id=>{const i=islands[id];return{built:!!i.group,vis:i.group&&i.group.visible,bob:(i.bob||[]).map(w=>({vis:w.visible,mv:w.children[0].visible,n:w.children[0].geometry.attributes.position.count,bb:w.children[0].geometry.boundingBox})),kids:i.group&&i.group.children.length,cx:i.cx,cz:i.cz};},
     potGarden:()=>{const ks=POT_PLANTS.map(q=>'pot_'+q[0]),at=DS.freeRow(5);if(!at)return null;let i=0;for(let dz=0;dz<4&&i<ks.length;dz++)for(let dx=0;dx<5&&i<ks.length;dx++){const x=at[0]+dx,z=at[1]-dz;if(objAt(x,z))continue;S.objs.push({id:S.nextId++,k:ks[i++],x,z,r:0});}syncObjs();return at;},freeRow:(len=5)=>{for(const [x,z] of tileKeys()){let ok=true;for(let i=0;i<len&&ok;i++){const k=K(x+i,z);ok=canTill(x+i,z)&&farmQ(x+i,z)>1.3&&(lvlMap.get(k)||0)===(lvlMap.get(K(x,z))||0)&&!TOWN.bld.some(b=>Math.abs(b.x+0.5-(x+i))<4&&Math.abs(b.z+1-z)<4)&&!(S.boat&&Math.hypot(S.boat.x-(x+i),S.boat.z-z)<7);}if(ok)return[x,z];}return null;},
     give:(items)=>{Object.assign(S.inv,items||{'m:wood':14,'m:stone':11,'m:fiber':9,'g:shell':4,'f:sardine':2,'tomato|normal':3,'tomato|golden':1});updateHUD();},
     craft:i=>craft(i),sheet:(k,tab)=>openSheet(k,tab),closeSheet:()=>closeSheet(),

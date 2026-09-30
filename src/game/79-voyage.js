@@ -11,7 +11,7 @@ const RESTORE_N=3;
 const stageOf2=isl=>(S.restore&&S.restore[isl.id])||0;
 const restored=isl=>isl.home||stageOf2(isl)>=RESTORE_N;
 // wild islands look washed-out until their heart tree is restored
-function islandBiome(isl){const B=BIOMES[isl.biome];if(restored(isl))return B;return Object.assign({},B,{grass:B.grass.map(c=>lerpHex(c,0xa0a08e,0.42))});}
+function islandBiome(isl){const B=islLook(isl);if(restored(isl))return B;return Object.assign({},B,{grass:B.grass.map(c=>lerpHex(c,0xa0a08e,isl.style?0.18:0.42))});}
 
 /* ---- heart trees ---- */
 function pickHeart(isl,blocked){let best=null,bd=1e9;for(const [x,z] of isl.grass){if(blocked.has(K(x,z)))continue;const d=Math.hypot(x-isl.cx,z-isl.cz);if(d<bd){bd=d;best=[x,z];}}

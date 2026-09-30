@@ -22,7 +22,7 @@ function planPath(sx,sz,tx,tz){
     pop=()=>{const top=heap[0],last=heap.pop();if(heap.length){heap[0]=last;let i=0;for(;;){const l=i*2+1,r=l+1;let m=i;if(l<heap.length&&heap[l].f<heap[m].f)m=l;if(r<heap.length&&heap[r].f<heap[m].f)m=r;if(m===i)break;[heap[m],heap[i]]=[heap[i],heap[m]];i=m;}}return top;};
   const gs=new Map(),came=new Map(),sk=K(x0,z0);gs.set(sk,0);push({x:x0,z:z0,f:hh(x0,z0)});let n=0,found=false;
   while(heap.length&&n<60000){const c=pop(),ck=K(c.x,c.z);n++;if(c.x===gx&&c.z===gz){found=true;break;}const cg=gs.get(ck);
-    for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){if(!dx&&!dz)continue;const nx=c.x+dx,nz=c.z+dz;if(Math.abs(nx)>300||Math.abs(nz)>300)continue;if(seaBlocked(nx,nz))continue;
+    for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){if(!dx&&!dz)continue;const nx=c.x+dx,nz=c.z+dz;if(Math.abs(nx-x0)>300||Math.abs(nz-z0)>300)continue;if(seaBlocked(nx,nz))continue;
       if(dx&&dz&&(seaBlocked(c.x+dx,c.z)||seaBlocked(c.x,c.z+dz)))continue;
       const nk=K(nx,nz),cost=(dx&&dz?1.414:1)*(seaMargin.has(nk)?4:1),ng=cg+cost;if(ng<(gs.get(nk)??1e9)){gs.set(nk,ng);came.set(nk,ck);push({x:nx,z:nz,f:ng+hh(nx,nz)});}}}
   if(!found)return null;
@@ -68,7 +68,7 @@ function updateSeaLife(dt,tt){
     if(dolph.t>T2+0.4){dolph=null;dolphins.forEach(g=>g.visible=false);}}}
 // instant travel to an island you've already found: the boat drops you off on its near shore
 function fastTravel(isl){sail=null;$('fade').classList.add('on');SFX.horn();
-  setTimeout(()=>{let bx,bz;
+  setTimeout(()=>{let bx,bz;if(isl.fr&&!isl.group){frBuild(isl);}
     if(isl.home){bx=DOCK.x+1.05;bz=isl.dockZ+2.4;}
     else{const L=Math.hypot(isl.cx,isl.cz)||1,ux=-isl.cx/L,uz=-isl.cz/L;let best=null,bs=-1e9;for(const [x,z] of isl.sand){const q=(x-isl.cx)*ux+(z-isl.cz)*uz;if(q>bs){bs=q;best=[x,z];}}
       if(!best)best=isl.grass[0];bx=best[0];bz=best[1];for(let i=0;i<16;i++){bx+=ux*0.5;bz+=uz*0.5;if(!seaMargin.has(K(Math.round(bx),Math.round(bz))))break;}}
@@ -78,6 +78,7 @@ function fastTravel(isl){sail=null;$('fade').classList.add('on');SFX.horn();
     setTimeout(()=>$('fade').classList.remove('on'),180);},650);}
 function sailHome(){const isl=islands[0];sailTo(DOCK.x+1.05,isl.dockZ+2.4,0,'Home');}
 function sailToIsland(isl){if(!S.sea){boardBoat(()=>sailToIsland(isl));return;}
+  if(!isl.group&&isl.fr){const d=Math.hypot(isl.cx-S.boat.x,isl.cz-S.boat.z)||1;/* not built yet (44b): head for it; it's built as you near it, and the course is set again then */sailTo(isl.cx-(isl.cx-S.boat.x)/d*(isl.ext+6),isl.cz-(isl.cz-S.boat.z)/d*(isl.ext+6),isl.id,isl.name);return;}
   let best=null,bd=1e9;for(const [x,z] of [...isl.sand,...isl.grass]){const d=(x-S.boat.x)**2+(z-S.boat.z)**2;if(d<bd){bd=d;best=[x,z];}}
   if(!best)return;const d=Math.sqrt(bd)||1,ux=(S.boat.x-best[0])/d,uz=(S.boat.z-best[1])/d;
   sailTo(best[0]+ux*1.3,best[1]+uz*1.3,isl.id,isl.home?'Home':isl.name);}
@@ -120,8 +121,10 @@ function updateFlotsam(dt,tt){
         else if(r<0.8){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+2;floatText(f.x,0.8,f.z,'+2 '+CROPS[id].name+' seeds','gold');SFX.pop();}
         else{const k=pickW(FINDS,k=>['glass','pearl','drift','fossil','amber'].includes(k));const first=gain('g:'+k);floatText(f.x,0.8,f.z,'+ '+FINDS[k].name,'gold');SFX.harvest();}}}
     else if(d>70){scene.remove(f.g);flots.splice(i,1);}}}
-function checkDiscovery(){const x=vil.x,z=vil.z;for(const isl of islands){if(S.disc[isl.id])continue;if(Math.hypot(x-isl.cx,z-isl.cz)<isl.r/0.7+30){S.disc[isl.id]=1;SFX.discover();
-  toast(`Discovered <b>${isl.name}</b> — a ${BIOMES[isl.biome].name.toLowerCase()} island!`,'rare',ICON.chart);addXP(20);}}}
+let discT=0;
+function checkDiscovery(){const x=vil.x,z=vil.z;for(const isl of islands){if(S.disc[isl.id])continue;if(Math.hypot(x-isl.cx,z-isl.cz)<isl.r/0.7+30){S.disc[isl.id]=1;
+  if(isl.fr&&performance.now()-discT<6000)continue;/* out on the frontier islands come thick and fast: one card at a time */discT=performance.now();SFX.discover();
+  toast(`Discovered <b>${isl.name}</b> — a ${islKind(isl).toLowerCase()} island!`,'rare',ICON.chart);addXP(20);}}}
 
 
 // ---- the villager sailboat: loops a sea route planned around the home island and farm field (never through land) ----

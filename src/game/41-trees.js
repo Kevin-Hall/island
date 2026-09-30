@@ -52,7 +52,11 @@ const FAR_GEO=new Map([[SPH,SPH_XS],[SPH_LO,SPH_XS],[ICO2,ICO0],[ICO,ICO0],[STRU
 function farParts(parts){const out=[];for(const p of parts){if(p.lo==='drop')continue;
   if(p.geo===LEAF_CARD){if(p.lo==='wide')out.push(Object.assign({},p,{geo:LEAF_CARD_LO,sx:p.sx*1.8}));continue;}
   if(Math.max(p.sx,p.sy,p.sz)<0.28)continue;const g=FAR_GEO.get(p.geo);out.push(g?Object.assign({},p,{geo:g}):p);}return out;}
-function addVeg(isl,g,parts){if(!parts.length)return;const hi=M(parts,leafMat),lo=M(lowParts(parts),leafMat),fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;lo.visible=false;g.add(hi,lo);if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([hi,lo,fa]);}
+function addVeg(isl,g,parts){if(!parts.length)return;
+  // a frontier island (44b) is built out on the horizon: only its far version is made now, the rest when you come near (vegReal)
+  if(isl.fr){const fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([null,null,fa,parts,g]);return;}
+  const hi=M(parts,leafMat),lo=M(lowParts(parts),leafMat),fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;lo.visible=false;g.add(hi,lo);if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([hi,lo,fa]);}
+function vegReal(isl,e){if(e[0])return;e[0]=M(e[3],leafMat);e[1]=M(lowParts(e[3]),leafMat);e[1].visible=false;e[4].add(e[0],e[1]);e[3]=null;isl.casters=null;isl.shadowOn=undefined;}
 // beach tiles a palm can stand on: flat sand (not the slope into the water), spread a few tiles apart
 function palmSpots(isl,R,n,ok){const out=[];for(const [x,z] of shuffle(isl.sand.slice(),R)){if(out.length>=n)break;const c=SAND_CH.get(K(x,z));if(!c||Math.min(...c)<0.17||!ok(x,z))continue;
   if(out.some(([a,b])=>Math.abs(a-x)+Math.abs(b-z)<3))continue;out.push([x,z]);}return out;}
@@ -125,6 +129,7 @@ function levelOf(isl,x,z){
   if(isl.home){if(farmQ(x,z)<1.2)return 0;const n=vnoise(x,z,S.worldSeed|0),hx=hash(S.worldSeed%97,3)<0.5?-9:9;
     const cl=S.home&&S.home.cliff,c1=cl?cl[0]:0.29,two=cl?cl[1]:1; // a chosen island sets how far north its cliffs start, and whether there's a second tier
     const hs=homeScale();if(two&&z<-(c1+0.37)*TOWN_D*hs+n*2.4&&Math.abs(x-hx*TOWN_W*hs/16)<(6+n*2.5)*hs)return 2;return z<-c1*TOWN_D*hs+(n-0.5)*3.6?1:0;}
+  if(isl.fr&&!(isl.biome==='volcano'&&Math.hypot(x-isl.cx,z-isl.cz)<3.2))return frLevel(isl,x,z);/* frontier islands: 44b */
   if(isl.biome==='swamp')return 0;
   if(isl.biome==='volcano'&&Math.hypot(x-isl.cx,z-isl.cz)<3.2)return 0;
   const d=islDist(isl,x,z),R=isl.r,n=vnoise(x,z,isl.seed);let l=0;
