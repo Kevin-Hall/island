@@ -32,7 +32,8 @@ const bilerp4=(c,lx,lz)=>{const u=clamp(lx+0.5,0,1),v=clamp(lz+0.5,0,1);return l
 // hide(dx,dz) says whether a side facing that neighbour is covered; bottoms are never visible, and cap:false drops the top too
 function makeBake(){const L=[];let n=0;return{
   add(geo,x,y,z,sx,sy,sz,col=0xffffff,ch=null,hide=null,cap=true){const g=flatGeo(geo);L.push([g,x,y,z,sx,sy,sz,col,ch,hide,cap]);n+=g.attributes.position.count;},
-  mesh(mat,colors=true){if(!n)return null;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=colors?new Float32Array(n*3):null;let o=0;
+  mesh(mat,colors=true){const a=this.arrays(colors);if(!a)return null;return bakeMesh([a],mat,colors);},
+  arrays(colors=true){if(!n)return null;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=colors?new Float32Array(n*3):null;let o=0;
     for(const [g,x,y,z,sx,sy,sz,c,ch,hide,cap] of L){const P0=g.attributes.position.array,N0=g.attributes.normal.array,cnt=g.attributes.position.count;if(colors)_c.setHex(c);
       for(let t=0;t<cnt;t+=3){const a=t*3;
         // face normal from the local triangle: skip bottoms, covered tops, and sides that butt against a neighbour as tall
@@ -44,8 +45,12 @@ function makeBake(){const L=[];let n=0;return{
           pos[j]=x+lx*sx;pos[j+1]=ch&&ly>0.99?bilerp4(ch,lx,lz):y+ly*sy;pos[j+2]=z+lz*sz;
           const nx=N0[i3]/sx,ny=N0[i3+1]/sy,nz=N0[i3+2]/sz,l=Math.hypot(nx,ny,nz)||1;nor[j]=nx/l;nor[j+1]=ny/l;nor[j+2]=nz/l;
           if(col){col[j]=_c.r;col[j+1]=_c.g;col[j+2]=_c.b;}o++;}}}
-    const bg=new T.BufferGeometry();bg.setAttribute('position',new T.BufferAttribute(pos.subarray(0,o*3),3));bg.setAttribute('normal',new T.BufferAttribute(nor.subarray(0,o*3),3));if(col)bg.setAttribute('color',new T.BufferAttribute(col.subarray(0,o*3),3));
-    const m=new T.Mesh(bg,mat);m.frustumCulled=false;m.receiveShadow=true;return m;}};}
+    return{pos:pos.subarray(0,o*3),nor:nor.subarray(0,o*3),col:col&&col.subarray(0,o*3),n:o};}};}
+// one mesh from several baked pieces (the terrain chunks, joined back up so the island stays a handful of draw calls)
+function bakeGeo(parts,colors=true){let n=0;for(const a of parts)if(a)n+=a.n;if(!n)return null;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=colors?new Float32Array(n*3):null;let o=0;
+  for(const a of parts){if(!a)continue;pos.set(a.pos,o*3);nor.set(a.nor,o*3);if(col)col.set(a.col,o*3);o+=a.n;}
+  const bg=new T.BufferGeometry();bg.setAttribute('position',new T.BufferAttribute(pos,3));bg.setAttribute('normal',new T.BufferAttribute(nor,3));if(col)bg.setAttribute('color',new T.BufferAttribute(col,3));return bg;}
+function bakeMesh(parts,mat,colors=true){const bg=bakeGeo(parts,colors);if(!bg)return null;const m=new T.Mesh(bg,mat);m.frustumCulled=false;m.receiveShadow=true;return m;}
 // sand corner heights from distance to open water: the waterline, halfway, then the full beach height
 const isSeaT=t=>!isLandT(t)&&t!=='river';
 function shapeBeach(isl){const d=new Map(),H=[0.03,0.17,TOP.sand,TOP.sand];let q=[];
@@ -58,6 +63,39 @@ function shapeBeach(isl){const d=new Map(),H=[0.03,0.17,TOP.sand,TOP.sand];let q
 function zoneGround(isl,x,z,col){if(!isl.home||!S.wild||S.home&&S.home.preset)return col;const fa=(S.home&&S.home.wild)||0.5,th=0.8-fa*0.25;
   const f=clamp((wildForest(x,z)-(th-0.14))/0.18,0,1),m=clamp((wildMeadow(x,z)-0.55)/0.1,0,1)*(1-f);
   _gc1.setHex(col);if(f>0)_gc1.lerp(_gc2.setHex(col).multiply(_a.setRGB(0.68,0.8,0.66)),f);if(m>0)_gc1.lerp(_gc2.setHex(col).multiply(_a.setRGB(1.1,1.08,0.9)),m*0.7);return _gc1.getHex();}
+// the ground of an island: grass tiles are a grassy slab on a dirt or rock cliff, like the tiers of Wild World; sand
+// tiles slope into the sea. Tiles have rounded outer corners, and the notch shows whatever lies below (sand, lower grass,
+// the sea). The island is baked in chunks of TCH×TCH tiles (isl.tch: chunk → raw arrays per material), then the chunks
+// are joined into one mesh per material (isl.tMesh), so it stays a handful of draw calls while a change to a few tiles
+// (Landscaping, 72b) only rebakes the chunks round them: bakeTerrain(isl,g,chunks)
+const TCH=12,tchKey=(x,z)=>Math.floor(x/TCH)+','+Math.floor(z/TCH);
+const TKINDS=[['cliff','cliffMat',true],['top','grassTopMat',true],['sand','sandMat',false],['underG','grassTopMat',false],['underS','sandMat',false]];
+function bakeTerrain(isl,g,only){const B=islandBiome(isl),by=new Map();const slot=c=>by.get(c)||(by.set(c,{g:[],s:[]}),by.get(c));
+  for(const [x,z] of isl.grass){const c=tchKey(x,z);if(!only||only.has(c))slot(c).g.push([x,z]);}
+  for(const [x,z] of isl.sand){const c=tchKey(x,z);if(!only||only.has(c))slot(c).s.push([x,z]);}
+  if(only)for(const c of only){if(!by.has(c))isl.tch.delete(c);}
+  const sandCol=(x,z)=>{const c=_c.setHex(groundCol(B.sand,x,z,isl.seed)).multiplyScalar(0.97+hash(x*5,z*3)*0.04);
+    if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>hclass(x+dx,z+dz)===-9))c.lerp(_a.set(0xc8a878),0.38)/* wet sand at the water's edge */;return c.getHex();};
+  for(const [c,{g:gl0,s:sl0}] of by){const byMask=new Map(),under=[];const put=(mask,e)=>{if(!byMask.has(mask))byMask.set(mask,{g:[],s:[]});byMask.get(mask)[e.kind].push(e);};
+    for(const [x,z] of gl0){const L=hclass(x,z);let mask=0;
+      CORNERS.forEach(([dx,dz],b)=>{const n=[hclass(x+dx,z),hclass(x,z+dz),hclass(x+dx,z+dz)];if(n.some(v=>v>=L||v===-5))return;mask|=1<<b;
+        const hm=Math.max(...n);if(hm>=0)under.push([x+dx*0.25,z+dz*0.25,TOP.grass+hm*LVH,groundCol(B.grass,x+dx,z+dz,isl.seed),1]);
+        else if(hm===-1)under.push([x+dx*0.25,z+dz*0.25,topY(x+dx,z+dz),sandCol(x+dx,z+dz),0]);});
+      CMASK.set(K(x,z),mask);put(mask,{kind:'g',x,z});}
+    for(const [x,z] of sl0){let mask=0;CORNERS.forEach(([dx,dz],b)=>{if([hclass(x+dx,z),hclass(x,z+dz),hclass(x+dx,z+dz)].every(v=>v===-9))mask|=1<<b;});put(mask,{kind:'s',x,z});}
+    const cliffB=makeBake(),topB=makeBake(),sandB=makeBake(),underG=makeBake(),underS=makeBake();
+    for(const [mask,{g:gl,s:sl}] of byMask){const geo=rtileGeo(mask);
+      for(const {x,z} of gl){const ty=topY(x,z),hid=(dx,dz)=>landMap.get(K(x+dx,z+dz))==='grass'&&topY(x+dx,z+dz)>=ty-1e-3;
+        cliffB.add(geo,x,-0.6,z,1,ty-0.14+0.6,1,_c.set(B.cliff).multiplyScalar(0.92+hash(z,x)*0.12).getHex(),null,hid,false);
+        topB.add(geo,x,ty-0.14,z,1,0.14,1,zoneGround(isl,x,z,groundCol(B.grass,x,z,isl.seed)),null,hid);}
+      for(const {x,z} of sl)sandB.add(geo,x,-0.6,z,1,TOP.sand+0.6,1,sandCol(x,z),SAND_CH.get(K(x,z)),(dx,dz)=>{const t=landMap.get(K(x+dx,z+dz));return t==='sand'||t==='grass';});}
+    for(const [x,z,ty,col,gr] of under)(gr?underG:underS).add(BOX,x,(ty-0.6)/2,z,0.5,ty+0.6,0.5,col);
+    isl.tch.set(c,{cliff:cliffB.arrays(),top:topB.arrays(),sand:sandB.arrays(),underG:underG.arrays(),underS:underS.arrays()});}
+  // join the chunks back into one mesh per material
+  const mats={cliffMat,grassTopMat,sandMat};if(!isl.tMesh)isl.tMesh={};
+  for(const [kind,mn,cast] of TKINDS){const parts=[];for(const d of isl.tch.values())parts.push(d[kind]);const bg=bakeGeo(parts);let m=isl.tMesh[kind];
+    if(m){m.geometry.dispose();if(bg)m.geometry=bg;else{g.remove(m);isl.tMesh[kind]=null;}}
+    else if(bg){m=new T.Mesh(bg,mats[mn]);m.frustumCulled=false;m.receiveShadow=true;m.castShadow=cast;m.userData.core=1;g.add(m);isl.tMesh[kind]=m;}}}
 function buildIsland(isl){
   if(isl.group){scene.remove(isl.group);isl.group.traverse(o=>{if(o.isInstancedMesh)o.dispose();else if(o.geometry&&!Object.values(RTILE).includes(o.geometry)&&o.geometry!==TILE_PLANE&&o.geometry!==BOX&&o.geometry!==POOL_GEO&&o.geometry!==BLADES)o.geometry.dispose();});}
   if(isl.keys)for(const k of isl.keys){landMap.delete(k);islMap.delete(k);lvlMap.delete(k);riverSurf.delete(k);bridgeY.delete(k);}
@@ -69,31 +107,12 @@ function buildIsland(isl){
     landMap.set(k,t);islMap.set(k,isl.id);isl.keys.push(k);
     if(t==='grass'){const l=levelOf(isl,x,z);if(l)lvlMap.set(k,l);}
     (t==='grass'?isl.grass:t==='sand'?isl.sand:t==='s1'?a1:a2).push([x,z]);}
-  if(isl.riverN||isl.home&&S.terra&&Object.values(S.terra).includes(-1))carveRivers(isl,g);
+  isl.riverG=new T.Group();isl.riverG.userData.core=1;g.add(isl.riverG);/* the rivers in a group of their own, so Landscaping can redo just them */
+  if(isl.riverN||isl.home&&S.terra&&Object.values(S.terra).some(v=>v<0))carveRivers(isl,isl.riverG);
   if(isl.home)reefDirty=true;/* the reef's seabed follows the coast (76c-swim) */
   shapeBeach(isl);
   if(isl.home){layoutTown(isl);setPathMask(TOWN.path);musShow.g=null;musShow.sig='';refreshMuseumShow();}
-  // grass tiles: a grassy slab on top of a dirt or rock cliff, like the tiers of Wild World
-  // grass and sand tiles, drawn with rounded outer corners; the notch shows whatever lies just below (sand, lower grass, or the sea)
-  const byMask=new Map(),under=[];const put=(mask,e)=>{if(!byMask.has(mask))byMask.set(mask,{g:[],s:[]});byMask.get(mask)[e.kind].push(e);};
-  const sandCol=(x,z)=>{const c=_c.setHex(groundCol(B.sand,x,z,isl.seed)).multiplyScalar(0.97+hash(x*5,z*3)*0.04);
-    if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>hclass(x+dx,z+dz)===-9))c.lerp(_a.set(0xc8a878),0.38)/* wet sand at the water's edge */;return c.getHex();};
-  for(const [x,z] of isl.grass){const L=hclass(x,z);let mask=0;
-    CORNERS.forEach(([dx,dz],b)=>{const n=[hclass(x+dx,z),hclass(x,z+dz),hclass(x+dx,z+dz)];if(n.some(v=>v>=L||v===-5))return;mask|=1<<b;
-      const hm=Math.max(...n);if(hm>=0)under.push([x+dx*0.25,z+dz*0.25,TOP.grass+hm*LVH,groundCol(B.grass,x+dx,z+dz,isl.seed),grassTopMat]);
-      else if(hm===-1)under.push([x+dx*0.25,z+dz*0.25,topY(x+dx,z+dz),sandCol(x+dx,z+dz),sandMat]);});
-    CMASK.set(K(x,z),mask);put(mask,{kind:'g',x,z});}
-  for(const [x,z] of isl.sand){let mask=0;CORNERS.forEach(([dx,dz],b)=>{if([hclass(x+dx,z),hclass(x,z+dz),hclass(x+dx,z+dz)].every(v=>v===-9))mask|=1<<b;});put(mask,{kind:'s',x,z});}
-  // all of an island's tiles are baked into one mesh per material (tile colours in vertex colours, the beach slope in the
-  // vertices), so the whole island costs a handful of draw calls instead of an instanced batch per corner shape
-  const cliffB=makeBake(),topB=makeBake(),sandB=makeBake(),underG=makeBake(),underS=makeBake(),s1B=makeBake(),s2B=makeBake();
-  for(const [mask,{g:gl,s:sl}] of byMask){const geo=rtileGeo(mask);
-    for(const {x,z} of gl){const ty=topY(x,z),hid=(dx,dz)=>landMap.get(K(x+dx,z+dz))==='grass'&&topY(x+dx,z+dz)>=ty-1e-3;
-      cliffB.add(geo,x,-0.6,z,1,ty-0.14+0.6,1,_c.set(B.cliff).multiplyScalar(0.92+hash(z,x)*0.12).getHex(),null,hid,false);
-      topB.add(geo,x,ty-0.14,z,1,0.14,1,zoneGround(isl,x,z,groundCol(B.grass,x,z,isl.seed)),null,hid);}
-    for(const {x,z} of sl)sandB.add(geo,x,-0.6,z,1,TOP.sand+0.6,1,sandCol(x,z),SAND_CH.get(K(x,z)),(dx,dz)=>{const t=landMap.get(K(x+dx,z+dz));return t==='sand'||t==='grass';});}
-  for(const [x,z,ty,col,mat] of under)(mat===sandMat?underS:underG).add(BOX,x,(ty-0.6)/2,z,0.5,ty+0.6,0.5,col);
-  for(const [B0,mat,cast] of [[cliffB,cliffMat,true],[topB,grassTopMat,true],[sandB,sandMat,false],[underG,grassTopMat,false],[underS,sandMat,false]]){const m=B0.mesh(mat);if(m){m.castShadow=cast;m.userData.core=1;g.add(m);}}
+  isl.tch=new Map();isl.tMesh=null;bakeTerrain(isl,g,null);
   if(isl.grass.length)buildGrass(isl,g);
   // shallow-water bands, with rounded outer corners so the coast doesn't step in squares
   const shc=(x,z)=>{const t=landMap.get(K(x,z));return t==='s1'?1:t==='s2'?2:t?0:3;};

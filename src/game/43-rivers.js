@@ -69,7 +69,8 @@ function carveRivers(isl,g){const R=mulberry(isl.seed^0x71e5),B=BIOMES[isl.biome
         if(lvl(x+dx,z+dz)>=L&&townQ(x+dx,z+dz)<0.8)addT(x+dx,z+dz,L,1,0);}
       (isl.ponds||(isl.ponds=[])).push([x,z,r]);break;}}
   // ponds you've dug with the Landscaping tool (72b-terraform) join the island's water
-  if(isl.home&&S.terra){for(const k in S.terra)if(S.terra[k]<0){const [x,z]=k.split(',').map(Number);if(typeAt(x,z)==='grass'){const L=terraWaterL(S.terra[k]),o=tiles.get(k);if(o)o.L=L;else tiles.set(k,{x,z,L,fx:1,fz:0});}}
+  if(isl.home&&S.terra){for(const k in S.terra)if(S.terra[k]<0){const [x,z]=k.split(',').map(Number);if(typeAt(x,z)==='grass'){const bySea=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]].some(([dx,dz])=>isSeaT(landMap.get(K(x+dx,z+dz))));/* water dug beside the sea is the sea's own level: never a raised tank of water on the shore */
+      const L=bySea?-1:terraWaterL(S.terra[k]),o=tiles.get(k);if(o)o.L=L;else tiles.set(k,{x,z,L,fx:1,fz:0});}}
     for(const k of [...tiles.keys()])if(S.terra[k]>=0)tiles.delete(k);}/* a stretch of river filled back in to land */
   if(!tiles.size)return;
   const list=[...tiles.values()];
@@ -108,7 +109,7 @@ function carveRivers(isl,g){const R=mulberry(isl.seed^0x71e5),B=BIOMES[isl.biome
     if(pb.length){const m=M(pb);m.castShadow=false;g.add(m);}}
   const fp=[];isl.falls=[];
   for(const q of list)for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const k2=K(q.x+dx,q.z+dz);if(!riverSurf.has(k2))continue;const s2=riverSurf.get(k2);
-    if(s2<q.surf-0.05){const h=q.surf-s2+0.02;fp.push(P(FALL_PLANE,0xffffff,q.x+dx*0.5,s2+h/2,q.z+dz*0.5,0,Math.atan2(dx,dz),0,1,h,1));isl.falls.push([q.x+dx*0.62,s2,q.z+dz*0.62]);}}
+    if(s2<q.surf-0.05){const h=q.surf-s2+0.02;fp.push(P(FALL_PLANE,0xffffff,q.x+dx*0.535,s2+h/2,q.z+dz*0.535,/* just in front of the higher bed's side, so they don't flicker through each other */0,Math.atan2(dx,dz),0,1,h,1));isl.falls.push([q.x+dx*0.62,s2,q.z+dz*0.62]);}}
   if(fp.length){const m=new T.Mesh(merge(fp),FALL_MATS[mk]);m.frustumCulled=false;g.add(m);}
   // ponds: lily pads (some flowering) floating on the water, and reeds and cattails round the edges
   if(isl.ponds&&isl.ponds.length){const lp=[],Rl=mulberry(isl.seed^0x11e5);

@@ -35,7 +35,8 @@ function terraApply(tiles,mode){if(!terraOn()){toast(`Landscaping unlocks at Isl
   const cost=plan.length*TERRA.COST;if(S.shells<cost){toast(`That needs <b>${fmt(cost)}</b> shells (${TERRA.COST} a tile).`,'',ICON.shell);SFX.no();return;}
   S.shells-=cost;S.terra=S.terra||{};const before=plan.map(([x,z])=>[x,z,topY(x,z)]);
   for(const [x,z,to] of plan)S.terra[K(x,z)]=to;
-  rebuildHome();terraFx(before);updateHUD();save();
+  try{terraPatch(plan,new Map(before.map(([x,z,y])=>[K(x,z),y])));}catch(e){console.warn('landscaping patch failed, rebuilding',e);rebuildHome();}
+  terraFx(before);updateHUD();save();
   floatText(vil.x,vil.y+1.4,vil.z,`${{raise:'Raised',lower:'Lowered',water:'Dug or filled'}[mode]} ${plan.length} tile${plan.length>1?'s':''} · −${fmt(cost)}`,'');}
 function terraTap(x,z){cursorAt(x,z);actAt(x,z,()=>{swingTool();terraApply([[x,z]],terraMode());});}
 // each changed tile pops: a block of earth rising or sinking into place, a puff of dust and a soft thud
@@ -54,3 +55,33 @@ function terraBar(force){const on=S.tool==='terra'&&terraOn()&&!S.sea&&!inside&&
   if(on!==terraBarOn||force){terraBarOn=on;el.hidden=!on;if(on)el.querySelectorAll('[data-tm]').forEach(b=>b.classList.toggle('on',b.dataset.tm===terraMode()));
     if(on&&!S.tipTerra){S.tipTerra=1;setTimeout(()=>say('Pick <b>Raise</b>, <b>Lower</b> or <b>Water</b>, then tap the ground (or hold and drag to brush).'),400);}}}
 $('terraUI')&&$('terraUI').addEventListener('click',e=>{const b=e.target.closest('[data-tm]');if(b){e.stopPropagation();setTerraMode(b.dataset.tm);}});
+
+// ---- changing the island in place (no full rebuild, so no hitch): only the ground chunks round the changed tiles are
+// rebaked (bakeTerrain, 44-terrain); if water moved, the rivers are re-carved on their own first ----
+function terraChunks(keys){const out=new Set();for(const k of keys){const [x,z]=k.split(',').map(Number);for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)out.add(tchKey(x+dx,z+dz));}return out;}
+function terraPatch(plan,y0){const isl=islands[0],g=isl.group;let changed=new Set(plan.map(([x,z])=>K(x,z)));
+  const water=plan.some(([x,z,to])=>to<0||landMap.get(K(x,z))==='river');
+  if(water){for(const k of redoRivers(isl))changed.add(k);}
+  else for(const [x,z,to] of plan){const k=K(x,z);if(to>0)lvlMap.set(k,to);else lvlMap.delete(k);}
+  bakeTerrain(isl,g,terraChunks(changed));
+  // grass blades and wild flowers on the changed tiles follow the ground (or go, where it's now water)
+  if(water){if(isl.gIM){g.remove(isl.gIM);isl.gIM.dispose();}buildGrass(isl,g);}
+  else if(isl.gIM){const im=isl.gIM,per=im.userData.per;for(const k of changed){const i0=isl.gIdx.get(k);if(i0===undefined||isl.gHid&&isl.gHid.get(k))continue;const [x,z]=k.split(',').map(Number);for(let j=0;j<per;j++)im.setMatrixAt(i0+j,clumpMat(x,z,j));}im.instanceMatrix.needsUpdate=true;}
+  const dirty=new Set();for(const k of changed){const arr=TOWN.flora.get(k);if(!arr)continue;const [x,z]=k.split(',').map(Number),wet=landMap.get(k)!=='grass',dy=y0.has(k)?topY(x,z)-y0.get(k):0;
+    for(const [fm,i,mat] of arr){if(wet)fm.setMatrixAt(i,_m.makeScale(0,0,0));else{mat[13]+=dy;fm.setMatrixAt(i,_m.fromArray(mat));}dirty.add(fm);}if(wet)TOWN.flora.delete(k);}
+  for(const fm of dirty)fm.instanceMatrix.needsUpdate=true;
+  if(water)refreshHomeGrass();
+  // the lists taps and walking use
+  landList=landList.filter(L=>!changed.has(K(L[0],L[1])));riverList=riverList.filter(L=>!changed.has(K(L[0],L[1])));
+  for(const k of changed){const t=landMap.get(k),[x,z]=k.split(',').map(Number);if(t==='river')riverList.push([x,z,riverSurf.get(k)]);else if(isLandT(t))landList.push([x,z,t,islMap.get(k),topY(x,z)]);}
+  nearT=0;}
+// put every river and bridge tile back to the ground it was carved from, carve the rivers again (with your ponds),
+// and return the tiles that came out different
+function redoRivers(isl){const sig=k=>landMap.get(k)+'|'+(lvlMap.get(k)||0)+'|'+(riverSurf.get(k)||0),before=new Map(isl.keys.map(k=>[k,sig(k)]));
+  for(const k of isl.keys){const t=landMap.get(k);if(t!=='river'&&!(t==='bridge'&&bridgeY.has(k)))continue;const [x,z]=k.split(',').map(Number),bt=tileTypeI(isl,x,z);
+    landMap.set(k,bt);riverSurf.delete(k);bridgeY.delete(k);lvlMap.delete(k);if(bt==='grass'){const l=levelOf(isl,x,z);if(l)lvlMap.set(k,l);}}
+  isl.grass=[];isl.sand=[];for(const k of isl.keys){const t=landMap.get(k);if(t!=='grass'&&t!=='sand')continue;const [x,z]=k.split(',').map(Number);(t==='grass'?isl.grass:isl.sand).push([x,z]);}
+  if(isl.riverG){isl.group.remove(isl.riverG);isl.riverG.traverse(o=>{if(o.isInstancedMesh)o.dispose();else if(o.geometry&&o.geometry!==TILE_PLANE)o.geometry.dispose();});}
+  isl.riverG=new T.Group();isl.riverG.userData.core=1;isl.group.add(isl.riverG);
+  if(isl.riverN||S.terra&&Object.values(S.terra).some(v=>v<0))carveRivers(isl,isl.riverG);
+  const out=[];for(const k of isl.keys)if(sig(k)!==before.get(k))out.push(k);return out;}

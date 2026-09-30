@@ -10,19 +10,25 @@
    ========================================================= */
 const SWIM={BREATH:30/* seconds of air */,REEF_HI:9,REEF_LO:6.5/* how far out the reef reaches (tiles from shore) at high and low tide */,
   DIVE_MIN_HI:0.85,DIVE_MIN_LO:1.35/* least water depth you can dive in */,SURF_SP:0.55,UW_SP:0.72/* × walking speed */,
-  DIVE_SP:1.3,RISE_SP:1.8,RISE_IDLE:0.22/* depth change per second: holding Dive, holding Up, neither (you drift gently up) */,REFILL:4/* s to refill at the surface */};
+  DIVE_SP:1.3,RISE_SP:1.8/* depth change per second holding Dive or Up (let go and you stay at that depth) */,REFILL:4/* s to refill at the surface */};
 const swim={on:false,depth:0,hold:false,up:false,breath:1,uw:0,rip:0,camD0:null,pitch0:null,bubT:0,ringT:0,pushT:0,outT:0,sayT:0};
 let reef=null,reefDirty=true,reefG=null;
 const tideK=()=>clamp((tideY+0.075)/0.09,0,1);/* 0 at the lowest tide, 1 at the highest */
 const reefR=()=>lerp(SWIM.REEF_LO,SWIM.REEF_HI,tideK());
 // ---- the distance field and the seabed ----
-function buildReef(){reefDirty=false;const isl=islands[0];if(!isl||!isl.keys||!isl.keys.length){reef=null;return;}
+// the reef is built a stage at a time (reefGen), a few milliseconds a frame as you come down to the shore (reefStep),
+// so wading in never stalls; buildReef runs it all at once when it's needed right now
+let reefJob=null;
+function* reefGen(){const isl=islands[0];if(!isl||!isl.keys||!isl.keys.length){reef=null;return;}
   let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const k of isl.keys){const [x,z]=k.split(',').map(Number);if(x<x0)x0=x;if(x>x1)x1=x;if(z<z0)z0=z;if(z>z1)z1=z;}
   const M=15;x0-=M;z0-=M;x1+=M;z1+=M;const nx=x1-x0+1,nz=z1-z0+1,d=new Float32Array(nx*nz).fill(99);
   for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){const t=landMap.get(K(x0+i,z0+j));if(isLandT(t)||t==='river')d[j*nx+i]=0;}
+  yield;
   const D=1.414;for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){let v=d[j*nx+i];if(i)v=Math.min(v,d[j*nx+i-1]+1);if(j){v=Math.min(v,d[(j-1)*nx+i]+1);if(i)v=Math.min(v,d[(j-1)*nx+i-1]+D);if(i<nx-1)v=Math.min(v,d[(j-1)*nx+i+1]+D);}d[j*nx+i]=v;}
   for(let j=nz-1;j>=0;j--)for(let i=nx-1;i>=0;i--){let v=d[j*nx+i];if(i<nx-1)v=Math.min(v,d[j*nx+i+1]+1);if(j<nz-1){v=Math.min(v,d[(j+1)*nx+i]+1);if(i<nx-1)v=Math.min(v,d[(j+1)*nx+i+1]+D);if(i)v=Math.min(v,d[(j+1)*nx+i-1]+D);}d[j*nx+i]=v;}
-  reef={x0,z0,nx,nz,d};buildSeabed();}
+  reef={x0,z0,nx,nz,d};yield;yield* seabedGen();}
+function buildReef(){reefDirty=false;reefJob=reefGen();while(!reefJob.next().done);reefJob=null;}
+function reefStep(ms){if(!reefJob){if(!reefDirty)return;reefDirty=false;reefJob=reefGen();}const t=performance.now();while(performance.now()-t<ms)if(reefJob.next().done){reefJob=null;return;}}
 // distance to shore at any point (bilinear; 99 off the map)
 function reefD(x,z){if(!reef)return 99;const fx=x-reef.x0,fz=z-reef.z0,i=Math.floor(fx),j=Math.floor(fz);if(i<0||j<0||i>=reef.nx-1||j>=reef.nz-1)return 99;
   const u=fx-i,v=fz-j,n=reef.nx,d=reef.d;return lerp(lerp(d[j*n+i],d[j*n+i+1],u),lerp(d[(j+1)*n+i],d[(j+1)*n+i+1],u),v);}
@@ -62,29 +68,30 @@ kelpMat.onBeforeCompile=sh=>{sh.uniforms.uT=kelpU.uT;
      #endif
      float h=transformed.y*transformed.y;transformed.x+=sin(uT*1.3+o.x*.7+o.z*.4+transformed.y*1.4)*.22*h;transformed.z+=cos(uT*1.1+o.z*.6+transformed.y)*.14*h;}`);};
 const KELP_GEO=(()=>{const g=new T.BoxGeometry(0.16,1,0.03,1,6,1);g.translate(0,0.5,0);const g2=g.clone().rotateY(Math.PI/2);const m=merge([P(g,0xffffff),P(g2,0xffffff,0,0,0,0,0,0,0.8,0.85,1)]);m.deleteAttribute('color');return m;})();
-function buildSeabed(){if(reefG){scene.remove(reefG);reefG.traverse(o=>{if(o.geometry&&o.geometry!==KELP_GEO)o.geometry.dispose();if(o.isInstancedMesh)o.dispose();});}
-  reefG=new T.Group();reefG.visible=false;const {x0,z0,nx,nz}=reef,R=mulberry((S.worldSeed|0)^0x5eab);
+function* seabedGen(){const G=new T.Group();G.visible=false;const {x0,z0,nx,nz}=reef,R=mulberry((S.worldSeed|0)^0x5eab);
   // the seabed mesh: one vertex per grid corner (half a tile off the tile centres, where the coast tiles' edges are)
   const pos=[],col=[],idx=[],vi=new Int32Array(nx*nz).fill(-1),c=new T.Color(),sand=new T.Color(0xc8b484),deep=new T.Color(0x3e5a74),alg=new T.Color(0x5e8a4e),mid=new T.Color(0x9a9068);
-  for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){const x=x0+i+0.5,z=z0+j+0.5,d=reefD(x,z);if(d>13.5)continue;vi[j*nx+i]=pos.length/3;const y=seabedY(x,z);pos.push(x,y,z);
-    c.copy(sand).lerp(mid,smooth(1,5,d)).lerp(deep,smooth(5,11.5,d));const a=vnoise(x*0.5+9,z*0.5+2,13);if(a>0.58&&d>1.5)c.lerp(alg,Math.min(1,(a-0.58)*4)*0.6);c.multiplyScalar(0.94+hash(x*3,z*5)*0.1);col.push(c.r,c.g,c.b);}
+  for(let j=0;j<nz;j++){if(j%12===11)yield;for(let i=0;i<nx;i++){const x=x0+i+0.5,z=z0+j+0.5,d=reefD(x,z);if(d>13.5)continue;vi[j*nx+i]=pos.length/3;const y=seabedY(x,z);pos.push(x,y,z);
+    c.copy(sand).lerp(mid,smooth(1,5,d)).lerp(deep,smooth(5,11.5,d));const a=vnoise(x*0.5+9,z*0.5+2,13);if(a>0.58&&d>1.5)c.lerp(alg,Math.min(1,(a-0.58)*4)*0.6);c.multiplyScalar(0.94+hash(x*3,z*5)*0.1);col.push(c.r,c.g,c.b);}}
   for(let j=0;j<nz-1;j++)for(let i=0;i<nx-1;i++){const a=vi[j*nx+i],b=vi[j*nx+i+1],cc=vi[(j+1)*nx+i],e=vi[(j+1)*nx+i+1];if(a<0||b<0||cc<0||e<0)continue;
     if(reef.d[j*nx+i]<0.1&&reef.d[j*nx+i+1]<0.1&&reef.d[(j+1)*nx+i]<0.1&&reef.d[(j+1)*nx+i+1]<0.1)continue;/* under solid land: skip */idx.push(a,cc,b,b,cc,e);}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.setIndex(idx);g.computeVertexNormals();
-  const bed=new T.Mesh(g,seabedMat);bed.frustumCulled=false;bed.receiveShadow=true;reefG.add(bed);
+  const bed=new T.Mesh(g,seabedMat);bed.frustumCulled=false;bed.receiveShadow=true;G.add(bed);yield;
   // scatter: kelp, coral, rocks and shells, on the seabed, thinning towards the drop-off
   const kelp=[],rp=[],cp=[],sp=[];
-  for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){const x=x0+i,z=z0+j,d=reef.d[j*nx+i];if(d<1||d>10.5)continue;const h=hash(x*1.73+11,z*2.37-5);
+  for(let j=0;j<nz;j++){if(j%10===9)yield;for(let i=0;i<nx;i++){const x=x0+i,z=z0+j,d=reef.d[j*nx+i];if(d<1||d>10.5)continue;const h=hash(x*1.73+11,z*2.37-5);
     const px=x+(hash(z,x*3)-0.5)*0.8,pz=z+(hash(x*7,z)-0.5)*0.8,y=seabedY(px,pz);
     if(h<0.3&&d>1.6){const n=1+(hash(x,z*9)*3|0);for(let k=0;k<n;k++)kelp.push([px+(R()-0.5)*0.5,y-0.05,pz+(R()-0.5)*0.5,0.8+R()*1.1*Math.min(1,(d-1)/3),R()*6.28,R()<0.5?0x4f8a3a:R()<0.5?0x6a9a3a:0x7a8a32]);}
     else if(h<0.36){const s=0.25+R()*0.45;rp.push(PG(SPH,0x7a8494,0x3a4454,px,y+s*0.18,pz,0,R()*6,0,s*1.6,s,s*1.3),PG(SPH_LO,0x6a8a5a,0x3a5a3a,px+s*0.2,y+s*0.55,pz,0,0,0,s*0.7,s*0.2,s*0.6));}
     else if(h<0.44&&d>2){coral(cp,R,px,y,pz);}
     else if(h<0.47){const k=R();if(k<0.4)sp.push(P(ICO,0xf6d6d0,px,y+0.03,pz,0,R()*6,0,0.2,0.07,0.18),P(BOX,0xf0a0a8,px,y+0.06,pz,0,R()*6,0,0.03,0.02,0.16));
       else if(k<0.7)for(let a=0;a<5;a++){const an=a/5*6.28;sp.push(P(BOX,0xf08a4a,px+Math.sin(an)*0.08,y+0.03,pz+Math.cos(an)*0.08,0,an,0,0.06,0.04,0.16));}
-      else sp.push(P(CONE6,0xf0d8c0,px,y+0.06,pz,0,R()*6,Math.PI/2,0.14,0.24,0.14));}}
-  if(kelp.length){const im=new T.InstancedMesh(KELP_GEO,kelpMat,kelp.length);kelp.forEach(([x,y,z,h,r,cl],i)=>{_e.set(0,r,0);_q.setFromEuler(_e);_m.compose(_v.set(x,y,z),_q,_s.set(1,h,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(cl));});im.frustumCulled=false;reefG.add(im);}
-  for(const p of [rp,cp,sp])if(p.length){const m=M(p);m.frustumCulled=false;reefG.add(m);}
-  scene.add(reefG);}
+      else sp.push(P(CONE6,0xf0d8c0,px,y+0.06,pz,0,R()*6,Math.PI/2,0.14,0.24,0.14));}}}
+  yield;
+  if(kelp.length){const im=new T.InstancedMesh(KELP_GEO,kelpMat,kelp.length);kelp.forEach(([x,y,z,h,r,cl],i)=>{_e.set(0,r,0);_q.setFromEuler(_e);_m.compose(_v.set(x,y,z),_q,_s.set(1,h,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.setHex(cl));});im.frustumCulled=false;G.add(im);}yield;
+  for(const p of [rp,cp,sp])for(let o=0;o<p.length;o+=80){const m=M(p.slice(o,o+80));m.frustumCulled=false;G.add(m);yield;}/* in batches, a frame apart */
+  if(reefG){scene.remove(reefG);reefG.traverse(o=>{if(o.geometry&&o.geometry!==KELP_GEO)o.geometry.dispose();if(o.isInstancedMesh)o.dispose();});}
+  reefG=G;reefG.visible=swim.on;scene.add(reefG);}
 // a coral head: branching staghorn, a round brain coral, or a fan
 function coral(p,R,x,y,z){const cols=[[0xf07a8a,0xb04a5a],[0xf6a04a,0xb86a2a],[0xb07ad8,0x6a4a98],[0xf6d04a,0xb8962a],[0x6ad0c0,0x3a8a80]],[a,b]=cols[Math.floor(R()*cols.length)],k=R();
   if(k<0.4){for(let i=0;i<5;i++){const an=R()*6.28,tl=0.2+R()*0.6,L=0.3+R()*0.35;p.push(PG(CYL5,a,b,x+Math.cos(an)*Math.sin(tl)*L*0.5,y+Math.cos(tl)*L*0.5,z+Math.sin(an)*Math.sin(tl)*L*0.5,Math.sin(an)*tl,0,-Math.cos(an)*tl,0.06,L,0.06),
@@ -112,14 +119,17 @@ function updateBubbles(dt){let n=0;for(let i=bubs.length-1;i>=0;i--){const b=bub
   for(const b of bubs){_m.compose(_v.set(b.x,b.y,b.z),_q.identity(),_s.setScalar(b.s*(1+Math.sin(b.t*9)*0.12)));bubMesh.setMatrixAt(n++,_m);}bubMesh.count=n;bubMesh.instanceMatrix.needsUpdate=true;}
 
 // ---- getting in and out ----
-function swimK(){return swim.on?(swim.depth>0.3?SWIM.UW_SP:SWIM.SURF_SP):1;}
-function swimY(tt){if(swim.depth<0.05)return tideY-0.34+Math.sin(tt*2.2)*0.035;/* bobbing, chest-deep */return tideY-0.34-swim.depth;}
+function swimK(){return swim.on?(swim.under?SWIM.UW_SP:SWIM.SURF_SP):1;}
+function swimY(tt){return tideY-0.34-swim.depth+Math.sin(tt*2.2)*0.035*Math.max(0,1-swim.depth*4);/* chest-deep and bobbing at the surface */}
 // the deepest you can go here: just above the seabed
 const maxDepth=(x,z)=>Math.max(0,waterDepth(x,z)-0.72);
-function enterWater(){swim.on=true;swim.depth=0;swim.breath=1;swim.hold=swim.up=false;burst(vil.x,tideY+0.05,vil.z,0xe8f6ff,14,1.6,0.07,5);SFX.splash();ripple(vil.x,vil.z,true);
-  if(reefDirty||!reef)buildReef();if(reefG)reefG.visible=true;showSwimUI(true);if(!S.tipSwim){S.tipSwim=1;setTimeout(()=>say('Splash! Press <b>Dive</b> to look under the waves.'),700);}}
-function leaveWater(){if(swim.depth>0.05)surfaceNow(true);swim.on=false;swim.depth=0;burst(vil.x,tideY+0.1,vil.z,0xe8f6ff,10,1.3,0.06,5);noise(0.2,0.06,900);showSwimUI(false);if(reefG)reefG.visible=false;}
-function surfaceNow(quiet){swim.hold=false;swim.up=true;if(!quiet)swim.up=true;}
+function enterWater(){swim.on=true;swim.depth=0;swim.breath=1;swim.hold=swim.up=false;swim.under=false;burst(vil.x,tideY+0.05,vil.z,0xe8f6ff,14,1.6,0.07,5);SFX.splash();ripple(vil.x,vil.z,true);
+  if(!reef)buildReef();if(reefG)reefG.visible=true;showSwimUI(true);if(!S.tipSwim){S.tipSwim=1;setTimeout(()=>say('Splash! Press <b>Dive</b> to look under the waves.'),700);}}
+function leaveWater(){surfaceNow();swim.on=false;swim.depth=0;burst(vil.x,tideY+0.1,vil.z,0xe8f6ff,10,1.3,0.06,5);noise(0.2,0.06,900);showSwimUI(false);if(reefG)reefG.visible=false;}
+function surfaceNow(){swim.under=false;swim.hold=swim.up=false;swim.chase=null;}
+// Dive pressed: go under (to a comfortable depth) if there's water enough; already under, holding it takes you deeper
+function divePress(){if(swim.under)return true;const md=maxDepth(vil.x,vil.z);if(!canDive(vil.x,vil.z)||md<0.6){SFX.no();return false;}
+  swim.under=true;swim.tgt=Math.min(1.1,md);swim.breath=Math.max(swim.breath,0.35);SFX.splash();return true;}
 function swimTo(x,z){swim.chase=null;vil.path=null;vil.idle=0;vil.cb=null;
   // from dry land: walk (round anything in the way) to the water's edge nearest where you're heading, then wade in
   if(!swim.on&&isLand(Math.round(vil.x),Math.round(vil.z))){const d=Math.hypot(x-vil.x,z-vil.z),n=Math.ceil(d/0.3);let sh=null;
@@ -134,7 +144,11 @@ function reefPush(dt){const d=reefD(vil.x,vil.z),R0=reefR();if(d<=R0-0.3)return;
 
 // ---- each frame ----
 function updateSwim(dt,tt){causU.uT.value=kelpU.uT.value=uwSurf.userData.u.uT.value=tt;
-  if(reefDirty&&swim.on)buildReef();
+  if((reefDirty||reefJob)&&swim.on)reefStep(8);/* the coast changed while you swim: the reef catches up over a few frames */
+  // get the reef ready as you come down to the shore, a few milliseconds a frame, so wading in never stalls
+  else if(reefJob)reefStep(5);
+  else if(reefDirty&&!S.sea&&!inside&&(swim.prebT=(swim.prebT||0)-dt)<=0){swim.prebT=0.5;const rx=Math.round(vil.x),rz=Math.round(vil.z);let sea=false;
+    for(let dx=-6;dx<=6&&!sea;dx++)for(let dz=-6;dz<=6;dz++)if(isSeaT(landMap.get(K(rx+dx,rz+dz)))){sea=true;break;}if(sea&&islMap.get(K(rx,rz))===0)reefStep(5);}
   const wet=!S.sea&&!inside&&reef&&swimmable(vil.x,vil.z)&&!isLand(Math.round(vil.x),Math.round(vil.z));
   if(wet&&!swim.on)enterWater();else if(!wet&&swim.on)leaveWater();
   if(!swim.on){swim.uw=Math.max(0,swim.uw-dt*3);applyUw(dt,tt);return;}
@@ -142,44 +156,47 @@ function updateSwim(dt,tt){causU.uT.value=kelpU.uT.value=uwSurf.userData.u.uT.va
   if(onDock(vil.x+Math.sin(villager.rotation.y)*0.5,vil.z+Math.cos(villager.rotation.y)*0.5)&&Math.hypot(vil.tx-vil.x,vil.tz-vil.z)>0.2){const isl=islands[0];let lz=isl.dockZ-1;for(let i=0;i<4&&!isLand(DOCK.x,lz);i++)lz--;
     leaveWater();vil.x=vil.tx=DOCK.x;vil.z=vil.tz=lz;vil.path=null;vil.hop=0.4;return;}
   reefPush(dt);
-  // up and down
-  const md=maxDepth(vil.x,vil.z),dive=canDive(vil.x,vil.z);
-  if(swim.breath<=0&&swim.depth>0.05){swim.hold=false;swim.up=true;}
-  if(swim.goal&&(swim.hold||swim.up||!dive||swim.depth>=Math.min(swim.goal,md)-0.02))swim.goal=0;
-  let v=0;if(swim.hold&&dive&&swim.breath>0)v=SWIM.DIVE_SP;else if(swim.goal&&swim.breath>0)v=SWIM.DIVE_SP;else if(swim.up)v=-SWIM.RISE_SP;else if(swim.depth>0.05)v=-SWIM.RISE_IDLE;
-  // chasing something you tapped: follow it down (or up) to its depth
-  {const ch=swim.chase;if(ch){if(!seaLife.includes(ch)||!vil.cb)swim.chase=null;else if(!swim.hold&&!swim.up&&dive&&swim.breath>0){const dy=vil.y-ch.y;v=dy>0.2?SWIM.DIVE_SP*0.8:dy<-0.3?-SWIM.RISE_SP*0.5:0;}}}
-  // heading for land (or somewhere too shallow): come up as you get there
-  const fx=vil.x+(vil.tx-vil.x)*0.2,fz=vil.z+(vil.tz-vil.z)*0.2;if(swim.depth>0.05&&(isLand(Math.round(fx),Math.round(fz))||!canDive(fx,fz))&&Math.hypot(vil.tx-vil.x,vil.tz-vil.z)>0.3)v=Math.min(v,-SWIM.RISE_SP*0.8);
-  swim.depth=clamp(swim.depth+v*dt,0,Math.max(0,md));if(swim.depth<=0.01){swim.depth=0;if(swim.up)swim.up=false;}
+  // up and down: you're either at the surface or under (swim.under); under, you hold a depth (swim.tgt) that Dive and Up
+  // move, and your actual depth glides after it, so nothing snaps
+  const md=maxDepth(vil.x,vil.z),look=[vil.x+(vil.tx-vil.x)*0.25,vil.z+(vil.tz-vil.z)*0.25],mdA=Math.min(md,Math.hypot(vil.tx-vil.x,vil.tz-vil.z)>0.3?maxDepth(look[0],look[1]):md);
+  if(swim.under){if(swim.hold)swim.tgt+=SWIM.DIVE_SP*dt;if(swim.up)swim.tgt-=SWIM.RISE_SP*dt;
+    const ch=swim.chase;if(ch){if(!seaLife.includes(ch)||!vil.cb)swim.chase=null;else if(!swim.hold&&!swim.up)swim.tgt=tideY-0.34-ch.y;}/* following something you tapped down to its depth */
+    swim.tgt=clamp(swim.tgt,0.55,Math.max(0.55,mdA));
+    if(swim.breath<=0||mdA<0.6||swim.up&&swim.tgt<=0.56||isLand(Math.round(look[0]),Math.round(look[1])))surfaceNow();}
+  const want=swim.under?swim.tgt:0;swim.depth+=clamp((want-swim.depth)*3,-SWIM.RISE_SP,SWIM.DIVE_SP)*dt;swim.depth=clamp(swim.depth,0,Math.max(0,md));if(!swim.under&&swim.depth<0.01)swim.depth=0;
   // breath: runs down under water, refills at the surface
-  if(swim.depth>0.3){swim.breath=Math.max(0,swim.breath-dt/SWIM.BREATH);if(swim.breath<=0&&swim.sayT<=0){swim.sayT=6;say('Out of breath. Up you float!');}}
+  if(swim.under&&swim.depth>0.3){swim.breath=Math.max(0,swim.breath-dt/SWIM.BREATH);if(swim.breath<=0&&swim.sayT<=0){swim.sayT=6;say('Out of breath. Up you float!');}}
   else swim.breath=Math.min(1,swim.breath+dt/SWIM.REFILL);swim.sayT-=dt;
   // bubbles from you under water, ripples round you at the surface
   const moving=Math.hypot(vil.tx-vil.x,vil.tz-vil.z)>0.05;
-  if(swim.depth>0.3){swim.bubT-=dt;if(swim.bubT<=0){swim.bubT=0.25+Math.random()*0.5;bubble(vil.x+(Math.random()-0.5)*0.15,vil.y+0.55,vil.z+(Math.random()-0.5)*0.15,0.04+Math.random()*0.05);}}
+  if(swim.under&&swim.depth>0.3){swim.bubT-=dt;if(swim.bubT<=0){swim.bubT=0.25+Math.random()*0.5;bubble(vil.x+(Math.random()-0.5)*0.15,vil.y+0.55,vil.z+(Math.random()-0.5)*0.15,0.04+Math.random()*0.05);}}
   else{swim.ringT-=dt;if(swim.ringT<=0){swim.ringT=moving?0.35:1.4;ripple(vil.x,vil.z);}}
   updateBubbles(dt);swimHUD();
-  // camera: under the surface it comes down with you, close in
-  const under=swim.depth>0.25;const prev=swim.uw;swim.uw=clamp(swim.uw+(under?dt:-dt)*2.2,0,1);if(prev<0.5!==swim.uw<0.5){swim.rip=1;noise(0.35,0.07,500);}
+  swim.uw=clamp(swim.uw+(swim.under?dt:-dt)*1.6,0,1);/* the camera's trip down and back up */
   applyUw(dt,tt);}
-function applyUw(dt,tt){swim.rip=Math.max(0,swim.rip-dt*1.6);const k=swim.uw,u=postMat.uniforms;u.uw.value=smooth(0,0.35,k);u.rip.value=swim.rip;u.tm.value=tt;
-  const on=k>0.02;uwSurf.visible=on;uwSnow.visible=on;for(const r of uwRays)r.visible=on;updateSchools(dt,tt,on&&k>0.3);if(reefG)reefG.visible=swim.on;
+function applyUw(dt,tt){
+  // how far under the lens itself is: every underwater look (fog, colour, rays, muffling) follows the camera, not you,
+  // so there's never blue fog above the waves or a clear view under them
+  const camUnder=camera.position.y<tideY-0.02;if(camUnder!==swim.camUnder){if(swim.camUnder!==undefined){swim.rip=1;noise(0.35,0.07,500);SFX.splash();}swim.camUnder=camUnder;}
+  swim.look=clamp((swim.look||0)+(camUnder?dt:-dt)*6,0,1);swim.rip=Math.max(0,swim.rip-dt*1.6);
+  if(swim.rec)swim.rec.push([+(camera.position.y-tideY).toFixed(2),+swim.look.toFixed(2),+swim.depth.toFixed(2),swim.under?1:0,+cam.dist.toFixed(1)]);
+  const k=swim.look,u=postMat.uniforms;u.uw.value=k*k*(3-2*k);u.rip.value=swim.rip;u.tm.value=tt;
+  const on=k>0.02;uwSurf.visible=on;uwSnow.visible=on;for(const r of uwRays)r.visible=on;updateSchools(dt,tt,on&&swim.uw>0.3);if(reefG)reefG.visible=swim.on;
   audioMuffle(k>0.5);
   // under water, the rest of the archipelago and the sun's shadows are lost in the blue: don't draw them (a big saving on a phone)
   renderer.shadowMap.autoUpdate=k<0.5;if(k>0.5)for(const isl of islands)if(!isl.home&&isl.group)isl.group.visible=false;
-  if(on&&swim.camD0===null){swim.camD0=cam.dist;swim.pitch0=cam.pitch;}
-  if(!on){cam.yMax=undefined;cam.ty=lerp(cam.ty||0,0,Math.min(1,dt*6));if(swim.camD0!==null){cam.dist=swim.camD0;cam.pitch=swim.pitch0;swim.camD0=null;}return;}
-  cam.yMax=tideY-0.28;
-  // camera: target your depth, close in, and keep the lens below the waves
-  cam.ty=lerp(cam.ty||0,(vil.y+0.2)*k,Math.min(1,dt*6));cam.dist=lerp(swim.camD0,7,k);
-  // just behind and a little above you when there's room, level with you or looking up from below near the surface
-  // (you can drag to look round and up; the camera itself never rises past the surface, see applyCam)
-  if(k<1)cam.pitch=lerp(swim.pitch0,0.22,k);else cam.pitch=clamp(cam.pitch,-0.5,0.8);
+  // the camera: glides down with you and closes in; the ceiling it may not rise past comes down with it, so it slips
+  // under the surface part-way down (and back up through it on the way home), never popping
+  const e=swim.uw*swim.uw*(3-2*swim.uw);
+  if(swim.uw>0&&swim.camD0===null){swim.camD0=cam.dist;swim.pitch0=cam.pitch;swim.pitchU=0.22;}
+  if(swim.camD0!==null){cam.dist=lerp(swim.camD0,7,e);cam.ty=lerp(0,vil.y+0.25,e);
+    if(e>0.999)swim.pitchU=cam.pitch=clamp(cam.pitch,-0.5,0.8);else cam.pitch=lerp(swim.pitch0,swim.pitchU,e);
+    cam.yMax=tideY-0.28+(1-e)*60;if(swim.uw<=0){cam.dist=swim.camD0;cam.pitch=swim.pitch0;cam.ty=0;cam.yMax=undefined;swim.camD0=null;}}
+  if(!on)return;
   // fog and light: sunlit blue near the top, darker deep down and past the reef's edge, much darker at night
   const edge=smooth(reefR()-1.5,reefR()+1.5,reefD(vil.x,vil.z)),dep=clamp(-vil.y/5,0,1),light=(1-nightF*0.72)*(1-rainMix*0.25);
-  _c.setHex(0x2a8cc0).lerp(_a.setHex(0x0e4a78),dep*0.6+edge*0.5).multiplyScalar(light);scene.fog.color.lerp(_c,Math.min(1,k*3));u.uwC.value.copy(_c);u.uwL.value=light;
-  {const kf=Math.min(1,k*3);scene.fog.near=lerp(scene.fog.near,camD()*0.35,kf);scene.fog.far=lerp(scene.fog.far,camD()+11-edge*5,kf);}
+  _c.setHex(0x2a8cc0).lerp(_a.setHex(0x0e4a78),dep*0.6+edge*0.5).multiplyScalar(light);scene.fog.color.lerp(_c,k);u.uwC.value.copy(_c);u.uwL.value=light;
+  {const kf=k;scene.fog.near=lerp(scene.fog.near,camD()*0.35,kf);scene.fog.far=lerp(scene.fog.far,camD()+11-edge*5,kf);}
   causU.uK.value=k*light*(1-rainMix*0.5);
   uwSurf.position.set(vil.x,tideY-0.01,vil.z);uwSurf.material.color.setHex(0x9ae0f0).multiplyScalar(0.35+0.65*light);
   // light rays slanting down from the surface, drifting and breathing
@@ -194,7 +211,7 @@ function applyUw(dt,tt){swim.rip=Math.max(0,swim.rip-dt*1.6);const k=swim.uw,u=p
 function uwSky(){const k=swim.uw;if(k<=0.02)return;if(k>0.5){for(const c of skyClouds)c.m.visible=false;moon.visible=false;rainbow.visible=false;shootLine.visible=false;}/* nothing of the sky shows through the sea */const u=skyMat.uniforms;u.zen.value.lerp(scene.fog.color,k);u.hz.value.lerp(scene.fog.color,k);u.ga.value*=1-k;u.disc.value*=1-k;}
 
 // ---- the swim pose: stretched out, a slow kick ----
-function swimPose(dt,tt,moving){const b=villager.children[0];if(!b)return;const uw=swim.depth>0.25,lean=uw?1.05:0.7,kick=moving?1:0.45;
+function swimPose(dt,tt,moving){const b=villager.children[0];if(!b)return;const uw=swim.under&&swim.depth>0.3,lean=uw?1.05:0.7,kick=moving?1:0.45;
   b.rotation.x=lerp(b.rotation.x,lean,Math.min(1,dt*5));b.rotation.z=Math.sin(tt*2.6)*0.08*kick;b.position.y=lerp(b.position.y,uw?0.25:0.12,Math.min(1,dt*5));
   if(playerLimbs)swingLimbs(playerLimbs,tt*(moving?6:3),0.55*kick);else b.scale.set(1+Math.sin(tt*6)*0.03*kick,1-Math.sin(tt*6)*0.03*kick,1);}
 function unPose(){const b=villager.children[0];if(b){b.rotation.z=0;b.position.y=0;}}
@@ -202,15 +219,18 @@ function unPose(){const b=villager.children[0];if(b){b.rotation.z=0;b.position.y
 // ---- the dive controls and the breath meter ----
 function showSwimUI(on){const el=$('swimUI');if(!el)return;el.hidden=!on;if(!on){unPose();swim.hold=swim.up=false;}}
 function swimHUD(){const el=$('swimUI');if(!el||el.hidden)return;const b=$('breath');const dv=canDive(vil.x,vil.z);
-  $('bDive').classList.toggle('off',!dv);$('bUp').hidden=swim.depth<0.05;b.hidden=swim.breath>=0.999&&swim.depth<0.05;
+  $('bDive').classList.toggle('off',!dv&&!swim.under);$('bUp').hidden=!swim.under;b.hidden=swim.breath>=0.999&&!swim.under;
   b.firstElementChild.style.width=(swim.breath*100).toFixed(1)+'%';b.classList.toggle('low',swim.breath<0.25);
-  $('diveHint').textContent=!dv&&swim.depth<0.05?(tideK()<0.4?'Too shallow at low tide':'Too shallow to dive'):'';}
+  $('diveHint').textContent=!dv&&!swim.under?(tideK()<0.4?'Too shallow at low tide':'Too shallow to dive'):'';}
 function initSwimUI(){const d=$('bDive'),u=$('bUp');if(!d)return;$('icoDive').src=PIX.dive;$('icoUp').src=PIX.up;
-  const hold=(el,key)=>{el.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();swim[key]=true;swim.goal=0;el.t0=performance.now();if(key==='hold'){swim.up=false;if(!canDive(vil.x,vil.z)){SFX.no();}else if(swim.depth<0.05){SFX.splash();}}else swim.hold=false;});
-    for(const ev of ['pointerup','pointercancel','pointerleave'])el.addEventListener(ev,()=>{if(key==='hold'&&swim.hold){swim.hold=false;/* a quick tap: dive to a comfortable depth, or (already under) head back up */if(performance.now()-(el.t0||0)<260){if(swim.depth<0.3)swim.goal=Math.min(1.3,maxDepth(vil.x,vil.z));else swim.up=true;}}});};
-  hold(d,'hold');hold(u,'up');
-  // keyboard: hold Space (or E) to dive, Q to rise
-  window.addEventListener('keydown',e=>{if(!swim.on||sheet)return;if(e.code==='Space'||e.key==='e'){swim.hold=true;swim.up=false;e.preventDefault();}if(e.key==='q'){swim.up=true;swim.hold=false;}});
+  // Dive: press to go under; hold to go deeper; a quick tap while under brings you back up. Up: hold to rise, tap to surface
+  d.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();d.t0=performance.now();d.was=swim.under;if(divePress()){swim.hold=true;swim.up=false;}});
+  u.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();u.t0=performance.now();swim.up=true;swim.hold=false;});
+  for(const ev of ['pointerup','pointercancel','pointerleave']){
+    d.addEventListener(ev,()=>{if(!swim.hold)return;swim.hold=false;if(ev==='pointerup'&&d.was&&performance.now()-d.t0<260)surfaceNow();});
+    u.addEventListener(ev,()=>{if(!swim.up)return;swim.up=false;if(ev==='pointerup'&&performance.now()-u.t0<260)surfaceNow();});}
+  // keyboard: hold Space (or E) to dive, Q to come up
+  window.addEventListener('keydown',e=>{if(!swim.on||sheet)return;if((e.code==='Space'||e.key==='e')&&!e.repeat){if(divePress()){swim.hold=true;swim.up=false;}e.preventDefault();}if(e.key==='q')surfaceNow();});
   window.addEventListener('keyup',e=>{if(e.code==='Space'||e.key==='e')swim.hold=false;});}
 // where a tap lands under water: on a level with you (so you can swim towards anything you see)
 function uwPoint(cx,cy){ndc.set(cx/window.innerWidth*2-1,-(cy/window.innerHeight)*2+1);ray.setFromCamera(ndc,camera);const y=vil.y+0.3;_plane.constant=-y;
@@ -220,7 +240,7 @@ function uwPoint(cx,cy){ndc.set(cx/window.innerWidth*2-1,-(cy/window.innerHeight
 function swimTap(cx,cy){if(S.sea||inside)return false;
   if(swim.on&&swim.uw>0.5){if(seaLifeTap(cx,cy))return true;const p=uwPoint(cx,cy);swimTo(p.x,p.z);return true;}
   const w=waterPoint(cx,cy);if(!w)return false;const tx=Math.round(w.x),tz=Math.round(w.z);if(isLand(tx,tz))return false;
-  if(!reef||reefDirty)buildReef();if(!swimmable(w.x,w.z))return false;const here=curIsl();if(!swim.on&&(!here||!here.home))return false;
+  if(!reef)buildReef();if(!swimmable(w.x,w.z))return false;const here=curIsl();if(!swim.on&&(!here||!here.home))return false;
   if(!swim.on&&S.tool==='rod')return false;/* the rod still casts from the shore */
   swimTo(w.x,w.z);return true;}
 

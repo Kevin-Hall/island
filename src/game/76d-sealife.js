@@ -97,7 +97,7 @@ function seaLifeTap(cx,cy){let best=null,bd=54;for(const c of seaLife){if(c.out>
   if(dist()<1.4){villager.rotation.y=Math.atan2(c.x-vil.x,c.z-vil.z);swingTool(grab);return true;}
   // swim to it (and down to its depth), then reach
   const dx=c.x-vil.x,dz=c.z-vil.z,d=Math.hypot(dx,dz)||1;swimTo(c.x-dx/d*0.8,c.z-dz/d*0.8);vil.cb=()=>{villager.rotation.y=Math.atan2(c.x-vil.x,c.z-vil.z);swingTool(grab);};
-  if(c.y<vil.y-0.4&&canDive(vil.x,vil.z)){swim.chase=c;}return true;}
+  if(swim.under)swim.chase=c;return true;}
 function catchSeaLife(c){const E=c.E,key='s:'+c.k,first=gain(key);buzz(25);scene.remove(c.g);seaLife.splice(seaLife.indexOf(c),1);
   bubble(c.x,c.y,c.z,0.1);for(let i=0;i<6;i++)bubble(c.x+(Math.random()-0.5)*0.3,c.y+Math.random()*0.2,c.z+(Math.random()-0.5)*0.3,0.03+Math.random()*0.04);
   if(caught){scene.remove(caught.g);catchCard(null);}const g=seaModel(c.k);g.children.forEach(o=>{if(o.userData.halo)o.visible=false;});scene.add(g);
