@@ -31,7 +31,7 @@ function updateHUD(){
   {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;
     const w0=wxNow(),wk=w0==='storm'?'storm':S.rain?'rain':w0==='snow'?'snow':w0==='fog'?'fog':w0==='cloudy'?'cloud':nightF>0.5?'moon':w0==='windy'?'wind':'sun';if(wxKind!==wk){wxKind=wk;$('wxIco').innerHTML=WX_ICO[wk];}}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${wxNow()!=='clear'?' · '+WX[wxNow()].name.toLowerCase():''}`;tideHUD();$('locTxt').textContent=locName();
   refreshMuseumShow();$('bTask').classList.toggle('ready',ordersReady());
-  {const g=nextGoal(),el=$('nextUp');el.hidden=!g;if(g){const h=`<small>${g.tag}</small>${g.name}`;if(el.innerHTML!==h)el.innerHTML=h;}}
+  {const g0=nextGoal(),g=g0&&g0.act!=='info'?g0:null,el=$('nextUp');el.hidden=!g;if(g){const h=`<small>${g.tag}</small>${g.name}`;if(el.innerHTML!==h)el.innerHTML=h;}}
   jrCheck();$('bShop').hidden=!!S.scratch;/* on a wild island you buy from Marlo's boat and, later, your own store: not from a menu */
   const [g,t]=dexCount();$('dexTxt').textContent=`Dex ${Math.floor(g/t*100)}%`;$('locTxt').hidden=!$('locTxt').textContent;
   updateCtx();

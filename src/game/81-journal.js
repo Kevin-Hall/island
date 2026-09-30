@@ -35,7 +35,7 @@ function jrCheck(){if(!S.jr||S.jr.day!==S.day)jrMake();for(const t of S.jr.tasks
 const BOOK_SVG='<svg viewBox="0 0 32 32"><path d="M4 7c4-2 8-2 12 1v18c-4-3-8-3-12-1z" fill="#f7e4c0" stroke="#b07a4a" stroke-width="1.6" stroke-linejoin="round"/><path d="M28 7c-4-2-8-2-12 1v18c4-3 8-3 12-1z" fill="#fff4dc" stroke="#b07a4a" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 11c2-.6 4-.5 6 .5M7 15c2-.6 4-.5 6 .5M19 11.5c2-1 4-1.1 6-.5" stroke="#d8b07a" stroke-width="1.3" stroke-linecap="round"/><path d="M22 4v9l2-1.6 2 1.6V4z" fill="#f08878"/></svg>';
 let jrSig='';
 function jrChip(bump){const el=$('jrChip');if(!el||!S.jr){return;}const d=S.jr.tasks.filter(q=>q.done).length,n=S.jr.tasks.length;
-  const sig=S.jr.day+':'+S.jr.tasks.map(q=>q.k+q.have).join(),changed=sig!==jrSig;if(changed){jrSig=sig;el.innerHTML=`${BOOK_SVG}<span><small>Today</small>${d===n?'All done!':`${d} / ${n} tasks`}</span><i>${S.jr.tasks.map(q=>`<b class="${q.done?'on':''}"></b>`).join('')}</i>`;}
+  const sig=S.jr.day+':'+S.jr.tasks.map(q=>q.k+q.have).join(),changed=sig!==jrSig;if(changed){jrSig=sig;el.innerHTML=`<img class="pix" src="${PIX.book}" alt=""><em>${d===n?'✓':`${d}/${n}`}</em>`;}
   el.hidden=false;el.classList.toggle('done',d===n);if(bump){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}
   if(changed&&$('jrCard'))jrRender();/* only when something changed: rebuilding it would replay its pop-in */}
 function jrOpen(){SFX.ui();let c=$('jrCard');if(c){c.remove();return;}c=document.createElement('div');c.id='jrCard';c.className='jrcard';c.innerHTML='<div class="fncard"></div>';document.body.appendChild(c);
@@ -46,6 +46,7 @@ function jrRender(){const c=$('jrCard');if(!c||!S.jr)return;const s=season();
   c.firstChild.innerHTML=`<i class="clip"></i><button class="x" aria-label="Close">×</button>
   <div class="fn-top"><span>Field Notes</span><span>No. ${no}</span></div>
   <div class="fn-grid"><div><label>Date sighted</label><b>${s[0].toUpperCase()+s.slice(1)} · Day ${S.day}</b></div><div><label>Station</label><b>${TOWN.name||'The island'}</b></div></div>
+  ${(()=>{const g=nextGoal();return g?`<div class="fn-next"><label>Next up</label><b>${g.name}</b></div>`:'';})()}
   <div class="fn-subj"><label>Subject</label><h3>Today's Tasks</h3></div>
   <ol class="fn-list">${S.jr.tasks.map((q,i)=>{const T=JR_TASKS[q.k],ic=ICON[T.ico]||ICON.star;return`<li class="${q.done?'done':''}"><span class="n">${['I','II','III','IV','V'][i]}.</span><img class="px" src="${ic}" alt=""><span class="t">${T.t(q.n)}</span><span class="c">${q.done?'':q.n>1?`${q.have}/${q.n}`:''}</span><span class="r">+${T.pay+q.n*10}</span>${q.done?'<u>Done</u>':''}</li>`;}).join('')}</ol>
   <div class="fn-foot"><span>${S.jr.all?'A perfect day. Filed with pride.':`${done} of ${S.jr.tasks.length} complete · all four earn a bonus`}</span><span>Form ${no}-${S.jr.tasks.length} · Rev. ${s}</span></div>`;}

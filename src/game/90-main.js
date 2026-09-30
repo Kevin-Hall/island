@@ -70,7 +70,7 @@ function frame(now){
 /* =========================================================
    Boot
    ========================================================= */
-$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
+$('icoShell').src=PIX.shell;$('icoStar').src=PIX.star;$('icoBag').src=PIX.bag;$('icoShop').src=PIX.shop;$('icoTask').src=PIX.task;$('icoChart').src=PIX.chart;$('icoDex').src=PIX.dex;
 // a brand-new game first chooses its island (85-islandpick), then boots; everything else boots straight away
 let introCam=null;
 function bootGame(prebuilt){applyHomeStyle();seasonCheck();

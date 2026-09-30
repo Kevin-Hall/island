@@ -515,6 +515,26 @@ body.titling .say,body.cine .say{display:none}
 #bolt{position:fixed;inset:0;z-index:4;pointer-events:none;background:#eef4ff;opacity:0}
 #bolt.on{animation:bolt .9s ease-out}
 @keyframes bolt{0%{opacity:0}6%{opacity:.75}14%{opacity:.1}22%{opacity:.55}100%{opacity:0}}
+
+/* ---------- tidier top, corner tool fan, pixel icons ---------- */
+img.pix{image-rendering:crisp-edges;image-rendering:pixelated}
+.hud{align-items:flex-start}
+.hud-l{display:flex;align-items:center;gap:8px;flex-wrap:wrap;pointer-events:none;max-width:70vw}
+.hud-l>*{pointer-events:auto}
+.hud-r .chip img,.lvl img{width:27px;height:27px;background:none;padding:0;border-radius:0}
+.jrchip{position:relative;width:44px;height:44px;padding:0;border-radius:50%;display:grid;place-items:center;background:var(--paper);box-shadow:var(--shadow)}
+.jrchip img{width:30px;height:30px}.jrchip em{position:absolute;right:-6px;bottom:-4px;font-style:normal;font-size:11px;font-weight:700;background:var(--teal);color:#fff;border-radius:99px;padding:1px 6px;box-shadow:0 2px 0 var(--teal-d)}
+.jrchip.done em{background:var(--green);box-shadow:0 2px 0 var(--green-d)}
+.nextup{padding:5px 11px;border-radius:99px;flex-direction:row;align-items:center;gap:6px;font-size:13px}.nextup small{font-size:10px}
+.clockb .sub{grid-column:1 / span 2;grid-row:3;display:flex;gap:10px;align-items:center;margin-top:2px}
+.clockb .loc,.clockb .tidep{all:unset;display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;color:#fffcf2;text-shadow:0 1px 0 rgba(58,38,22,.7),0 0 6px rgba(58,38,22,.4)}
+.clockb .tidep svg{width:15px;height:15px}.clockb .loc[hidden],.clockb .tidep[hidden]{display:none}
+.wheel{right:calc(env(safe-area-inset-right,0px) + 50px);bottom:calc(env(safe-area-inset-bottom,0px) + 50px)}
+.toolbtn{width:64px;height:64px;left:-32px;top:-32px}.toolbtn img{width:36px;height:36px}
+.ring .tool img{width:30px;height:30px}
+.wheel.open .ring .tool{transform:rotate(var(--a)) translate(var(--r)) rotate(calc(-1 * var(--a))) scale(1)}
+.appcol .btn .ico img{width:30px;height:30px}
+.ring .tool span{display:none}
 </style>
 </head>
 <body>
@@ -522,12 +542,14 @@ body.titling .say,body.cine .say{display:none}
 <div id="floats"></div>
 
 <div class="hud">
-  <div><div class="clockb"><div class="wx" id="wxIco"></div><div class="t" id="timeTxt">7:00</div><div class="d" id="dayTxt">Day 1 · morning</div></div><div class="tidep" id="tideTxt" hidden></div><div class="loc" id="locTxt">Home</div></div>
-  <div class="hud-r"><div class="chip"><img class="px" id="icoShell" alt="shells"><span id="shellTxt">0</span></div>
-    <button class="chip lvl" id="lvlChip" aria-label="Island and settings"><img class="px" id="icoStar" alt=""><span class="lv"><span id="lvlTxt">Lv 1</span><i class="xpbar"><b id="xpFill"></b></i></span></button>
+  <div class="hud-l">
+    <button class="chip lvl" id="lvlChip" aria-label="Island and settings"><img class="pix" id="icoStar" alt=""><span class="lv"><span id="lvlTxt">Lv 1</span><i class="xpbar"><b id="xpFill"></b></i></span></button>
+    <button class="jrchip" id="jrChip" hidden aria-label="Today's journal"></button>
     <button class="nextup" id="nextUp" hidden></button>
-    <button class="jrchip" id="jrChip" hidden aria-label="Today's journal"></button></div>
+  </div>
+  <div class="hud-r"><div class="chip"><img class="pix" id="icoShell" alt="shells"><span id="shellTxt">0</span></div></div>
 </div>
+<div class="clockb"><div class="t" id="timeTxt">7:00</div><div class="wx" id="wxIco"></div><div class="d" id="dayTxt">Day 1 · morning</div><div class="sub"><span class="loc" id="locTxt">Home</span><span class="tidep" id="tideTxt" hidden></span></div></div>
 <div id="toasts"></div>
 <div id="seamarks" hidden></div>
 <div id="ctx" class="ctx"></div>
@@ -537,14 +559,14 @@ body.titling .say,body.cine .say{display:none}
 <!-- one tool button: tap it and every tool fans out in a ring around it -->
 <div class="wheel" id="bar">
   <div class="ring" id="tools"></div>
-  <button class="toolbtn" id="bTool" aria-label="Tools" aria-expanded="false"><img class="px" id="icoTool" alt=""></button>
+  <button class="toolbtn" id="bTool" aria-label="Tools" aria-expanded="false"><img class="pix" id="icoTool" alt=""></button>
 </div>
 <nav class="appcol" id="apps" aria-label="Menu">
-  <button class="btn" id="bBag" style="--c:#f3d3a8"><span class="ico"><img class="px" id="icoBag" alt=""></span><span class="lb">Bag</span></button>
-  <button class="btn" id="bShop" style="--c:#a6e3d8"><span class="ico"><img class="px" id="icoShop" alt=""></span><span class="lb">Shop</span></button>
-  <button class="btn" id="bTask" style="--c:#ffc9a3"><span class="ico"><img class="px" id="icoTask" alt=""></span><span class="lb">Orders</span></button>
-  <button class="btn" id="bChart" style="--c:#b7d7f7"><span class="ico"><img class="px" id="icoChart" alt=""></span><span class="lb">Chart</span></button>
-  <button class="btn" id="bDex" style="--c:#fac3cf"><span class="ico"><img class="px" id="icoDex" alt=""></span><span class="lb" id="dexTxt">Dex</span></button>
+  <button class="btn" id="bBag" style="--c:#f3d3a8"><span class="ico"><img class="pix" id="icoBag" alt=""></span><span class="lb">Bag</span></button>
+  <button class="btn" id="bShop" style="--c:#a6e3d8"><span class="ico"><img class="pix" id="icoShop" alt=""></span><span class="lb">Shop</span></button>
+  <button class="btn" id="bTask" style="--c:#ffc9a3"><span class="ico"><img class="pix" id="icoTask" alt=""></span><span class="lb">Orders</span></button>
+  <button class="btn" id="bChart" style="--c:#b7d7f7"><span class="ico"><img class="pix" id="icoChart" alt=""></span><span class="lb">Chart</span></button>
+  <button class="btn" id="bDex" style="--c:#fac3cf"><span class="ico"><img class="pix" id="icoDex" alt=""></span><span class="lb" id="dexTxt">Dex</span></button>
 </nav>
 
 <section class="sheet" id="sheet" hidden>
@@ -1661,6 +1683,42 @@ function paintItemIcon(key){const [c,x]=(()=>{const c=document.createElement('ca
 {const keys=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),'g:mushroom','g:truffle','g:acorn','g:pinecone','g:berries','g:clover4','g:apple','g:clam','g:geode','g:oldcoin',...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','shell','star','heart','sprout','boat','rod','hammer','chart','can','shop','mystery','dex','bag','fish','fly','crawl'];
   for(const k of [...new Set(keys)]){const old=ICON[k];Object.defineProperty(ICON,k,{configurable:true,enumerable:true,get(){const v=paintItemIcon(k)||old;Object.defineProperty(ICON,k,{value:v,writable:true,configurable:true,enumerable:true});return v;},set(v){/* a later pixel sprite for the same thing: keep the painted one */}});}}
 shellHTML=`<img class="px" src="${ICON.shell}" alt="">`;
+/* =========================================================
+   Pixel icons for the buttons (tools, the menu column, the HUD): hand-placed 16×16 sprites in the style of a cosy
+   16-bit item sheet: rich colours with a light edge and a dark edge on every shape, and a crisp dark outline traced
+   automatically round the outside. They're drawn at 2× (36px) so they stay sharp; show them with class "pix".
+   ========================================================= */
+const PIX_OUT='#2b1d2c';
+function pixIcon(rows,pal,sc=2){const h=rows.length,w=16,W=w+2,H=h+2,g=[...Array(H)].map(()=>Array(W).fill(null));
+  rows.forEach((r,y)=>[...r].forEach((ch,x)=>{if(ch!=='.'&&ch!==' '&&x<w)g[y+1][x+1]=pal[ch]||'#f0f';}));
+  // the outline: every empty pixel outside the shape that touches it (holes inside stay see-through)
+  const out=[...Array(H)].map(()=>Array(W).fill(false)),st=[[0,0]];out[0][0]=true;
+  while(st.length){const [x,y]=st.pop();for(const [a,b] of [[1,0],[-1,0],[0,1],[0,-1]]){const X=x+a,Y=y+b;if(X<0||Y<0||X>=W||Y>=H||out[Y][X]||g[Y][X])continue;out[Y][X]=true;st.push([X,Y]);}}
+  const cv=document.createElement('canvas');cv.width=W*sc;cv.height=H*sc;const c=cv.getContext('2d');
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let col=g[y][x];
+    if(!col&&out[y][x]&&[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>g[y+b]&&g[y+b][x+a]))col=PIX_OUT;
+    if(col){c.fillStyle=col;c.fillRect(x*sc,y*sc,sc,sc);}}
+  return cv.toDataURL();}
+const PX_WOOD={W:'#e3a45f',w:'#b8743f',d:'#7a4a2a'},PX_STEEL={X:'#ffffff',M:'#dfe7f0',m:'#a6b2c4',n:'#6c7890'};
+const PIX_ART={
+  hand:[['................','....pp....pp....','...pPPp..pPPp...','...pXPp..pXPp...','....pp....pp....','.pp..........pp.','pPPp........pPPp','pXPp..pppp..pXPp','.pp..pPPPPp..pp.','....pPXPPPPp....','...pPPPPPPPPp...','...pPPPPPPPPp...','...pPPPPPPPPp...','....qPPPPPPq....','.....qqqqqq.....','................'],{P:'#ffb8cc',p:'#f07aa0',q:'#c85a82',X:'#ffe4ec'}],
+  axe:[['................','........MMMm....','.......MXMMmn...','......MXMMmmn...','......MMMmmnn...','.......Mmmnn.d..','........nndWd...','.........dWd....','........dWd.....','.......dWd......','......dWd.......','.....dWd........','....dWd.........','...dWd..........','...dd...........','................'],{...PX_STEEL,...PX_WOOD}],
+  shovel:[['................','.............dd.','............dWWd','............dWd.','...........dWd..','..........dWd...','.........dWd....','........dWd.....','.......nmd......','.....mMMMn......','....mXMMmn......','...mMMMmn.......','...mMMmn........','...mmmn.........','....nn..........','................'],{...PX_STEEL,...PX_WOOD}],
+  hoe:[['................','..........nMMm..','..........MXMMn.','...........mMMn.','..........dWmnn.','.........dWd.n..','........dWd.....','.......dWd......','......dWd.......','.....dWd........','....dWd.........','...dWd..........','..dWd...........','..dd............','................','................'],{...PX_STEEL,...PX_WOOD}],
+  can:[['................','................','.....dddd.......','....d....d......','....d....d...bb.','...LLLLLLLLd.bXb','...LXLLLLLLLbLb.','...LLMMMMMMLLb..','...LMMMMMMMLL...','...LMMMMMMMMd...','...LMMMMMMMMd...','...LMMMMMMMMd...','...DMMMMMMMDD...','....DDDDDDDD....','................','................'],{L:'#8fe3d4',M:'#3cbfae',D:'#1f8a80',d:'#2a6a66',b:'#3cbfae',X:'#e8fffa'}],
+  net:[['................','...wwwww........','..wx.x.xw.......','.wx.x.x.xw......','.w.x.x.x.w......','.wx.x.x.xw......','.w.x.x.x.w......','..wx.x.xw.......','...wwwwwd.......','........dW......','.........dW.....','..........dW....','...........dW...','............dW..','.............dd.','................'],{w:'#f4f4f8',x:'#c8d4e4',...PX_WOOD}],
+  rod:[['................','.............dW.','............dW.l','...........dW..l','..........dW...l','.........dW....l','........dW.....l','.......dW......l','......dW......rXr','.....dW.......rrr','....dW.........X.','..mmW...........','.mMmd...........','.mmnd...........','.dd.............','................'],{...PX_WOOD,m:'#a6b2c4',M:'#dfe7f0',n:'#6c7890',l:'#f4f4f8',r:'#f0504a',X:'#ffffff'}],
+  seeds:[['................','.......g........','......gGg.......','.......g........','....cCCCCCCc....','...cCCCCCCCCc...','...cCyCCCCyCc...','...cCCCCyCCCc...','...cCCyCCCCCc...','...cCCCCCyCCc...','...cCyCCCCCCc...','...cCCCCyCCCc...','...cCCCCCCCCc...','....cccccccc....','................','................'],{C:'#e9c98e',c:'#b8894e',y:'#7a4a2a',g:'#3f9a3a',G:'#8fd46a'}],
+  bag:[['................','......dddd......','.....d....d.....','....wWWWWWWw....','...wWXWWWWWWw...','...wWWWWWWWWw...','...wddddddddw...','...wwWWyyWWww...','...wWWWyyWWWw...','...wWWWWWWWWw...','...wWbbbbbbWw...','...wWbWWWWbWw...','...wWbbbbbbWw...','...dwwwwwwwwd...','....dddddddd....','................'],{W:'#f2a24e',w:'#c4702e',d:'#8a4a22',X:'#ffd8a0',y:'#ffd23a',b:'#b8702e'}],
+  task:[['................','................','..eeeeeeeeeeee..','..eEEEEEEEEEEe..','..eeEEEEEEEEee..','..eEeEEEEEEeEe..','..eEEeEEEEeEEe..','..eEEEeErEeEEe..','..eEEEErrrEEEe..','..eEEEEErEEEEe..','..eEEEEEEEEEEe..','..eeeeeeeeeeee..','................','................','................','................'],{E:'#fff4dc',e:'#d8b88a',r:'#e8484a'}],
+  chart:[['................','................','.pPPPpPPPPpPPPp.','.pPPPpPPPPpPPPp.','.pPgGpPPPPpPPPp.','.pgGGgPPr.pPPPp.','.pPggpP.r.pPPPp.','.pPPPp.PP.pPPrp.','.pPPPpPPPPpPr.r.','.pPPPpPPPPpPPrp.','.pPPPpPPbbpPPPp.','.pPPPpPbBBbPPPp.','.pPPPpPPbbpPPPp.','.pppppppppppppp.','................','................'],{P:'#f4e0b0',p:'#c8a26a',g:'#4fa845',G:'#8fd46a',r:'#e0443c',b:'#3f8ee0',B:'#8fd0ff'}],
+  dex:[['................','...ddddddddddd..','..dGGGGGGGGGGdc.','..dGXGGGGGGGGdc.','..dGGGGyyGGGGdc.','..dGGGyYYyGGGdc.','..dGGGyYYyGGGdc.','..dGGGGyyGGGGdc.','..dGGGGgGGGGGdc.','..dGGGGgGGGGGdc.','..dGGGGGGGGGGdc.','..dGGGGGGGGGGdc.','..ddddddddddddc.','..dcccccccccccc.','...ddddddddddd..','................'],{G:'#4fb89a',g:'#2a7a60',d:'#1f5a4a',X:'#9ae8d0',y:'#f6c030',Y:'#ffe680',c:'#fff4dc'}],
+  shop:[['................','................','..rWrWrWrWrWrW..','.rrWWrrWWrrWWrr.','.rrWWrrWWrrWWrr.','..qqqqqqqqqqqq..','...d........d...','...d.yy..oo.d...','...d.yy..oo.d...','..wWWWWWWWWWWw..','..wWXWWWWWWWWw..','..wWWWWWWWWWWw..','..wWWWWWWWWWWw..','..dddddddddddd..','................','................'],{r:'#f0504a',q:'#b83434',W:'#fff4dc',...PX_WOOD,w:'#b8743f',y:'#ffd23a',o:'#f59a3a',X:'#ffffff'}],
+  shell:[['................','................','......pppp......','....pPPpPPpp....','...pPXPpPPpPp...','..pPPpPPpPPpPp..','..pPPpPPpPPpPp..','..pPPpPPpPPpPp..','...pPpPPpPPpP...','....pPPpPPpp....','.....pppppp.....','......qqqq......','.....qqqqqq.....','................','................','................'],{P:'#ffc7cf',p:'#f08aa0',q:'#c85a78',X:'#ffffff'}],
+  star:[['................','.......yy.......','......yYYy......','......yYYy......','.yyyyyYYYYyyyyy.','..yYYYYXYYYYYy..','...yYYYYYYYYy...','....yYYYYYYy....','....yYYYYYYy....','...yYYYyyYYYy...','...yYYy..yYYy...','..yYy......yYy..','..yy........yy..','................','................','................'],{Y:'#ffe066',y:'#f0a820',X:'#ffffff'}],
+  book:[['................','................','..dddddd.ddddd..','.dPPPPPPdPPPPPd.','.dPllllPdPllllPd','.dPPPPPPdPPPPPd.','.dPllllPdPllllPd','.dPPPPPPdPPPPPd.','.dPllllPdPllllPd','.dPPPPPPdPPPPPd.','.ddddddrddddddd.','.......r........','.......r........','................','................','................'],{P:'#fff4dc',l:'#c8b08a',d:'#8a5a32',r:'#e0443c'}],
+};
+const PIX={};for(const k in PIX_ART){const [rows,pal]=PIX_ART[k];PIX[k]=pixIcon(rows.map(r=>r.padEnd(16,'.').slice(0,16)),pal);}
 /* =========================================================
    Renderer, camera, post-process (pixelate + outline + dither)
    ========================================================= */
@@ -4443,7 +4501,7 @@ function updateHUD(){
   {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;
     const w0=wxNow(),wk=w0==='storm'?'storm':S.rain?'rain':w0==='snow'?'snow':w0==='fog'?'fog':w0==='cloudy'?'cloud':nightF>0.5?'moon':w0==='windy'?'wind':'sun';if(wxKind!==wk){wxKind=wk;$('wxIco').innerHTML=WX_ICO[wk];}}$('dayTxt').textContent=`Day ${S.day} · ${timeName(S.hour)}${wxNow()!=='clear'?' · '+WX[wxNow()].name.toLowerCase():''}`;tideHUD();$('locTxt').textContent=locName();
   refreshMuseumShow();$('bTask').classList.toggle('ready',ordersReady());
-  {const g=nextGoal(),el=$('nextUp');el.hidden=!g;if(g){const h=`<small>${g.tag}</small>${g.name}`;if(el.innerHTML!==h)el.innerHTML=h;}}
+  {const g0=nextGoal(),g=g0&&g0.act!=='info'?g0:null,el=$('nextUp');el.hidden=!g;if(g){const h=`<small>${g.tag}</small>${g.name}`;if(el.innerHTML!==h)el.innerHTML=h;}}
   jrCheck();$('bShop').hidden=!!S.scratch;/* on a wild island you buy from Marlo's boat and, later, your own store: not from a menu */
   const [g,t]=dexCount();$('dexTxt').textContent=`Dex ${Math.floor(g/t*100)}%`;$('locTxt').hidden=!$('locTxt').textContent;
   updateCtx();
@@ -4510,10 +4568,12 @@ const TOOLS=[
 const TOOL_OF={};for(const t of TOOLS)TOOL_OF[t.k]=t;
 // which tool clears each kind of farm debris (weeds come up with any tool)
 const DEBRIS_TOOL={weed:null,twig:'axe',bush:'axe',stump:'axe',rock:'shovel',boulder:'shovel',tree:'axe'};
-const toolIcon=k=>k==='seeds'?seedIcon(S.seed):ICON[k];
+const toolIcon=k=>PIX[k]||(k==='seeds'?seedIcon(S.seed):ICON[k]); // the pixel set (22d-pixicons)
 
 /* ---- tool bar ---- */
-function renderTools(){const n=TOOLS.length;$('tools').innerHTML=TOOLS.map((t,i)=>`<button class="tool${S.tool===t.k?' on':''}" data-tool="${t.k}" style="--a:${(i/n*360-90).toFixed(1)}deg" aria-label="${t.name}" title="${t.name} (${i+1})"><img class="px" src="${toolIcon(t.k)}" alt=""><span>${t.name}</span></button>`).join('');
+// the ring fans out up and to the left of the corner button: three tools close in, the rest in a wider arc
+const fanAng=(i,n)=>i<3?[204,234,264][i]:198+(i-3)*72/Math.max(1,n-4);
+function renderTools(){const n=TOOLS.length;$('tools').innerHTML=TOOLS.map((t,i)=>`<button class="tool${S.tool===t.k?' on':''}" data-tool="${t.k}" style="--a:${fanAng(i,n)}deg;--r:${i<3?88:158}px" aria-label="${t.name}" title="${t.name} (${i+1})"><img class="pix" src="${toolIcon(t.k)}" alt=""><span>${t.name}</span></button>`).join('');
   $('icoTool').src=toolIcon(S.tool);$('bTool').title=TOOL_OF[S.tool]?TOOL_OF[S.tool].name:'Tools';}
 function equip(k){if(!TOOL_OF[k])return;if(S.tool===k&&k==='seeds'){openSheet('seeds');return;}
   S.tool=k;SFX.ui();renderTools();showApps(false);showHeld();floatText(vil.x,1.25,vil.z,TOOL_OF[k].name);save();}
@@ -6223,7 +6283,7 @@ function jrCheck(){if(!S.jr||S.jr.day!==S.day)jrMake();for(const t of S.jr.tasks
 const BOOK_SVG='<svg viewBox="0 0 32 32"><path d="M4 7c4-2 8-2 12 1v18c-4-3-8-3-12-1z" fill="#f7e4c0" stroke="#b07a4a" stroke-width="1.6" stroke-linejoin="round"/><path d="M28 7c-4-2-8-2-12 1v18c4-3 8-3 12-1z" fill="#fff4dc" stroke="#b07a4a" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 11c2-.6 4-.5 6 .5M7 15c2-.6 4-.5 6 .5M19 11.5c2-1 4-1.1 6-.5" stroke="#d8b07a" stroke-width="1.3" stroke-linecap="round"/><path d="M22 4v9l2-1.6 2 1.6V4z" fill="#f08878"/></svg>';
 let jrSig='';
 function jrChip(bump){const el=$('jrChip');if(!el||!S.jr){return;}const d=S.jr.tasks.filter(q=>q.done).length,n=S.jr.tasks.length;
-  const sig=S.jr.day+':'+S.jr.tasks.map(q=>q.k+q.have).join(),changed=sig!==jrSig;if(changed){jrSig=sig;el.innerHTML=`${BOOK_SVG}<span><small>Today</small>${d===n?'All done!':`${d} / ${n} tasks`}</span><i>${S.jr.tasks.map(q=>`<b class="${q.done?'on':''}"></b>`).join('')}</i>`;}
+  const sig=S.jr.day+':'+S.jr.tasks.map(q=>q.k+q.have).join(),changed=sig!==jrSig;if(changed){jrSig=sig;el.innerHTML=`<img class="pix" src="${PIX.book}" alt=""><em>${d===n?'✓':`${d}/${n}`}</em>`;}
   el.hidden=false;el.classList.toggle('done',d===n);if(bump){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}
   if(changed&&$('jrCard'))jrRender();/* only when something changed: rebuilding it would replay its pop-in */}
 function jrOpen(){SFX.ui();let c=$('jrCard');if(c){c.remove();return;}c=document.createElement('div');c.id='jrCard';c.className='jrcard';c.innerHTML='<div class="fncard"></div>';document.body.appendChild(c);
@@ -6234,6 +6294,7 @@ function jrRender(){const c=$('jrCard');if(!c||!S.jr)return;const s=season();
   c.firstChild.innerHTML=`<i class="clip"></i><button class="x" aria-label="Close">×</button>
   <div class="fn-top"><span>Field Notes</span><span>No. ${no}</span></div>
   <div class="fn-grid"><div><label>Date sighted</label><b>${s[0].toUpperCase()+s.slice(1)} · Day ${S.day}</b></div><div><label>Station</label><b>${TOWN.name||'The island'}</b></div></div>
+  ${(()=>{const g=nextGoal();return g?`<div class="fn-next"><label>Next up</label><b>${g.name}</b></div>`:'';})()}
   <div class="fn-subj"><label>Subject</label><h3>Today's Tasks</h3></div>
   <ol class="fn-list">${S.jr.tasks.map((q,i)=>{const T=JR_TASKS[q.k],ic=ICON[T.ico]||ICON.star;return`<li class="${q.done?'done':''}"><span class="n">${['I','II','III','IV','V'][i]}.</span><img class="px" src="${ic}" alt=""><span class="t">${T.t(q.n)}</span><span class="c">${q.done?'':q.n>1?`${q.have}/${q.n}`:''}</span><span class="r">+${T.pay+q.n*10}</span>${q.done?'<u>Done</u>':''}</li>`;}).join('')}</ol>
   <div class="fn-foot"><span>${S.jr.all?'A perfect day. Filed with pride.':`${done} of ${S.jr.tasks.length} complete · all four earn a bonus`}</span><span>Form ${no}-${S.jr.tasks.length} · Rev. ${s}</span></div>`;}
@@ -7360,7 +7421,7 @@ function frame(now){
 /* =========================================================
    Boot
    ========================================================= */
-$('icoShell').src=ICON.shell;$('icoStar').src=ICON.star;$('icoBag').src=ICON.bag;$('icoShop').src=ICON.shop;$('icoTask').src=ICON.task;$('icoChart').src=ICON.chart;$('icoDex').src=ICON.dex;
+$('icoShell').src=PIX.shell;$('icoStar').src=PIX.star;$('icoBag').src=PIX.bag;$('icoShop').src=PIX.shop;$('icoTask').src=PIX.task;$('icoChart').src=PIX.chart;$('icoDex').src=PIX.dex;
 // a brand-new game first chooses its island (85-islandpick), then boots; everything else boots straight away
 let introCam=null;
 function bootGame(prebuilt){applyHomeStyle();seasonCheck();
@@ -7412,7 +7473,7 @@ if(/[?&]debug\b/.test(location.search)){
   window.DS={
     state:()=>({day:S.day,hour:S.hour,shells:S.shells,sea:S.sea,loc:locName(),tiles:Object.keys(S.tiles).length,inv:{...S.inv},store:{...S.store},
       islands:islands.length,town:TOWN.name,buildings:TOWN.bld.filter(b=>!b.locked).map(b=>b.t),npcs:npcs.map(n=>n.name+' ('+n.pers+' '+n.sp+', '+n.state+(n.act?':'+n.act.k:'')+')'),px:PX,perfPx:PERF.px,inside:inside?inside.title:null}),
-    hour:h=>{setHour(h);applyTime();},wx:k=>{if(k)setWx(k);return{wx:S.wx,next:S.wxNext,rain:S.rain,grey:wxGrey()};},wxStats:(n=400)=>{const o={};for(const se of ['spring','summer','autumn','winter']){S.seasonOv=se;const c={};let p=null;for(let i=0;i<n;i++){p=rollWx(p);c[p]=(c[p]||0)+1;}o[se]=c;}delete S.seasonOv;return o;},outpost:()=>S.outpost,catchNow:id=>{const tg={fish:id,g:new T.Group(),gold:false,x:vil.x+1.5,z:vil.z};shadows.push(tg);fishing={px:vil.x+1.5,pz:vil.z,state:'bite',t:0,target:tg};catchFish();return !!caught;},fish3d:(ks,sz=200)=>(ks==='all'?Object.keys(FISH):ks).map(k=>{const w=new T.Group(),m=fishModel(FISH[k]);m.rotation.y=Math.PI*0.75;w.add(m);return[k,snapThumb(w,sz)];}),scan:v=>{S.scan=v;applyFx();},fx:k=>{setFx(k);if(S.rain)stopRain();return Object.keys(FXS);},
+    hour:h=>{setHour(h);applyTime();},pix:()=>Object.entries(PIX),wx:k=>{if(k)setWx(k);return{wx:S.wx,next:S.wxNext,rain:S.rain,grey:wxGrey()};},wxStats:(n=400)=>{const o={};for(const se of ['spring','summer','autumn','winter']){S.seasonOv=se;const c={};let p=null;for(let i=0;i<n;i++){p=rollWx(p);c[p]=(c[p]||0)+1;}o[se]=c;}delete S.seasonOv;return o;},outpost:()=>S.outpost,catchNow:id=>{const tg={fish:id,g:new T.Group(),gold:false,x:vil.x+1.5,z:vil.z};shadows.push(tg);fishing={px:vil.x+1.5,pz:vil.z,state:'bite',t:0,target:tg};catchFish();return !!caught;},fish3d:(ks,sz=200)=>(ks==='all'?Object.keys(FISH):ks).map(k=>{const w=new T.Group(),m=fishModel(FISH[k]);m.rotation.y=Math.PI*0.75;w.add(m);return[k,snapThumb(w,sz)];}),scan:v=>{S.scan=v;applyFx();},fx:k=>{setFx(k);if(S.rain)stopRain();return Object.keys(FXS);},
     icons:(ks)=>{if(ks==='all')ks=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','shell'];return ks.map(k=>[k,ICON[k]]);},
     fillBag:(n=4)=>{const pick=(o,pre)=>Object.keys(o).slice(0,n).map(k=>pre+k);for(const k of [...pick(FISH,'f:'),...pick(BUGS,'b:'),...pick(PLANTS,'p:'),...pick(FINDS,'g:'),'m:wood','m:stone','m:fiber','x:bait','x:fert',...CROP_IDS.slice(0,n*2).map(k=>k+'|normal'),CROP_IDS[3]+'|golden',CROP_IDS[6]+'|rainbow'])S.inv[k]=(S.inv[k]||0)+3;for(const k of ['bench','lamppost','picnic','parasol','fountain','brick','topiary','swing'])S.store[k]=2;updateHUD();return Object.keys(S.inv).length;},
     floorTest:()=>{S.store.brick=3;S.store.chair=1;startPlace('brick',true);const [x,z]=[placing.x,placing.z];layFloorAt(x,z);const second=nearestValid(x,z,'brick');if(second)layFloorAt(...second);endPlace();

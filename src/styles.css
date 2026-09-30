@@ -503,3 +503,23 @@ body.titling .say,body.cine .say{display:none}
 #bolt{position:fixed;inset:0;z-index:4;pointer-events:none;background:#eef4ff;opacity:0}
 #bolt.on{animation:bolt .9s ease-out}
 @keyframes bolt{0%{opacity:0}6%{opacity:.75}14%{opacity:.1}22%{opacity:.55}100%{opacity:0}}
+
+/* ---------- tidier top, corner tool fan, pixel icons ---------- */
+img.pix{image-rendering:crisp-edges;image-rendering:pixelated}
+.hud{align-items:flex-start}
+.hud-l{display:flex;align-items:center;gap:8px;flex-wrap:wrap;pointer-events:none;max-width:70vw}
+.hud-l>*{pointer-events:auto}
+.hud-r .chip img,.lvl img{width:27px;height:27px;background:none;padding:0;border-radius:0}
+.jrchip{position:relative;width:44px;height:44px;padding:0;border-radius:50%;display:grid;place-items:center;background:var(--paper);box-shadow:var(--shadow)}
+.jrchip img{width:30px;height:30px}.jrchip em{position:absolute;right:-6px;bottom:-4px;font-style:normal;font-size:11px;font-weight:700;background:var(--teal);color:#fff;border-radius:99px;padding:1px 6px;box-shadow:0 2px 0 var(--teal-d)}
+.jrchip.done em{background:var(--green);box-shadow:0 2px 0 var(--green-d)}
+.nextup{padding:5px 11px;border-radius:99px;flex-direction:row;align-items:center;gap:6px;font-size:13px}.nextup small{font-size:10px}
+.clockb .sub{grid-column:1 / span 2;grid-row:3;display:flex;gap:10px;align-items:center;margin-top:2px}
+.clockb .loc,.clockb .tidep{all:unset;display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;color:#fffcf2;text-shadow:0 1px 0 rgba(58,38,22,.7),0 0 6px rgba(58,38,22,.4)}
+.clockb .tidep svg{width:15px;height:15px}.clockb .loc[hidden],.clockb .tidep[hidden]{display:none}
+.wheel{right:calc(env(safe-area-inset-right,0px) + 50px);bottom:calc(env(safe-area-inset-bottom,0px) + 50px)}
+.toolbtn{width:64px;height:64px;left:-32px;top:-32px}.toolbtn img{width:36px;height:36px}
+.ring .tool img{width:30px;height:30px}
+.wheel.open .ring .tool{transform:rotate(var(--a)) translate(var(--r)) rotate(calc(-1 * var(--a))) scale(1)}
+.appcol .btn .ico img{width:30px;height:30px}
+.ring .tool span{display:none}
