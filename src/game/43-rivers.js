@@ -69,7 +69,8 @@ function carveRivers(isl,g){const R=mulberry(isl.seed^0x71e5),B=BIOMES[isl.biome
         if(lvl(x+dx,z+dz)>=L&&townQ(x+dx,z+dz)<0.8)addT(x+dx,z+dz,L,1,0);}
       (isl.ponds||(isl.ponds=[])).push([x,z,r]);break;}}
   // ponds you've dug with the Landscaping tool (72b-terraform) join the island's water
-  if(isl.home&&S.terra)for(const k in S.terra)if(S.terra[k]===-1){const [x,z]=k.split(',').map(Number);if(typeAt(x,z)==='grass')addT(x,z,-1,1,0);}
+  if(isl.home&&S.terra){for(const k in S.terra)if(S.terra[k]<0){const [x,z]=k.split(',').map(Number);if(typeAt(x,z)==='grass'){const L=terraWaterL(S.terra[k]),o=tiles.get(k);if(o)o.L=L;else tiles.set(k,{x,z,L,fx:1,fz:0});}}
+    for(const k of [...tiles.keys()])if(S.terra[k]>=0)tiles.delete(k);}/* a stretch of river filled back in to land */
   if(!tiles.size)return;
   const list=[...tiles.values()];
   for(const q of list){const k=K(q.x,q.z);q.surf=q.L<0?0.07:TOP.grass+q.L*LVH-0.2;landMap.set(k,'river');riverSurf.set(k,q.surf);lvlMap.set(k,Math.max(0,q.L));}

@@ -12,7 +12,7 @@ const TOOLS=[
   {k:'axe',   name:'Axe',          tip:'Chop trees, stumps, bushes and twigs for wood'},
   {k:'net',   name:'Net',          tip:'Catch bugs'},
   {k:'rod',   name:'Fishing Rod',  tip:'Tap the water to cast'},
-  {k:'terra', name:'Landscaping',  tip:'Raise or lower the land a tier (tap the tool again to switch); hold and drag to brush',lv:8}];
+  {k:'terra', name:'Landscaping',  tip:'Raise or lower the land a tier, or dig and fill water (pick on the bar over the tool button); hold and drag to brush',lv:8}];
 const TOOL_OF={};for(const t of TOOLS)TOOL_OF[t.k]=t;
 // which tool clears each kind of farm debris (weeds come up with any tool)
 const DEBRIS_TOOL={weed:null,twig:'axe',bush:'axe',stump:'axe',rock:'shovel',boulder:'shovel',tree:'axe'};
@@ -22,7 +22,7 @@ const toolIcon=k=>PIX[k]||(k==='seeds'?seedIcon(S.seed):ICON[k]); // the pixel s
 // the ring fans out up and to the left of the corner button: three tools close in, the rest in a wider arc
 const fanAng=(i,n)=>i<3?[204,234,264][i]:198+(i-3)*72/Math.max(1,n-4);
 const toolsHave=()=>TOOLS.filter(t=>!t.lv||level()>=t.lv);/* the Landscaping tool waits for its Island Heart level */
-function renderTools(){const TL=toolsHave(),n=TL.length;$('tools').innerHTML=TL.map((t,i)=>`<button class="tool${S.tool===t.k?' on':''}" data-tool="${t.k}" style="--a:${fanAng(i,n)}deg;--r:${i<3?88:158}px" aria-label="${t.name}" title="${t.name} (${i+1})"><img class="pix" src="${toolIcon(t.k)}" alt=""><span>${t.k==='terra'?(terraMode()==='raise'?'Raise land':'Lower land'):t.name}</span></button>`).join('');
+function renderTools(){const TL=toolsHave(),n=TL.length;$('tools').innerHTML=TL.map((t,i)=>`<button class="tool${S.tool===t.k?' on':''}" data-tool="${t.k}" style="--a:${fanAng(i,n)}deg;--r:${i<3?88:158}px" aria-label="${t.name}" title="${t.name} (${i+1})"><img class="pix" src="${toolIcon(t.k)}" alt=""><span>${t.k==='terra'?'Landscaping: '+TERRA_MODES[terraMode()]:t.name}</span></button>`).join('');
   $('icoTool').src=toolIcon(S.tool);$('bTool').title=TOOL_OF[S.tool]?TOOL_OF[S.tool].name:'Tools';}
 function equip(k){if(!TOOL_OF[k]||!toolsHave().includes(TOOL_OF[k]))return;if(S.tool===k&&k==='seeds'){openSheet('seeds');return;}if(S.tool===k&&k==='terra'){terraToggle();return;}
   S.tool=k;SFX.ui();renderTools();showApps(false);showHeld();floatText(vil.x,1.25,vil.z,TOOL_OF[k].name);save();}

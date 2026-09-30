@@ -547,6 +547,13 @@ img.pix{image-rendering:crisp-edges;image-rendering:pixelated}
 .swimui .breath.low b{background:linear-gradient(90deg,#f0a07a,#ffd0b0)}
 .swimui .dh{font-size:12px;font-weight:700;color:#fffcf2;text-shadow:0 1px 0 rgba(58,38,22,.7),0 0 6px rgba(58,38,22,.4)}
 .swimui .dh:empty{display:none}
+
+/* the Landscaping tool's modes (72b-terraform), over the tool button */
+.terraui{position:fixed;z-index:6;right:calc(env(safe-area-inset-right,0px) + 14px);bottom:calc(env(safe-area-inset-bottom,0px) + 96px);display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.terraui .tl{font-size:12px;font-weight:700;color:#fffcf2;text-shadow:0 1px 0 rgba(58,38,22,.7),0 0 6px rgba(58,38,22,.4);margin-right:6px}
+.terraui .seg3{display:flex;background:var(--paper);border-radius:18px;box-shadow:var(--shadow);padding:4px;gap:2px}
+.terraui button{border:none;background:none;border-radius:14px;padding:8px 11px;font:inherit;font-size:13.5px;font-weight:700;color:var(--ink2)}
+.terraui button.on{background:#7cc46a;color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}
 </style>
 </head>
 <body>
@@ -573,6 +580,7 @@ img.pix{image-rendering:crisp-edges;image-rendering:pixelated}
   <div class="ring" id="tools"></div>
   <button class="toolbtn" id="bTool" aria-label="Tools" aria-expanded="false"><img class="pix" id="icoTool" alt=""></button>
 </div>
+<div class="terraui" id="terraUI" hidden><span class="tl">Landscaping</span><div class="seg3"><button data-tm="raise">▲ Raise</button><button data-tm="lower">▼ Lower</button><button data-tm="water">≈ Water</button></div></div>
 <div class="swimui" id="swimUI" hidden><div class="breath" id="breath" hidden><b></b></div><div class="dh" id="diveHint"></div><div class="row"><button class="swimb" id="bUp" aria-label="Swim up" hidden><img class="pix" id="icoUp" alt=""><span>Up</span></button><button class="swimb" id="bDive" aria-label="Dive (hold)"><img class="pix" id="icoDive" alt=""><span>Dive</span></button></div></div>
 <nav class="appcol" id="apps" aria-label="Menu">
   <button class="btn" id="bBag" style="--c:#f3d3a8"><span class="ico"><img class="pix" id="icoBag" alt=""></span><span class="lb">Bag</span></button>
@@ -1759,11 +1767,11 @@ const postMat=new T.ShaderMaterial({
   uniforms:{tC:{value:null},tD:{value:null},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},tm:{value:0},
     // the visual style (applyFx): colour grade, outlines, glow, film texture and palette
     fxA:{value:new T.Vector4(1,1,1,0)}/* saturation, contrast, brightness, faded blacks */,tS:{value:new T.Vector3(1,1,1)},tH:{value:new T.Vector3(1,1,1)},
-    edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},uw:{value:0},rip:{value:0}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},
+    edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},uw:{value:0},rip:{value:0},uwC:{value:new T.Color(0x2a8cc0)},uwL:{value:1}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
   fragmentShader:`
     uniform sampler2D tC;uniform sampler2D tD;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;uniform float tm;varying vec2 vUv;
-    uniform vec4 fxA;uniform vec3 tS;uniform vec3 tH;uniform float edgeK;uniform vec3 edgeC;uniform float dith;uniform float grain;uniform float vig;uniform float bloomK;uniform float gradeK;uniform float pal;uniform float tilt;uniform float scan;uniform float paper;uniform float uw;uniform float rip;
+    uniform vec4 fxA;uniform vec3 tS;uniform vec3 tH;uniform float edgeK;uniform vec3 edgeC;uniform float dith;uniform float grain;uniform float vig;uniform float bloomK;uniform float gradeK;uniform float pal;uniform float tilt;uniform float scan;uniform float paper;uniform float uw;uniform float rip;uniform vec3 uwC;uniform float uwL;
     float b2(vec2 a){a=floor(a);return fract(a.x*.5+a.y*a.y*.75);}
     float bayer(vec2 a){return b2(.5*a)*.25+b2(a);}
     float lin(vec2 uv){float d=texture2D(tD,uv).r*2.-1.;return 2.*cn*cf/(cf+cn-d*(cf-cn));}
@@ -1803,7 +1811,15 @@ const postMat=new T.ShaderMaterial({
       if(paper>0.){vec2 p=gl_FragCoord.xy;float w=vn(p*.08)*.6+vn(p*.3)*.3+h21(p)*.1;c*=1.-paper*(.1*w-.04);c=mix(c,c*c*1.1+.02,paper*.25*vn(p*.02+3.));}
       if(grain>0.)c+=(h21(gl_FragCoord.xy+fract(tm)*97.)-.5)*grain;
       if(scan>0.)c*=1.-scan*.16*step(.5,fract(gl_FragCoord.y*.5));
-      if(uw>0.){c=mix(c,c*vec3(.74,.96,1.08)+vec3(0.,.025,.05),uw*.65);vec2 q=vUv-.5;c*=1.-dot(q,q)*.9*uw;}
+      if(uw>0.){
+        // under water: light is soaked up with distance (reds first), everything far melts into the sea's own colour,
+        // shafts of sunlight slant down from the surface, and a shimmer of caustic light plays over the near things
+        float fd=1.-exp(-d*.05);c*=mix(vec3(1.),vec3(.6,.88,1.02),uw);c=mix(c,uwC,clamp(fd*.85,0.,1.)*uw);
+        float sx=vUv.x+vUv.y*.35;float ry=pow(max(0.,sin(sx*13.+tm*.32)*sin(sx*6.1-tm*.19+1.3)),3.)+.5*pow(max(0.,sin(sx*23.-tm*.5+2.)),6.);
+        c+=vec3(.55,.85,.95)*ry*smoothstep(.2,1.,vUv.y)*(1.-fd*.5)*.2*uw*uwL;
+        vec2 cp=gl_FragCoord.xy*.035;float cs=sin(cp.x+sin(cp.y*1.3+tm*.9)*1.4+tm*.7)*sin(cp.y*1.1+sin(cp.x*.8-tm)*1.2-tm*.5);
+        c+=vec3(.3,.5,.55)*smoothstep(.6,.95,abs(cs))*(1.-fd)*.14*uw*uwL;
+        vec2 q=vUv-.5;c*=1.-dot(q,q)*1.3*uw;c=mix(c,c*c*1.25+.02,.18*uw);}
       if(rip>0.)c=mix(c,vec3(.85,.97,1.),rip*rip*.35);
       vec2 vg=vUv-.5;c*=1.-dot(vg,vg)*vig;
       float b=bayer(gl_FragCoord.xy)-.5;
@@ -1856,7 +1872,8 @@ function applyCam(){
   // the view leads a little ahead of you, so you stand in the lower half of the screen with the island opening out beyond
   const hd=camD()*Math.cos(cam.pitch),lead=cam.dist*0.1,tx=cam.tx-Math.sin(cam.yaw)*lead,tz=cam.tz-Math.cos(cam.yaw)*lead;
   const ty=cam.ty||0;/* the height it looks at: 0 on land, your depth under water (76c-swim) */
-  camera.position.set(tx+Math.sin(cam.yaw)*hd,ty+Math.sin(cam.pitch)*camD(),tz+Math.cos(cam.yaw)*hd);
+  let cy=ty+Math.sin(cam.pitch)*camD();if(cam.yMax!==undefined&&cy>cam.yMax)cy=cam.yMax;/* diving: the lens stays under the surface (76c-swim) */
+  camera.position.set(tx+Math.sin(cam.yaw)*hd,cy,tz+Math.cos(cam.yaw)*hd);
   camera.lookAt(tx,ty+0.4-hd*hd*CURVE,tz);
   if(camShake>0){const k=camShake*0.25;camera.position.x+=(Math.random()-0.5)*k;camera.position.y+=(Math.random()-0.5)*k;camera.position.z+=(Math.random()-0.5)*k;}
   camera.updateMatrixWorld();
@@ -2593,7 +2610,8 @@ function carveRivers(isl,g){const R=mulberry(isl.seed^0x71e5),B=BIOMES[isl.biome
         if(lvl(x+dx,z+dz)>=L&&townQ(x+dx,z+dz)<0.8)addT(x+dx,z+dz,L,1,0);}
       (isl.ponds||(isl.ponds=[])).push([x,z,r]);break;}}
   // ponds you've dug with the Landscaping tool (72b-terraform) join the island's water
-  if(isl.home&&S.terra)for(const k in S.terra)if(S.terra[k]===-1){const [x,z]=k.split(',').map(Number);if(typeAt(x,z)==='grass')addT(x,z,-1,1,0);}
+  if(isl.home&&S.terra){for(const k in S.terra)if(S.terra[k]<0){const [x,z]=k.split(',').map(Number);if(typeAt(x,z)==='grass'){const L=terraWaterL(S.terra[k]),o=tiles.get(k);if(o)o.L=L;else tiles.set(k,{x,z,L,fx:1,fz:0});}}
+    for(const k of [...tiles.keys()])if(S.terra[k]>=0)tiles.delete(k);}/* a stretch of river filled back in to land */
   if(!tiles.size)return;
   const list=[...tiles.values()];
   for(const q of list){const k=K(q.x,q.z);q.surf=q.L<0?0.07:TOP.grass+q.L*LVH-0.2;landMap.set(k,'river');riverSurf.set(k,q.surf);lvlMap.set(k,Math.max(0,q.L));}
@@ -4702,7 +4720,7 @@ const TOOLS=[
   {k:'axe',   name:'Axe',          tip:'Chop trees, stumps, bushes and twigs for wood'},
   {k:'net',   name:'Net',          tip:'Catch bugs'},
   {k:'rod',   name:'Fishing Rod',  tip:'Tap the water to cast'},
-  {k:'terra', name:'Landscaping',  tip:'Raise or lower the land a tier (tap the tool again to switch); hold and drag to brush',lv:8}];
+  {k:'terra', name:'Landscaping',  tip:'Raise or lower the land a tier, or dig and fill water (pick on the bar over the tool button); hold and drag to brush',lv:8}];
 const TOOL_OF={};for(const t of TOOLS)TOOL_OF[t.k]=t;
 // which tool clears each kind of farm debris (weeds come up with any tool)
 const DEBRIS_TOOL={weed:null,twig:'axe',bush:'axe',stump:'axe',rock:'shovel',boulder:'shovel',tree:'axe'};
@@ -4712,7 +4730,7 @@ const toolIcon=k=>PIX[k]||(k==='seeds'?seedIcon(S.seed):ICON[k]); // the pixel s
 // the ring fans out up and to the left of the corner button: three tools close in, the rest in a wider arc
 const fanAng=(i,n)=>i<3?[204,234,264][i]:198+(i-3)*72/Math.max(1,n-4);
 const toolsHave=()=>TOOLS.filter(t=>!t.lv||level()>=t.lv);/* the Landscaping tool waits for its Island Heart level */
-function renderTools(){const TL=toolsHave(),n=TL.length;$('tools').innerHTML=TL.map((t,i)=>`<button class="tool${S.tool===t.k?' on':''}" data-tool="${t.k}" style="--a:${fanAng(i,n)}deg;--r:${i<3?88:158}px" aria-label="${t.name}" title="${t.name} (${i+1})"><img class="pix" src="${toolIcon(t.k)}" alt=""><span>${t.k==='terra'?(terraMode()==='raise'?'Raise land':'Lower land'):t.name}</span></button>`).join('');
+function renderTools(){const TL=toolsHave(),n=TL.length;$('tools').innerHTML=TL.map((t,i)=>`<button class="tool${S.tool===t.k?' on':''}" data-tool="${t.k}" style="--a:${fanAng(i,n)}deg;--r:${i<3?88:158}px" aria-label="${t.name}" title="${t.name} (${i+1})"><img class="pix" src="${toolIcon(t.k)}" alt=""><span>${t.k==='terra'?'Landscaping: '+TERRA_MODES[terraMode()]:t.name}</span></button>`).join('');
   $('icoTool').src=toolIcon(S.tool);$('bTool').title=TOOL_OF[S.tool]?TOOL_OF[S.tool].name:'Tools';}
 function equip(k){if(!TOOL_OF[k]||!toolsHave().includes(TOOL_OF[k]))return;if(S.tool===k&&k==='seeds'){openSheet('seeds');return;}if(S.tool===k&&k==='terra'){terraToggle();return;}
   S.tool=k;SFX.ui();renderTools();showApps(false);showHeld();floatText(vil.x,1.25,vil.z,TOOL_OF[k].name);save();}
@@ -5014,33 +5032,36 @@ function layFloorAt(x,z){if(!placing||!isFloor(placing.kind))return false;moveGh
 function endPlace(){if(ghost){scene.remove(ghost);ghost=null;}placing=null;cursor.visible=false;cursorT=0;clearAction();}
 
 /* =========================================================
-   Landscaping (the Landscaping tool, from level TERRA.LV): raise or lower your island's ground one cliff tier at a
-   time, up to TERRA.MAX tiers. It works on the island's own tile grid, nothing new: each changed tile's tier is saved
-   in S.terra (key → level 0..MAX, or -1 for water) and levelOf (41-trees) reads it back, so the island rebuilds with
-   its cliffs where you put them. Lowering a ground-level tile beside the sea, a river or a pond floods it: it
-   becomes part of the island's water (a pond tile, carved like the rivers, 43-rivers). Raising a pond tile drains it.
-   Not allowed: under buildings, decor, floors, debris, soil or crops; the beach (sand) and the natural rivers.
-   Tap a tile to change it, or hold and drag to brush several and change them all at once when you let go.
-   Tap the tool again to switch between raising and lowering. Each tile changed costs TERRA.COST shells.
+   Landscaping (the Landscaping tool, from Island Heart level TERRA.LV). Three modes, picked on the little bar that
+   appears over the tool button (or by tapping the tool again): Raise lifts a tile one cliff tier (up to TERRA.MAX),
+   Lower drops it one, and Water digs a pond or a stretch of river into the tile at its own height, or fills water back
+   in to land (dug ponds and the island's own rivers alike). Tap a tile, or hold and drag to brush several and change
+   them all when you let go. It works on the island's own tile grid: each changed tile is saved in S.terra and read back
+   by levelOf (41-trees) and carveRivers (43-rivers), then the island rebuilds. S.terra values: 0..MAX a ground tier,
+   -1 water at sea level, -2..-5 water at tier 0..3 (TERRA_W), and a ground tier on a river tile fills that bit of river.
+   Water tiers are carved like the rivers, so water on a higher tier spills down to lower water in a little waterfall.
+   Not allowed: under buildings, decor, floors, debris, soil or finds, on the beach, under a bridge. TERRA.COST shells a tile.
    ========================================================= */
 const TERRA={COST:150/* shells per tile per tier */,LV:8/* Island Heart level it unlocks at */,MAX:3};
 const terraOn=()=>level()>=TERRA.LV;
-const terraMode=()=>S.terraMode==='lower'?'lower':'raise';
+const TERRA_MODES={raise:'Raise',lower:'Lower',water:'Water'};
+const terraMode=()=>TERRA_MODES[S.terraMode]?S.terraMode:'raise';
+const TERRA_W=L=>L<0?-1:-(L+2),terraWaterL=v=>v===-1?-1:-(v+2);/* water at tier L ↔ its S.terra value */
 // what a tile can become: returns {to, why} (to: new level, -1 for water; why: why not, if it can't)
 function terraPlan(x,z,mode){const k=K(x,z),t=landMap.get(k);if(islMap.get(k)!==0)return{why:'Only on your island.'};
   if(fixedAt(x,z)||objAt(x,z)||floorAt(x,z))return{why:'Something is built there.'};
   if(debrisAt(x,z))return{why:'Clear it first.'};if(S.tiles[k])return{why:'That\'s your soil. Fill it in first.'};
   if(findAt(x,z))return{why:'Pick up what\'s lying there first.'};
-  const tw=S.terra&&S.terra[k]===-1;
-  if(t==='river'&&tw)return mode==='raise'?{to:0}:{why:'It\'s as deep as it goes.'};
-  if(t==='river')return{why:'The island\'s own streams stay where they are.'};
-  if(t==='sand')return{why:'The beach stays a beach.'};if(t!=='grass')return{why:'You can\'t landscape there.'};
-  const L=lvlMap.get(k)||0;
+  if(t==='bridge')return{why:'Not under a bridge.'};if(t==='sand')return{why:'The beach stays a beach.'};
+  const L=lvlMap.get(k)||0,wetNear=[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>{const t2=landMap.get(K(x+dx,z+dz));return t2==='river'||isSeaT(t2);});
+  if(t==='river'){const surf=riverSurf.get(k)||0,wl=surf<0.2?-1:Math.round((surf-TOP.grass+0.2)/LVH);/* the water's own tier */
+    if(mode==='lower')return{why:'It\'s as deep as it goes.'};
+    return{to:Math.max(0,wl)};}/* raise or water: fill it back in to land */
+  if(t!=='grass')return{why:'You can\'t landscape there.'};
+  if(mode==='water'){const seaNear=[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>{const k2=K(x+dx,z+dz),t2=landMap.get(k2);return isSeaT(t2)||t2==='river'&&(riverSurf.get(k2)||0)<0.2;});return{to:TERRA_W(L===0&&seaNear?-1:L)};}/* dig water here (by the sea it settles at sea level) */
   if(mode==='raise')return L>=TERRA.MAX?{why:'That\'s as high as it goes.'}:{to:L+1};
   if(L>0)return{to:L-1};
-  // ground level: lowering floods it, but only next to water (no dry holes)
-  const wet=[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>{const t2=landMap.get(K(x+dx,z+dz));return t2==='river'||isSeaT(t2);});
-  return wet?{to:-1}:{why:'Nothing lower here, unless there\'s water beside it.'};}
+  return wetNear?{to:-1}:{why:'Nothing lower here. Use Water to dig a pond.'};}
 function terraApply(tiles,mode){if(!terraOn()){toast(`Landscaping unlocks at Island Heart level ${TERRA.LV}.`);return;}
   const plan=[],seen=new Set();let why='';for(const [x,z] of tiles){const k=K(x,z);if(seen.has(k))continue;seen.add(k);const p=terraPlan(x,z,mode);if(p.why){why=p.why;continue;}plan.push([x,z,p.to]);}
   if(!plan.length){if(why){toast(why);SFX.no();}return;}
@@ -5048,17 +5069,24 @@ function terraApply(tiles,mode){if(!terraOn()){toast(`Landscaping unlocks at Isl
   S.shells-=cost;S.terra=S.terra||{};const before=plan.map(([x,z])=>[x,z,topY(x,z)]);
   for(const [x,z,to] of plan)S.terra[K(x,z)]=to;
   rebuildHome();terraFx(before);updateHUD();save();
-  floatText(vil.x,vil.y+1.4,vil.z,`${mode==='raise'?'Raised':'Lowered'} ${plan.length} tile${plan.length>1?'s':''} · −${fmt(cost)}`,'');}
+  floatText(vil.x,vil.y+1.4,vil.z,`${{raise:'Raised',lower:'Lowered',water:'Dug or filled'}[mode]} ${plan.length} tile${plan.length>1?'s':''} · −${fmt(cost)}`,'');}
 function terraTap(x,z){cursorAt(x,z);actAt(x,z,()=>{swingTool();terraApply([[x,z]],terraMode());});}
 // each changed tile pops: a block of earth rising or sinking into place, a puff of dust and a soft thud
 const terraPops=[];const terraMat=new T.MeshToonMaterial({gradientMap:grad,color:0x8a6a44,transparent:true});
 function terraFx(before){camShake=Math.max(camShake,0.25);tone(95,0.22,'sine',0.14,55);noise(0.18,0.09,260,0.7);
   for(const [x,z,y0] of before){const y1=topY(x,z),m=new T.Mesh(BOX,terraMat.clone());m.frustumCulled=false;scene.add(m);terraPops.push({m,x,z,y0,y1,t:0});
     for(let i=0;i<8;i++)emit(x+(Math.random()-0.5)*0.9,Math.max(y0,y1)+0.1,z+(Math.random()-0.5)*0.9,{vx:(Math.random()-0.5)*1.2,vy:0.8+Math.random()*0.8,vz:(Math.random()-0.5)*1.2,life:0.7,max:0.7,size:0.08,color:y1<0.2?0xbfe6ff:0xc8a878,g:3});}}
-function updateTerra(dt){for(let i=terraPops.length-1;i>=0;i--){const p=terraPops[i];p.t+=dt;const u=Math.min(1,p.t/0.32),e=1+Math.sin(u*Math.PI)*0.12;/* a little overshoot */
+function updateTerra(dt){terraBar();for(let i=terraPops.length-1;i>=0;i--){const p=terraPops[i];p.t+=dt;const u=Math.min(1,p.t/0.32),e=1+Math.sin(u*Math.PI)*0.12;/* a little overshoot */
   const y=lerp(p.y0,p.y1,u*u*(3-2*u)),h=Math.max(0.05,y+0.6);p.m.position.set(p.x,y-h/2,p.z);p.m.scale.set(1.02*e,h,1.02*e);p.m.material.opacity=u<0.7?0.9:0.9*(1-(u-0.7)/0.3);
   if(p.t>0.4){scene.remove(p.m);p.m.material.dispose();terraPops.splice(i,1);}}}
-function terraToggle(){S.terraMode=terraMode()==='raise'?'lower':'raise';SFX.ui();floatText(vil.x,vil.y+1.3,vil.z,S.terraMode==='raise'?'Raise the land':'Lower the land');renderTools();}
+function setTerraMode(m){S.terraMode=m;SFX.ui();floatText(vil.x,vil.y+1.3,vil.z,{raise:'Raise the land',lower:'Lower the land',water:'Dig or fill water'}[m]);renderTools();terraBar(true);}
+function terraToggle(){const ks=Object.keys(TERRA_MODES);setTerraMode(ks[(ks.indexOf(terraMode())+1)%ks.length]);}
+// the mode bar over the tool button, shown while the Landscaping tool is in your hands
+let terraBarOn=null;
+function terraBar(force){const on=S.tool==='terra'&&terraOn()&&!S.sea&&!inside&&!swim.on;const el=$('terraUI');if(!el)return;
+  if(on!==terraBarOn||force){terraBarOn=on;el.hidden=!on;if(on)el.querySelectorAll('[data-tm]').forEach(b=>b.classList.toggle('on',b.dataset.tm===terraMode()));
+    if(on&&!S.tipTerra){S.tipTerra=1;setTimeout(()=>say('Pick <b>Raise</b>, <b>Lower</b> or <b>Water</b>, then tap the ground (or hold and drag to brush).'),400);}}}
+$('terraUI')&&$('terraUI').addEventListener('click',e=>{const b=e.target.closest('[data-tm]');if(b){e.stopPropagation();setTerraMode(b.dataset.tm);}});
 /* =========================================================
    Settling a wild island (S.scratch): you choose where everything goes.
    Blueprints: your tent, and each kit the Island Heart gives you (store, museum, café, town hall, a neighbour's plot).
@@ -6042,12 +6070,15 @@ seabedMat.onBeforeCompile=sh=>{sh.uniforms.uT=causU.uT;sh.uniforms.uK=causU.uK;
        float a=sin(p.x+sin(p.y*1.2+t)*1.3+t)*sin(p.y*1.1+sin(p.x*.9-t*1.2)*1.2-t*.8);
        float b=sin(p.x*1.7-sin(p.y*.8-t*.7)+t*.6)*sin(p.y*1.6+sin(p.x*1.3+t)-t);
        float c=smoothstep(.62,.98,abs(a))*.7+smoothstep(.7,1.,abs(b))*.5;
-       diffuseColor.rgb+=vec3(.42,.66,.74)*c*uK*.55*clamp(1.+vSw.y*.18,.25,1.);}`);};
+       diffuseColor.rgb+=vec3(.42,.66,.74)*c*uK*.55*clamp(1.+vSw.y*.18,.25,1.);
+       float rp=sin(vSw.x*3.3+sin(vSw.z*.6)*1.6+vSw.z*1.1)*.5+.5;diffuseColor.rgb*=.92+.12*rp;}`);};
 // kelp: tall ribbons that sway in the swell (the tips move most)
 const kelpU={uT:{value:0}};
 const kelpMat=new T.MeshToonMaterial({gradientMap:grad,color:0xffffff});
 kelpMat.onBeforeCompile=sh=>{sh.uniforms.uT=kelpU.uT;
-  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uT;').replace('#include <begin_vertex>',`#include <begin_vertex>
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying float vKh;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.rgb*=.4+.75*vKh;');
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uT;varying float vKh;').replace('#include <begin_vertex>',`#include <begin_vertex>
+    vKh=position.y;
     {vec3 o=vec3(0.);
      #ifdef USE_INSTANCING
      o=instanceMatrix[3].xyz;
@@ -6095,7 +6126,7 @@ const UW_RAY_TEX=(()=>{const cv=document.createElement('canvas');cv.width=4;cv.h
 const uwRays=[...Array(8)].map((_,i)=>{const m=new T.Mesh(new T.PlaneGeometry(0.9+Math.random()*0.8,7),new T.MeshBasicMaterial({color:0xcff4ff,map:UW_RAY_TEX,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending,fog:false}));
   m.frustumCulled=false;m.visible=false;m.userData={ox:(Math.random()-0.5)*14,oz:(Math.random()-0.5)*14,ph:Math.random()*6.28,sp:0.2+Math.random()*0.3};scene.add(m);return m;});
 const SNOW_N=240,snowGeo=new T.BufferGeometry(),snowPos=new Float32Array(SNOW_N*3);snowGeo.setAttribute('position',new T.BufferAttribute(snowPos,3));
-const uwSnow=new T.Points(snowGeo,new T.PointsMaterial({color:0xd8f0ff,size:0.06,transparent:true,opacity:0.75,depthWrite:false}));uwSnow.frustumCulled=false;uwSnow.visible=false;scene.add(uwSnow);
+const uwSnow=new T.Points(snowGeo,new T.PointsMaterial({color:0xd8f0ff,size:0.08,transparent:true,opacity:0.75,depthWrite:false}));uwSnow.frustumCulled=false;uwSnow.visible=false;scene.add(uwSnow);
 let snowInit=false;
 const BUB_N=28,bubMesh=new T.InstancedMesh(ICO0,new T.MeshBasicMaterial({color:0xe8faff,transparent:true,opacity:0.7,depthWrite:false}),BUB_N);bubMesh.frustumCulled=false;bubMesh.count=0;scene.add(bubMesh);
 const bubs=[];
@@ -6155,21 +6186,23 @@ function updateSwim(dt,tt){causU.uT.value=kelpU.uT.value=uwSurf.userData.u.uT.va
   // camera: under the surface it comes down with you, close in
   const under=swim.depth>0.25;const prev=swim.uw;swim.uw=clamp(swim.uw+(under?dt:-dt)*2.2,0,1);if(prev<0.5!==swim.uw<0.5){swim.rip=1;noise(0.35,0.07,500);}
   applyUw(dt,tt);}
-function applyUw(dt,tt){swim.rip=Math.max(0,swim.rip-dt*1.6);const k=swim.uw,u=postMat.uniforms;u.uw.value=k;u.rip.value=swim.rip;u.tm.value=tt;
-  const on=k>0.02;uwSurf.visible=on;uwSnow.visible=on;for(const r of uwRays)r.visible=on;if(reefG)reefG.visible=swim.on;
+function applyUw(dt,tt){swim.rip=Math.max(0,swim.rip-dt*1.6);const k=swim.uw,u=postMat.uniforms;u.uw.value=smooth(0,0.35,k);u.rip.value=swim.rip;u.tm.value=tt;
+  const on=k>0.02;uwSurf.visible=on;uwSnow.visible=on;for(const r of uwRays)r.visible=on;updateSchools(dt,tt,on&&k>0.3);if(reefG)reefG.visible=swim.on;
   audioMuffle(k>0.5);
   // under water, the rest of the archipelago and the sun's shadows are lost in the blue: don't draw them (a big saving on a phone)
   renderer.shadowMap.autoUpdate=k<0.5;if(k>0.5)for(const isl of islands)if(!isl.home&&isl.group)isl.group.visible=false;
   if(on&&swim.camD0===null){swim.camD0=cam.dist;swim.pitch0=cam.pitch;}
-  if(!on){cam.ty=lerp(cam.ty||0,0,Math.min(1,dt*6));if(swim.camD0!==null){cam.dist=swim.camD0;cam.pitch=swim.pitch0;swim.camD0=null;}return;}
+  if(!on){cam.yMax=undefined;cam.ty=lerp(cam.ty||0,0,Math.min(1,dt*6));if(swim.camD0!==null){cam.dist=swim.camD0;cam.pitch=swim.pitch0;swim.camD0=null;}return;}
+  cam.yMax=tideY-0.28;
   // camera: target your depth, close in, and keep the lens below the waves
   cam.ty=lerp(cam.ty||0,(vil.y+0.2)*k,Math.min(1,dt*6));cam.dist=lerp(swim.camD0,7,k);
   // just behind and a little above you when there's room, level with you or looking up from below near the surface
-  const pmax=Math.asin(clamp((tideY-0.32-cam.ty)/camD(),-0.3,0.9));cam.pitch=clamp(Math.min(lerp(swim.pitch0,0.24,k),pmax),-0.12,1.2);
+  // (you can drag to look round and up; the camera itself never rises past the surface, see applyCam)
+  if(k<1)cam.pitch=lerp(swim.pitch0,0.22,k);else cam.pitch=clamp(cam.pitch,-0.5,0.8);
   // fog and light: sunlit blue near the top, darker deep down and past the reef's edge, much darker at night
   const edge=smooth(reefR()-1.5,reefR()+1.5,reefD(vil.x,vil.z)),dep=clamp(-vil.y/5,0,1),light=(1-nightF*0.72)*(1-rainMix*0.25);
-  _c.setHex(0x2a8cc0).lerp(_a.setHex(0x0e4a78),dep*0.6+edge*0.5).multiplyScalar(light);scene.fog.color.lerp(_c,k);
-  scene.fog.near=lerp(scene.fog.near,camD()*0.5,k);scene.fog.far=lerp(scene.fog.far,camD()+14-edge*6,k);
+  _c.setHex(0x2a8cc0).lerp(_a.setHex(0x0e4a78),dep*0.6+edge*0.5).multiplyScalar(light);scene.fog.color.lerp(_c,Math.min(1,k*3));u.uwC.value.copy(_c);u.uwL.value=light;
+  {const kf=Math.min(1,k*3);scene.fog.near=lerp(scene.fog.near,camD()*0.35,kf);scene.fog.far=lerp(scene.fog.far,camD()+11-edge*5,kf);}
   causU.uK.value=k*light*(1-rainMix*0.5);
   uwSurf.position.set(vil.x,tideY-0.01,vil.z);uwSurf.material.color.setHex(0x9ae0f0).multiplyScalar(0.35+0.65*light);
   // light rays slanting down from the surface, drifting and breathing
@@ -6214,6 +6247,15 @@ function swimTap(cx,cy){if(S.sea||inside)return false;
   if(!swim.on&&S.tool==='rod')return false;/* the rod still casts from the shore */
   swimTo(w.x,w.z);return true;}
 
+// little schools of reef fish, just for life: they wheel round a drifting centre near you (not catchable)
+const SCHOOL_N=16,schoolGeo=merge([PG(SPH_LO,0xffffff,0xb8c8d8,0,0,0,0,0,0,0.07,0.08,0.2),P(CONE5,0xe8f0f8,0,0,-0.12,-Math.PI/2,0,0,0.06,0.08,0.02)]);
+const schools=[0x6ab0f0,0xf0c050,0xa8e0e0].map(col=>{const im=new T.InstancedMesh(schoolGeo,vcMat,SCHOOL_N);im.frustumCulled=false;im.visible=false;for(let i=0;i<SCHOOL_N;i++)im.setColorAt(i,_c.setHex(col).multiplyScalar(0.85+Math.random()*0.3));scene.add(im);
+  return{im,x:0,y:-1.5,z:0,a:Math.random()*6.28,r:1.2+Math.random(),ph:[...Array(SCHOOL_N)].map(()=>[Math.random()*6.28,Math.random()*0.5,(Math.random()-0.5)*0.5,0.8+Math.random()*0.4]),set:false};});
+function updateSchools(dt,tt,on){for(const s of schools){s.im.visible=on;if(!on){s.set=false;continue;}
+  if(!s.set||Math.hypot(s.x-vil.x,s.z-vil.z)>12){for(let it=0;it<10;it++){const a=Math.random()*6.28,r=3+Math.random()*5,x=vil.x+Math.cos(a)*r,z=vil.z+Math.sin(a)*r;if(reefD(x,z)>1.5&&reefD(x,z)<reefR()&&waterDepth(x,z)>1.3){s.x=x;s.z=z;s.y=lerp(seabedY(x,z)+0.5,tideY-0.5,Math.random());s.set=true;break;}}}
+  s.a+=dt*0.25;const cx=s.x+Math.cos(s.a)*1.5,cz=s.z+Math.sin(s.a*0.8)*1.5;
+  s.ph.forEach(([p,ro,yo,sp],i)=>{const a=tt*0.9*sp+p,x=cx+Math.cos(a)*(s.r+ro),z=cz+Math.sin(a)*(s.r+ro),y=s.y+yo+Math.sin(tt*1.3+p)*0.1;
+    _e.set(0,a+Math.PI,Math.sin(tt*8+p)*0.15,'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(x,y,z),_q,_s.setScalar(1));s.im.setMatrixAt(i,_m);});s.im.instanceMatrix.needsUpdate=true;}}
 initSwimUI();
 /* =========================================================
    Sea life on the reef (76c-swim): creatures you can see swimming, crawling and drifting, not shadows or icons.
@@ -7351,7 +7393,7 @@ canvas.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.
   if(drag&&drag.lay&&ptrs.size===1){const hit=pick(e.clientX,e.clientY);if(hit&&placing&&(hit.x!==placing.x||hit.z!==placing.z))layFloorAt(hit.x,hit.z);return;} // hold and drag to lay a path
   if(ptrs.size===1&&drag){const dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;
     if(!drag.moved&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>9)drag.moved=true;
-    if(drag.moved&&!inside){cam.yaw-=dx*0.009;cam.pitch=clamp(cam.pitch+dy*0.005,0.35,1.2);}}});
+    if(drag.moved&&!inside){cam.yaw-=dx*0.009;const uwc=typeof swim!=='undefined'&&swim.uw>0.02;cam.pitch=clamp(cam.pitch+dy*0.005,uwc?-0.5:0.35,uwc?0.8:1.2);/* under water you can look up at the surface */}}});
 function endPtr(e){if(!ptrs.has(e.pointerId))return;const wasOne=ptrs.size===1;ptrs.delete(e.pointerId);clearTimeout(holdT);if(paint&&ptrs.size===0)endPaint();
   if(wasOne&&drag&&!drag.moved&&e.type==='pointerup')onTap(e.clientX,e.clientY);
   if(ptrs.size<2)pinch=null;if(ptrs.size===1){const p=[...ptrs.values()][0];drag={sx:p.x,sy:p.y,lx:p.x,ly:p.y,moved:true};}if(ptrs.size===0)drag=null;}
@@ -8181,7 +8223,7 @@ if(/[?&]debug\b/.test(location.search)){
     swimState:()=>({on:swim.on,depth:+swim.depth.toFixed(2),breath:+swim.breath.toFixed(2),uw:+swim.uw.toFixed(2),y:+vil.y.toFixed(2),x:+vil.x.toFixed(2),z:+vil.z.toFixed(2),reefD:+reefD(vil.x,vil.z).toFixed(2),R:+reefR().toFixed(2),life:seaLife.map(c=>c.k),tide:+tideK().toFixed(2),canDive:canDive(vil.x,vil.z)}),
     dive:on=>{swim.hold=!!on;if(on)swim.up=false;},rise:()=>{swim.up=true;swim.hold=false;},swimTo:(x,z)=>swimTo(x,z),setBreath:b=>{swim.breath=b;},
     seaSpawn:(k,fw=2,rt=0,up=0.2)=>{const E=SEA[k],g=seaModel(k);scene.add(g);const sy=Math.sin(cam.yaw),cy=Math.cos(cam.yaw),x=vil.x-sy*fw+cy*rt,z=vil.z-cy*fw-sy*rt,y=E.zone==='floor'?seabedY(x,z)+0.04:vil.y+up;const c={k,E,g,cx:x,cz:z,x,z,y,y0:y,sc:SEA_TIERS[E.tier].sc,rad:0.3,ang:0,dir:1,sp:0.05,ph:0,t:5,out:0,life:999};seaLife.push(c);return seaLife.length;},
-    seaTick:()=>{try{updateReefLife(0.016,1);return 'ok';}catch(e){return e.message+' '+e.stack.slice(0,300);}},seaScreen:k=>{const c=seaLife.find(q=>q.k===k);if(!c)return null;const s=toScreen(c.x,c.y+0.1,c.z);return[s[0],s[1],+Math.hypot(c.x-vil.x,c.z-vil.z).toFixed(2)];},toScreenW:(x,y,z)=>toScreen(x,y,z),reefAt:h=>{const o=S.hour;DS.hour(h);updateTides();const r={h,tide:+tideK().toFixed(2),R:+reefR().toFixed(2),can:Object.keys(SEA).filter(k=>seaOk(SEA[k]))};DS.hour(o);updateTides();return r;},alm:k=>S.alm[k]||0,terraAt:(x,z)=>[S.terra&&S.terra[K(x,z)],lvlMap.get(K(x,z))||0,landMap.get(K(x,z))],equipT:k=>equip(k),seaAlm:ks=>{for(const k of ks)S.alm['s:'+k]=1;},seaDump:()=>seaLife.map(c=>[c.k,+c.x.toFixed(2),+c.y.toFixed(2),+c.z.toFixed(2),c.g.visible,c.g.parent===scene,c.g.children.length,+c.g.scale.x.toFixed(2),c.out]),seaCatch:()=>{const c=seaLife.slice().sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];if(!c)return null;catchSeaLife(c);return c.k;},
+    seaTick:()=>{try{updateReefLife(0.016,1);return 'ok';}catch(e){return e.message+' '+e.stack.slice(0,300);}},seaScreen:k=>{const c=seaLife.find(q=>q.k===k);if(!c)return null;const s=toScreen(c.x,c.y+0.1,c.z);return[s[0],s[1],+Math.hypot(c.x-vil.x,c.z-vil.z).toFixed(2)];},toScreenW:(x,y,z)=>toScreen(x,y,z),reefAt:h=>{const o=S.hour;DS.hour(h);updateTides();const r={h,tide:+tideK().toFixed(2),R:+reefR().toFixed(2),can:Object.keys(SEA).filter(k=>seaOk(SEA[k]))};DS.hour(o);updateTides();return r;},alm:k=>S.alm[k]||0,terraAt:(x,z)=>[S.terra&&S.terra[K(x,z)],lvlMap.get(K(x,z))||0,landMap.get(K(x,z))],equipT:k=>equip(k),camY:()=>[+camera.position.y.toFixed(2),+tideY.toFixed(2),+cam.pitch.toFixed(2)],riverTile:()=>{let b=null,bd=1e9;for(const [k,t] of landMap){if(t!=='river'||islMap.get(k)!==0||S.terra&&S.terra[k]!==undefined)continue;const [x,z]=k.split(',').map(Number);if(landMap.get(K(x+1,z))==='bridge'||landMap.get(K(x-1,z))==='bridge')continue;const d=Math.hypot(x-vil.x,z-vil.z);if(d<bd){bd=d;b=[x,z];}}return b;},seaAlm:ks=>{for(const k of ks)S.alm['s:'+k]=1;},seaDump:()=>seaLife.map(c=>[c.k,+c.x.toFixed(2),+c.y.toFixed(2),+c.z.toFixed(2),c.g.visible,c.g.parent===scene,c.g.children.length,+c.g.scale.x.toFixed(2),c.out]),seaCatch:()=>{const c=seaLife.slice().sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];if(!c)return null;catchSeaLife(c);return c.k;},
     tideSet:h=>{const t0=tideNow();S.toff=(S.toff||0);/* move the clock so the tide is high (1) or low (0) */return tideAt(t0);},spGallery:(sea,size=140)=>{const o=S.seasonOv;S.seasonOv=sea||o;const out=[];for(let sp=0;sp<TREE_NS;sp++)for(let sh=0;sh<TREE_SP[sp].shapes;sh++){const v=sp+sh*TREE_NS,w=new T.Group(),t=new T.Mesh(merge(wildTreeParts(v)),leafMat);w.add(t);
       const fp=fruitParts(v);if(fp.length&&fruitSeason(v))w.add(new T.Mesh(merge(fp),fruitMat));w.add(M([P(BOX,0x6aa843,0,-0.03,0,0,0,0,1.6,0.06,1.6)]));out.push([TREE_SP[sp].name+(sh?' ii':''),snapThumb(w,size)]);}S.seasonOv=o;return out;},
     fruitShow:k=>{const w=new T.Group();w.add(M(fruitModel(k,mulberry(3))));return snapThumb(w,120);},

@@ -16,11 +16,11 @@ const postMat=new T.ShaderMaterial({
   uniforms:{tC:{value:null},tD:{value:null},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},tm:{value:0},
     // the visual style (applyFx): colour grade, outlines, glow, film texture and palette
     fxA:{value:new T.Vector4(1,1,1,0)}/* saturation, contrast, brightness, faded blacks */,tS:{value:new T.Vector3(1,1,1)},tH:{value:new T.Vector3(1,1,1)},
-    edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},uw:{value:0},rip:{value:0}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},
+    edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},uw:{value:0},rip:{value:0},uwC:{value:new T.Color(0x2a8cc0)},uwL:{value:1}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
   fragmentShader:`
     uniform sampler2D tC;uniform sampler2D tD;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;uniform float tm;varying vec2 vUv;
-    uniform vec4 fxA;uniform vec3 tS;uniform vec3 tH;uniform float edgeK;uniform vec3 edgeC;uniform float dith;uniform float grain;uniform float vig;uniform float bloomK;uniform float gradeK;uniform float pal;uniform float tilt;uniform float scan;uniform float paper;uniform float uw;uniform float rip;
+    uniform vec4 fxA;uniform vec3 tS;uniform vec3 tH;uniform float edgeK;uniform vec3 edgeC;uniform float dith;uniform float grain;uniform float vig;uniform float bloomK;uniform float gradeK;uniform float pal;uniform float tilt;uniform float scan;uniform float paper;uniform float uw;uniform float rip;uniform vec3 uwC;uniform float uwL;
     float b2(vec2 a){a=floor(a);return fract(a.x*.5+a.y*a.y*.75);}
     float bayer(vec2 a){return b2(.5*a)*.25+b2(a);}
     float lin(vec2 uv){float d=texture2D(tD,uv).r*2.-1.;return 2.*cn*cf/(cf+cn-d*(cf-cn));}
@@ -60,7 +60,15 @@ const postMat=new T.ShaderMaterial({
       if(paper>0.){vec2 p=gl_FragCoord.xy;float w=vn(p*.08)*.6+vn(p*.3)*.3+h21(p)*.1;c*=1.-paper*(.1*w-.04);c=mix(c,c*c*1.1+.02,paper*.25*vn(p*.02+3.));}
       if(grain>0.)c+=(h21(gl_FragCoord.xy+fract(tm)*97.)-.5)*grain;
       if(scan>0.)c*=1.-scan*.16*step(.5,fract(gl_FragCoord.y*.5));
-      if(uw>0.){c=mix(c,c*vec3(.74,.96,1.08)+vec3(0.,.025,.05),uw*.65);vec2 q=vUv-.5;c*=1.-dot(q,q)*.9*uw;}
+      if(uw>0.){
+        // under water: light is soaked up with distance (reds first), everything far melts into the sea's own colour,
+        // shafts of sunlight slant down from the surface, and a shimmer of caustic light plays over the near things
+        float fd=1.-exp(-d*.05);c*=mix(vec3(1.),vec3(.6,.88,1.02),uw);c=mix(c,uwC,clamp(fd*.85,0.,1.)*uw);
+        float sx=vUv.x+vUv.y*.35;float ry=pow(max(0.,sin(sx*13.+tm*.32)*sin(sx*6.1-tm*.19+1.3)),3.)+.5*pow(max(0.,sin(sx*23.-tm*.5+2.)),6.);
+        c+=vec3(.55,.85,.95)*ry*smoothstep(.2,1.,vUv.y)*(1.-fd*.5)*.2*uw*uwL;
+        vec2 cp=gl_FragCoord.xy*.035;float cs=sin(cp.x+sin(cp.y*1.3+tm*.9)*1.4+tm*.7)*sin(cp.y*1.1+sin(cp.x*.8-tm)*1.2-tm*.5);
+        c+=vec3(.3,.5,.55)*smoothstep(.6,.95,abs(cs))*(1.-fd)*.14*uw*uwL;
+        vec2 q=vUv-.5;c*=1.-dot(q,q)*1.3*uw;c=mix(c,c*c*1.25+.02,.18*uw);}
       if(rip>0.)c=mix(c,vec3(.85,.97,1.),rip*rip*.35);
       vec2 vg=vUv-.5;c*=1.-dot(vg,vg)*vig;
       float b=bayer(gl_FragCoord.xy)-.5;
@@ -113,7 +121,8 @@ function applyCam(){
   // the view leads a little ahead of you, so you stand in the lower half of the screen with the island opening out beyond
   const hd=camD()*Math.cos(cam.pitch),lead=cam.dist*0.1,tx=cam.tx-Math.sin(cam.yaw)*lead,tz=cam.tz-Math.cos(cam.yaw)*lead;
   const ty=cam.ty||0;/* the height it looks at: 0 on land, your depth under water (76c-swim) */
-  camera.position.set(tx+Math.sin(cam.yaw)*hd,ty+Math.sin(cam.pitch)*camD(),tz+Math.cos(cam.yaw)*hd);
+  let cy=ty+Math.sin(cam.pitch)*camD();if(cam.yMax!==undefined&&cy>cam.yMax)cy=cam.yMax;/* diving: the lens stays under the surface (76c-swim) */
+  camera.position.set(tx+Math.sin(cam.yaw)*hd,cy,tz+Math.cos(cam.yaw)*hd);
   camera.lookAt(tx,ty+0.4-hd*hd*CURVE,tz);
   if(camShake>0){const k=camShake*0.25;camera.position.x+=(Math.random()-0.5)*k;camera.position.y+=(Math.random()-0.5)*k;camera.position.z+=(Math.random()-0.5)*k;}
   camera.updateMatrixWorld();

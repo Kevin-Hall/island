@@ -47,12 +47,15 @@ seabedMat.onBeforeCompile=sh=>{sh.uniforms.uT=causU.uT;sh.uniforms.uK=causU.uK;
        float a=sin(p.x+sin(p.y*1.2+t)*1.3+t)*sin(p.y*1.1+sin(p.x*.9-t*1.2)*1.2-t*.8);
        float b=sin(p.x*1.7-sin(p.y*.8-t*.7)+t*.6)*sin(p.y*1.6+sin(p.x*1.3+t)-t);
        float c=smoothstep(.62,.98,abs(a))*.7+smoothstep(.7,1.,abs(b))*.5;
-       diffuseColor.rgb+=vec3(.42,.66,.74)*c*uK*.55*clamp(1.+vSw.y*.18,.25,1.);}`);};
+       diffuseColor.rgb+=vec3(.42,.66,.74)*c*uK*.55*clamp(1.+vSw.y*.18,.25,1.);
+       float rp=sin(vSw.x*3.3+sin(vSw.z*.6)*1.6+vSw.z*1.1)*.5+.5;diffuseColor.rgb*=.92+.12*rp;}`);};
 // kelp: tall ribbons that sway in the swell (the tips move most)
 const kelpU={uT:{value:0}};
 const kelpMat=new T.MeshToonMaterial({gradientMap:grad,color:0xffffff});
 kelpMat.onBeforeCompile=sh=>{sh.uniforms.uT=kelpU.uT;
-  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uT;').replace('#include <begin_vertex>',`#include <begin_vertex>
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying float vKh;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.rgb*=.4+.75*vKh;');
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uT;varying float vKh;').replace('#include <begin_vertex>',`#include <begin_vertex>
+    vKh=position.y;
     {vec3 o=vec3(0.);
      #ifdef USE_INSTANCING
      o=instanceMatrix[3].xyz;
@@ -100,7 +103,7 @@ const UW_RAY_TEX=(()=>{const cv=document.createElement('canvas');cv.width=4;cv.h
 const uwRays=[...Array(8)].map((_,i)=>{const m=new T.Mesh(new T.PlaneGeometry(0.9+Math.random()*0.8,7),new T.MeshBasicMaterial({color:0xcff4ff,map:UW_RAY_TEX,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending,fog:false}));
   m.frustumCulled=false;m.visible=false;m.userData={ox:(Math.random()-0.5)*14,oz:(Math.random()-0.5)*14,ph:Math.random()*6.28,sp:0.2+Math.random()*0.3};scene.add(m);return m;});
 const SNOW_N=240,snowGeo=new T.BufferGeometry(),snowPos=new Float32Array(SNOW_N*3);snowGeo.setAttribute('position',new T.BufferAttribute(snowPos,3));
-const uwSnow=new T.Points(snowGeo,new T.PointsMaterial({color:0xd8f0ff,size:0.06,transparent:true,opacity:0.75,depthWrite:false}));uwSnow.frustumCulled=false;uwSnow.visible=false;scene.add(uwSnow);
+const uwSnow=new T.Points(snowGeo,new T.PointsMaterial({color:0xd8f0ff,size:0.08,transparent:true,opacity:0.75,depthWrite:false}));uwSnow.frustumCulled=false;uwSnow.visible=false;scene.add(uwSnow);
 let snowInit=false;
 const BUB_N=28,bubMesh=new T.InstancedMesh(ICO0,new T.MeshBasicMaterial({color:0xe8faff,transparent:true,opacity:0.7,depthWrite:false}),BUB_N);bubMesh.frustumCulled=false;bubMesh.count=0;scene.add(bubMesh);
 const bubs=[];
@@ -160,21 +163,23 @@ function updateSwim(dt,tt){causU.uT.value=kelpU.uT.value=uwSurf.userData.u.uT.va
   // camera: under the surface it comes down with you, close in
   const under=swim.depth>0.25;const prev=swim.uw;swim.uw=clamp(swim.uw+(under?dt:-dt)*2.2,0,1);if(prev<0.5!==swim.uw<0.5){swim.rip=1;noise(0.35,0.07,500);}
   applyUw(dt,tt);}
-function applyUw(dt,tt){swim.rip=Math.max(0,swim.rip-dt*1.6);const k=swim.uw,u=postMat.uniforms;u.uw.value=k;u.rip.value=swim.rip;u.tm.value=tt;
-  const on=k>0.02;uwSurf.visible=on;uwSnow.visible=on;for(const r of uwRays)r.visible=on;if(reefG)reefG.visible=swim.on;
+function applyUw(dt,tt){swim.rip=Math.max(0,swim.rip-dt*1.6);const k=swim.uw,u=postMat.uniforms;u.uw.value=smooth(0,0.35,k);u.rip.value=swim.rip;u.tm.value=tt;
+  const on=k>0.02;uwSurf.visible=on;uwSnow.visible=on;for(const r of uwRays)r.visible=on;updateSchools(dt,tt,on&&k>0.3);if(reefG)reefG.visible=swim.on;
   audioMuffle(k>0.5);
   // under water, the rest of the archipelago and the sun's shadows are lost in the blue: don't draw them (a big saving on a phone)
   renderer.shadowMap.autoUpdate=k<0.5;if(k>0.5)for(const isl of islands)if(!isl.home&&isl.group)isl.group.visible=false;
   if(on&&swim.camD0===null){swim.camD0=cam.dist;swim.pitch0=cam.pitch;}
-  if(!on){cam.ty=lerp(cam.ty||0,0,Math.min(1,dt*6));if(swim.camD0!==null){cam.dist=swim.camD0;cam.pitch=swim.pitch0;swim.camD0=null;}return;}
+  if(!on){cam.yMax=undefined;cam.ty=lerp(cam.ty||0,0,Math.min(1,dt*6));if(swim.camD0!==null){cam.dist=swim.camD0;cam.pitch=swim.pitch0;swim.camD0=null;}return;}
+  cam.yMax=tideY-0.28;
   // camera: target your depth, close in, and keep the lens below the waves
   cam.ty=lerp(cam.ty||0,(vil.y+0.2)*k,Math.min(1,dt*6));cam.dist=lerp(swim.camD0,7,k);
   // just behind and a little above you when there's room, level with you or looking up from below near the surface
-  const pmax=Math.asin(clamp((tideY-0.32-cam.ty)/camD(),-0.3,0.9));cam.pitch=clamp(Math.min(lerp(swim.pitch0,0.24,k),pmax),-0.12,1.2);
+  // (you can drag to look round and up; the camera itself never rises past the surface, see applyCam)
+  if(k<1)cam.pitch=lerp(swim.pitch0,0.22,k);else cam.pitch=clamp(cam.pitch,-0.5,0.8);
   // fog and light: sunlit blue near the top, darker deep down and past the reef's edge, much darker at night
   const edge=smooth(reefR()-1.5,reefR()+1.5,reefD(vil.x,vil.z)),dep=clamp(-vil.y/5,0,1),light=(1-nightF*0.72)*(1-rainMix*0.25);
-  _c.setHex(0x2a8cc0).lerp(_a.setHex(0x0e4a78),dep*0.6+edge*0.5).multiplyScalar(light);scene.fog.color.lerp(_c,k);
-  scene.fog.near=lerp(scene.fog.near,camD()*0.5,k);scene.fog.far=lerp(scene.fog.far,camD()+14-edge*6,k);
+  _c.setHex(0x2a8cc0).lerp(_a.setHex(0x0e4a78),dep*0.6+edge*0.5).multiplyScalar(light);scene.fog.color.lerp(_c,Math.min(1,k*3));u.uwC.value.copy(_c);u.uwL.value=light;
+  {const kf=Math.min(1,k*3);scene.fog.near=lerp(scene.fog.near,camD()*0.35,kf);scene.fog.far=lerp(scene.fog.far,camD()+11-edge*5,kf);}
   causU.uK.value=k*light*(1-rainMix*0.5);
   uwSurf.position.set(vil.x,tideY-0.01,vil.z);uwSurf.material.color.setHex(0x9ae0f0).multiplyScalar(0.35+0.65*light);
   // light rays slanting down from the surface, drifting and breathing
@@ -219,4 +224,13 @@ function swimTap(cx,cy){if(S.sea||inside)return false;
   if(!swim.on&&S.tool==='rod')return false;/* the rod still casts from the shore */
   swimTo(w.x,w.z);return true;}
 
+// little schools of reef fish, just for life: they wheel round a drifting centre near you (not catchable)
+const SCHOOL_N=16,schoolGeo=merge([PG(SPH_LO,0xffffff,0xb8c8d8,0,0,0,0,0,0,0.07,0.08,0.2),P(CONE5,0xe8f0f8,0,0,-0.12,-Math.PI/2,0,0,0.06,0.08,0.02)]);
+const schools=[0x6ab0f0,0xf0c050,0xa8e0e0].map(col=>{const im=new T.InstancedMesh(schoolGeo,vcMat,SCHOOL_N);im.frustumCulled=false;im.visible=false;for(let i=0;i<SCHOOL_N;i++)im.setColorAt(i,_c.setHex(col).multiplyScalar(0.85+Math.random()*0.3));scene.add(im);
+  return{im,x:0,y:-1.5,z:0,a:Math.random()*6.28,r:1.2+Math.random(),ph:[...Array(SCHOOL_N)].map(()=>[Math.random()*6.28,Math.random()*0.5,(Math.random()-0.5)*0.5,0.8+Math.random()*0.4]),set:false};});
+function updateSchools(dt,tt,on){for(const s of schools){s.im.visible=on;if(!on){s.set=false;continue;}
+  if(!s.set||Math.hypot(s.x-vil.x,s.z-vil.z)>12){for(let it=0;it<10;it++){const a=Math.random()*6.28,r=3+Math.random()*5,x=vil.x+Math.cos(a)*r,z=vil.z+Math.sin(a)*r;if(reefD(x,z)>1.5&&reefD(x,z)<reefR()&&waterDepth(x,z)>1.3){s.x=x;s.z=z;s.y=lerp(seabedY(x,z)+0.5,tideY-0.5,Math.random());s.set=true;break;}}}
+  s.a+=dt*0.25;const cx=s.x+Math.cos(s.a)*1.5,cz=s.z+Math.sin(s.a*0.8)*1.5;
+  s.ph.forEach(([p,ro,yo,sp],i)=>{const a=tt*0.9*sp+p,x=cx+Math.cos(a)*(s.r+ro),z=cz+Math.sin(a)*(s.r+ro),y=s.y+yo+Math.sin(tt*1.3+p)*0.1;
+    _e.set(0,a+Math.PI,Math.sin(tt*8+p)*0.15,'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(x,y,z),_q,_s.setScalar(1));s.im.setMatrixAt(i,_m);});s.im.instanceMatrix.needsUpdate=true;}}
 initSwimUI();

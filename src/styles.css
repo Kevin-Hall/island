@@ -535,3 +535,10 @@ img.pix{image-rendering:crisp-edges;image-rendering:pixelated}
 .swimui .breath.low b{background:linear-gradient(90deg,#f0a07a,#ffd0b0)}
 .swimui .dh{font-size:12px;font-weight:700;color:#fffcf2;text-shadow:0 1px 0 rgba(58,38,22,.7),0 0 6px rgba(58,38,22,.4)}
 .swimui .dh:empty{display:none}
+
+/* the Landscaping tool's modes (72b-terraform), over the tool button */
+.terraui{position:fixed;z-index:6;right:calc(env(safe-area-inset-right,0px) + 14px);bottom:calc(env(safe-area-inset-bottom,0px) + 96px);display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.terraui .tl{font-size:12px;font-weight:700;color:#fffcf2;text-shadow:0 1px 0 rgba(58,38,22,.7),0 0 6px rgba(58,38,22,.4);margin-right:6px}
+.terraui .seg3{display:flex;background:var(--paper);border-radius:18px;box-shadow:var(--shadow);padding:4px;gap:2px}
+.terraui button{border:none;background:none;border-radius:14px;padding:8px 11px;font:inherit;font-size:13.5px;font-weight:700;color:var(--ink2)}
+.terraui button.on{background:#7cc46a;color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}

@@ -1,31 +1,34 @@
 /* =========================================================
-   Landscaping (the Landscaping tool, from level TERRA.LV): raise or lower your island's ground one cliff tier at a
-   time, up to TERRA.MAX tiers. It works on the island's own tile grid, nothing new: each changed tile's tier is saved
-   in S.terra (key → level 0..MAX, or -1 for water) and levelOf (41-trees) reads it back, so the island rebuilds with
-   its cliffs where you put them. Lowering a ground-level tile beside the sea, a river or a pond floods it: it
-   becomes part of the island's water (a pond tile, carved like the rivers, 43-rivers). Raising a pond tile drains it.
-   Not allowed: under buildings, decor, floors, debris, soil or crops; the beach (sand) and the natural rivers.
-   Tap a tile to change it, or hold and drag to brush several and change them all at once when you let go.
-   Tap the tool again to switch between raising and lowering. Each tile changed costs TERRA.COST shells.
+   Landscaping (the Landscaping tool, from Island Heart level TERRA.LV). Three modes, picked on the little bar that
+   appears over the tool button (or by tapping the tool again): Raise lifts a tile one cliff tier (up to TERRA.MAX),
+   Lower drops it one, and Water digs a pond or a stretch of river into the tile at its own height, or fills water back
+   in to land (dug ponds and the island's own rivers alike). Tap a tile, or hold and drag to brush several and change
+   them all when you let go. It works on the island's own tile grid: each changed tile is saved in S.terra and read back
+   by levelOf (41-trees) and carveRivers (43-rivers), then the island rebuilds. S.terra values: 0..MAX a ground tier,
+   -1 water at sea level, -2..-5 water at tier 0..3 (TERRA_W), and a ground tier on a river tile fills that bit of river.
+   Water tiers are carved like the rivers, so water on a higher tier spills down to lower water in a little waterfall.
+   Not allowed: under buildings, decor, floors, debris, soil or finds, on the beach, under a bridge. TERRA.COST shells a tile.
    ========================================================= */
 const TERRA={COST:150/* shells per tile per tier */,LV:8/* Island Heart level it unlocks at */,MAX:3};
 const terraOn=()=>level()>=TERRA.LV;
-const terraMode=()=>S.terraMode==='lower'?'lower':'raise';
+const TERRA_MODES={raise:'Raise',lower:'Lower',water:'Water'};
+const terraMode=()=>TERRA_MODES[S.terraMode]?S.terraMode:'raise';
+const TERRA_W=L=>L<0?-1:-(L+2),terraWaterL=v=>v===-1?-1:-(v+2);/* water at tier L ↔ its S.terra value */
 // what a tile can become: returns {to, why} (to: new level, -1 for water; why: why not, if it can't)
 function terraPlan(x,z,mode){const k=K(x,z),t=landMap.get(k);if(islMap.get(k)!==0)return{why:'Only on your island.'};
   if(fixedAt(x,z)||objAt(x,z)||floorAt(x,z))return{why:'Something is built there.'};
   if(debrisAt(x,z))return{why:'Clear it first.'};if(S.tiles[k])return{why:'That\'s your soil. Fill it in first.'};
   if(findAt(x,z))return{why:'Pick up what\'s lying there first.'};
-  const tw=S.terra&&S.terra[k]===-1;
-  if(t==='river'&&tw)return mode==='raise'?{to:0}:{why:'It\'s as deep as it goes.'};
-  if(t==='river')return{why:'The island\'s own streams stay where they are.'};
-  if(t==='sand')return{why:'The beach stays a beach.'};if(t!=='grass')return{why:'You can\'t landscape there.'};
-  const L=lvlMap.get(k)||0;
+  if(t==='bridge')return{why:'Not under a bridge.'};if(t==='sand')return{why:'The beach stays a beach.'};
+  const L=lvlMap.get(k)||0,wetNear=[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>{const t2=landMap.get(K(x+dx,z+dz));return t2==='river'||isSeaT(t2);});
+  if(t==='river'){const surf=riverSurf.get(k)||0,wl=surf<0.2?-1:Math.round((surf-TOP.grass+0.2)/LVH);/* the water's own tier */
+    if(mode==='lower')return{why:'It\'s as deep as it goes.'};
+    return{to:Math.max(0,wl)};}/* raise or water: fill it back in to land */
+  if(t!=='grass')return{why:'You can\'t landscape there.'};
+  if(mode==='water'){const seaNear=[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>{const k2=K(x+dx,z+dz),t2=landMap.get(k2);return isSeaT(t2)||t2==='river'&&(riverSurf.get(k2)||0)<0.2;});return{to:TERRA_W(L===0&&seaNear?-1:L)};}/* dig water here (by the sea it settles at sea level) */
   if(mode==='raise')return L>=TERRA.MAX?{why:'That\'s as high as it goes.'}:{to:L+1};
   if(L>0)return{to:L-1};
-  // ground level: lowering floods it, but only next to water (no dry holes)
-  const wet=[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>{const t2=landMap.get(K(x+dx,z+dz));return t2==='river'||isSeaT(t2);});
-  return wet?{to:-1}:{why:'Nothing lower here, unless there\'s water beside it.'};}
+  return wetNear?{to:-1}:{why:'Nothing lower here. Use Water to dig a pond.'};}
 function terraApply(tiles,mode){if(!terraOn()){toast(`Landscaping unlocks at Island Heart level ${TERRA.LV}.`);return;}
   const plan=[],seen=new Set();let why='';for(const [x,z] of tiles){const k=K(x,z);if(seen.has(k))continue;seen.add(k);const p=terraPlan(x,z,mode);if(p.why){why=p.why;continue;}plan.push([x,z,p.to]);}
   if(!plan.length){if(why){toast(why);SFX.no();}return;}
@@ -33,14 +36,21 @@ function terraApply(tiles,mode){if(!terraOn()){toast(`Landscaping unlocks at Isl
   S.shells-=cost;S.terra=S.terra||{};const before=plan.map(([x,z])=>[x,z,topY(x,z)]);
   for(const [x,z,to] of plan)S.terra[K(x,z)]=to;
   rebuildHome();terraFx(before);updateHUD();save();
-  floatText(vil.x,vil.y+1.4,vil.z,`${mode==='raise'?'Raised':'Lowered'} ${plan.length} tile${plan.length>1?'s':''} · −${fmt(cost)}`,'');}
+  floatText(vil.x,vil.y+1.4,vil.z,`${{raise:'Raised',lower:'Lowered',water:'Dug or filled'}[mode]} ${plan.length} tile${plan.length>1?'s':''} · −${fmt(cost)}`,'');}
 function terraTap(x,z){cursorAt(x,z);actAt(x,z,()=>{swingTool();terraApply([[x,z]],terraMode());});}
 // each changed tile pops: a block of earth rising or sinking into place, a puff of dust and a soft thud
 const terraPops=[];const terraMat=new T.MeshToonMaterial({gradientMap:grad,color:0x8a6a44,transparent:true});
 function terraFx(before){camShake=Math.max(camShake,0.25);tone(95,0.22,'sine',0.14,55);noise(0.18,0.09,260,0.7);
   for(const [x,z,y0] of before){const y1=topY(x,z),m=new T.Mesh(BOX,terraMat.clone());m.frustumCulled=false;scene.add(m);terraPops.push({m,x,z,y0,y1,t:0});
     for(let i=0;i<8;i++)emit(x+(Math.random()-0.5)*0.9,Math.max(y0,y1)+0.1,z+(Math.random()-0.5)*0.9,{vx:(Math.random()-0.5)*1.2,vy:0.8+Math.random()*0.8,vz:(Math.random()-0.5)*1.2,life:0.7,max:0.7,size:0.08,color:y1<0.2?0xbfe6ff:0xc8a878,g:3});}}
-function updateTerra(dt){for(let i=terraPops.length-1;i>=0;i--){const p=terraPops[i];p.t+=dt;const u=Math.min(1,p.t/0.32),e=1+Math.sin(u*Math.PI)*0.12;/* a little overshoot */
+function updateTerra(dt){terraBar();for(let i=terraPops.length-1;i>=0;i--){const p=terraPops[i];p.t+=dt;const u=Math.min(1,p.t/0.32),e=1+Math.sin(u*Math.PI)*0.12;/* a little overshoot */
   const y=lerp(p.y0,p.y1,u*u*(3-2*u)),h=Math.max(0.05,y+0.6);p.m.position.set(p.x,y-h/2,p.z);p.m.scale.set(1.02*e,h,1.02*e);p.m.material.opacity=u<0.7?0.9:0.9*(1-(u-0.7)/0.3);
   if(p.t>0.4){scene.remove(p.m);p.m.material.dispose();terraPops.splice(i,1);}}}
-function terraToggle(){S.terraMode=terraMode()==='raise'?'lower':'raise';SFX.ui();floatText(vil.x,vil.y+1.3,vil.z,S.terraMode==='raise'?'Raise the land':'Lower the land');renderTools();}
+function setTerraMode(m){S.terraMode=m;SFX.ui();floatText(vil.x,vil.y+1.3,vil.z,{raise:'Raise the land',lower:'Lower the land',water:'Dig or fill water'}[m]);renderTools();terraBar(true);}
+function terraToggle(){const ks=Object.keys(TERRA_MODES);setTerraMode(ks[(ks.indexOf(terraMode())+1)%ks.length]);}
+// the mode bar over the tool button, shown while the Landscaping tool is in your hands
+let terraBarOn=null;
+function terraBar(force){const on=S.tool==='terra'&&terraOn()&&!S.sea&&!inside&&!swim.on;const el=$('terraUI');if(!el)return;
+  if(on!==terraBarOn||force){terraBarOn=on;el.hidden=!on;if(on)el.querySelectorAll('[data-tm]').forEach(b=>b.classList.toggle('on',b.dataset.tm===terraMode()));
+    if(on&&!S.tipTerra){S.tipTerra=1;setTimeout(()=>say('Pick <b>Raise</b>, <b>Lower</b> or <b>Water</b>, then tap the ground (or hold and drag to brush).'),400);}}}
+$('terraUI')&&$('terraUI').addEventListener('click',e=>{const b=e.target.closest('[data-tm]');if(b){e.stopPropagation();setTerraMode(b.dataset.tm);}});
