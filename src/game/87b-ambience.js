@@ -9,7 +9,7 @@ let sayEl=null,sayT=0;
 function say(html,icon){if(!sayEl){sayEl=document.createElement('div');sayEl.className='say';document.body.appendChild(sayEl);}
   sayEl.innerHTML=(icon?`<img class="px" src="${icon}" alt="">`:'')+`<span>${html}</span>`;sayT=Math.min(5,2.2+html.replace(/<[^>]+>/g,'').length*0.025);
   sayEl.classList.remove('on');void sayEl.offsetWidth;sayEl.classList.add('on');}
-function updateSay(dt){if(!sayEl||sayT<=0)return;sayT-=dt;if(sayT<=0){sayEl.classList.remove('on');return;}
+function updateSay(dt){if(!sayEl||sayT<=0)return;if(caught&&caught.shown){sayT=0;sayEl.classList.remove('on');return;}/* the catch has the stage */sayT-=dt;if(sayT<=0){sayEl.classList.remove('on');return;}
   const [sx,sy]=toScreen(vil.x,(S.sea?0.14:vil.y)+1.55,vil.z);sayEl.style.transform=`translate(${Math.round(sx)}px,${Math.round(sy)}px) translate(-50%,-100%)`;}
 
 // ---- the gathering streak: every find within a few seconds of the last builds it; milestones pay out ----

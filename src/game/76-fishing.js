@@ -97,24 +97,25 @@ const QUIPS={sardine:"It's packed with flavour!",mackerel:"It's a slick one!",bo
   salmon:"Pink and proud!",char:"How char-ming!",kingsalmon:"Fit for a king!",flounder:"Flat-out fantastic!",snapper:"Oh, snap!",sunset:"It looks like the evening sky!",cod:"Cod you believe it?",
   icefish:"Chill out!",narwhal:"The unicorn of the sea!",lavaeel:"Hot, hot, hot!",ember:"Still warm!",obsidian:"What a sharp-looking catch!",catfish:"Purr-fect!",eel:"I'm shocked!",gar:"So many teeth!",
   axolotl:"It's smiling at me!",flying:"Did it just fly?!",mahi:"So nice they named it twice!",marlin:"What a sword!",whaleshark:"The biggest fish in the sea!"};
-function fishModel(F){const s=0.32+F.size*0.1,g=new T.Group();
-  if(F.junk){g.add(M([P(BOX,0x6a4a30,0,0,0,0,0,0,0.22,0.4,0.24),P(BOX,0x6a4a30,0,-0.16,0.16,0,0,0,0.22,0.12,0.36),P(BOX,0x3a2a20,0,-0.24,0.1,0,0,0,0.24,0.04,0.5)]));return g;}
-  const bl=new T.Color(F.col).lerp(new T.Color(0xffffff),0.45).getHex(),fn=F.fin||F.dk;
-  g.add(M([P(ICO2,F.col,0,0,0,0,0,0,s*0.42,s*0.55,s),P(ICO2,bl,0,-s*0.1,s*0.04,0,0,0,s*0.36,s*0.38,s*0.86),P(ICO2,F.dk,0,s*0.12,-s*0.05,0,0,0,s*0.3,s*0.34,s*0.8),
-    P(ICO2,F.col,0,0,-s*0.48,0,0,0,s*0.2,s*0.26,s*0.3),
-    P(CONE4,fn,0,s*0.16,-s*0.72,-2.3,Math.PI/4,0,s*0.3,s*0.4,s*0.06),P(CONE4,fn,0,-s*0.16,-s*0.72,-0.84,Math.PI/4,0,s*0.3,s*0.4,s*0.06),
-    P(PRISM,fn,0,s*0.3,-s*0.05,0,0,0,0.012,s*0.14,s*0.5),P(PRISM,fn,0,-s*0.26,-s*0.2,Math.PI,0,0,0.012,s*0.08,s*0.26),
-    P(ICO2,fn,s*0.22,-s*0.06,s*0.12,0,0.6,0.5,0.02,s*0.1,s*0.18),P(ICO2,fn,-s*0.22,-s*0.06,s*0.12,0,-0.6,-0.5,0.02,s*0.1,s*0.18),
-    P(ICO2,0xffffff,s*0.18,s*0.08,s*0.33,0,0,0,0.07,0.07,0.07),P(ICO2,0xffffff,-s*0.18,s*0.08,s*0.33,0,0,0,0.07,0.07,0.07),
-    P(ICO2,0x1a1420,s*0.2,s*0.08,s*0.345,0,0,0,0.045,0.05,0.045),P(ICO2,0x1a1420,-s*0.2,s*0.08,s*0.345,0,0,0,0.045,0.05,0.045),
-    P(ICO2,F.dk,0,-s*0.04,s*0.52,0,0,0,s*0.16,0.03,s*0.06)]));return g;}
 let caught=null;
-function updateCaught(dt,tt){if(!caught)return;caught.t+=dt;const c=caught,u=Math.min(1,c.t/0.55);
-  const hx=vil.x,hz=vil.z,hy=(S.sea?0.14:vil.y)+1.15;
-  if(c.t<0.55){c.g.position.set(lerp(c.fx,hx,u),lerp(0.1,hy,u)+Math.sin(u*Math.PI)*1.4,lerp(c.fz,hz,u));c.g.rotation.x+=dt*12;}
-  else{c.g.position.set(hx,hy+Math.sin(tt*6)*0.03,hz);c.g.rotation.set(-Math.PI/2+Math.sin(tt*9)*0.15,cam.yaw+Math.PI/2,0);villager.rotation.y+=angDiff(villager.rotation.y,cam.yaw)*Math.min(1,dt*6);
-    if(!c.shown){c.shown=true;say(c.msg);}if(c.t>3)dismissCatch();}}/* held up for a moment, then away: no box to close */
-function dismissCatch(){if(!caught||caught.t<0.6)return;scene.remove(caught.g);caught=null;}
+// after a catch you hold it up, side-on to the camera, and it stays there (flapping now and then) while the camera leans
+// in and a card says what it is; a tap puts it away and the camera eases back out
+let camBack=null;
+function updateCaught(dt,tt){if(camBack!==null&&!caught){cam.dist=lerp(cam.dist,camBack,Math.min(1,dt*3));if(Math.abs(cam.dist-camBack)<0.05){cam.dist=camBack;camBack=null;}}
+  if(!caught)return;caught.t+=dt;const c=caught,u=Math.min(1,c.t/0.55);
+  const hx=vil.x,hz=vil.z,hy=(S.sea?0.14:vil.y)+1.6;c.g.rotation.order='YXZ';
+  if(c.t<0.55){c.g.position.set(lerp(c.fx,hx,u),lerp(0.1,hy,u)+Math.sin(u*Math.PI)*1.4,lerp(c.fz,hz,u));c.g.rotation.x+=dt*12;c.g.scale.setScalar(lerp(0.6,c.sc,u));}
+  else{const k=c.t-0.55,flap=Math.sin(tt*14)*Math.max(0,Math.sin(k*1.7))**8*0.22; // a flap every few seconds
+    const pop=1+Math.sin(Math.min(1,k*4)*Math.PI)*0.12;c.g.scale.setScalar(c.sc*pop);
+    c.g.position.set(hx,hy+Math.sin(tt*2.2)*0.04,hz);c.g.rotation.set(0,cam.yaw+Math.PI/2+flap*0.6,c.roll+flap);villager.rotation.y+=angDiff(villager.rotation.y,cam.yaw)*Math.min(1,dt*6);
+    if(c.d0===undefined){c.d0=cam.dist;}cam.dist=lerp(cam.dist,Math.min(c.d0,14),Math.min(1,dt*2.5));
+    if(!c.shown){c.shown=true;catchCard(c.card);}}}
+function catchCard(d){let el=$('catchCard');if(!el){el=document.createElement('div');el.id='catchCard';el.className='catchcard';document.body.appendChild(el);}
+  if(!d){el.classList.remove('on');return;}
+  const tags=[d.junk?'':`${d.kg} kg`,d.junk?'':d.rar,d.rec?'Record!':'',d.gold?'Golden!':''].filter(Boolean);
+  el.innerHTML=`<small>You caught</small><b>${d.art} ${d.name}</b>${tags.length?`<span>${tags.map(t=>`<em>${t}</em>`).join('')}</span>`:''}<p>${d.quip}</p>${d.first?'<i class="new">New to your Islandex!</i>':''}<i>Tap anywhere to put it away</i>`;
+  el.classList.remove('on');void el.offsetWidth;el.classList.add('on');}
+function dismissCatch(){if(!caught||caught.t<0.6)return;scene.remove(caught.g);if(caught.d0!==undefined)camBack=caught.d0;catchCard(null);caught=null;}
 
 // no menu while you fish: a tap anywhere reels in (onTap), with one hint the first time
 function fishingBar(){clearAction();if(!S.tipFish){S.tipFish=1;setTimeout(()=>say('Tap the moment the bobber is <b>pulled under</b>!'),900);}}
@@ -149,12 +150,13 @@ function catchFish(){const f=fishing,id=f.target.fish,F=FISH[id],key='f:'+id;con
   const kg=Math.round((F.size*(0.5+Math.random()*0.9)+Math.random()*0.3)*F.size*10)/10;const rec=!F.junk&&kg>(S.rec[id]||0);if(!F.junk)S.rec[id]=Math.max(S.rec[id]||0,kg);
   f.caughtIt=true;const s=f.target;scene.remove(s.g);shadows.splice(shadows.indexOf(s),1);
   burst(f.px,0.1,f.pz,0xe8f4ff,18,1.9,0.08,5);ripple(f.px,f.pz,true);SFX.splash();vil.hop=0.3;
-  if(caught)scene.remove(caught.g);const g=fishModel(F);scene.add(g);caught={g,t:0,fx:f.px,fz:f.pz,msg:''};
+  if(caught){scene.remove(caught.g);catchCard(null);}const g=fishModel(F);scene.add(g);const kind=fishKind(id,F);
+  caught={g,t:0,fx:f.px,fz:f.pz,msg:'',sc:Math.max(0.8,Math.min(1.35,1.1/(2*(0.32+F.size*0.1)))),roll:/ray|flat|crab|octo|jelly/.test(kind)?0.9:0};
   addXP(F.junk?1:Math.round(F.price/12)+2);
   const art=/^[aeiou]/i.test(F.name)?'an':'a';
   const msg=`I caught ${art} <b>${F.name.toLowerCase()}</b>! ${QUIPS[id]||'What a catch!'}${F.junk?'':` <small>${kg} kg${rec&&!first?' · record!':''}${F.w<6?' · '+rarity(F.w):''}</small>`}`;
   if(F.w<6&&!F.junk){SFX.rare();for(let i=0;i<12;i++)sparkle(vil.x,1.4,vil.z,0xfff0a0);}else SFX.catch();
-  endFishing();caught.msg=msg+(first&&!F.junk?'<br><b style="color:#1c9a8c">New to your Islandex!</b>':'');}
+  endFishing();caught.msg=msg;caught.card={art:art==='an'?'An':'A',name:F.name,quip:QUIPS[id]||'What a catch!',kg,rar:rarity(F.w),rec:rec&&!first,first:first&&!F.junk,junk:F.junk,gold:f.target.gold};}
 // the line: from the rod tip to the bobber, sagging onto the water when slack and pulled straight when taut
 function drawLine(bx,by,bz,taut,wy){const pa=linePts,sag=(1-taut)*0.55*Math.min(1,Math.hypot(bx-TIP.x,bz-TIP.z)/2);
   for(let i=0;i<LINE_N;i++){const s=i/(LINE_N-1);let y=lerp(TIP.y,by,s)-sag*4*s*(1-s)*(1-s*0.35);if(s>0.3)y=Math.max(y,wy+0.012);pa[i*3]=lerp(TIP.x,bx,s);pa[i*3+1]=y;pa[i*3+2]=lerp(TIP.z,bz,s);}

@@ -26,7 +26,7 @@ function makeThumbs(){const snap=g=>snapThumb(g,128);
    Sheets
    ========================================================= */
 let sheet=null;
-function openSheet(kind,tab,ctx){/* ctx: where you are ('crate', 'trader'): selling only happens there */showApps(false);if(caught){scene.remove(caught.g);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab,ctx};renderSheet();$('sheet').hidden=false;updateCtx();}
+function openSheet(kind,tab,ctx){/* ctx: where you are ('crate', 'trader'): selling only happens there */showApps(false);if(caught){scene.remove(caught.g);if(caught.d0!==undefined)camBack=caught.d0;catchCard(null);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab,ctx};renderSheet();$('sheet').hidden=false;updateCtx();}
 function closeSheet(){$('sheet').hidden=true;sheet=null;updateCtx();}
 function tabs(list){$('sheetTabs').innerHTML=list.map(([id,l])=>`<button class="tab ${sheet.tab===id?'on':''}" data-tab="${id}">${l}</button>`).join('');const on=$('sheetTabs').querySelector('.on');if(on)requestAnimationFrame(()=>on.scrollIntoView({inline:'center',block:'nearest'}));}
 const sh=n=>`<span class="shl">${shellHTML}${fmt(n)}</span>`;
