@@ -13,32 +13,52 @@ const camD=()=>cam.dist*LENS; // how far the camera really is from what it looks
 let W=1,H=1,PX=2,rt=null;
 const post={scene:new T.Scene(),cam:new T.OrthographicCamera(-1,1,1,-1,0,1)};
 const postMat=new T.ShaderMaterial({
-  uniforms:{tC:{value:null},tD:{value:null},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1}},
+  uniforms:{tC:{value:null},tD:{value:null},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},tm:{value:0},
+    // the visual style (applyFx): colour grade, outlines, glow, film texture and palette
+    fxA:{value:new T.Vector4(1,1,1,0)}/* saturation, contrast, brightness, faded blacks */,tS:{value:new T.Vector3(1,1,1)},tH:{value:new T.Vector3(1,1,1)},
+    edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0}},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
   fragmentShader:`
-    uniform sampler2D tC;uniform sampler2D tD;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;varying vec2 vUv;
+    uniform sampler2D tC;uniform sampler2D tD;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;uniform float tm;varying vec2 vUv;
+    uniform vec4 fxA;uniform vec3 tS;uniform vec3 tH;uniform float edgeK;uniform vec3 edgeC;uniform float dith;uniform float grain;uniform float vig;uniform float bloomK;uniform float gradeK;uniform float pal;uniform float tilt;uniform float scan;uniform float paper;
     float b2(vec2 a){a=floor(a);return fract(a.x*.5+a.y*a.y*.75);}
     float bayer(vec2 a){return b2(.5*a)*.25+b2(a);}
     float lin(vec2 uv){float d=texture2D(tD,uv).r*2.-1.;return 2.*cn*cf/(cf+cn-d*(cf-cn));}
+    float h21(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+    float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y);}
     void main(){
-      vec3 c=texture2D(tC,vUv).rgb;
-      float d=lin(vUv);
       vec2 px=1./res;
+      vec3 c=texture2D(tC,vUv).rgb;
+      // tilt-shift: the top and bottom of the view melt into a soft blur, like a photo of a model
+      if(tilt>0.){float f=smoothstep(.1,.42,abs(vUv.y-.55))*tilt*2.2;if(f>.01){vec3 a=c;for(int i=1;i<=3;i++){float o=float(i)*f;a+=texture2D(tC,vUv+vec2(o*px.x,0.)).rgb+texture2D(tC,vUv-vec2(o*px.x,0.)).rgb+texture2D(tC,vUv+vec2(0.,o*px.y)).rgb+texture2D(tC,vUv-vec2(0.,o*px.y)).rgb;}c=a/13.;}}
+      if(scan>0.){c.r=mix(c.r,texture2D(tC,vUv+vec2(px.x,0.)).r,.7*scan);c.b=mix(c.b,texture2D(tC,vUv-vec2(px.x,0.)).b,.7*scan);}
+      float d=lin(vUv);
       float fz=cf*.45;/* neighbours out in the sky don't count: no outline along the horizon */
       float n1=lin(vUv+vec2(px.x,0.)),n2=lin(vUv-vec2(px.x,0.)),n3=lin(vUv+vec2(0.,px.y)),n4=lin(vUv-vec2(0.,px.y));
       float dn=max(max(n1>fz?d:n1,n2>fz?d:n2),max(n3>fz?d:n3,n4>fz?d:n4));
       float e=step(max(.35,d*.018),dn-d)*step(d,cf*.6);
-      c=mix(c,c*vec3(.36,.32,.46),e*.9*(1.-smoothstep(140.,260.,d))); // outlines fade out on the far islands
+      c=mix(c,c*edgeC,clamp(e*.9*edgeK,0.,1.)*(1.-smoothstep(140.,260.,d))); // outlines fade out on the far islands
       // lighting: bright things (sand, foam, sunlit leaves, clouds) bloom softly into their neighbours
       vec3 gl=vec3(0.);for(int i=0;i<4;i++){vec2 o=vec2(i<2?-2.:2.,mod(float(i),2.)<1.?-2.:2.)*px;gl+=max(texture2D(tC,vUv+o).rgb-.8,0.);}
-      c+=gl*vec3(.09,.08,.06)*gw; // just a whisper of glow off the sand and surf
-      // a sunny grade: a touch more colour, warm highlights, cool shadows, and a warm haze out towards the horizon
-      float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.+.04*gw);c=mix(c,(c-.5)*1.08+.48,gw); // a little more contrast
-      c*=mix(vec3(1.),mix(vec3(.96,.98,1.05),vec3(1.04,1.,.95),smoothstep(.25,.85,l)),gw);
-      c=mix(c,c*vec3(1.04,1.,.95)+vec3(.03,.02,.0),smoothstep(110.,300.,d)*step(d,cf*.6)*.45*gw);
-      vec2 vg=vUv-.5;c*=1.-dot(vg,vg)*.14;
+      c+=gl*vec3(.09,.08,.06)*gw*bloomK;
+      // the island's own sunny grade: a touch more colour, warm highlights, cool shadows, a warm haze towards the horizon
+      float g=gw*gradeK;float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.+.04*g);c=mix(c,(c-.5)*1.08+.48,g);
+      c*=mix(vec3(1.),mix(vec3(.96,.98,1.05),vec3(1.04,1.,.95),smoothstep(.25,.85,l)),g);
+      c=mix(c,c*vec3(1.04,1.,.95)+vec3(.03,.02,.0),smoothstep(110.,300.,d)*step(d,cf*.6)*.45*g);
+      // the style's grade: saturation, contrast, brightness, lifted blacks and split-toning
+      l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,fxA.x);c=(c-.5)*fxA.y+.5;c*=fxA.z;c=fxA.w+c*(1.-fxA.w);
+      c*=mix(tS,tH,smoothstep(.15,.85,l));
+      // palettes: 1 four greens (Game Boy), 2 black and white, 3 sepia
+      if(pal>0.5){float m=clamp(dot(c,vec3(.299,.587,.114)),0.,1.);
+        if(pal<1.5){m=smoothstep(.12,.92,m);float q=floor(m*3.99+(bayer(gl_FragCoord.xy)-.5)*.35);c=q<.5?vec3(.06,.22,.06):q<1.5?vec3(.19,.38,.19):q<2.5?vec3(.55,.67,.06):vec3(.61,.74,.06);}
+        else if(pal<2.5)c=vec3(m);else c=vec3(m)*vec3(1.08,.93,.74);}
+      // watercolour paper: soft blotches of pigment and a fibrous grain
+      if(paper>0.){vec2 p=gl_FragCoord.xy;float w=vn(p*.08)*.6+vn(p*.3)*.3+h21(p)*.1;c*=1.-paper*(.1*w-.04);c=mix(c,c*c*1.1+.02,paper*.25*vn(p*.02+3.));}
+      if(grain>0.)c+=(h21(gl_FragCoord.xy+fract(tm)*97.)-.5)*grain;
+      if(scan>0.)c*=1.-scan*.16*step(.5,fract(gl_FragCoord.y*.5));
+      vec2 vg=vUv-.5;c*=1.-dot(vg,vg)*vig;
       float b=bayer(gl_FragCoord.xy)-.5;
-      c=floor(c*levels+b+.5)/levels;
+      if(pal<0.5)c=floor(c*levels+b*dith+.5)/levels;
       gl_FragColor=vec4(c,1.);
     }`,
   depthTest:false,depthWrite:false
@@ -70,7 +90,7 @@ const PERF={px:0}; // reserved for future auto-quality; automatic pixel scaling 
 function resize(){
   const cw=window.innerWidth,ch=window.innerHeight;
   const base=clamp(Math.round(Math.min(cw,ch)/130)/2,1.5,5); // fine pixels (a phone draws about 260 across), in half steps
-  PX=clamp(base+S.pxAdj*0.5+PERF.px,1,9);
+  PX=clamp(base+S.pxAdj*0.5+PERF.px+fxPx(),1,9);
   W=Math.max(1,Math.ceil(cw/PX));H=Math.max(1,Math.ceil(ch/PX));
   renderer.setSize(W,H,false);
   if(rt){rt.depthTexture.dispose();rt.dispose();}

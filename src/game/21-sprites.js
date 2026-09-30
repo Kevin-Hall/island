@@ -124,5 +124,5 @@ const FIND_SPR={
 for(const k in FIND_SPR)ICON[k]=sprite(FIND_SPR[k]);
 ICON['g:shell']=ICON.shell;
 const seedIcon=id=>id==='mystery'?ICON.mystery:ICON[id];
-const shellHTML=`<img class="px" src="${ICON.shell}" alt="">`;
+let shellHTML=`<img class="px" src="${ICON.shell}" alt="">`;
 

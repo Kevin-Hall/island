@@ -28,7 +28,7 @@ function makeThumbs(){const snap=g=>snapThumb(g,96);
 let sheet=null;
 function openSheet(kind,tab,ctx){/* ctx: where you are ('crate', 'trader'): selling only happens there */showApps(false);if(caught){scene.remove(caught.g);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab,ctx};renderSheet();$('sheet').hidden=false;updateCtx();}
 function closeSheet(){$('sheet').hidden=true;sheet=null;updateCtx();}
-function tabs(list){$('sheetTabs').innerHTML=list.map(([id,l])=>`<button class="tab ${sheet.tab===id?'on':''}" data-tab="${id}">${l}</button>`).join('');}
+function tabs(list){$('sheetTabs').innerHTML=list.map(([id,l])=>`<button class="tab ${sheet.tab===id?'on':''}" data-tab="${id}">${l}</button>`).join('');const on=$('sheetTabs').querySelector('.on');if(on)requestAnimationFrame(()=>on.scrollIntoView({inline:'center',block:'nearest'}));}
 const sh=n=>`<span class="shl">${shellHTML}${fmt(n)}</span>`;
 function whereStr(I,key){const bios=I.bio||[];let w=bios.map(bioLabel).filter((v,i,a)=>a.indexOf(v)===i).join(' / ');
   if(key.startsWith('f:'))w+=' · '+(I.hab==='deep'?'deep water':I.hab==='shore'?'near shore':'any water');
@@ -41,9 +41,9 @@ function renderSheet(){
       const sub=id==='mystery'?'Any crop, even locked ones. 3× rare chance.':`Sells ${fmt(C.price)} · ~${Math.round(C.grow/60*10)/10} min watered${C.night?' · night only':''}${C.day?' · loves sun':''}`;
       h+=`<button class="card ${S.seed===id?'sel':''} ${lock?'lock':''}" data-seed="${id}" ${lock?'disabled':''}><img class="px" src="${seedIcon(id)}" alt=""><span class="grow"><span class="nm">${C.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+C.lvl:sub}</span></span><span class="price">${S.free[id]?`<span class="done">${S.free[id]} free</span>`:sh(C.seed)}</span></button>`;}
     h+='</div>';}
-  else if(sheet.kind==='bag'){$('sheetTitle').textContent='Pockets';tabs([['all','All'],['crops','Crops'],['catch','Catch'],['nature','Nature'],['mats','Mats'],['store','Stored'],['craft','Craft']]);
+  else if(sheet.kind==='bag'){$('sheetTitle').textContent='Bag';tabs([['all','All'],['crops','Crops'],['catch','Critters'],['nature','Nature'],['store','Decor'],['craft','Craft']]);
     const T0=sheet.tab||'all';
-    if(T0==='craft'){h+=`<p class="note">Craft decor and handy items from what you gather. Crafted decor goes to <b>Storage</b>, ready to place.</p><div class="list">`;
+    if(T0==='craft'){h+=`<p class="note">Make decor and handy things from what you gather. Decor you make waits in the <b>Decor</b> tab, ready to place.</p><div class="list">`;
       RECIPES.forEach((r,i)=>{const lock=r.lvl>lv;const ing=Object.entries(r.in).map(([k,n])=>{const hv=haveOf(k);return `<span class="chip ${hv<n?'miss':''}"><img src="${iconOf(k)}" alt="">${nameOf(k).replace(/^(.{14}).+$/,'$1…')} ${Math.min(hv,99)}/${n}</span>`;}).join('');
         h+=`<div class="recipe ${lock?'lock':''}"><img src="${recipeIcon(r)}" alt=""><span class="grow"><span class="nm">${recipeName(r)}${r.out[2]>1?' ×'+r.out[2]:''}</span><div class="ing">${lock?`<span class="chip">Unlocks at Lv ${r.lvl}</span>`:ing}</div></span><button class="pbtn go" data-craft="${i}" ${canCraft(r)?'':'disabled'}>Craft</button></div>`;});
       h+='</div>';}
@@ -52,13 +52,13 @@ function renderSheet(){
       else{const sel=ks.includes(sheet.sel)?sheet.sel:ks[0];const B=BUILD[sel];
         h+=`<div class="detail"><img src="${THUMB[sel]||''}" alt=""><div class="grow"><div class="nm">${B.name} ×${S.store[sel]}</div><div class="sub">${B.desc}</div><div class="acts"><button class="pbtn go" data-place="${sel}">Place it</button></div></div></div><div class="inv">`;
         for(const k of ks)h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img src="${THUMB[k]||''}" alt=""><span class="n">${S.store[k]}</span></button>`;h+='</div>';}}
-    else{const cat=k=>k.startsWith('m:')||k.startsWith('x:')?'mats':k.startsWith('f:')||k.startsWith('b:')?'catch':k.startsWith('p:')||k.startsWith('g:')?'nature':'crops';
+    else{const cat=k=>k.startsWith('m:')||k.startsWith('x:')?'nature':k.startsWith('f:')||k.startsWith('b:')?'catch':k.startsWith('p:')||k.startsWith('g:')?'nature':'crops';
       const ks=Object.keys(S.inv).filter(k=>S.inv[k]>0&&(T0==='all'||cat(k)===T0)).sort((a,b)=>cat(a).localeCompare(cat(b))||priceOf(b)-priceOf(a));
       const sellable=Object.keys(S.inv).filter(k=>!k.startsWith('m:')&&!k.startsWith('x:')),total=sellable.reduce((t,k)=>t+priceOf(k)*S.inv[k],0);
       const ctx=sheet.ctx;
       if(ctx==='trader')h+=`<div class="invtop"><span class="tot">Worth <b>${fmt(total)}</b> shells · market wants <b>${CROPS[S.demand].name}</b></span><button class="pbtn go" data-sellall="1" ${total?'':'disabled'}>Sell all</button></div>`;
       else if(ctx==='crate'){const cn=Object.values(S.crate||{}).reduce((a,b)=>a+b,0);h+=`<div class="invtop"><span class="tot">In the crate: <b>${cn}</b> thing${cn===1?'':'s'}, worth ~<b>${fmt(crateWorth())}</b> · ${TRADER.name} collects at dawn</span><button class="pbtn go" data-crateall="1" ${total?'':'disabled'}>Put it all in</button></div>`;}
-      else if(S.scratch)h+=`<p class="note">To sell, leave things in the <b>crate by your tent</b> (collected at dawn), or take them to ${TRADER.name}'s boat at the dock (8am–6pm).</p>`;
+      else if(S.scratch)h+=`<p class="note">To sell, put things in the <b>crate by your tent</b> or take them to <b>${TRADER.name}'s boat</b>.</p>`;
       if(!ks.length)h+=`<p class="note">${T0==='all'?'Your pockets are empty. Harvest, fish, catch bugs, forage and gather to fill them.':'Nothing here yet.'}</p>`;
       else{const sel=ks.includes(sheet.sel)?sheet.sel:ks[0],I=itemInfo(sel),t=sel.split('|')[0],mat=sel.startsWith('m:')||sel.startsWith('x:');
         const inOrder=S.orders.some(o=>!o.done&&(o.k===sel||o.k==='c:'+t));const wish=npcs.find(n=>{const d=S.npc[n.i];return d&&d.wish&&!d.wish.done&&d.wish.day===S.day&&invFor(d.wish.k)===sel;});
@@ -126,14 +126,16 @@ function renderSheet(){
     h+=`<h3 class="sech">${L.sp==='duck'||L.sp==='penguin'?'Feathers':L.sp==='frog'?'Skin':'Fur'}</h3><div class="swatches">${LOOKS[L.sp].fur.map(c=>`<button class="sw ${L.fur===c?'on':''}" data-fur="${c}" style="--sw:${hexCss(c)}" aria-label="Colour"></button>`).join('')}</div>`;
     h+=`<h3 class="sech">Outfit</h3><div class="swatches">${OUTFITS.map(c=>`<button class="sw ${L.shirt===c?'on':''}" data-shirt="${c}" style="--sw:${hexCss(c)}" aria-label="Outfit colour"></button>`).join('')}</div>`;
     h+=`<p class="note">Changes show on your villager right away, and you can switch any time from the Island menu.</p>`;}
-  else if(sheet.kind==='settings'){$('sheetTitle').textContent='Island';tabs([]);const b=LV[lv];
-    h+=`<button class="card lookrow" data-openlook="1"><img src="${lookThumb(S.look.sp,S.look.fur,S.look.shirt)}" alt=""><span class="grow"><span class="nm">Your look</span><br><span class="sub">${LOOKS[S.look.sp]?.name||'Bunny'} · tap to change animal and colours</span></span></button>`;
-    h+=`<div class="stat"><span>Level <b>${lv}</b></span><span>${b?`<b>${fmt(b-S.xp)}</b> XP to next`:'max level'}</span><span>Day <b>${S.day}</b></span><span><b>${fmt(S.earned)}</b> shells earned</span></div>`;
-    h+=`<div class="setrow"><span>Sound</span><span class="seg"><button data-snd="1" class="${S.sound?'on':''}">On</button><button data-snd="0" class="${S.sound?'':'on'}">Off</button></span></div>`;
-    h+=`<div class="setrow"><span>Music</span><span class="seg"><button data-mus="1" class="${S.music!==false?'on':''}">On</button><button data-mus="0" class="${S.music===false?'on':''}">Off</button></span></div>`;
-    h+=`<div class="setrow"><span>Pixels</span><span class="seg">${[[1,'Chunky'],[0,'Classic'],[-1,'Fine']].map(([v,l])=>`<button data-px="${v}" class="${S.pxAdj===v?'on':''}">${l}</button>`).join('')}</span></div>`;
-    h+=`<div class="setrow"><span class="note" style="margin:0">Drag to spin the camera, pinch to zoom. Your island and world save on this device.</span></div>`;
-    h+=`<h3 class="sech">Dev tools</h3>`;
+  else if(sheet.kind==='settings'){$('sheetTitle').textContent='Settings';tabs([]);const b=LV[lv];
+    h+=`<button class="card lookrow" data-openlook="1"><img src="${lookThumb(S.look.sp,S.look.fur,S.look.shirt)}" alt=""><span class="grow"><span class="nm">Your look</span><br><span class="sub">${LOOKS[S.look.sp]?.name||'Bunny'} · change animal and colours</span></span><span class="sub" style="font-size:22px">›</span></button>`;
+    h+=`<div class="tiles"><div><b>${lv}</b><span>${b?fmt(b-S.xp)+' XP to go':'Max level'}</span></div><div><b>${S.day}</b><span>Day</span></div><div><b>${fmt(S.earned)}</b><span>Shells earned</span></div></div>`;
+    h+=`<h3 class="sech">Sound & display</h3><div class="group">`;
+    h+=`<div class="setrow"><span>Sound effects</span><button class="iswitch ${S.sound?'on':''}" data-snd="${S.sound?0:1}" aria-label="Sound"></button></div>`;
+    h+=`<div class="setrow"><span>Music</span><button class="iswitch ${S.music!==false?'on':''}" data-mus="${S.music!==false?0:1}" aria-label="Music"></button></div>`;
+    h+=`<div class="setrow"><span>Pixel size</span><span class="seg">${[[1,'Big'],[0,'Normal'],[-1,'Small']].map(([v,l])=>`<button data-px="${v}" class="${S.pxAdj===v?'on':''}">${l}</button>`).join('')}</span></div></div>`;
+    h+=`<p class="note" style="margin:10px 6px 0">Drag to turn the camera, pinch to zoom. Your island saves on this device.</p>`;
+    h+=`<h3 class="sech">Developer</h3><div class="group">`;
+    h+=`<div class="setrow col"><div class="rowtop"><span>Visual style</span><b>${(FXS[S.fx]||FXS.island).name}</b></div><div class="fxgrid">${Object.entries(FXS).map(([k,f])=>`<button class="fxb ${(S.fx||'island')===k?'on':''}" data-fx="${k}"><b>${f.name}</b><small>${f.desc}</small></button>`).join('')}</div></div>`;
     h+=`<div class="setrow col"><div class="rowtop"><span>Time of day</span><b id="devHourLbl">${clockStr(S.hour)}</b></div><input type="range" id="devHour" min="0" max="23.9" step="0.05" value="${S.hour.toFixed(2)}" aria-label="Time of day"></div>`;
     h+=`<div class="setrow"><span>Time speed</span><span class="seg">${[[0,'Pause'],[1,'Real'],[10,'10×'],[60,'60×']].map(([v,l])=>`<button data-spd="${v}" class="${devSpeed===v?'on':''}">${l}</button>`).join('')}</span></div>`;
     h+=`<div class="setrow"><span>Clock</span><span class="seg">${S.toff?`<button data-dev="realtime">Back to real time</button>`:'<button class="on" disabled>Your real time</button>'}</span></div>`;
@@ -147,7 +149,7 @@ function renderSheet(){
     h+=`<div class="setrow"><span>Acornfield island</span><span class="seg"><button data-dev="acorn">Load</button></span></div>`;
     h+=`<div class="setrow"><span>Showcase farm</span><span class="seg"><button data-dev="showcase">${S.showcase?'Rebuild':'Load'}</button>${hasRealSave()?'<button data-dev="realsave">Restore my save</button>':''}</span></div>`;
     h+=`<div class="setrow"><span class="note" style="margin:0">Loads a fully built late-game farm: a big fenced field with sprinkler plots, an orchard, flower beds and a windmill, plus a Villa, max tools and every island restored. Your own save is backed up first.</span></div>`;
-    h+=`<div class="setrow"><span>Start over</span><button class="pbtn warn" data-reset="1">Reset world</button></div>`;}
+    h+=`</div><div class="group" style="margin-top:16px"><div class="setrow"><span>Start over</span><button class="pbtn warn" data-reset="1">Reset world</button></div></div>`;}
   body.innerHTML=h;
   if(sheet.kind==='chart')drawChart();
 }
@@ -217,6 +219,7 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.dev==='realtime'){S.toff=0;devSpeed=1;S.hour=realHour();applyTime();updateHUD();renderSheet();return;}
   if(d.season!==undefined){S.seasonOv=d.season||null;seasonCheck(true);renderSheet();return;}
   if(d.dev==='shells'){S.shells+=1000;SFX.coin();return;}
+  if(d.fx!==undefined){setFx(d.fx);SFX.ui();renderSheet();return;}
   if(d.snd!==undefined){S.sound=d.snd==='1';setWaveVol();if(S.sound)startWaves();renderSheet();return;}
   if(d.px!==undefined){S.pxAdj=Number(d.px);resize();renderSheet();return;}
   if(d.reset){el.textContent='Tap again to erase';el.dataset.reset='';el.dataset.really='1';return;}
