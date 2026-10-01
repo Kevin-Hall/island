@@ -1861,13 +1861,13 @@ const camD=()=>cam.dist*LENS; // how far the camera really is from what it looks
 let W=1,H=1,PX=2,rt=null;
 const post={scene:new T.Scene(),cam:new T.OrthographicCamera(-1,1,1,-1,0,1)};
 const postMat=new T.ShaderMaterial({
-  uniforms:{tC:{value:null},tD:{value:null},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},tm:{value:0},
+  uniforms:{tC:{value:null},tD:{value:null},tB:{value:null},bloomC:{value:new T.Vector3(.3,.26,.2)},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},tm:{value:0},
     // the visual style (applyFx): colour grade, outlines, glow, film texture and palette
     fxA:{value:new T.Vector4(1,1,1,0)}/* saturation, contrast, brightness, faded blacks */,tS:{value:new T.Vector3(1,1,1)},tH:{value:new T.Vector3(1,1,1)},
     edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},uw:{value:0},rip:{value:0},uwC:{value:new T.Color(0x2a8cc0)},uwL:{value:1}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
   fragmentShader:`
-    uniform sampler2D tC;uniform sampler2D tD;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;uniform float tm;varying vec2 vUv;
+    uniform sampler2D tC;uniform sampler2D tD;uniform sampler2D tB;uniform vec3 bloomC;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;uniform float tm;varying vec2 vUv;
     uniform vec4 fxA;uniform vec3 tS;uniform vec3 tH;uniform float edgeK;uniform vec3 edgeC;uniform float dith;uniform float grain;uniform float vig;uniform float bloomK;uniform float gradeK;uniform float pal;uniform float tilt;uniform float scan;uniform float paper;uniform float uw;uniform float rip;uniform vec3 uwC;uniform float uwL;
     float b2(vec2 a){a=floor(a);return fract(a.x*.5+a.y*a.y*.75);}
     float bayer(vec2 a){return b2(.5*a)*.25+b2(a);}
@@ -1891,8 +1891,8 @@ const postMat=new T.ShaderMaterial({
       float e=step(max(.35,d*.018),dn-d)*step(d,cf*.6);
       c=mix(c,c*edgeC,clamp(e*.9*edgeK,0.,1.)*(1.-smoothstep(140.,260.,d))); // outlines fade out on the far islands
       // lighting: bright things (sand, foam, sunlit leaves, clouds) bloom softly into their neighbours
-      vec3 gl=vec3(0.);for(int i=0;i<4;i++){vec2 o=vec2(i<2?-2.:2.,mod(float(i),2.)<1.?-2.:2.)*px;gl+=max(texture2D(tC,vUv+o).rgb-.8,0.);}
-      c+=gl*vec3(.09,.08,.06)*gw*bloomK;
+      // (bloomPass: the brightest parts, blurred at a quarter of the size; warm, and stronger at night round lamps and fires)
+      if(bloomK>0.)c+=texture2D(tB,vUv).rgb*bloomC*bloomK;
       // the island's own sunny grade: a touch more colour, warm highlights, cool shadows, a warm haze towards the horizon
       float g=gw*gradeK;float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.+.04*g);c=mix(c,(c-.5)*1.08+.48,g);
       c*=mix(vec3(1.),mix(vec3(.96,.98,1.05),vec3(1.04,1.,.95),smoothstep(.25,.85,l)),g);
@@ -1926,6 +1926,23 @@ const postMat=new T.ShaderMaterial({
   depthTest:false,depthWrite:false
 });
 post.scene.add(new T.Mesh(new T.PlaneGeometry(2,2),postMat));
+/* glow: the frame's brightest parts (sunlit sand and foam, lamps, lit windows and fires at night) are soaked into a copy a
+   quarter of the size each way, blurred across and down, and laid back over the picture (postMat) as a soft halo:
+   three tiny passes, about 1/16 of the pixels each */
+const bloomRT=[null,null],bloomScene=new T.Scene(),bloomQ=new T.Mesh(new T.PlaneGeometry(2,2));bloomQ.frustumCulled=false;bloomScene.add(bloomQ);
+const _qv='varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}';
+const brightMat=new T.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{tC:{value:null},px:{value:new T.Vector2(1,1)},th:{value:.78},nb:{value:0}},vertexShader:_qv,
+  fragmentShader:`uniform sampler2D tC;uniform vec2 px;uniform float th;uniform float nb;varying vec2 vUv;
+    // by day anything bright glows a little; at night (nb) only the light sources do (marked in alpha: GLOW_A)
+    vec3 b(vec2 o){vec4 c=texture2D(tC,vUv+o*px);return c.rgb*smoothstep(th,th+.22,max(max(c.r,c.g),c.b))*max(1.-nb,1.-c.a);}
+    void main(){gl_FragColor=vec4((b(vec2(-1.,-1.))+b(vec2(1.,-1.))+b(vec2(-1.,1.))+b(vec2(1.,1.)))*.25,1.);}`});
+const blurMat=new T.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{tB:{value:null},dir:{value:new T.Vector2()}},vertexShader:_qv,
+  fragmentShader:`uniform sampler2D tB;uniform vec2 dir;varying vec2 vUv;
+    void main(){vec3 c=texture2D(tB,vUv).rgb*.227+(texture2D(tB,vUv+dir*1.385).rgb+texture2D(tB,vUv-dir*1.385).rgb)*.316+(texture2D(tB,vUv+dir*3.231).rgb+texture2D(tB,vUv-dir*3.231).rgb)*.07;gl_FragColor=vec4(c,1.);}`});
+function bloomPass(){if(!(postMat.uniforms.bloomK.value>0)||!bloomRT[0])return;const [a,b]=bloomRT,ac=renderer.autoClear;renderer.autoClear=false;
+  bloomQ.material=brightMat;brightMat.uniforms.tC.value=rt.texture;renderer.setRenderTarget(a);renderer.render(bloomScene,post.cam);
+  bloomQ.material=blurMat;blurMat.uniforms.tB.value=a.texture;blurMat.uniforms.dir.value.set(1/a.width,0);renderer.setRenderTarget(b);renderer.render(bloomScene,post.cam);
+  blurMat.uniforms.tB.value=b.texture;blurMat.uniforms.dir.value.set(0,1/a.height);renderer.setRenderTarget(a);renderer.render(bloomScene,post.cam);renderer.autoClear=ac;}
 const skyMat=new T.ShaderMaterial({depthTest:false,depthWrite:false,
   uniforms:{zen:{value:new T.Color()},hz:{value:new T.Color()},glowC:{value:new T.Color()},hy:{value:0.6},ga:{value:0},sunP:{value:new T.Vector2(0.5,0.7)},aspect:{value:0.5},disc:{value:0},night:{value:0}},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
@@ -1960,6 +1977,8 @@ function resize(){
   rt.depthTexture=new T.DepthTexture(W,H);rt.depthTexture.type=T.UnsignedIntType;
   rt.depthTexture.minFilter=rt.depthTexture.magFilter=T.NearestFilter;
   postMat.uniforms.tC.value=rt.texture;postMat.uniforms.tD.value=rt.depthTexture;postMat.uniforms.res.value.set(W,H);
+  for(let i=0;i<2;i++){if(bloomRT[i])bloomRT[i].dispose();bloomRT[i]=new T.WebGLRenderTarget(Math.ceil(W/4),Math.ceil(H/4),{minFilter:T.LinearFilter,magFilter:T.LinearFilter,depthBuffer:false});}
+  postMat.uniforms.tB.value=bloomRT[0].texture;brightMat.uniforms.px.value.set(1/W,1/H);
   camera.aspect=cw/ch;camera.updateProjectionMatrix();applyCam();
 }
 const cam={yaw:Math.PI*0.27,pitch:0.5,dist:30,tx:0,tz:0.3};
@@ -2036,14 +2055,34 @@ function merge(parts){
   out.setAttribute('position',new T.BufferAttribute(pos,3));out.setAttribute('normal',new T.BufferAttribute(nor,3));
   out.setAttribute('color',new T.BufferAttribute(col,3));out.computeBoundingSphere();out.computeBoundingBox();return out;
 }
-const grad=(()=>{const d=new Uint8Array([88,88,88,255,160,160,160,255,222,222,222,255,255,255,255,255]);
-  const t=new T.DataTexture(d,4,1,T.RGBAFormat);t.minFilter=t.magFilter=T.NearestFilter;t.needsUpdate=true;return t;})();
+/* the toon ramps: how much of a light reaches a surface, by how squarely it faces it (left: facing away, right: facing
+   straight at it). 64 steps, filtered, so the bands of light and shade can melt softly into each other; applyFx (30b-fx)
+   paints them for the visual style: the bands' brightness, how soft their edges are, a warm glow where light gives way
+   to shade and cooler shadows */
+const RAMP_N=64,rampTex=()=>{const t=new T.DataTexture(new Uint8Array(RAMP_N*4).fill(255),RAMP_N,1,T.RGBAFormat);t.minFilter=t.magFilter=T.LinearFilter;t.needsUpdate=true;return t;};
+const grad=rampTex();
+/* rim light: a soft edge of sky light round the silhouettes of rounded things (trees, people, rocks, walls), warmer on
+   the side facing the sun. Floors and roofs don't get it. One uniform (RIM: strength, sun warmth) is shared by every
+   toon material, set each frame by applyTime (62-time): a few instructions per pixel, no extra pass */
+const RIM=new Float32Array([0.3,0.4,0]);
+T.ShaderLib.toon.uniforms.rimP={value:RIM};/* (a typed array is shared, not copied, when each material clones its uniforms) */
+T.ShaderLib.toon.fragmentShader=T.ShaderLib.toon.fragmentShader.replace('uniform float opacity;','uniform float opacity;\nuniform vec3 rimP;')
+  .replace('#include <aomap_fragment>',`#include <aomap_fragment>
+  {vec3 rn=geometry.normal;float nv=1.-clamp(dot(rn,geometry.viewDir),0.,1.);vec3 upV=(viewMatrix*vec4(0.,1.,0.,0.)).xyz;
+   float rim=smoothstep(.45,.95,nv)*(1.-abs(dot(rn,upV)))*rimP.x;vec3 rc=vec3(.55,.6,.7);
+   #if NUM_HEMI_LIGHTS>0
+   rc=hemisphereLights[0].skyColor;
+   #endif
+   #if NUM_DIR_LIGHTS>0
+   rc=mix(rc,directionalLights[0].color,rimP.y*clamp(dot(rn,directionalLights[0].direction)*.7+.5,0.,1.));
+   #endif
+   reflectedLight.indirectDiffuse+=rim*rc*(diffuseColor.rgb*.75+.25);}`);
 const toon=o=>new T.MeshToonMaterial(Object.assign({gradientMap:grad},o));
 const vcMat=toon({vertexColors:true});
 const vcMatFlat=toon({color:0xffffff});
 // foliage: the same toon look, speckled with little light and dark leaf clusters fixed in world space (two sizes of blotch),
 // so after the pixel pass a crown reads as a mass of painted leaves rather than a plain ball
-const leafGrad=(()=>{const d=new Uint8Array([72,72,72,255,140,140,140,255,208,208,208,255,255,255,255,255]);const t=new T.DataTexture(d,4,1,T.RGBAFormat);t.minFilter=t.magFilter=T.NearestFilter;t.needsUpdate=true;return t;})();
+const leafGrad=rampTex();/* foliage's own, slightly deeper ramp (applyFx) */
 const leafMat=new T.MeshToonMaterial({gradientMap:leafGrad,vertexColors:true});
 const leafU={uT:{value:0},uWind:{value:1}};
 leafMat.onBeforeCompile=sh=>{sh.uniforms.uT=leafU.uT;sh.uniforms.uWind=leafU.uWind;
@@ -2070,6 +2109,11 @@ bushMat.onBeforeCompile=sh=>{sh.uniforms.uT=leafU.uT;sh.uniforms.uWind=leafU.uWi
      tone*=mix(.8,1.08,smoothstep(-.3,.8,n.y));      // dark underneath, bright on top
      diffuseColor.rgb*=tone;}`);};
 const glowMat=toon({vertexColors:true,emissive:0xffc460,emissiveIntensity:0});
+/* light sources (lamps and lit windows here, fires in 55-town) mark themselves in the frame's alpha, 0 for a full glow, so
+   the glow pass can tell a lamp from a moonlit white wall at night. GLOW_A.value=0 turns the mark off (thumbnails, whose
+   alpha is their cut-out) */
+const GLOW_A={value:1};
+glowMat.onBeforeCompile=sh=>{sh.uniforms.glowA=GLOW_A;sh.fragmentShader='uniform float glowA;\n'+sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\ngl_FragColor.a=1.-clamp(dot(totalEmissiveRadiance,vec3(.5)),0.,1.)*glowA;');};
 const lumMat=toon({vertexColors:true,emissive:0x444444,emissiveIntensity:1});
 const goldMat=toon({color:0xf5c542,emissive:0x6a4200,emissiveIntensity:.7});
 const crystalMat=toon({color:0xb0f4ff,emissive:0x2a88aa,emissiveIntensity:.7,transparent:true,opacity:.85});
@@ -2149,30 +2193,76 @@ const stars=new T.Points(starGeo,starMat);stars.frustumCulled=false;scene.add(st
    (30-render), changes how many steps of light the toon shading has, and how big the pixels are. The island itself
    doesn't change, only how it's filmed. S.fx remembers the choice.
    ========================================================= */
-const FX_BASE={sat:1,con:1,br:1,fade:0,tS:[1,1,1],tH:[1,1,1],edge:1,edgeC:[.36,.32,.46],dith:1,levels:22,grain:0,vig:.14,bloom:1,grade:1,pal:0,tilt:0,scan:0,paper:0,px:0,ramp:[88,160,222,255]};
+// ramp: the toon bands, shadow to sunlit (leaf: foliage's); soft: how softly they melt together; warm: the glow where light
+// gives way to shade; cool: how blue the shadows lean; rim: the rim light round silhouettes (30-render)
+const FX_BASE={sat:1,con:1,br:1,fade:0,tS:[1,1,1],tH:[1,1,1],edge:1,edgeC:[.36,.32,.46],dith:1,levels:22,grain:0,vig:.14,bloom:1,grade:1,pal:0,tilt:0,scan:0,paper:0,px:0,ramp:[88,160,222,255],leaf:[72,140,208,255],soft:0,warm:0,cool:0,rim:1};
+let fxRim=1;
 const FXS={
-  island:   {name:'Driftseed',  desc:'The island as it is'},
-  wildworld:{name:'Wild World', desc:'Chunky handheld pixels, soft flat colour',sat:1.18,con:.96,br:1.08,fade:.05,tS:[1.02,1.02,1.06],tH:[1.04,1.02,.94],edge:.35,edgeC:[.5,.44,.52],dith:0,levels:14,vig:0,bloom:.2,grade:.5,px:2,ramp:[140,200,245,255]},
-  wildsoft: {name:'Wild World Soft',desc:'A gentler Wild World: softer pixels and colour',sat:1.08,con:.98,br:1.04,fade:.03,tS:[1.01,1.01,1.03],tH:[1.02,1.01,.97],edge:.6,edgeC:[.44,.39,.49],dith:0,levels:18,vig:.06,bloom:.55,grade:.75,px:1,ramp:[112,178,232,255]},
-  windwaker:{name:'Wind Waker', desc:'Bold two-tone cel shading and bright sea colours',sat:1.45,con:1.1,br:1.14,tS:[.9,.95,1.14],tH:[1.05,1.02,.95],edge:2.4,edgeC:[.1,.1,.2],dith:0,levels:64,vig:.05,bloom:2.4,px:-1,ramp:[120,120,255,255]},
-  storybook:{name:'Storybook',  desc:'Soft watercolour on paper',sat:.8,con:.86,br:1.1,fade:.1,tS:[1.04,1,.94],tH:[1.05,1.02,.92],edge:.7,edgeC:[.58,.46,.4],dith:0,levels:48,grain:.015,vig:.1,bloom:1.4,grade:.7,paper:1,px:-.5,ramp:[140,185,225,250]},
-  film:     {name:'35mm Film',  desc:'Grain, faded blacks, teal shadows, warm light',sat:.8,con:1.14,fade:.11,tS:[.8,1.02,1.14],tH:[1.13,1,.82],edge:.7,dith:0,levels:64,grain:.09,vig:.45,bloom:2,grade:.6,px:-.5},
-  golden:   {name:'Golden Hour',desc:'Everything bathed in late sun',sat:1.15,con:1.08,br:1.02,fade:.03,tS:[1.02,.84,.88],tH:[1.26,1.02,.7],edge:.8,edgeC:[.42,.28,.3],dith:0,levels:48,vig:.26,bloom:2.6},
-  diorama:  {name:'Tilt-shift', desc:'A tiny model island on a tabletop',sat:1.28,con:1.1,br:1.03,edge:.9,dith:0,levels:64,vig:.12,bloom:1.2,tilt:1,px:-.5},
-  neon:     {name:'Neon Night', desc:'Vaporwave pinks and cyans, with scanlines',sat:1.3,con:1.1,tS:[.88,.78,1.28],tH:[1.22,.9,1.12],edge:1.2,edgeC:[.3,.1,.5],dith:0,levels:64,vig:.32,bloom:2.6,scan:1},
-  noir:     {name:'Noir',       desc:'Black and white, with grain',con:1.28,pal:2,edge:1.4,edgeC:[.1,.1,.1],dith:0,levels:64,grain:.08,vig:.42,ramp:[60,120,200,255]},
-  sepia:    {name:'Old Photo',  desc:'A faded sepia print',con:1.05,fade:.1,pal:3,edge:.9,edgeC:[.3,.24,.2],dith:0,levels:64,grain:.05,vig:.5,px:-.5},
-  gameboy:  {name:'Game Boy',   desc:'Four shades of green',pal:1,edge:1.2,edgeC:[.2,.2,.2],levels:4,vig:0,bloom:0,grade:0,px:2},
+  island:   {name:'Driftseed',  desc:'The island as it is',sat:1.04,tS:[.97,.98,1.04],tH:[1.04,1.01,.95],soft:.07,warm:1,cool:1},
+  wildworld:{name:'Wild World', desc:'Chunky handheld pixels, soft flat colour',sat:1.18,con:.96,br:1.08,fade:.05,tS:[1.02,1.02,1.06],tH:[1.04,1.02,.94],edge:.35,edgeC:[.5,.44,.52],dith:0,levels:14,vig:0,bloom:.2,grade:.5,px:2,ramp:[140,200,245,255],soft:.02,rim:.6},
+  wildsoft: {name:'Wild World Soft',desc:'A gentler Wild World: softer pixels and colour',sat:1.08,con:.98,br:1.04,fade:.03,tS:[1.01,1.01,1.03],tH:[1.02,1.01,.97],edge:.6,edgeC:[.44,.39,.49],dith:0,levels:18,vig:.06,bloom:.55,grade:.75,px:1,ramp:[112,178,232,255],soft:.05,warm:.6,cool:.5},
+  windwaker:{name:'Wind Waker', desc:'Bold two-tone cel shading and bright sea colours',sat:1.45,con:1.1,br:1.14,tS:[.9,.95,1.14],tH:[1.05,1.02,.95],edge:2.4,edgeC:[.1,.1,.2],dith:0,levels:64,vig:.05,bloom:2.4,px:-1,ramp:[120,120,255,255],rim:1.3},
+  storybook:{name:'Storybook',  desc:'Soft watercolour on paper',sat:.8,con:.86,br:1.1,fade:.1,tS:[1.04,1,.94],tH:[1.05,1.02,.92],edge:.7,edgeC:[.58,.46,.4],dith:0,levels:48,grain:.015,vig:.1,bloom:1.4,grade:.7,paper:1,px:-.5,ramp:[140,185,225,250],soft:.12,warm:.5,cool:.3},
+  film:     {name:'35mm Film',  desc:'Grain, faded blacks, teal shadows, warm light',sat:.8,con:1.14,fade:.11,tS:[.8,1.02,1.14],tH:[1.13,1,.82],edge:.7,dith:0,levels:64,grain:.09,vig:.45,bloom:2,grade:.6,px:-.5,soft:.08,warm:.7,cool:.8},
+  golden:   {name:'Golden Hour',desc:'Everything bathed in late sun',sat:1.15,con:1.08,br:1.02,fade:.03,tS:[1.02,.84,.88],tH:[1.26,1.02,.7],edge:.8,edgeC:[.42,.28,.3],dith:0,levels:48,vig:.26,bloom:2.6,soft:.07,warm:1.4,cool:.6},
+  diorama:  {name:'Tilt-shift', desc:'A tiny model island on a tabletop',sat:1.28,con:1.1,br:1.03,edge:.9,dith:0,levels:64,vig:.12,bloom:1.2,tilt:1,px:-.5,soft:.06,warm:.7,cool:.6},
+  neon:     {name:'Neon Night', desc:'Vaporwave pinks and cyans, with scanlines',sat:1.3,con:1.1,tS:[.88,.78,1.28],tH:[1.22,.9,1.12],edge:1.2,edgeC:[.3,.1,.5],dith:0,levels:64,vig:.32,bloom:2.6,scan:1,rim:1.2},
+  noir:     {name:'Noir',       desc:'Black and white, with grain',con:1.28,pal:2,edge:1.4,edgeC:[.1,.1,.1],dith:0,levels:64,grain:.08,vig:.42,ramp:[60,120,200,255],rim:.6},
+  sepia:    {name:'Old Photo',  desc:'A faded sepia print',con:1.05,fade:.1,pal:3,edge:.9,edgeC:[.3,.24,.2],dith:0,levels:64,grain:.05,vig:.5,px:-.5,rim:.6},
+  gameboy:  {name:'Game Boy',   desc:'Four shades of green',pal:1,edge:1.2,edgeC:[.2,.2,.2],levels:4,vig:0,bloom:0,grade:0,px:2,rim:0},
 };
 function fxNow(){const F=Object.assign({},FX_BASE,FXS[S.fx]||FXS.island);if(S.scan!==undefined)F.scan=S.scan?1:0;/* the Scanlines switch in Settings overrides the style */return F;}
 function fxPx(){try{return fxNow().px;}catch(e){return 0;}}
 function applyFx(){const F=fxNow(),u=postMat.uniforms;
   u.fxA.value.set(F.sat,F.con,F.br,F.fade);u.tS.value.set(...F.tS);u.tH.value.set(...F.tH);u.edgeK.value=F.edge;u.edgeC.value.set(...F.edgeC);u.dith.value=F.dith;u.levels.value=F.levels;
   u.grain.value=F.grain;u.vig.value=F.vig;u.bloomK.value=F.bloom;u.gradeK.value=F.grade;u.pal.value=F.pal;u.tilt.value=F.tilt;u.scan.value=F.scan;u.paper.value=F.paper;
-  // the toon ramp: how many bands of light and shade every surface is painted in
-  const d=grad.image.data;F.ramp.forEach((v,i)=>{d[i*4]=d[i*4+1]=d[i*4+2]=v;});grad.needsUpdate=true;}
+  // the toon ramps: how many bands of light and shade every surface is painted in, and how softly
+  paintRamp(grad,F.ramp,F.soft,F.warm,F.cool);paintRamp(leafGrad,F.leaf,F.soft,F.warm*0.8,F.cool);fxRim=F.rim;}
+// four bands (shadow to sunlit) meeting a quarter, half and three quarters of the way along, their edges softened by
+// `soft`; a warm glow just on the lit side of where light gives way to shade (`warm`) and bluer shadows (`cool`)
+function paintRamp(t,vals,soft,warm,cool){const d=t.image.data,n=d.length/4;
+  for(let i=0;i<n;i++){const x=(i+0.5)/n;let v=vals[0];for(let b=1;b<4;b++){const e=b*0.25;v+=(vals[b]-vals[b-1])*(soft>0?smooth(e-soft,e+soft,x):x>=e?1:0);}
+    const w=Math.exp(-(((x-0.56)/0.1)**2))*warm,c=clamp(1-x*2,0,1)*cool;
+    d[i*4]=clamp(v*(1+0.14*w-0.05*c),0,255);d[i*4+1]=clamp(v*(1+0.03*w-0.02*c),0,255);d[i*4+2]=clamp(v*(1-0.1*w+0.08*c),0,255);d[i*4+3]=255;}
+  t.needsUpdate=true;}
 function setFx(k){S.fx=k;applyFx();resize();save();}
 applyFx();
+/* =========================================================
+   Petal and leaf cards: thin, smooth, gently curved shapes for flowers and leaves
+   A card runs up its length (local y, 0 at the base to 1 at the tip) through rows of [y, half-width] (a half-width of 0
+   is a point). Rows with a width get a centre line, so the card can cup across its width (`cup`: the edges sweep back,
+   leaving the front face rounded), fold along its midrib (`fold`) and curl along its length (`curl`: + bends the tip
+   towards the front, - away). The front face looks along +z. Each card is smooth-shaded, and a PG part paints it from a
+   deeper base to a bright tip. One-sided cards suit materials drawn from both sides (flowerMat, 42-grass); `closed`
+   adds a back face, for the shared one-sided materials. Shapes are cached, so every flower shares a handful of them.
+   ========================================================= */
+const _cardC=new Map();
+function cardGeo(rows,o={}){const key=JSON.stringify([rows,o]);let g=_cardC.get(key);if(g)return g;
+  const cup=o.cup||0,fold=o.fold||0,curl=o.curl||0,mid=o.mid!==false;let wm=0;for(const r of rows)wm=Math.max(wm,r[1]);
+  const pos=[],idx=[],R=[],zf=(x,y)=>{const t=Math.abs(x)/(wm||1);return-cup*t*t-fold*t+curl*y*y;};
+  for(const [y,w] of rows){const xs=w<=0?[0]:mid?[-w,0,w]:[-w,w];R.push(xs.map(x=>{pos.push(x,y,zf(x,y));return pos.length/3-1;}));}
+  for(let i=0;i<R.length-1;i++){const A=R[i],B=R[i+1];if(A.length===1&&B.length===1)continue;
+    if(A.length===1)for(let j=0;j<B.length-1;j++)idx.push(A[0],B[j+1],B[j]);
+    else if(B.length===1)for(let j=0;j<A.length-1;j++)idx.push(A[j],A[j+1],B[0]);
+    else for(let j=0;j<A.length-1;j++)idx.push(A[j],A[j+1],B[j+1],A[j],B[j+1],B[j]);}
+  if(o.closed){const n=pos.length/3,th=o.th||0.04,m=idx.length;for(let i=0;i<n;i++)pos.push(pos[i*3],pos[i*3+1],pos[i*3+2]-th);for(let i=0;i<m;i+=3)idx.push(idx[i]+n,idx[i+2]+n,idx[i+1]+n);}
+  g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+  smoothG(g);_cardC.set(key,g);return g;}
+// an open, tapering tube up local y (stems, stamens): `sides` round, smooth-shaded, no caps
+function tubeGeo(sides=3,taper=0.6){const key='tube'+sides+'/'+taper;let g=_cardC.get(key);if(g)return g;const pos=[],idx=[];
+  for(let i=0;i<=1;i++){const r=0.5*(i?taper:1);for(let j=0;j<sides;j++){const a=j/sides*6.283;pos.push(Math.cos(a)*r,i,Math.sin(a)*r);}}
+  for(let j=0;j<sides;j++){const a=j,b=(j+1)%sides,c=a+sides,d=b+sides;idx.push(a,c,b,b,c,d);}
+  g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();smoothG(g);_cardC.set(key,g);return g;}
+// a low dome (a flower's eye): a fan from the top round a ring, smooth-shaded so it reads as a rounded button
+function domeGeo(n=6){const key='dome'+n;let g=_cardC.get(key);if(g)return g;const pos=[0,1,0],idx=[];
+  for(let j=0;j<n;j++){const a=j/n*6.283;pos.push(Math.cos(a)*0.5,0,Math.sin(a)*0.5);}
+  for(let j=0;j<n;j++)idx.push(0,1+(j+1)%n,1+j);
+  g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();smoothG(g);_cardC.set(key,g);return g;}
+// a card part whose base sits at (x,y,z), leaning out from upright by `lean` towards azimuth `a` (front face outwards),
+// shaded from `base` to `tip`
+function cardP(p,g,tip,base,x,y,z,a,lean,len,wid,dep=wid,roll=0){p.push(PG(g,tip,base,x,y,z,lean,a,roll,wid,len,dep));}
+const _wh=new T.Color(0xffffff);
+const ltc=(c,f=0.2)=>new T.Color(c).lerp(_wh,f).getHex(),mixc=(a,b,f)=>new T.Color(a).lerp(new T.Color(b),f).getHex();
 /* =========================================================
    Ground textures — Animal Crossing-style patterns instead of geometry:
    triangle-flecked grass, pebbly dirt paths, speckled sand and layered cliff rock.
@@ -2589,7 +2679,7 @@ fruitMat.onBeforeCompile=sh=>{sh.uniforms.uT=leafU.uT;sh.uniforms.uWind=leafU.uW
 // fuzzy grass: clumps of thin tapered blades, instanced over every grass tile; they sway in the wind and part around the villager
 const grassU={uTime:{value:0},uWind:{value:1},uPl:{value:new T.Vector3(0,-99,0)}};
 let nearT=0; // near-grass rebuild timer (see updateNearGrass); set to 0 to rebuild next frame
-const grassMat=toon({vertexColors:true});grassMat.depthWrite=false;const flowerMat=toon({vertexColors:true}); // kept out of the depth buffer so the outline pass doesn't ink every blade
+const grassMat=toon({vertexColors:true});grassMat.depthWrite=false;/* kept out of the depth buffer so the outline pass doesn't ink every blade */const flowerMat=toon({vertexColors:true,side:T.DoubleSide}); // flowers are thin petal cards (54b-flora), seen from both sides
 const swayCompile=sh=>{Object.assign(sh.uniforms,grassU);
   sh.vertexShader='uniform float uTime;uniform float uWind;uniform vec3 uPl;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
   #ifdef USE_INSTANCING
@@ -3948,39 +4038,89 @@ function morningMoveIn(quiet){if(!S.scratch)return;S.moved=S.moved||{};let chang
     else{const u=HEART_UNLOCKS.find(q=>q.k===b.t);news.push([`The <b>${(u?u.name:b.t).toLowerCase()}</b> is finished!`,'rare']);}}
   if(!changed)return;rebuildHome();initNPCs();if(!quiet)news.forEach(([m,c],i)=>setTimeout(()=>toast(m,c,ICON.star),1200+i*2600));}
 /* =========================================================
+   Wild flowers: tulips, roses, cosmos, pansies, lilies, lupins, daisies and crocuses, built from smooth petal cards
+   (30c-cards), each petal shaded from a deeper base to a bright tip, on slender leaning stems with their own leaves:
+   strap leaves for tulips, fans of leaflets for lupins, grassy blades for crocuses and lilies.
+   One clump of three flowers per species and colour, instanced over the town's grass (55-town layoutTown), plus a light
+   twin of each for when you're zoomed out (no leaves, two-triangle petals; cullIslands in 44-terrain swaps them).
+   ========================================================= */
+const FLOWER_SP={tulip:[0xe8453a,0xf6d04a,0xf2a6c8,0xffffff,0x9a6ad0],rose:[0xd8303a,0xf8f4ee,0xf6d04a,0xf2a6c8],cosmos:[0xf2a6c8,0xf8f4ee,0xe86a8a,0xf6a830],
+  pansy:[0x7a5ad0,0xf6d04a,0xe8453a,0x8ac8f0],lily:[0xf8f4ee,0xf08a2a,0xf2a6c8],lupine:[0x8a6ae0,0xf2a6c8,0x6a7ae0],daisy:[0xffffff,0xf6e6f0,0xb8a0ee],crocus:[0xb48ee8,0xf6f2fa,0xf6c440]};
+const dkc=(c,f=0.78)=>new T.Color(c).multiplyScalar(f).getHex();
+// the deeper colour at the base of a petal: white flowers go a soft yellow-green there, coloured ones a richer, darker shade
+function petalBase(c,f=0.68){const k=new T.Color(c);if(Math.min(k.r,k.g,k.b)>0.85)return mixc(c,0xc4d488,0.55);const h={};k.getHSL(h);k.setHSL(h.h,Math.min(1,h.s*1.12),h.l*f);return k.getHex();}
+const PT={tulip:cardGeo([[0,0],[0.36,0.4],[0.76,0.5],[1,0]],{cup:0.34,curl:-0.16}),round:cardGeo([[0,0],[0.3,0.42],[0.72,0.5],[1,0]],{cup:0.24}),
+  fan:cardGeo([[0,0],[0.4,0.34],[0.86,0.5],[1,0.3]],{cup:0.14}),ray:cardGeo([[0,0],[0.18,0.5],[0.84,0.42],[1,0]],{mid:false}),
+  lily:cardGeo([[0,0],[0.3,0.42],[0.6,0.5],[1,0]],{cup:0.3,curl:0.9}),rose:cardGeo([[0,0],[0.3,0.44],[0.7,0.5],[1,0]],{cup:0.42,curl:-0.22}),bell:cardGeo([[0,0],[0.55,0.5],[1,0]],{cup:0.45}),lo:cardGeo([[0,0],[0.55,0.5],[1,0]],{mid:false})};
+const LF={strap:cardGeo([[0,0.3],[0.45,0.46],[0.8,0.32],[1,0]],{cup:0.32,curl:1.1}),oval:cardGeo([[0,0],[0.35,0.46],[0.75,0.4],[1,0]],{cup:0.26,curl:0.3}),
+  blade:cardGeo([[0,0.42],[0.6,0.34],[1,0]],{mid:false,curl:2}),leaflet:cardGeo([[0,0],[0.5,0.5],[1,0]],{cup:0.3,curl:0.4})};
+const STEM=tubeGeo(3,0.65),DOME=domeGeo(6);
+// heads: (x,y,z) is the top of the stem and d its direction; R is drawn the same number of times near and far, so the two
+// versions of a clump match
+const FLOWER_HEAD={
+  tulip(p,c,x,y,z,R,lo){const a0=R()*6.283,base=petalBase(c),g=lo?PT.lo:PT.tulip;
+    for(let k=0;k<6;k++){const a=a0+k*1.0472,o=k%2===0;cardP(p,g,o?ltc(c,0.18):ltc(c,0.06),base,x+Math.sin(a)*0.008,y,z+Math.cos(a)*0.008,a,o?0.26:0.12,0.115,o?0.095:0.08);}},
+  // a rose: a cup of five broad petals round four more and a tight bud at the heart
+  rose(p,c,x,y,z,R,lo){const a0=R()*6.283,base=petalBase(c,0.6),g=lo?PT.lo:PT.rose;
+    for(let k=0;k<5;k++)cardP(p,g,ltc(c,0.14),base,x+Math.sin(a0+k*1.2566)*0.01,y,z+Math.cos(a0+k*1.2566)*0.01,a0+k*1.2566,0.62,0.08,0.085);
+    for(let k=0;k<4;k++)cardP(p,g,ltc(c,0.04),base,x,y+0.008,z,a0+0.6+k*1.5708,0.28,0.068,0.07);
+    if(!lo)for(let k=0;k<3;k++)cardP(p,PT.bell,dkc(c,0.88),base,x,y+0.016,z,a0+k*2.094,0.06,0.05,0.045);},
+  cosmos(p,c,x,y,z,R,lo){const a0=R()*6.283,base=petalBase(c,0.82);
+    for(let k=0;k<8;k++)cardP(p,lo?PT.lo:PT.fan,ltc(c,0.18),base,x,y,z,a0+k*0.7854,1.2,0.1,0.055);
+    p.push(PG(DOME,0xf6c030,0xc08018,x,y-0.004,z,0,0,0,0.045,0.03,0.045));},
+  // two upper petals behind, two at the sides and a broad one in front; the lower three carry the pansy's dark face
+  pansy(p,c,x,y,z,R,lo){const a0=R()*6.283,g=lo?PT.lo:PT.round,face=mixc(c,0x2a1838,0.85),up=dkc(c,0.82);
+    for(const [da,l,w,col,b] of [[2.6,0.075,0.08,up,dkc(c,0.6)],[-2.6,0.075,0.08,up,dkc(c,0.6)],[1.25,0.07,0.07,c,face],[-1.25,0.07,0.07,c,face],[0,0.078,0.088,ltc(c,0.1),face]])
+      cardP(p,g,col,b,x,y,z,a0+da,1.15,l,w);
+    p.push(PG(DOME,0xf6d04a,0xe0a020,x,y+0.004,z,0,0,0,0.022,0.016,0.022));},
+  lily(p,c,x,y,z,R,lo){const a0=R()*6.283,throat=mixc(c,0xe8f0a0,0.45);
+    for(let k=0;k<6;k++)cardP(p,lo?PT.lo:PT.lily,ltc(c,0.1),throat,x,y,z,a0+k*1.0472,k%2?0.62:0.78,0.13,0.05,0.05);
+    if(!lo)for(let k=0;k<3;k++){const a=a0+k*2.094+0.5;p.push(PG(STEM,0xb8c860,0xd8e090,x,y,z,0.35,a,0,0.006,0.09,0.006),PG(DOME,0xc8601a,0xe07a2a,x+Math.sin(a)*0.031,y+0.083,z+Math.cos(a)*0.031,0,0,0,0.016,0.012,0.016));}},
+  // a spike of little pea-flowers, dark below and paling to buds at the tip, up the leaning stem
+  lupine(p,c,x,y,z,R,lo,d){const a0=R()*6.283,lv=lo?4:7,H=0.15;
+    for(let i=0;i<lv;i++){const t=i/(lv-1),s=1-t*0.5,col=mixc(dkc(c,0.8),ltc(c,0.42),t),n=i===lv-1?2:3,cx=x+d[0]*t*H,cy=y+d[1]*t*H,cz=z+d[2]*t*H;
+      for(let k=0;k<n;k++){const a=a0+k*6.283/n+i*1.1;cardP(p,lo?PT.lo:PT.bell,col,dkc(col,0.7),cx+Math.sin(a)*0.01*s,cy,cz+Math.cos(a)*0.01*s,a,1.05-t*0.5,0.042*s,0.036*s);}}},
+  daisy(p,c,x,y,z,R,lo){const a0=R()*6.283,n=lo?8:13,base=mixc(petalBase(c,0.85),0xf6e6a0,0.25);
+    for(let k=0;k<n;k++)cardP(p,lo?PT.lo:PT.ray,ltc(c,0.12),base,x,y,z,a0+k*6.283/n,1.3,0.078,0.024);
+    p.push(PG(DOME,0xf6d04a,0xd8a020,x,y-0.003,z,0,0,0,0.04,0.026,0.04));},
+  crocus(p,c,x,y,z,R,lo){const a0=R()*6.283,base=c===0xf6c440?0xd88a20:mixc(c,0x5a2aa0,0.6),g=lo?PT.lo:PT.tulip;
+    for(let k=0;k<6;k++){const a=a0+k*1.0472;cardP(p,g,ltc(c,0.22),base,x+Math.sin(a)*0.005,y,z+Math.cos(a)*0.005,a,k%2?0.36:0.5,0.085,0.058);}
+    p.push(PG(DOME,0xf08a2a,0xf6c030,x,y+0.012,z,0,0,0,0.018,0.03,0.018));}};
+// leaves, from the foot of the stem at (x,z) (or up it, to height h); r: three random numbers for this flower
+const FLOWER_LEAVES={
+  tulip(p,x,z,h,a,r,g){for(let k=0;k<2;k++)cardP(p,LF.strap,ltc(g,0.1),dkc(g,0.7),x,0.004,z,a+k*3.1+r[k]*0.8,0.42+r[2]*0.3,0.17,0.06);},
+  rose(p,x,z,h,a,r,g){for(let k=0;k<2;k++)cardP(p,LF.oval,ltc(g,0.08),dkc(g,0.72),x,h*(0.38+k*0.22),z,a+k*2.9+r[k],0.95,0.075,0.05);},
+  cosmos(p,x,z,h,a,r,g){for(let k=0;k<3;k++)cardP(p,LF.blade,ltc(g,0.1),dkc(g,0.75),x,h*(0.2+k*0.18),z,a+k*2.2+r[k],0.75,0.09,0.018);},
+  pansy(p,x,z,h,a,r,g){for(let k=0;k<3;k++)cardP(p,LF.oval,ltc(g,0.08),dkc(g,0.7),x,0.01,z,a+k*2.1+r[k]*0.5,1.15,0.08,0.055);},
+  lily(p,x,z,h,a,r,g){for(let k=0;k<3;k++)cardP(p,LF.blade,ltc(g,0.1),dkc(g,0.72),x,h*(0.15+k*0.22),z,a+k*2.3+r[k],0.8,0.12,0.022);},
+  lupine(p,x,z,h,a,r,g){for(let k=0;k<6;k++)cardP(p,LF.leaflet,ltc(g,0.1),dkc(g,0.72),x,0.035,z,a+k*1.047+r[0],1.25,0.07,0.024);},
+  daisy(p,x,z,h,a,r,g){for(let k=0;k<2;k++)cardP(p,LF.oval,ltc(g,0.08),dkc(g,0.7),x,0.008,z,a+k*3.1+r[k]*0.6,1.1,0.075,0.045);cardP(p,LF.oval,ltc(g,0.08),dkc(g,0.72),x,h*0.45,z,a+1.5,0.9,0.055,0.032);},
+  crocus(p,x,z,h,a,r,g){for(let k=0;k<3;k++)cardP(p,LF.blade,ltc(g,0.12),dkc(g,0.7),x,0.002,z,a+k*2.1+r[k]*0.6,0.22+r[2]*0.2,0.12,0.016);}};
+// stem heights: knee-high to the villager (~0.9 tall), the lupin's spike and the crocus's cup sitting low
+const FLOWER_H={tulip:0.19,rose:0.16,cosmos:0.23,pansy:0.075,lily:0.2,lupine:0.11,daisy:0.15,crocus:0.025};
+function floraClump(sp,c,seed,lo){const R=mulberry(seed),p=[],n=sp==='crocus'?4:3;
+  for(let s=0;s<n;s++){const a=s*2.1+R(),r=s?0.13+R()*0.07:0.02,x=Math.cos(a)*r,z=Math.sin(a)*r,h=FLOWER_H[sp]*(0.85+R()*0.3),la=R()*6.283,lean=0.04+R()*0.12,lr=[R(),R(),R()],g=GREENS[s%4];
+    const d=[Math.sin(la)*Math.sin(lean),Math.cos(lean),Math.cos(la)*Math.sin(lean)],ax=sp==='lupine'?0.15:0;
+    p.push(PG(STEM,0x62a444,0x3a6a28,x,0,z,lean,la,0,0.026,h+ax,0.026));if(!lo)FLOWER_LEAVES[sp](p,x,z,h,a,lr,g);
+    FLOWER_HEAD[sp](p,c,x+d[0]*h,d[1]*h,z+d[2]*h,R,lo,d);}
+  return merge(p);}
+const FLORA_KEYS=[],FLORA_GEOS=[],FLORA_LO=[];
+for(const sp in FLOWER_SP)FLOWER_SP[sp].forEach((c,ci)=>{const seed=hi(sp.length,ci,31);FLORA_KEYS.push(sp+ci);FLORA_GEOS.push(floraClump(sp,c,seed,false));FLORA_LO.push(floraClump(sp,c,seed,true));});
+// which clump grows at (x,z): one species per 5x5 patch, one colour per 3x3
+function floraIndex(x,z){const sps=Object.keys(FLOWER_SP),sp=sps[Math.floor(hash(Math.floor(x/5)+11,Math.floor(z/5)-3)*sps.length)],cols=FLOWER_SP[sp];
+  const ci=Math.floor(hash(Math.floor(x/3)-5,Math.floor(z/3)+9)*cols.length);return FLORA_KEYS.indexOf(sp+ci);}
+// clover: round three-part leaves lying flat, and a white clover flower
+const CLOVER_GEO=(()=>{const R=mulberry(5),p=[],lf3=cardGeo([[0,0],[0.45,0.5],[0.85,0.42],[1,0.12]],{mid:false});
+  for(let i=0;i<7;i++){const cx=(R()-0.5)*0.55,cz=(R()-0.5)*0.55,y=0.03+R()*0.04,r0=R()*6.28,g=GREENS[i%4];
+    for(let j=0;j<3;j++)cardP(p,lf3,ltc(g,0.1),dkc(g,0.72),cx,y,cz,r0+j*2.094,1.3,0.085,0.075);
+    if(i===2)p.push(PG(STEM,0x62a444,0x3a6a28,cx,0,cz,0.1,r0,0,0.018,y+0.05,0.018),PG(DOME,0xffffff,0xf2c8d8,cx,y+0.045,cz,0,0,0,0.055,0.05,0.055));}
+  return merge(p);})();
+/* =========================================================
    The town: a Wild World-style village generated from the world seed —
    plaza with a town tree, shops, a museum, a town hall, villager homes, dirt paths, lamps and trees
    ========================================================= */
 const TOWN={fHid:null,name:'',plaza:[0,0],benches:[],cafeSeats:[],light:null,bld:[],path:new Map(),fixed:new Map(),plot:[],board:null,lamps:[],flora:new Map(),res:new Map()};
-// wild flower clumps (one geometry per colour), clover and pebbles for the town's grass
-const FLOWER_SP={tulip:[0xe8453a,0xf6d04a,0xf2a6c8,0xffffff,0x9a6ad0],rose:[0xd8303a,0xf8f4ee,0xf6d04a,0xf2a6c8],cosmos:[0xf2a6c8,0xf8f4ee,0xe86a8a,0xf6a830],
-  pansy:[0x7a5ad0,0xf6d04a,0xe8453a,0x8ac8f0],lily:[0xf8f4ee,0xf08a2a,0xf2a6c8],hyacinth:[0x6a7ae0,0xf2a6c8,0xf8f4ee],daisy:[0xffffff,0xf6e6f0]};
-const dkc=(c,f=0.78)=>new T.Color(c).multiplyScalar(f).getHex();
-function flowerHead(p,sp,c,x,y,z,R){
-  switch(sp){
-    case'tulip':for(let k=0;k<6;k++)lf(p,k%2?c:dkc(c,0.88),x,y-0.03,z,k/6*6.283+R()*0.2,1.3,0.14,0.085,0.035);p.push(P(ICO2,dkc(c,0.7),x,y+0.015,z,0,0,0,0.07,0.08,0.07));break;
-    case'rose':for(let k=0;k<6;k++)lf(p,c,x,y,z,k/6*6.283,0.35,0.09,0.08,0.04);p.push(P(ICO2,c,x,y+0.02,z,0,0,0,0.12,0.09,0.12),P(ICO2,dkc(c,0.8),x,y+0.05,z,0,1,0,0.08,0.06,0.08),P(ICO2,dkc(c,0.65),x,y+0.07,z,0,2,0,0.04,0.035,0.04));break;
-    case'cosmos':for(let k=0;k<8;k++)lf(p,c,x,y,z,k/8*6.283,0.12,0.14,0.05,0.025);p.push(P(ICO2,0xf6c030,x,y+0.01,z,0,0,0,0.05,0.035,0.05));break;
-    case'pansy':for(let k=0;k<5;k++){const a=k/5*6.283;p.push(P(ICO2,k<2?dkc(c,0.8):c,x+Math.cos(a)*0.05,y+0.01,z+Math.sin(a)*0.05,0,-a,0.2,0.09,0.02,0.08));}p.push(P(ICO2,0x3a2a4a,x,y+0.02,z,0,0,0,0.06,0.02,0.06),P(ICO2,0xf6d04a,x,y+0.03,z,0,0,0,0.025,0.02,0.025));break;
-    case'lily':for(let k=0;k<6;k++)lf(p,k%2?c:dkc(c,0.92),x,y,z,k/6*6.283,0.75,0.17,0.06,0.03);for(let k=0;k<3;k++)p.push(P(BOX,0xe8903a,x+Math.cos(k*2.1)*0.02,y+0.07,z+Math.sin(k*2.1)*0.02,0.3*Math.cos(k),k,0.3*Math.sin(k),0.008,0.1,0.008));break;
-    case'hyacinth':for(let k=0;k<14;k++){const a=k*2.4,h=y+k*0.012,r=0.035-k*0.0012;p.push(P(ICO2,k%3?c:dkc(c,0.85),x+Math.cos(a)*r,h,z+Math.sin(a)*r,0,a,0,0.045,0.04,0.045));}break;
-    default:bloom(p,c,0xf6d04a,x,y,z,0.1,10,0.15);}}
-// stem heights: ankle-high next to the villager (~0.9 tall), like Animal Crossing flowers
-const FLOWER_H={tulip:0.15,rose:0.14,cosmos:0.19,pansy:0.07,lily:0.17,hyacinth:0.09,daisy:0.12};
-// flowers are only a few pixels on screen, so they're built from the lightest versions of each shape (a round petal
-// is 20 triangles, not 320): there are hundreds of them across the island
-const FLORA_LITE=new Map([[LEAF0,LEAF8]/* a petal or leaf: 8 triangles, not 20 */,[ICO2,OCT],[ICO,OCT],[ICO0,OCT],[SPH,SPH_XS],[SPH_LO,SPH_XS],[CYL12,CYL5],[CYL8,CYL5],[CYL6,CYL5],[CONE8,CONE5],[CONE6,CONE5]]);
-const FLORA_KEYS=[],FLORA_GEOS=[],FLORA_LO=[];/* FLORA_LO: the far version (no stems, a third of the leaves and petals) */
-for(const sp in FLOWER_SP)FLOWER_SP[sp].forEach((c,ci)=>{const R=mulberry(hi(sp.length,ci,31)),p=[];
-  for(let s=0;s<3;s++){const a=s*2.1+R(),r=s?0.14+R()*0.06:0.02,x=Math.cos(a)*r,z=Math.sin(a)*r,h=FLOWER_H[sp]*(0.85+R()*0.3);stemP(p,0x4f8a34,x,z,h);
-    if(sp==='tulip'){lf(p,GREENS[s%4],x,0.01,z,a,1.15,0.2,0.08);lf(p,GREENS[(s+1)%4],x,0.01,z,a+3,1.05,0.18,0.07);}
-    else if(sp==='pansy'||sp==='hyacinth')for(let k=0;k<3;k++)lf(p,GREENS[k%4],x,0.01,z,a+k*2.1,0.35,0.1,0.07);
-    else{lf(p,GREENS[s%4],x,h*0.35,z,a,0.45,0.12,0.06);lf(p,GREENS[(s+2)%4],x,h*0.55,z,a+2.6,0.45,0.1,0.05);}
-    flowerHead(p,sp,c,x,h,z,R);}
-  FLORA_KEYS.push(sp+ci);FLORA_GEOS.push(merge(p.map(q=>Object.assign({},q,{geo:FLORA_LITE.get(q.geo)||q.geo}))));FLORA_LO.push(merge(p.filter((q,i)=>q.geo!==CYL6&&q.geo!==CYL12&&(q.geo!==LEAF0||i%3===0))));});
-function floraIndex(x,z){const sps=Object.keys(FLOWER_SP),sp=sps[Math.floor(hash(Math.floor(x/5)+11,Math.floor(z/5)-3)*sps.length)],cols=FLOWER_SP[sp];
-  const ci=Math.floor(hash(Math.floor(x/3)-5,Math.floor(z/3)+9)*cols.length);return FLORA_KEYS.indexOf(sp+ci);}
-const CLOVER_GEO=(()=>{const R=mulberry(5),p=[];for(let i=0;i<7;i++){const cx=(R()-0.5)*0.55,cz=(R()-0.5)*0.55,y=0.03+R()*0.04,r0=R()*6.28;for(let j=0;j<3;j++)lf(p,GREENS[(i+j)%4],cx,y,cz,r0+j*2.09,0.12,0.09,0.08);if(i===2)bloom(p,0xffffff,0xf2c8d8,cx,y+0.05,cz,0.04,6,0.9);}return merge(p.map(q=>Object.assign({},q,{geo:FLORA_LITE.get(q.geo)||q.geo})));})();
+// (wild flowers and clover: 54b-flora)
 const PEBBLE_GEO=merge([P(ICO,0xb8b4ac,0,0.02,0,0,0.3,0,0.14,0.07,0.11),P(ICO,0xa09c94,0.1,0.015,0.06,0,1,0,0.09,0.05,0.08),P(ICO,0xc8c4bc,-0.08,0.015,0.07,0,2,0,0.07,0.04,0.06)]);
 const DOCK={x:1,z:12};
 function scaleParts(ps,s){return ps.map(p=>Object.assign({},p,{x:p.x*s,y:p.y*s,z:p.z*s,sx:p.sx*s,sy:p.sy*s,sz:p.sz*s}));}
@@ -4171,13 +4311,13 @@ function benchParts(p,x,z,r){const q=[P(BOX,0x9a6438,0,0.2,0,0,0,0,0.9,0.07,0.3)
 // ground, and send up sparks (and a thread of smoke by day). One shared point light sits in the fire nearest the camera.
 const fires=new Set(),flameU={uT:{value:0}},_fv=new T.Vector3();
 const flameMat=new T.MeshBasicMaterial({vertexColors:true});
-flameMat.onBeforeCompile=sh=>{sh.uniforms.uT=flameU.uT;sh.vertexShader='uniform float uT;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+flameMat.onBeforeCompile=sh=>{sh.uniforms.uT=flameU.uT;sh.uniforms.glowA=GLOW_A;sh.fragmentShader='uniform float glowA;\n'+sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\ngl_FragColor.a=1.-glowA;');/* (a light source: 30-render GLOW_A) */sh.vertexShader='uniform float uT;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
   float fh=max(transformed.y,0.0),fw=fh*fh*1.8;
   transformed.x+=(sin(uT*8.0+fh*7.0+position.z*6.0)*0.08+sin(uT*15.0+fh*13.0+position.x*4.0)*0.03)*fw;
   transformed.z+=(cos(uT*7.0+fh*6.0+position.x*6.0)*0.08+cos(uT*13.0+fh*11.0)*0.03)*fw;
   transformed.y*=1.0+sin(uT*11.0+position.x*9.0+position.z*7.0)*0.14*fh;`);};
 const firePoolMat=new T.MeshBasicMaterial({map:glowTex,color:0xffb070,transparent:true,blending:T.AdditiveBlending,depthWrite:false,opacity:0});
-const fireLight=new T.PointLight(0xff9448,0,9,1.4);scene.add(fireLight);
+const fireLight=new T.PointLight(0xff9a4c,0,10,2);scene.add(fireLight);/* one warm light, carried to whichever fire is nearest the view */
 function addFire(parent,x,y,z,s=1){const f=M(flameParts(s),flameMat);f.castShadow=false;f.receiveShadow=false;f.position.set(x,y+0.04*s,z);f.userData.s=s;parent.add(f);fires.add(f);
   const pm=new T.Mesh(POOL_GEO,firePoolMat);pm.position.set(x,y+0.04,z);pm.scale.setScalar(1.5*s);pm.userData.noThumb=true;pm.renderOrder=2;pm.frustumCulled=false;parent.add(pm);return f;}
 // how lit a fire wants to be: a small flame by day, a bonfire from dusk (and whenever you sit by it or have just lit it)
@@ -4194,8 +4334,8 @@ function updateFires(dt,tt){flameU.uT.value=tt;let best=null,bd=26*26,bl=0;
       if(nightF<0.35&&Math.random()<dt*1.4)emit(_v.x+(Math.random()-0.5)*0.15,_v.y+(0.6+L*0.4)*s,_v.z+(Math.random()-0.5)*0.15,{vx:0.12,vy:0.45,vz:0.04,life:3,max:3,size:0.09,color:0xd8d2cc,g:-0.05,sw:0.5,ph:Math.random()*6});}
     const d=(_v.x-cam.tx)**2+(_v.z-cam.tz)**2;if(d<bd){bd=d;best=_fv.copy(_v);bl=L*s;}}
   const fk=0.85+Math.sin(tt*13)*0.08+Math.sin(tt*29)*0.05+Math.sin(tt*5.3)*0.05;
-  if(best){fireLight.position.set(best.x,best.y+0.9,best.z);fireLight.intensity=Math.max(0,nightF*0.9+0.08)*bl*1.5*fk;}else fireLight.intensity=0;
-  firePoolMat.opacity=clamp(nightF*1.1+0.05,0,1)*clamp(bl,0,1)*fk;}
+  if(best){fireLight.position.set(best.x,best.y+0.9,best.z);fireLight.intensity=Math.max(0,nightF*0.9+0.08)*Math.min(bl,1.1)*1.15*fk;/* a warm pool round the fire, fading out over a few steps */}else fireLight.intensity=0;
+  firePoolMat.opacity=clamp(nightF*1.1+0.05,0,1)*clamp(bl,0,1)*fk*0.7;}
 /* ---- villager homes in coastal styles, one per personality (footprint ±1, door at the front centre, +z) ---- */
 function planks(p,c,x,y,z,w,h,d,axis='x'){const n=Math.max(2,Math.round((axis==='x'?w:d)/0.14));for(let i=0;i<n;i++){const t=(i+0.5)/n-0.5,sh=i%2?0.94:1.04;
   p.push(axis==='x'?P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x+t*w,y,z,0,0,0,w/n*0.96,h,d):P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x,y,z+t*d,0,0,0,w,h,d/n*0.96));}}
@@ -5597,7 +5737,7 @@ const HSTYLE={
   top:[['tee','T-shirt'],['stripe','Stripy tee'],['hoodie','Hoodie'],['sweater','Sweater'],['tank','Vest top'],['overalls','Overalls'],['dress','Dress'],['jacket','Jacket']],
   bot:[['shorts','Shorts'],['trousers','Trousers'],['skirt','Skirt']],
   hat:[['none','Nothing'],['cap','Cap'],['beanie','Beanie'],['sunhat','Sun hat'],['bow','Bow'],['flower','Flower'],['headband','Headband'],['band','Bandana']]};
-const HDEF={boy:{g:'boy',skin:2,hair:'short',hairC:1,eye:3,top:'sweater',topC:0x4a8a4a,bot:'trousers',botC:0x6a4a34,shoe:0xf4f0ea,hat:'none',glasses:0,blush:1,freckles:0},
+const HDEF={boy:{g:'boy',skin:2,hair:'short',hairC:2,eye:3,top:'sweater',topC:0x4a8a4a,bot:'trousers',botC:0x6a4a34,shoe:0xf4f0ea,hat:'none',glasses:0,blush:1,freckles:0},
   girl:{g:'girl',skin:1,hair:'long',hairC:2,eye:1,top:'overalls',topC:0xf4f0ea,bot:'shorts',botC:0x7aa0d8,shoe:0xf6c84a,hat:'flower',glasses:0,blush:1,freckles:0}};
 // The model is sculpted from shaped geometry, in the proportions of a young person drawn in a cosy pixel-art style:
 // a head about a third of the height, egg-shaped (round cranium, narrower jaw and chin: headPt), ears and a nose;
@@ -5614,7 +5754,7 @@ function onHead(u,v,r=1){const w=Math.sqrt(Math.max(0,1-u*u-v*v)),[x,y,z]=headPt
 function headGeo(){if(_hgeo.has('head2'))return _hgeo.get('head2');const g=new T.SphereGeometry(1,40,30),a=g.attributes.position;
   for(let i=0;i<a.count;i++){const [x,y,z]=headPt(a.getX(i),a.getY(i),a.getZ(i));a.setXYZ(i,x,y,z);}g.computeVertexNormals();smoothG(g);_hgeo.set('head2',g);return g;}
 // each style's base: where the fringe line sits, the hem at the sides and back, its volume, and how far long hair falls
-const HAIR_CUT={short:{f:0.42,hem:-0.05,back:-0.5},side:{f:'side',hem:-0.05,back:-0.5},spiky:{f:0.45,hem:-0.08,back:-0.5},buzz:{f:0.55,hem:-0.12,back:-0.45,r:1.03,top:0.01},
+const HAIR_CUT={short:{f:0.4,hem:-0.08,back:-0.55,r:1.12,top:0.1},side:{f:'side',hem:-0.05,back:-0.5},spiky:{f:0.45,hem:-0.08,back:-0.5},buzz:{f:0.55,hem:-0.12,back:-0.45,r:1.03,top:0.01},
   curly:{f:0.42,hem:-0.1,back:-0.5,r:1.1},mohawk:{f:0.6,hem:-0.15,back:-0.45,r:1.02,top:0},bob:{f:0.4,hem:-0.62,back:-0.62,side:0.62,pull:0.15},
   long:{f:0.4,hem:-0.6,back:-0.95,side:0.62,pull:1.1},ponytail:{f:0.4,hem:-0.1,back:-0.55},pigtails:{f:0.4,hem:-0.1,back:-0.55},bun:{f:0.4,hem:-0.1,back:-0.55},afro:{f:0.45,hem:-0.3,back:-0.6,r:1.42,top:0.1}};
 function hairGeo(st){const key='h2'+st;if(_hgeo.has(key))return _hgeo.get(key);const C=HAIR_CUT[st]||HAIR_CUT.short,g=new T.SphereGeometry(1,56,42),a=g.attributes.position;
@@ -5628,21 +5768,35 @@ function hairGeo(st){const key='h2'+st;if(_hgeo.has(key))return _hgeo.get(key);c
     a.setXYZ(i,X,Y,Z);}
   g.computeVertexNormals();smoothG(g);_hgeo.set(key,g);return g;}
 function latheGeo(key,pts,seg=20){if(_hgeo.has(key))return _hgeo.get(key);const g=new T.LatheGeometry(pts.map(([r,y])=>new T.Vector2(Math.max(0.0005,r),y)),seg);g.computeVertexNormals();smoothG(g);_hgeo.set(key,g);return g;}
-// a tapered limb segment from radius r0 (at 0) to r1 (at -len), with rounded ends
-const seg2=(k,r0,r1,len)=>latheGeo('sg'+k,[[0.0005,0],...[...Array(5)].map((_,i)=>{const a=i/4*Math.PI/2;return[Math.sin(a)*r0,-r0+Math.cos(a)*r0];}),...[...Array(5)].map((_,i)=>{const a=i/4*Math.PI/2;return[Math.cos(a)*r1,-len+r1-Math.sin(a)*r1-r1];}),[0.0005,-len-r1]].map(([r,y])=>[r,y]).reverse(),14);
+// a lathe with knit ribs running down it (a sweater, its sleeves and cuffs): the radius ripples round the body
+function ribLathe(key,pts,ribs,amp){if(_hgeo.has(key))return _hgeo.get(key);const g=new T.LatheGeometry(pts.map(([r,y])=>new T.Vector2(Math.max(0.0005,r),y)),ribs*4),a=g.attributes.position;
+  for(let i=0;i<a.count;i++){const x=a.getX(i),z=a.getZ(i),k=1+amp*Math.cos(Math.atan2(z,x)*ribs);a.setX(i,x*k);a.setZ(i,z*k);}
+  g.computeVertexNormals();smoothG(g);_hgeo.set(key,g);return g;}
+// a tapered limb segment from radius r0 (at 0) to r1 (at -len), with rounded ends (ribbed: knitted)
+const seg2=(k,r0,r1,len,ribs=0)=>(ribs?(key,pts)=>ribLathe(key,pts,ribs,0.06):latheGeo)((ribs?'sgr':'sg')+k,[[0.0005,0],...[...Array(5)].map((_,i)=>{const a=i/4*Math.PI/2;return[Math.sin(a)*r0,-r0+Math.cos(a)*r0];}),...[...Array(5)].map((_,i)=>{const a=i/4*Math.PI/2;return[Math.cos(a)*r1,-len+r1-Math.sin(a)*r1-r1];}),[0.0005,-len-r1]].map(([r,y])=>[r,y]).reverse(),14);
 const tear=k=>latheGeo('tear'+k,[...Array(11)].map((_,i)=>{const t=i/10;return[Math.max(0.001,Math.sin(Math.PI*t)**0.75*(1-t*0.35)*0.5),t];}),16);
-// a lock of hair: thick at the root, tapering to a point
-const LOCK=latheGeo('lock',[[0.0005,0],[0.45,0.06],[0.5,0.2],[0.4,0.5],[0.22,0.8],[0.0005,1]],8);
-function lock(p,col,root,tip,w){const dx=tip[0]-root[0],dy=tip[1]-root[1],dz=tip[2]-root[2],L=Math.hypot(dx,dy,dz);w*=1.22;p.push(P(LOCK,col,root[0],root[1],root[2],Math.atan2(Math.hypot(dx,dz),dy),Math.atan2(dx,dz),0,w,L,w*0.7));}
+// a lock of hair: a fat, flattened clump, thickest a little way up and tapering to a soft point, that arches out from root
+// to tip (following the round of the head: arch < 0) and flicks up at the end (flick < 0: away from the head)
+function lockGeo(arch,flick){arch=Math.round(arch*20)/20;flick=Math.round(flick*20)/20;/* (a handful of cached shapes) */const key='lk'+arch+'/'+flick;if(_hgeo.has(key))return _hgeo.get(key);
+  const RAD=[[0,0.4],[0.16,0.5],[0.4,0.47],[0.64,0.36],[0.82,0.22],[0.94,0.09],[1,0.004]],S=8,pos=[],idx=[];
+  for(const [t,r] of RAD){const zc=arch*2*t*(1-t)+flick*Math.max(0,t-0.55)**2*4.9;for(let j=0;j<S;j++){const a=j/S*6.283;pos.push(Math.cos(a)*r,t,zc+Math.sin(a)*r);}}
+  for(let i=0;i<RAD.length-1;i++)for(let j=0;j<S;j++){const a=i*S+j,b=i*S+(j+1)%S,c=a+S,d=b+S;idx.push(a,c,b,b,c,d);}
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();smoothG(g);_hgeo.set(key,g);return g;}
+// a lock from root to tip (points on or near the head), shaded from a deeper root to a sunlit tip
+function lock(p,col,root,tip,w,arch=-0.7,flick=-0.25){const dx=tip[0]-root[0],dy=tip[1]-root[1],dz=tip[2]-root[2],L=Math.hypot(dx,dy,dz);w*=1.22;
+  p.push(PG(lockGeo(arch,flick),lerpHex(col,0xfff4e0,0.1),lerpHex(col,0x1a1420,0.12),root[0],root[1],root[2],Math.atan2(Math.hypot(dx,dz),dy),Math.atan2(dx,dz),0,w,L,w*0.72));}
 const hairMat=toon({vertexColors:true,side:T.DoubleSide});
 function humanModel(h0){const h=Object.assign({},HDEF.boy,h0),g=new T.Group(),p=[],hp=[],sk=HSKIN[h.skin]??HSKIN[2],hc=HHAIR[h.hairC]??HHAIR[1],ec=HEYES[h.eye]??HEYES[0],tc=h.topC,bc=h.botC,girl=h.g==='girl';
   const dk=(c,t)=>lerpHex(c,0x1a1420,t),lt=(c,t)=>lerpHex(c,0xffffff,t),dress=h.top==='dress',W=girl?1.0:1.1,hipY=0.38,shY=0.68,zS=0.72,DY=-0.12;
   const longS=['hoodie','sweater','jacket'].includes(h.top),rib=h.top==='sweater'||h.top==='hoodie';
   // torso: hips, waist, chest and shoulders, flattened front to back
-  const torso=latheGeo('torso'+(girl?'g':'b'),girl?[[0.0005,0.45],[0.12,0.45],[0.125,0.52],[0.105,0.6],[0.115,0.68],[0.13,0.74],[0.12,0.79],[0.06,0.83],[0.0005,0.84]]
+  const torso=(rib&&h.top==='sweater'?(k,q)=>ribLathe(k+'R',q,22,0.035):latheGeo)('torso'+(girl?'g':'b'),girl?[[0.0005,0.45],[0.12,0.45],[0.125,0.52],[0.105,0.6],[0.115,0.68],[0.13,0.74],[0.12,0.79],[0.06,0.83],[0.0005,0.84]]
     :[[0.0005,0.45],[0.12,0.45],[0.125,0.52],[0.118,0.6],[0.13,0.68],[0.145,0.75],[0.13,0.8],[0.06,0.84],[0.0005,0.85]],24);
-  p.push(P(torso,h.top==='tank'?tc:tc,0,0,0,0,0,0,W,1,zS));
-  if(rib)p.push(P(latheGeo('ribH',[[0.123,0],[0.129,0.012],[0.129,0.035],[0.123,0.045]]),dk(tc,0.08),0,0.45,0,0,0,0,W,1,zS*1.02),P(latheGeo('ribN',[[0.055,0],[0.064,0.012],[0.06,0.03]]),dk(tc,0.08),0,0.825,0,0,0,0,W,1,zS*1.2));
+  const knit=h.top==='sweater',kw=knit?1.04:1;
+  p.push(P(torso,tc,0,0,0,0,0,0,W*kw,1,zS*kw));
+  // a ribbed hem and a chunky rolled collar
+  if(rib)p.push(P(ribLathe('ribH2',[[0.123,0],[0.131,0.012],[0.131,0.04],[0.123,0.052]],30,0.03),dk(tc,0.1),0,0.445,0,0,0,0,W*kw,1,zS*kw*1.02),
+    P(ribLathe('ribN2',[[0.05,0],[0.066,0.008],[0.07,0.028],[0.064,0.046],[0.052,0.05]],16,0.05),dk(tc,0.06),0,0.815,0,0,0,0,W,1,zS*1.25));
   if(h.top==='stripe')for(let i=0;i<4;i++)p.push(P(latheGeo('st2',[[0.128,0],[0.132,0.01],[0.128,0.02]]),0xf8f6f0,0,0.5+i*0.07,0,0,0,0,W*(i===3?1.08:1),1,zS*1.02));
   if(h.top==='hoodie'){p.push(P(SPH_LO,dk(tc,0.1),0,0.82,-0.07,0,0,0,0.2,0.09,0.11),P(BOX,dk(tc,0.08),0,0.56,0.085,-0.06,0,0,0.13,0.06,0.015));for(const s of [-1,1])p.push(P(CYL8,0xf4f0ea,s*0.025,0.72,0.09,0,0,0,0.008,0.07,0.008));}
   if(h.top==='jacket'){p.push(P(BOX,0xf4f0ea,0,0.66,0.087,-0.05,0,0,0.07,0.28,0.012));for(const s of [-1,1])p.push(P(BOX,dk(tc,0.15),s*0.045,0.76,0.082,-0.15,0,s*0.35,0.03,0.09,0.015));}
@@ -5651,7 +5805,7 @@ function humanModel(h0){const h=Object.assign({},HDEF.boy,h0),g=new T.Group(),p=
   // the lower half: trousers or shorts on the hips, a skirt or a dress flaring out
   if(dress)p.push(P(latheGeo('dress2',[[0.0005,0.62],[0.11,0.62],[0.125,0.54],[0.17,0.4],[0.19,0.33],[0.0005,0.33]]),tc,0,0,0,0,0,0,W,1,0.85),P(latheGeo('dhem',[[0.188,0],[0.193,0.012],[0.186,0.024]]),lt(tc,0.4),0,0.33,0,0,0,0,W,1,0.85));
   else if(h.bot==='skirt')p.push(P(latheGeo('skirt2',[[0.0005,0.56],[0.125,0.56],[0.16,0.44],[0.175,0.39],[0.0005,0.39]]),bc,0,0,0,0,0,0,W,1,0.85));
-  else if(h.top!=='overalls')p.push(P(latheGeo('pelvis',[[0.0005,0.42],[0.115,0.42],[0.125,0.48],[0.125,0.55],[0.0005,0.56]]),bc,0,0,0,0,0,0,W,1,zS*1.02),P(latheGeo('belt',[[0.126,0],[0.129,0.012],[0.126,0.022]]),dk(bc,0.35),0,0.535,0,0,0,0,W,1,zS*1.03));
+  else if(h.top!=='overalls')p.push(P(latheGeo('pelvis',[[0.0005,0.42],[0.115,0.42],[0.125,0.48],[0.125,0.55],[0.0005,0.56]]),bc,0,0,0,0,0,0,W*(rib?0.94:1),1,zS*(rib?0.96:1.02)),...(rib?[]:[P(latheGeo('belt',[[0.126,0],[0.129,0.012],[0.126,0.022]]),dk(bc,0.35),0,0.535,0,0,0,0,W,1,zS*1.03)]));/* (a sweater or hoodie hides the belt) */
   // neck and head
   p.push(P(latheGeo('neck2',[[0.0005,0],[0.045,0],[0.042,0.05],[0.045,0.1],[0.0005,0.1]]),sk,0,0.8,0,0,0,0,1,1,0.9));
   for(const q of p)q.y+=DY;/* the whole body sits lower: shorter legs */
@@ -5659,7 +5813,7 @@ function humanModel(h0){const h=Object.assign({},HDEF.boy,h0),g=new T.Group(),p=
   const feat=(geo,col,u,v,sx,sy,sz,r=1.0,into=p,rz=0)=>{const [x,y,z,ry,rx]=onHead(u,v,r);into.push(P(geo,col,x,y,z,rx,ry,rz,sx,sy,sz));};
   for(const s of [-1,1]){const [x,y,z]=headPt(s*0.99,-0.06,-0.05);p.push(P(SPH_LO,sk,x,HEAD_Y+y,z,0,s*0.3,0,0.045,0.07,0.035),P(SPH_XS,dk(sk,0.15),x+s*0.004,HEAD_Y+y,z+0.008,0,0,0,0.022,0.04,0.015));}/* ears */
   feat(SPH_LO,sk,0,-0.22,0.034,0.05,0.04,1.0);feat(SPH_XS,dk(sk,0.16),0,-0.27,0.03,0.012,0.012,1.012);/* a nose, with a little shadow under it */
-  if(h.blush)for(const s of [-1,1])feat(SPH_LO,girl?0xf6a0ac:0xf0a8a0,s*0.5,-0.3,0.05,0.03,0.012,0.99);
+  if(h.blush)for(const s of [-1,1])feat(SPH_LO,girl?0xf6a0ac:0xf29c94,s*0.5,-0.3,0.058,0.034,0.012,0.99);
   if(h.freckles)for(const s of [-1,1])for(let i=0;i<4;i++)feat(SPH_XS,dk(sk,0.3),s*(0.2+i*0.07),-0.2-(i%2)*0.04,0.009,0.009,0.006,1.005);
   for(const s of [-1,1])feat(BOX,dk(hc,0.15),s*0.34,0.16,girl?0.058:0.064,girl?0.009:0.014,0.01,1.008,p,s*(girl?-0.15:-0.06));/* brows */
   // hair: the base, then locks
@@ -5671,7 +5825,15 @@ function humanModel(h0){const h=Object.assign({},HDEF.boy,h0),g=new T.Group(),p=
     lock(hp,[hc,hl,hd][i%3],sph(a,e,1.04),sph(a+(R0()-0.5)*0.5,e+0.55+R0()*0.25,out),0.06+R0()*0.02);}};
   const sides=(len)=>{for(const s of [-1,1])for(let i=0;i<3;i++){const root=at(s*0.82,0.35-i*0.12,1.08),tip=at(s*(0.9+R0()*0.05),0.1-len-i*0.08,1.12);lock(hp,i%2?hc:hd,root,tip,0.045);}};
   switch(h.hair){
-    case'short':crown(14,1.22);fringe(6,0.3);sides(0.12);break;
+    // a big, soft, tousled mop: fat locks sweeping out from a whorl at the back of the crown, a heavy fringe falling in
+    // points across the forehead, tufts over the ears and down the nape
+    case'short':{const W0=[-1.75,0.32];
+      for(let i=0;i<20;i++){const a=W0[0]+i/20*6.283+(R0()-0.5)*0.2,front=Math.sin(a)>0.35,e1=front?0.95+R0()*0.12:1.05+R0()*0.4;
+        lock(hp,[hc,hl,hc,hd][i%4],sph(a,0.12+R0()*0.18,1.06),sph(a+(R0()-0.5)*0.35,e1,1.17+R0()*0.05),0.105+R0()*0.025,-0.9,-0.35-R0()*0.3);}
+      for(let i=0;i<7;i++){const u=(i/6-0.5)*1.25,root=at(u*0.6,0.86,1.12),tip=at(u*1.05+(i%2?0.07:-0.05),0.34+R0()*0.08-(Math.abs(u)>0.5?0.08:0),1.13);lock(hp,i%2?hl:hc,root,tip,0.088+R0()*0.02,-0.7,-0.35);}
+      for(const s of [-1,1])for(let i=0;i<3;i++){const root=at(s*0.7,0.62-i*0.08,1.1),tip=at(s*(0.93+R0()*0.04),0.02-i*0.1,1.15);lock(hp,i%2?hc:hd,root,tip,0.085,-0.6,-0.45);}
+      for(let i=0;i<7;i++){const a=-Math.PI/2+(i/6-0.5)*2.4;lock(hp,i%2?hc:hd,sph(a,0.95,1.1),sph(a+(R0()-0.5)*0.2,1.85+R0()*0.15,1.12),0.1,-0.7,-0.5);}
+      break;}
     case'side':crown(10,1.18);for(let i=0;i<7;i++){const u=-0.45+i*0.15,root=at(u-0.2,0.8,1.12),tip=at(u+0.25,0.42-i*0.025,1.12);lock(hp,i%2?hc:hl,root,tip,0.055);}sides(0.1);break;
     case'spiky':for(let i=0;i<16;i++){const a=i/16*6.283,e=0.3+(i%3)*0.18,u=Math.cos(a)*Math.sin(e),v=Math.cos(e),w=Math.sin(a)*Math.sin(e);lock(hp,i%2?hc:hl,[u*HEAD_R[0]*0.9,HEAD_Y+v*HEAD_R[1]*0.9,w*HEAD_R[2]*0.9],[u*HEAD_R[0]*1.5,HEAD_Y+(v*1.25+0.2)*HEAD_R[1]*1.3,w*HEAD_R[2]*1.5],0.06);}fringe(5,0.22);break;
     case'buzz':break;
@@ -5698,8 +5860,8 @@ function humanModel(h0){const h=Object.assign({},HDEF.boy,h0),g=new T.Group(),p=
   g.add(M(p));g.add(M(hp,hairMat));
   // eyes: an almond white, a big coloured iris, a dark pupil, two catchlights and a lash line; closed and happy versions
   const fp={open:[],blink:[],happy:[],smile:[],talk:[]},lid=new T.TorusGeometry(0.03,0.006,4,12,Math.PI*0.75);
-  for(const s of [-1,1]){const u=s*0.37,v=-0.07,sc=girl?1.1:1;
-    feat(SPH_LO,0xfbf8f4,u,v,0.068*sc,0.052*sc,0.016,1.0,fp.open);feat(SPH_LO,ec,u+s*-0.01,v-0.005,0.04*sc,0.05*sc,0.014,1.01,fp.open);feat(SPH_LO,0x140c10,u+s*-0.01,v-0.005,0.02*sc,0.03*sc,0.012,1.018,fp.open);
+  for(const s of [-1,1]){const u=s*0.37,v=-0.07,sc=girl?1.12:1.07;
+    feat(SPH_LO,0xfbf8f4,u,v,0.068*sc,0.054*sc,0.016,1.0,fp.open);feat(SPH_LO,ec,u+s*-0.01,v-0.005,0.044*sc,0.054*sc,0.014,1.01,fp.open);feat(SPH_LO,0x140c10,u+s*-0.01,v-0.005,0.02*sc,0.03*sc,0.012,1.018,fp.open);
     feat(SPH_XS,0xffffff,u+0.02,v+0.03,0.013,0.015,0.008,1.026,fp.open);feat(SPH_XS,0xffffff,u-0.015,v-0.035,0.007,0.007,0.006,1.026,fp.open);
     feat(lid,0x1a1218,u,v+0.012,(girl?1.25:1.12)*sc,1.05,1,1.016,fp.open,0.12*Math.PI);
     if(girl)feat(BOX,0x1a1218,u+s*0.075,v+0.05,0.026,0.006,0.006,1.018,fp.open,s*0.6);
@@ -5708,20 +5870,26 @@ function humanModel(h0){const h=Object.assign({},HDEF.boy,h0),g=new T.Group(),p=
   feat(SPH_LO,0x6a2030,0,-0.44,0.04,0.03,0.014,0.99,fp.talk);feat(SPH_LO,0xf39ab0,0,-0.48,0.024,0.012,0.01,0.995,fp.talk);
   const face={};for(const k in fp){const m=M(fp[k]);m.castShadow=false;m.visible=k==='open'||k==='smile';g.add(m);face[k]=m;}g.userData.face=face;
   // arms: shoulder, upper arm, elbow, forearm, hand (sleeves and cuffs per top)
-  const upper=seg2('ua2'+(girl?'g':'b'),girl?0.042:0.048,girl?0.036:0.04,0.12),fore=seg2('fa2'+(girl?'g':'b'),girl?0.035:0.04,girl?0.03:0.033,0.11);
+  const kr=h.top==='sweater'?10:0,upper=seg2('ua2'+(girl?'g':'b'),girl?0.042:0.048,girl?0.036:0.04,0.12,kr),fore=seg2('fa2'+(girl?'g':'b'),girl?0.035:0.04,girl?0.03:0.033,0.11,kr);
   const sleeveC=h.top==='tank'?sk:tc,foreC=longS?tc:sk;
   for(const [nm,s] of [['armL',-1],['armR',1]]){const pv=new T.Group();pv.name=nm;pv.position.set(s*0.14*W,shY-0.03,0);pv.rotation.z=s*0.12;
     const ap=[P(SPH_LO,sleeveC,0,0,0,0,0,0,0.1,0.09,0.09),P(upper,h.top==='dress'||h.top==='tank'?sk:sleeveC,0,0,0,0,0,0),P(fore,foreC,0,-0.125,0.0,-0.12,0,0)];
     if(!longS&&h.top!=='tank'&&h.top!=='dress')ap.push(P(latheGeo('slv3',[[0.054,0],[0.057,0.04],[0.05,0.08],[0.0005,0.085]]),sleeveC,0,-0.085,0));
-    if(longS)ap.push(P(latheGeo('cuff2',[[0.035,0],[0.041,0.012],[0.041,0.03],[0.035,0.04]]),dk(tc,0.1),0,-0.245,0.015,-0.12,0,0));
+    if(longS)ap.push(P(ribLathe('cuff3',[[0.035,0],[0.043,0.01],[0.044,0.032],[0.036,0.042]],12,0.06),dk(tc,0.1),0,-0.245,0.015,-0.12,0,0));
     ap.push(P(SPH,sk,0,-0.275,0.02,0,0,0,0.07,0.08,0.052),P(SPH_LO,sk,s*-0.026,-0.26,0.038,0,0,s*0.5,0.026,0.04,0.026));/* hand and thumb */
     pv.add(M(ap));g.add(pv);}
   // legs: thigh, knee, calf, and a sneaker (sole, toe cap, laces)
-  const thigh=seg2('th2',0.062,0.05,0.14),calf=seg2('cf2',0.05,0.038,0.15),legTop=!dress&&h.bot==='trousers'?bc:sk,legBot=legTop;
+  const trou=!dress&&h.bot==='trousers',thigh=seg2(trou?'th3':'th2',trou?0.066:0.062,trou?0.056:0.05,0.14),calf=seg2(trou?'cf3':'cf2',trou?0.056:0.05,trou?0.05:0.038,0.15),legTop=trou?bc:sk,legBot=legTop;
   for(const [nm,s] of [['footL',-1],['footR',1]]){const pv=new T.Group();pv.name=nm;pv.position.set(s*0.062*W,hipY,0);
     const lp=[P(thigh,legTop,0,0,0),P(calf,legBot,0,-0.15,0)];if(h.bot==='shorts'&&!dress)lp.push(P(latheGeo('shrt2',[[0.066,0],[0.07,0.05],[0.068,0.1],[0.0005,0.11]]),bc,0,-0.09,0));
     if(legBot===sk)lp.push(P(latheGeo('sock3',[[0.04,0],[0.043,0.02],[0.04,0.045]]),0xf6f2ea,0,-0.32,0));
-    lp.push(P(SPH,lt(h.shoe,0.55),0,-0.365,0.022,0,0,0,0.095,0.038,0.16),P(SPH,h.shoe,0,-0.345,0.02,0,0,0,0.088,0.065,0.14),P(SPH_LO,lt(h.shoe,0.7),0,-0.35,0.08,0,0,0,0.06,0.032,0.045),P(BOX,0xf6f2ea,0,-0.318,0.045,0.5,0,0,0.04,0.004,0.045));
+    if(trou)lp.push(P(latheGeo('tcuf',[[0.05,0],[0.058,0.008],[0.059,0.026],[0.052,0.034]]),dk(bc,0.14),0,-0.322,0));/* turned-up cuffs */
+    // chunky sneakers: a thick cupsole, a padded upper with a toe cap and an ankle collar, laces and a stripe down each side
+    {const sh=h.shoe,sole=lerpHex(sh,0xd0c8c0,sh===0xf4f0ea?0.55:0.2),acc=sh===0xf4f0ea?0x9a9aa8:lt(sh,0.55);
+      lp.push(P(SPH,sole,0,-0.376,0.026,0,0,0,0.112,0.042,0.19),P(SPH,sh,0,-0.35,0.018,0,0,0,0.102,0.078,0.165),P(SPH_LO,lt(sh,0.45),0,-0.36,0.088,0,0,0,0.078,0.042,0.062),
+        P(latheGeo('scol',[[0.044,0],[0.052,0.012],[0.047,0.022]]),dk(sh,0.12),0,-0.322,-0.008));
+      for(let i=0;i<2;i++)lp.push(P(BOX,0xf6f2ea,0,-0.316-i*0.008,0.045+i*0.022,0.5,0,0,0.046,0.006,0.012));
+      for(const q of [-1,1])lp.push(P(BOX,acc,q*0.05,-0.352,0.012,0,0,q*-0.3,0.006,0.02,0.075));}
     pv.add(M(lp));g.add(pv);}
   g.children.forEach(c=>{c.position.multiplyScalar(HUM_S);c.scale.multiplyScalar(HUM_S);});
   return g;}
@@ -5731,7 +5899,7 @@ const H_TABS=[['look','Look'],['hair','Hair'],['face','Face'],['top','Top'],['bo
 function curHuman(){if(!S.look.h)S.look.h=Object.assign({},HDEF.boy);return S.look.h;}
 // the editor's own little studio: a soft backdrop and a round stage, so you can dress up anywhere (indoors, at sea…)
 const edScene=new T.Scene(),edCam=new T.PerspectiveCamera(30,1,0.05,60);
-{edScene.add(new T.HemisphereLight(0xf4f0ff,0x8a9ab0,0.5));const d=new T.DirectionalLight(0xfff0e0,0.55);d.position.set(1.5,4,3);edScene.add(d);const d2=new T.DirectionalLight(0xc8dcff,0.18);d2.position.set(-3,1.5,-2);edScene.add(d2);const d3=new T.DirectionalLight(0xfff4ea,0.32);d3.position.set(0,0.6,5);edScene.add(d3);/* a soft fill from the front, so the face is evenly lit */
+{edScene.add(new T.HemisphereLight(0xfff2e6,0x8a7a8a,0.42));const d=new T.DirectionalLight(0xffe6c8,0.52);d.position.set(2.2,3.4,3);edScene.add(d);/* a warm key light, high on the right */const d2=new T.DirectionalLight(0xb8d0ff,0.3);d2.position.set(-2.5,2,-3);edScene.add(d2);/* a cool rim from behind */const d3=new T.DirectionalLight(0xfff0e6,0.16);d3.position.set(-1.5,0.8,5);edScene.add(d3);/* a soft fill from the front, so the face is evenly lit */
   const bg=new T.SphereGeometry(20,24,16),c=[],a=bg.attributes.position;for(let i=0;i<a.count;i++){const t=clamp((a.getY(i)+6)/22,0,1);const q=new T.Color(0xe8d4c4).lerp(new T.Color(0x9cc4dc),t);c.push(q.r,q.g,q.b);}
   bg.setAttribute('color',new T.Float32BufferAttribute(c,3));edScene.add(new T.Mesh(bg,new T.MeshBasicMaterial({vertexColors:true,side:T.BackSide,fog:false})));
   const st=M([P(CYL12,0xe8dcc8,0,-0.05,0,0,0,0,1.5,0.1,1.5),P(CYL12,0xc8b498,0,-0.12,0,0,0,0,1.56,0.06,1.56),P(CYL12,0xe0b8a0,0,0.002,0,0,0,0,1.1,0.004,1.1)]);st.castShadow=false;edScene.add(st);
@@ -5778,16 +5946,16 @@ const charEdFocus=()=>chatFocus();
    Time of day
    ========================================================= */
 const KF=[
- {h:0,   sun:0x9ab0ff,si:.58,sky:0x6a7cc4,gnd:0x3a4478,hi:.82,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
+ {h:0,   sun:0x9ab0ff,si:.52,sky:0x6a7cc4,gnd:0x3a4478,hi:.74,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
  {h:4.8, sun:0x9aa8f0,si:.4,sky:0x6070b4,gnd:0x303868,hi:.76,water:0x243a78,s1:0x3e5ea4,s2:0x30488c,n:1,gl:0xc8d4ff,hz:0x1c2656,zen:0x0c1434,glow:0x7a6aa8,ga:.25},
  {h:6,   sun:0xff9a6a,si:.55,sky:0xffb896,gnd:0x5a4a6e,hi:.55,water:0x3a6cb4,s1:0x8ab8d4,s2:0x5c94c4,n:.25,gl:0xffe0c8,hz:0xf4b090,zen:0x5a78c8,glow:0xffa060,ga:1},
  {h:8,   sun:0xffe6c4,si:1.0,sky:0xd8e6ff,gnd:0x5e6a58,hi:.5,water:0x2b6fd0,s1:0x8ee0ec,s2:0x44b2e4,n:0,gl:0xffffff,hz:0xa6d2fa,zen:0x3f8ae6,glow:0xfff0c0,ga:.3},
- {h:12.5,sun:0xfff8ea,si:1.05,sky:0xeaf2ff,gnd:0x66725e,hi:.52,water:0x2a72d6,s1:0x92e4ee,s2:0x42b6e8,n:0,gl:0xffffff,hz:0xc4dcf6,zen:0x2f7fe4,glow:0xffe8c8,ga:.35},
- {h:16.5,sun:0xffe0b0,si:1.0,sky:0xffe6c8,gnd:0x625e54,hi:.5,water:0x2e6ccc,s1:0x92dce6,s2:0x4aace0,n:0,gl:0xffffff,hz:0xd8def0,zen:0x3a84de,glow:0xffd8a8,ga:.55},
+ {h:12.5,sun:0xfff3e0,si:1.05,sky:0xecf2ff,gnd:0x6a7258,hi:.52,water:0x2a72d6,s1:0x92e4ee,s2:0x42b6e8,n:0,gl:0xffffff,hz:0xc4dcf6,zen:0x2f7fe4,glow:0xffe8c8,ga:.35},
+ {h:16.5,sun:0xffd9a4,si:1.0,sky:0xffe6c8,gnd:0x665e50,hi:.5,water:0x2e6ccc,s1:0x92dce6,s2:0x4aace0,n:0,gl:0xffffff,hz:0xd8def0,zen:0x3a84de,glow:0xffd8a8,ga:.55},
  {h:18.3,sun:0xff8a54,si:.72,sky:0xff9c7a,gnd:0x5e4868,hi:.58,water:0x4c5aa8,s1:0x9a92cc,s2:0x6e70ba,n:.3,gl:0xffd0a0,hz:0xf89a78,zen:0x4a5aae,glow:0xffb050,ga:1},
  {h:19.4,sun:0xb07ad0,si:.4,sky:0x8a6ab0,gnd:0x3a3060,hi:.68,water:0x2e3a80,s1:0x505ea6,s2:0x3c4a92,n:.8,gl:0xe0c8ff,hz:0x4a3a78,zen:0x221f5a,glow:0xff7a6a,ga:.6},
- {h:21,  sun:0x9ab0ff,si:.58,sky:0x6a7cc4,gnd:0x3a4478,hi:.82,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
- {h:24,  sun:0x9ab0ff,si:.58,sky:0x6a7cc4,gnd:0x3a4478,hi:.82,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
+ {h:21,  sun:0x9ab0ff,si:.52,sky:0x6a7cc4,gnd:0x3a4478,hi:.74,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
+ {h:24,  sun:0x9ab0ff,si:.52,sky:0x6a7cc4,gnd:0x3a4478,hi:.74,water:0x1f3470,s1:0x3a5aa0,s2:0x2c4688,n:1,gl:0xc8d4ff,hz:0x141c46,zen:0x070b26,glow:0x4a5a9a,ga:.18},
 ];
 const _a=new T.Color(),_b=new T.Color(),GREY=new T.Color(0x8a90a0);
 let nightF=0,rainMix=S.rain?1:0,rainFall=S.rain?1:0; // rainMix: how grey the sky is; rainFall: how hard it's raining
@@ -5806,6 +5974,11 @@ function applyTime(){
   const az=lerp(-1.25,1.25,tt)+0.6,el=0.28+Math.sin(tt*Math.PI)*0.62; // the sun never climbs too high, so shadows stay long and soft
   sun.position.set(cam.tx+Math.cos(el)*Math.sin(az)*32,Math.sin(el)*32,cam.tz+Math.cos(el)*Math.cos(az)*32);sun.target.position.set(cam.tx,0,cam.tz);
   glowMat.emissiveIntensity=nightF*1.3+rm*0.2;poolMat.opacity=nightF*0.55;lumMat.emissiveIntensity=0.6+nightF*0.8;
+  // rim light: sky-blue by day, golden round dawn and dusk, moonlight at night (30-render); the glow pass picks up lamps,
+  // windows and fires as the light goes, and warms
+  const gold=Math.max(smooth(1.3,0,Math.abs(h-18.5)),smooth(1.3,0,Math.abs(h-6.3)));
+  RIM[0]=(0.26+0.24*gold+0.12*nightF)*fxRim*(1-rm*0.5);RIM[1]=0.45+0.4*gold-0.3*nightF;
+  brightMat.uniforms.th.value=0.86-0.08*nightF;brightMat.uniforms.nb.value=nightF;postMat.uniforms.bloomC.value.set(0.16+0.14*gold+0.5*nightF,0.14+0.09*gold+0.38*nightF,0.1+0.03*gold+0.24*nightF).multiplyScalar(1-rm*0.4);
   moonMat.emissiveIntensity=0.35+nightF*0.9;VBM.moonlit.emissiveIntensity=moonMat.emissiveIntensity;waterU.uSunD.value.copy(sun.position).sub(sun.target.position).normalize();waterU.uGl.value=(1-nightF*0.85)*(1-rm);postMat.uniforms.tm.value=tt;postMat.uniforms.gw.value=(1-nightF*0.75)*(1-rm*0.6);ffMat.opacity=nightF*0.95;starMat.uniforms.op.value=nightF*(1-rm);
 }
 function timeName(h){if(h<5)return'night';if(h<7)return'dawn';if(h<11)return'morning';if(h<14)return'midday';if(h<17)return'afternoon';if(h<19.3)return'dusk';if(h<22)return'evening';return'night';}
@@ -8440,8 +8613,8 @@ function snapThumb(g,out=48){const size=out*2;
   const {ts,tc,trt,buf,cv,cx,img}=thumbRig;
   g.traverse(o=>{if(o.userData.noThumb)o.visible=false;});ts.add(g);g.updateMatrixWorld(true);const box=new T.Box3();g.traverse(o=>{if(o.isMesh&&o.visible&&!o.userData.noThumb&&o.geometry){o.geometry.computeBoundingBox();box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));}});if(box.isEmpty())box.setFromObject(g);const c=box.getCenter(new T.Vector3());const s=box.getSize(new T.Vector3());
   const r=Math.max(s.x,s.y,s.z)*0.62;tc.left=-r;tc.right=r;tc.top=r;tc.bottom=-r;tc.position.set(c.x+2.2,c.y+1.55,c.z+2.2);tc.lookAt(c);tc.updateProjectionMatrix();tc.updateMatrixWorld();
-  const old=glowMat.emissiveIntensity;glowMat.emissiveIntensity=0.4;renderer.setRenderTarget(trt);renderer.setClearColor(0x000000,0);renderer.clear();renderer.render(ts,tc);
-  renderer.readRenderTargetPixels(trt,0,0,size,size,buf);renderer.setRenderTarget(null);renderer.setClearColor(0x000000,1);glowMat.emissiveIntensity=old;ts.remove(g);
+  const old=glowMat.emissiveIntensity;glowMat.emissiveIntensity=0.4;GLOW_A.value=0;/* (a thumbnail's alpha is its cut-out) */renderer.setRenderTarget(trt);renderer.setClearColor(0x000000,0);renderer.clear();renderer.render(ts,tc);
+  renderer.readRenderTargetPixels(trt,0,0,size,size,buf);renderer.setRenderTarget(null);renderer.setClearColor(0x000000,1);glowMat.emissiveIntensity=old;GLOW_A.value=1;ts.remove(g);
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){const si=((size-1-y)*size+x)*4,di=(y*size+x)*4;img.data[di]=buf[si];img.data[di+1]=buf[si+1];img.data[di+2]=buf[si+2];img.data[di+3]=buf[si+3];}
   cx.putImageData(img,0,0);const oc=document.createElement('canvas');oc.width=oc.height=out;const o2=oc.getContext('2d');o2.imageSmoothingEnabled=true;o2.imageSmoothingQuality='high';o2.drawImage(cv,0,0,out,out);return oc.toDataURL();}
 function makeThumbs(){const snap=g=>snapThumb(g,128);
@@ -8825,7 +8998,7 @@ function fadeThen(fn,keep){const f=$('fade');f.classList.add('on');setTimeout(()
 function arrivalFrame(now){if(!arriving)return;const dt=Math.min(0.1,(now-arriving.last)/1000);arriving.last=now;arriving.t+=dt;tt+=dt;
   cam.yaw+=dt*0.06;cam.tx=-9;cam.tz=1;cam.dist=60;cam.pitch=0.6;applyCam();cullIslands();
   scene.fog.near=camD()+18;scene.fog.far=camD()+150;grassU.uTime.value=tt;riverU.uTime.value=tt;waterU.uT.value=tt;waterU.uCam.value.copy(camera.position);if(depthDirty)buildDepthTex();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
-  updateSky(dt,tt);updateSkyDome();renderer.setRenderTarget(rt);renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);renderer.autoClear=true;
+  updateSky(dt,tt);updateSkyDome();renderer.setRenderTarget(rt);renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);renderer.autoClear=true;bloomPass();
   renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);requestAnimationFrame(arrivalFrame);}
 /* =========================================================
    New game setup
@@ -9486,7 +9659,7 @@ function frame(now){
   saveT+=dt;if(saveT>5){saveT=0;save();}
   PL('hudSave');const tLogic=performance.now();
   const shadowNow=!swim.noShadow&&(shadowFrame++&1)===0;
-  updateSkyDome();uwSky();renderer.setRenderTarget(rt);if(charEd){renderer.render(edScene,edCam);}/* the character editor's studio (61b) */else if(inside){updateRoom(dt,tt);renderer.shadowMap.needsUpdate=shadowNow;renderer.render(roomScene,roomCam);}else{renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.shadowMap.needsUpdate=shadowNow;/* (set just before the scene, or the sky pass would use it up) */renderer.render(scene,camera);FRAME_STAT.calls=renderer.info.render.calls;FRAME_STAT.tris=renderer.info.render.triangles;renderer.autoClear=true;}FRAME_STAT.logic=tLogic-now;FRAME_STAT.render=performance.now()-tLogic;renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);
+  updateSkyDome();uwSky();renderer.setRenderTarget(rt);if(charEd){renderer.render(edScene,edCam);}/* the character editor's studio (61b) */else if(inside){updateRoom(dt,tt);renderer.shadowMap.needsUpdate=shadowNow;renderer.render(roomScene,roomCam);}else{renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.shadowMap.needsUpdate=shadowNow;/* (set just before the scene, or the sky pass would use it up) */renderer.render(scene,camera);FRAME_STAT.calls=renderer.info.render.calls;FRAME_STAT.tris=renderer.info.render.triangles;renderer.autoClear=true;}FRAME_STAT.logic=tLogic-now;bloomPass();FRAME_STAT.render=performance.now()-tLogic;renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);
   requestAnimationFrame(frame);
 }
 
@@ -9652,7 +9825,9 @@ if(/[?&]debug\b/.test(location.search)){
       scene.traverseVisible(o=>{if(!(o.isMesh||o.isPoints||o.isLine))return;let p=o,k=null;while(p&&p!==scene){if(names.has(p)){k=names.get(p);break;}const ii=islands.findIndex(i=>i.group===p||i.pgroup===p);if(ii>=0){k=ii===0?'home':'isl';break;}if(npcs.some(n=>n.g===p)){k='npc';break;}if(p===villager){k='player';break;}p=p.parent;}
         k=k||('scene:'+(o.name||o.type)+':'+(o.material&&o.material.type));out[k]=(out[k]||0)+1;});return Object.entries(out).sort((a,b)=>b[1]-a[1]).slice(0,20).map(x=>x.join(' '));},tris:()=>{const out={};const tag=o=>{let p=o;while(p){if(p.userData&&p.userData.tag)return p.userData.tag;if(islands.some(i=>i.group===p))return 'isl'+islands.findIndex(i=>i.group===p)+':'+(o.isInstancedMesh?'inst':'mesh');if(p===scene)break;p=p.parent;}return (o.isInstancedMesh?'inst:':'mesh:')+(o.material&&o.material.type)+(o.parent===scene?'@scene':'');};
       scene.traverseVisible(o=>{if(!(o.isMesh||o.isInstancedMesh||o.isPoints))return;const g=o.geometry;if(!g)return;const n=(g.index?g.index.count:g.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);const k=tag(o);out[k]=out[k]||{tris:0,n:0,shadow:0};out[k].tris+=n;out[k].n++;if(o.castShadow)out[k].shadow+=n;});
-      return Object.entries(out).sort((a,b)=>b[1].tris-a[1].tris).slice(0,25).map(([k,v])=>k+' '+Math.round(v.tris)+' ('+v.n+' objs, shadow '+Math.round(v.shadow)+')');},perf:()=>({...FRAME_STAT,shadowCasters:(()=>{let n=0;scene.traverseVisible(o=>{if((o.isMesh||o.isInstancedMesh)&&o.castShadow)n++;});return n;})()}),zoom:d=>{cam.dist=d;},collectAll:()=>{for(const k in FISH)S.alm['f:'+k]=1;for(const k in BUGS)S.alm['b:'+k]=1;refreshMuseumShow();},enterMuseum:()=>enterHouse('museum',TOWN.bld.find(b=>b.t==='museum'),null),museumDoor:()=>{const b=TOWN.bld.find(q=>q.t==='museum');return b.door;},roomGo:(x,z)=>{inside.tx=x;inside.tz=z;},look:(sp,fur,shirt)=>{setLook(Object.assign({sp},fur?{fur}:{},shirt?{shirt}:{}));return S.look;},beach:id=>{const i=islands[id],s=i.sand.filter(([x,z])=>{const c=SAND_CH.get(K(x,z));return c&&Math.min(...c)<0.1;});return s[Math.floor(s.length/3)]||i.sand[0];},tool:k=>{equip(k);return S.tool;},tile:(x,z)=>S.tiles[K(x,z)]||null,vil:()=>({x:vil.x,z:vil.z}),
+      return Object.entries(out).sort((a,b)=>b[1].tris-a[1].tris).slice(0,25).map(([k,v])=>k+' '+Math.round(v.tris)+' ('+v.n+' objs, shadow '+Math.round(v.shadow)+')');},floraSpot:()=>{let best=null,bn=0;const ks=[...TOWN.flora.keys()].filter(k=>!S.tiles[k]&&!(TOWN.fHid&&TOWN.fHid.get(k))).map(k=>k.split(',').map(Number)).filter(([x,z])=>!S.objs.some(o=>Math.abs(o.x-x)<2&&Math.abs(o.z-z)<2)&&!Object.keys(S.tiles).some(q=>{const [a,c]=q.split(',').map(Number);return Math.abs(a-x)<3&&Math.abs(c-z)<3;}));for(const [x,z] of ks){let n=0;for(const [a,c] of ks)if(Math.abs(a-x)<=2&&Math.abs(c-z)<=2)n++;if(n>bn){bn=n;best=[x,z];}}return [best,bn];},plaza:()=>TOWN.plaza,lights:()=>({hour:S.hour,nightF,rain:rainMix,hemi:[hemi.intensity,hemi.color.getHexString(),hemi.groundColor.getHexString()],sun:[sun.intensity,sun.color.getHexString()],fire:[fireLight.intensity,fireLight.distance,fireLight.decay],rim:[...RIM],bloomC:postMat.uniforms.bloomC.value.toArray(),th:brightMat.uniforms.th.value,gw:postMat.uniforms.gw.value,pool:firePoolMat.opacity,lights:(()=>{const o=[];scene.traverse(q=>{if(q.isLight)o.push(q.type+':'+(+q.intensity).toFixed(2)+(q.visible?'':'(hidden)'));});return o;})()}),meadow:(yaw=0.5,len=10)=>{const ok=k=>!(TOWN.fHid&&TOWN.fHid.get(k));const ks=[...TOWN.flora.keys()].filter(ok).map(k=>k.split(',').map(Number));const sx=Math.sin(yaw),sz=Math.cos(yaw);let best=null,bs=-1;
+      for(const [x,z] of ks){let n=0;for(const [a,c] of ks)if(Math.hypot(a-x,c-z)<=3)n++;if(n<=bs)continue;let clear=true;for(let t=-1;t<=len&&clear;t++)for(let w=-1;w<=1;w++){const qx=Math.round(x+sx*t+sz*w),qz=Math.round(z+sz*t-sx*w);if(solidR(qx,qz)>0){clear=false;break;}}if(clear){bs=n;best=[x,z];}}return [best,bs];},floraThumbs:(sz=160,lo)=>(lo?FLORA_LO:FLORA_GEOS).map((g,i)=>[FLORA_KEYS[i],snapThumb((()=>{const m=new T.InstancedMesh(g,flowerMat,1);m.setMatrixAt(0,new T.Matrix4());return m;})(),sz),(g.attributes.position.count/3)|0]),
+    perf:()=>({...FRAME_STAT,shadowCasters:(()=>{let n=0;scene.traverseVisible(o=>{if((o.isMesh||o.isInstancedMesh)&&o.castShadow)n++;});return n;})()}),zoom:d=>{cam.dist=d;},collectAll:()=>{for(const k in FISH)S.alm['f:'+k]=1;for(const k in BUGS)S.alm['b:'+k]=1;refreshMuseumShow();},enterMuseum:()=>enterHouse('museum',TOWN.bld.find(b=>b.t==='museum'),null),museumDoor:()=>{const b=TOWN.bld.find(q=>q.t==='museum');return b.door;},roomGo:(x,z)=>{inside.tx=x;inside.tz=z;},look:(sp,fur,shirt)=>{setLook(Object.assign({sp},fur?{fur}:{},shirt?{shirt}:{}));return S.look;},beach:id=>{const i=islands[id],s=i.sand.filter(([x,z])=>{const c=SAND_CH.get(K(x,z));return c&&Math.min(...c)<0.1;});return s[Math.floor(s.length/3)]||i.sand[0];},tool:k=>{equip(k);return S.tool;},tile:(x,z)=>S.tiles[K(x,z)]||null,vil:()=>({x:vil.x,z:vil.z}),
     boat:()=>({x:S.boat.x,z:S.boat.z,onLand:seaBlocked(Math.round(S.boat.x),Math.round(S.boat.z)),sailing:!!sail}),
   };
   console.info('Driftseed debug API ready: window.DS');

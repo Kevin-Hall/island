@@ -11,8 +11,8 @@ function snapThumb(g,out=48){const size=out*2;
   const {ts,tc,trt,buf,cv,cx,img}=thumbRig;
   g.traverse(o=>{if(o.userData.noThumb)o.visible=false;});ts.add(g);g.updateMatrixWorld(true);const box=new T.Box3();g.traverse(o=>{if(o.isMesh&&o.visible&&!o.userData.noThumb&&o.geometry){o.geometry.computeBoundingBox();box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));}});if(box.isEmpty())box.setFromObject(g);const c=box.getCenter(new T.Vector3());const s=box.getSize(new T.Vector3());
   const r=Math.max(s.x,s.y,s.z)*0.62;tc.left=-r;tc.right=r;tc.top=r;tc.bottom=-r;tc.position.set(c.x+2.2,c.y+1.55,c.z+2.2);tc.lookAt(c);tc.updateProjectionMatrix();tc.updateMatrixWorld();
-  const old=glowMat.emissiveIntensity;glowMat.emissiveIntensity=0.4;renderer.setRenderTarget(trt);renderer.setClearColor(0x000000,0);renderer.clear();renderer.render(ts,tc);
-  renderer.readRenderTargetPixels(trt,0,0,size,size,buf);renderer.setRenderTarget(null);renderer.setClearColor(0x000000,1);glowMat.emissiveIntensity=old;ts.remove(g);
+  const old=glowMat.emissiveIntensity;glowMat.emissiveIntensity=0.4;GLOW_A.value=0;/* (a thumbnail's alpha is its cut-out) */renderer.setRenderTarget(trt);renderer.setClearColor(0x000000,0);renderer.clear();renderer.render(ts,tc);
+  renderer.readRenderTargetPixels(trt,0,0,size,size,buf);renderer.setRenderTarget(null);renderer.setClearColor(0x000000,1);glowMat.emissiveIntensity=old;GLOW_A.value=1;ts.remove(g);
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){const si=((size-1-y)*size+x)*4,di=(y*size+x)*4;img.data[di]=buf[si];img.data[di+1]=buf[si+1];img.data[di+2]=buf[si+2];img.data[di+3]=buf[si+3];}
   cx.putImageData(img,0,0);const oc=document.createElement('canvas');oc.width=oc.height=out;const o2=oc.getContext('2d');o2.imageSmoothingEnabled=true;o2.imageSmoothingQuality='high';o2.drawImage(cv,0,0,out,out);return oc.toDataURL();}
 function makeThumbs(){const snap=g=>snapThumb(g,128);

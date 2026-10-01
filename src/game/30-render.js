@@ -14,13 +14,13 @@ const camD=()=>cam.dist*LENS; // how far the camera really is from what it looks
 let W=1,H=1,PX=2,rt=null;
 const post={scene:new T.Scene(),cam:new T.OrthographicCamera(-1,1,1,-1,0,1)};
 const postMat=new T.ShaderMaterial({
-  uniforms:{tC:{value:null},tD:{value:null},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},tm:{value:0},
+  uniforms:{tC:{value:null},tD:{value:null},tB:{value:null},bloomC:{value:new T.Vector3(.3,.26,.2)},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},tm:{value:0},
     // the visual style (applyFx): colour grade, outlines, glow, film texture and palette
     fxA:{value:new T.Vector4(1,1,1,0)}/* saturation, contrast, brightness, faded blacks */,tS:{value:new T.Vector3(1,1,1)},tH:{value:new T.Vector3(1,1,1)},
     edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},uw:{value:0},rip:{value:0},uwC:{value:new T.Color(0x2a8cc0)},uwL:{value:1}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
   fragmentShader:`
-    uniform sampler2D tC;uniform sampler2D tD;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;uniform float tm;varying vec2 vUv;
+    uniform sampler2D tC;uniform sampler2D tD;uniform sampler2D tB;uniform vec3 bloomC;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;uniform float tm;varying vec2 vUv;
     uniform vec4 fxA;uniform vec3 tS;uniform vec3 tH;uniform float edgeK;uniform vec3 edgeC;uniform float dith;uniform float grain;uniform float vig;uniform float bloomK;uniform float gradeK;uniform float pal;uniform float tilt;uniform float scan;uniform float paper;uniform float uw;uniform float rip;uniform vec3 uwC;uniform float uwL;
     float b2(vec2 a){a=floor(a);return fract(a.x*.5+a.y*a.y*.75);}
     float bayer(vec2 a){return b2(.5*a)*.25+b2(a);}
@@ -44,8 +44,8 @@ const postMat=new T.ShaderMaterial({
       float e=step(max(.35,d*.018),dn-d)*step(d,cf*.6);
       c=mix(c,c*edgeC,clamp(e*.9*edgeK,0.,1.)*(1.-smoothstep(140.,260.,d))); // outlines fade out on the far islands
       // lighting: bright things (sand, foam, sunlit leaves, clouds) bloom softly into their neighbours
-      vec3 gl=vec3(0.);for(int i=0;i<4;i++){vec2 o=vec2(i<2?-2.:2.,mod(float(i),2.)<1.?-2.:2.)*px;gl+=max(texture2D(tC,vUv+o).rgb-.8,0.);}
-      c+=gl*vec3(.09,.08,.06)*gw*bloomK;
+      // (bloomPass: the brightest parts, blurred at a quarter of the size; warm, and stronger at night round lamps and fires)
+      if(bloomK>0.)c+=texture2D(tB,vUv).rgb*bloomC*bloomK;
       // the island's own sunny grade: a touch more colour, warm highlights, cool shadows, a warm haze towards the horizon
       float g=gw*gradeK;float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.+.04*g);c=mix(c,(c-.5)*1.08+.48,g);
       c*=mix(vec3(1.),mix(vec3(.96,.98,1.05),vec3(1.04,1.,.95),smoothstep(.25,.85,l)),g);
@@ -79,6 +79,23 @@ const postMat=new T.ShaderMaterial({
   depthTest:false,depthWrite:false
 });
 post.scene.add(new T.Mesh(new T.PlaneGeometry(2,2),postMat));
+/* glow: the frame's brightest parts (sunlit sand and foam, lamps, lit windows and fires at night) are soaked into a copy a
+   quarter of the size each way, blurred across and down, and laid back over the picture (postMat) as a soft halo:
+   three tiny passes, about 1/16 of the pixels each */
+const bloomRT=[null,null],bloomScene=new T.Scene(),bloomQ=new T.Mesh(new T.PlaneGeometry(2,2));bloomQ.frustumCulled=false;bloomScene.add(bloomQ);
+const _qv='varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}';
+const brightMat=new T.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{tC:{value:null},px:{value:new T.Vector2(1,1)},th:{value:.78},nb:{value:0}},vertexShader:_qv,
+  fragmentShader:`uniform sampler2D tC;uniform vec2 px;uniform float th;uniform float nb;varying vec2 vUv;
+    // by day anything bright glows a little; at night (nb) only the light sources do (marked in alpha: GLOW_A)
+    vec3 b(vec2 o){vec4 c=texture2D(tC,vUv+o*px);return c.rgb*smoothstep(th,th+.22,max(max(c.r,c.g),c.b))*max(1.-nb,1.-c.a);}
+    void main(){gl_FragColor=vec4((b(vec2(-1.,-1.))+b(vec2(1.,-1.))+b(vec2(-1.,1.))+b(vec2(1.,1.)))*.25,1.);}`});
+const blurMat=new T.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{tB:{value:null},dir:{value:new T.Vector2()}},vertexShader:_qv,
+  fragmentShader:`uniform sampler2D tB;uniform vec2 dir;varying vec2 vUv;
+    void main(){vec3 c=texture2D(tB,vUv).rgb*.227+(texture2D(tB,vUv+dir*1.385).rgb+texture2D(tB,vUv-dir*1.385).rgb)*.316+(texture2D(tB,vUv+dir*3.231).rgb+texture2D(tB,vUv-dir*3.231).rgb)*.07;gl_FragColor=vec4(c,1.);}`});
+function bloomPass(){if(!(postMat.uniforms.bloomK.value>0)||!bloomRT[0])return;const [a,b]=bloomRT,ac=renderer.autoClear;renderer.autoClear=false;
+  bloomQ.material=brightMat;brightMat.uniforms.tC.value=rt.texture;renderer.setRenderTarget(a);renderer.render(bloomScene,post.cam);
+  bloomQ.material=blurMat;blurMat.uniforms.tB.value=a.texture;blurMat.uniforms.dir.value.set(1/a.width,0);renderer.setRenderTarget(b);renderer.render(bloomScene,post.cam);
+  blurMat.uniforms.tB.value=b.texture;blurMat.uniforms.dir.value.set(0,1/a.height);renderer.setRenderTarget(a);renderer.render(bloomScene,post.cam);renderer.autoClear=ac;}
 const skyMat=new T.ShaderMaterial({depthTest:false,depthWrite:false,
   uniforms:{zen:{value:new T.Color()},hz:{value:new T.Color()},glowC:{value:new T.Color()},hy:{value:0.6},ga:{value:0},sunP:{value:new T.Vector2(0.5,0.7)},aspect:{value:0.5},disc:{value:0},night:{value:0}},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
@@ -113,6 +130,8 @@ function resize(){
   rt.depthTexture=new T.DepthTexture(W,H);rt.depthTexture.type=T.UnsignedIntType;
   rt.depthTexture.minFilter=rt.depthTexture.magFilter=T.NearestFilter;
   postMat.uniforms.tC.value=rt.texture;postMat.uniforms.tD.value=rt.depthTexture;postMat.uniforms.res.value.set(W,H);
+  for(let i=0;i<2;i++){if(bloomRT[i])bloomRT[i].dispose();bloomRT[i]=new T.WebGLRenderTarget(Math.ceil(W/4),Math.ceil(H/4),{minFilter:T.LinearFilter,magFilter:T.LinearFilter,depthBuffer:false});}
+  postMat.uniforms.tB.value=bloomRT[0].texture;brightMat.uniforms.px.value.set(1/W,1/H);
   camera.aspect=cw/ch;camera.updateProjectionMatrix();applyCam();
 }
 const cam={yaw:Math.PI*0.27,pitch:0.5,dist:30,tx:0,tz:0.3};
@@ -189,14 +208,34 @@ function merge(parts){
   out.setAttribute('position',new T.BufferAttribute(pos,3));out.setAttribute('normal',new T.BufferAttribute(nor,3));
   out.setAttribute('color',new T.BufferAttribute(col,3));out.computeBoundingSphere();out.computeBoundingBox();return out;
 }
-const grad=(()=>{const d=new Uint8Array([88,88,88,255,160,160,160,255,222,222,222,255,255,255,255,255]);
-  const t=new T.DataTexture(d,4,1,T.RGBAFormat);t.minFilter=t.magFilter=T.NearestFilter;t.needsUpdate=true;return t;})();
+/* the toon ramps: how much of a light reaches a surface, by how squarely it faces it (left: facing away, right: facing
+   straight at it). 64 steps, filtered, so the bands of light and shade can melt softly into each other; applyFx (30b-fx)
+   paints them for the visual style: the bands' brightness, how soft their edges are, a warm glow where light gives way
+   to shade and cooler shadows */
+const RAMP_N=64,rampTex=()=>{const t=new T.DataTexture(new Uint8Array(RAMP_N*4).fill(255),RAMP_N,1,T.RGBAFormat);t.minFilter=t.magFilter=T.LinearFilter;t.needsUpdate=true;return t;};
+const grad=rampTex();
+/* rim light: a soft edge of sky light round the silhouettes of rounded things (trees, people, rocks, walls), warmer on
+   the side facing the sun. Floors and roofs don't get it. One uniform (RIM: strength, sun warmth) is shared by every
+   toon material, set each frame by applyTime (62-time): a few instructions per pixel, no extra pass */
+const RIM=new Float32Array([0.3,0.4,0]);
+T.ShaderLib.toon.uniforms.rimP={value:RIM};/* (a typed array is shared, not copied, when each material clones its uniforms) */
+T.ShaderLib.toon.fragmentShader=T.ShaderLib.toon.fragmentShader.replace('uniform float opacity;','uniform float opacity;\nuniform vec3 rimP;')
+  .replace('#include <aomap_fragment>',`#include <aomap_fragment>
+  {vec3 rn=geometry.normal;float nv=1.-clamp(dot(rn,geometry.viewDir),0.,1.);vec3 upV=(viewMatrix*vec4(0.,1.,0.,0.)).xyz;
+   float rim=smoothstep(.45,.95,nv)*(1.-abs(dot(rn,upV)))*rimP.x;vec3 rc=vec3(.55,.6,.7);
+   #if NUM_HEMI_LIGHTS>0
+   rc=hemisphereLights[0].skyColor;
+   #endif
+   #if NUM_DIR_LIGHTS>0
+   rc=mix(rc,directionalLights[0].color,rimP.y*clamp(dot(rn,directionalLights[0].direction)*.7+.5,0.,1.));
+   #endif
+   reflectedLight.indirectDiffuse+=rim*rc*(diffuseColor.rgb*.75+.25);}`);
 const toon=o=>new T.MeshToonMaterial(Object.assign({gradientMap:grad},o));
 const vcMat=toon({vertexColors:true});
 const vcMatFlat=toon({color:0xffffff});
 // foliage: the same toon look, speckled with little light and dark leaf clusters fixed in world space (two sizes of blotch),
 // so after the pixel pass a crown reads as a mass of painted leaves rather than a plain ball
-const leafGrad=(()=>{const d=new Uint8Array([72,72,72,255,140,140,140,255,208,208,208,255,255,255,255,255]);const t=new T.DataTexture(d,4,1,T.RGBAFormat);t.minFilter=t.magFilter=T.NearestFilter;t.needsUpdate=true;return t;})();
+const leafGrad=rampTex();/* foliage's own, slightly deeper ramp (applyFx) */
 const leafMat=new T.MeshToonMaterial({gradientMap:leafGrad,vertexColors:true});
 const leafU={uT:{value:0},uWind:{value:1}};
 leafMat.onBeforeCompile=sh=>{sh.uniforms.uT=leafU.uT;sh.uniforms.uWind=leafU.uWind;
@@ -223,6 +262,11 @@ bushMat.onBeforeCompile=sh=>{sh.uniforms.uT=leafU.uT;sh.uniforms.uWind=leafU.uWi
      tone*=mix(.8,1.08,smoothstep(-.3,.8,n.y));      // dark underneath, bright on top
      diffuseColor.rgb*=tone;}`);};
 const glowMat=toon({vertexColors:true,emissive:0xffc460,emissiveIntensity:0});
+/* light sources (lamps and lit windows here, fires in 55-town) mark themselves in the frame's alpha, 0 for a full glow, so
+   the glow pass can tell a lamp from a moonlit white wall at night. GLOW_A.value=0 turns the mark off (thumbnails, whose
+   alpha is their cut-out) */
+const GLOW_A={value:1};
+glowMat.onBeforeCompile=sh=>{sh.uniforms.glowA=GLOW_A;sh.fragmentShader='uniform float glowA;\n'+sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\ngl_FragColor.a=1.-clamp(dot(totalEmissiveRadiance,vec3(.5)),0.,1.)*glowA;');};
 const lumMat=toon({vertexColors:true,emissive:0x444444,emissiveIntensity:1});
 const goldMat=toon({color:0xf5c542,emissive:0x6a4200,emissiveIntensity:.7});
 const crystalMat=toon({color:0xb0f4ff,emissive:0x2a88aa,emissiveIntensity:.7,transparent:true,opacity:.85});

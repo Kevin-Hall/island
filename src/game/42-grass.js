@@ -1,7 +1,7 @@
 // fuzzy grass: clumps of thin tapered blades, instanced over every grass tile; they sway in the wind and part around the villager
 const grassU={uTime:{value:0},uWind:{value:1},uPl:{value:new T.Vector3(0,-99,0)}};
 let nearT=0; // near-grass rebuild timer (see updateNearGrass); set to 0 to rebuild next frame
-const grassMat=toon({vertexColors:true});grassMat.depthWrite=false;const flowerMat=toon({vertexColors:true}); // kept out of the depth buffer so the outline pass doesn't ink every blade
+const grassMat=toon({vertexColors:true});grassMat.depthWrite=false;/* kept out of the depth buffer so the outline pass doesn't ink every blade */const flowerMat=toon({vertexColors:true,side:T.DoubleSide}); // flowers are thin petal cards (54b-flora), seen from both sides
 const swayCompile=sh=>{Object.assign(sh.uniforms,grassU);
   sh.vertexShader='uniform float uTime;uniform float uWind;uniform vec3 uPl;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
   #ifdef USE_INSTANCING

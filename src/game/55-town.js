@@ -3,35 +3,7 @@
    plaza with a town tree, shops, a museum, a town hall, villager homes, dirt paths, lamps and trees
    ========================================================= */
 const TOWN={fHid:null,name:'',plaza:[0,0],benches:[],cafeSeats:[],light:null,bld:[],path:new Map(),fixed:new Map(),plot:[],board:null,lamps:[],flora:new Map(),res:new Map()};
-// wild flower clumps (one geometry per colour), clover and pebbles for the town's grass
-const FLOWER_SP={tulip:[0xe8453a,0xf6d04a,0xf2a6c8,0xffffff,0x9a6ad0],rose:[0xd8303a,0xf8f4ee,0xf6d04a,0xf2a6c8],cosmos:[0xf2a6c8,0xf8f4ee,0xe86a8a,0xf6a830],
-  pansy:[0x7a5ad0,0xf6d04a,0xe8453a,0x8ac8f0],lily:[0xf8f4ee,0xf08a2a,0xf2a6c8],hyacinth:[0x6a7ae0,0xf2a6c8,0xf8f4ee],daisy:[0xffffff,0xf6e6f0]};
-const dkc=(c,f=0.78)=>new T.Color(c).multiplyScalar(f).getHex();
-function flowerHead(p,sp,c,x,y,z,R){
-  switch(sp){
-    case'tulip':for(let k=0;k<6;k++)lf(p,k%2?c:dkc(c,0.88),x,y-0.03,z,k/6*6.283+R()*0.2,1.3,0.14,0.085,0.035);p.push(P(ICO2,dkc(c,0.7),x,y+0.015,z,0,0,0,0.07,0.08,0.07));break;
-    case'rose':for(let k=0;k<6;k++)lf(p,c,x,y,z,k/6*6.283,0.35,0.09,0.08,0.04);p.push(P(ICO2,c,x,y+0.02,z,0,0,0,0.12,0.09,0.12),P(ICO2,dkc(c,0.8),x,y+0.05,z,0,1,0,0.08,0.06,0.08),P(ICO2,dkc(c,0.65),x,y+0.07,z,0,2,0,0.04,0.035,0.04));break;
-    case'cosmos':for(let k=0;k<8;k++)lf(p,c,x,y,z,k/8*6.283,0.12,0.14,0.05,0.025);p.push(P(ICO2,0xf6c030,x,y+0.01,z,0,0,0,0.05,0.035,0.05));break;
-    case'pansy':for(let k=0;k<5;k++){const a=k/5*6.283;p.push(P(ICO2,k<2?dkc(c,0.8):c,x+Math.cos(a)*0.05,y+0.01,z+Math.sin(a)*0.05,0,-a,0.2,0.09,0.02,0.08));}p.push(P(ICO2,0x3a2a4a,x,y+0.02,z,0,0,0,0.06,0.02,0.06),P(ICO2,0xf6d04a,x,y+0.03,z,0,0,0,0.025,0.02,0.025));break;
-    case'lily':for(let k=0;k<6;k++)lf(p,k%2?c:dkc(c,0.92),x,y,z,k/6*6.283,0.75,0.17,0.06,0.03);for(let k=0;k<3;k++)p.push(P(BOX,0xe8903a,x+Math.cos(k*2.1)*0.02,y+0.07,z+Math.sin(k*2.1)*0.02,0.3*Math.cos(k),k,0.3*Math.sin(k),0.008,0.1,0.008));break;
-    case'hyacinth':for(let k=0;k<14;k++){const a=k*2.4,h=y+k*0.012,r=0.035-k*0.0012;p.push(P(ICO2,k%3?c:dkc(c,0.85),x+Math.cos(a)*r,h,z+Math.sin(a)*r,0,a,0,0.045,0.04,0.045));}break;
-    default:bloom(p,c,0xf6d04a,x,y,z,0.1,10,0.15);}}
-// stem heights: ankle-high next to the villager (~0.9 tall), like Animal Crossing flowers
-const FLOWER_H={tulip:0.15,rose:0.14,cosmos:0.19,pansy:0.07,lily:0.17,hyacinth:0.09,daisy:0.12};
-// flowers are only a few pixels on screen, so they're built from the lightest versions of each shape (a round petal
-// is 20 triangles, not 320): there are hundreds of them across the island
-const FLORA_LITE=new Map([[LEAF0,LEAF8]/* a petal or leaf: 8 triangles, not 20 */,[ICO2,OCT],[ICO,OCT],[ICO0,OCT],[SPH,SPH_XS],[SPH_LO,SPH_XS],[CYL12,CYL5],[CYL8,CYL5],[CYL6,CYL5],[CONE8,CONE5],[CONE6,CONE5]]);
-const FLORA_KEYS=[],FLORA_GEOS=[],FLORA_LO=[];/* FLORA_LO: the far version (no stems, a third of the leaves and petals) */
-for(const sp in FLOWER_SP)FLOWER_SP[sp].forEach((c,ci)=>{const R=mulberry(hi(sp.length,ci,31)),p=[];
-  for(let s=0;s<3;s++){const a=s*2.1+R(),r=s?0.14+R()*0.06:0.02,x=Math.cos(a)*r,z=Math.sin(a)*r,h=FLOWER_H[sp]*(0.85+R()*0.3);stemP(p,0x4f8a34,x,z,h);
-    if(sp==='tulip'){lf(p,GREENS[s%4],x,0.01,z,a,1.15,0.2,0.08);lf(p,GREENS[(s+1)%4],x,0.01,z,a+3,1.05,0.18,0.07);}
-    else if(sp==='pansy'||sp==='hyacinth')for(let k=0;k<3;k++)lf(p,GREENS[k%4],x,0.01,z,a+k*2.1,0.35,0.1,0.07);
-    else{lf(p,GREENS[s%4],x,h*0.35,z,a,0.45,0.12,0.06);lf(p,GREENS[(s+2)%4],x,h*0.55,z,a+2.6,0.45,0.1,0.05);}
-    flowerHead(p,sp,c,x,h,z,R);}
-  FLORA_KEYS.push(sp+ci);FLORA_GEOS.push(merge(p.map(q=>Object.assign({},q,{geo:FLORA_LITE.get(q.geo)||q.geo}))));FLORA_LO.push(merge(p.filter((q,i)=>q.geo!==CYL6&&q.geo!==CYL12&&(q.geo!==LEAF0||i%3===0))));});
-function floraIndex(x,z){const sps=Object.keys(FLOWER_SP),sp=sps[Math.floor(hash(Math.floor(x/5)+11,Math.floor(z/5)-3)*sps.length)],cols=FLOWER_SP[sp];
-  const ci=Math.floor(hash(Math.floor(x/3)-5,Math.floor(z/3)+9)*cols.length);return FLORA_KEYS.indexOf(sp+ci);}
-const CLOVER_GEO=(()=>{const R=mulberry(5),p=[];for(let i=0;i<7;i++){const cx=(R()-0.5)*0.55,cz=(R()-0.5)*0.55,y=0.03+R()*0.04,r0=R()*6.28;for(let j=0;j<3;j++)lf(p,GREENS[(i+j)%4],cx,y,cz,r0+j*2.09,0.12,0.09,0.08);if(i===2)bloom(p,0xffffff,0xf2c8d8,cx,y+0.05,cz,0.04,6,0.9);}return merge(p.map(q=>Object.assign({},q,{geo:FLORA_LITE.get(q.geo)||q.geo})));})();
+// (wild flowers and clover: 54b-flora)
 const PEBBLE_GEO=merge([P(ICO,0xb8b4ac,0,0.02,0,0,0.3,0,0.14,0.07,0.11),P(ICO,0xa09c94,0.1,0.015,0.06,0,1,0,0.09,0.05,0.08),P(ICO,0xc8c4bc,-0.08,0.015,0.07,0,2,0,0.07,0.04,0.06)]);
 const DOCK={x:1,z:12};
 function scaleParts(ps,s){return ps.map(p=>Object.assign({},p,{x:p.x*s,y:p.y*s,z:p.z*s,sx:p.sx*s,sy:p.sy*s,sz:p.sz*s}));}
@@ -222,13 +194,13 @@ function benchParts(p,x,z,r){const q=[P(BOX,0x9a6438,0,0.2,0,0,0,0,0.9,0.07,0.3)
 // ground, and send up sparks (and a thread of smoke by day). One shared point light sits in the fire nearest the camera.
 const fires=new Set(),flameU={uT:{value:0}},_fv=new T.Vector3();
 const flameMat=new T.MeshBasicMaterial({vertexColors:true});
-flameMat.onBeforeCompile=sh=>{sh.uniforms.uT=flameU.uT;sh.vertexShader='uniform float uT;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+flameMat.onBeforeCompile=sh=>{sh.uniforms.uT=flameU.uT;sh.uniforms.glowA=GLOW_A;sh.fragmentShader='uniform float glowA;\n'+sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\ngl_FragColor.a=1.-glowA;');/* (a light source: 30-render GLOW_A) */sh.vertexShader='uniform float uT;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
   float fh=max(transformed.y,0.0),fw=fh*fh*1.8;
   transformed.x+=(sin(uT*8.0+fh*7.0+position.z*6.0)*0.08+sin(uT*15.0+fh*13.0+position.x*4.0)*0.03)*fw;
   transformed.z+=(cos(uT*7.0+fh*6.0+position.x*6.0)*0.08+cos(uT*13.0+fh*11.0)*0.03)*fw;
   transformed.y*=1.0+sin(uT*11.0+position.x*9.0+position.z*7.0)*0.14*fh;`);};
 const firePoolMat=new T.MeshBasicMaterial({map:glowTex,color:0xffb070,transparent:true,blending:T.AdditiveBlending,depthWrite:false,opacity:0});
-const fireLight=new T.PointLight(0xff9448,0,9,1.4);scene.add(fireLight);
+const fireLight=new T.PointLight(0xff9a4c,0,10,2);scene.add(fireLight);/* one warm light, carried to whichever fire is nearest the view */
 function addFire(parent,x,y,z,s=1){const f=M(flameParts(s),flameMat);f.castShadow=false;f.receiveShadow=false;f.position.set(x,y+0.04*s,z);f.userData.s=s;parent.add(f);fires.add(f);
   const pm=new T.Mesh(POOL_GEO,firePoolMat);pm.position.set(x,y+0.04,z);pm.scale.setScalar(1.5*s);pm.userData.noThumb=true;pm.renderOrder=2;pm.frustumCulled=false;parent.add(pm);return f;}
 // how lit a fire wants to be: a small flame by day, a bonfire from dusk (and whenever you sit by it or have just lit it)
@@ -245,8 +217,8 @@ function updateFires(dt,tt){flameU.uT.value=tt;let best=null,bd=26*26,bl=0;
       if(nightF<0.35&&Math.random()<dt*1.4)emit(_v.x+(Math.random()-0.5)*0.15,_v.y+(0.6+L*0.4)*s,_v.z+(Math.random()-0.5)*0.15,{vx:0.12,vy:0.45,vz:0.04,life:3,max:3,size:0.09,color:0xd8d2cc,g:-0.05,sw:0.5,ph:Math.random()*6});}
     const d=(_v.x-cam.tx)**2+(_v.z-cam.tz)**2;if(d<bd){bd=d;best=_fv.copy(_v);bl=L*s;}}
   const fk=0.85+Math.sin(tt*13)*0.08+Math.sin(tt*29)*0.05+Math.sin(tt*5.3)*0.05;
-  if(best){fireLight.position.set(best.x,best.y+0.9,best.z);fireLight.intensity=Math.max(0,nightF*0.9+0.08)*bl*1.5*fk;}else fireLight.intensity=0;
-  firePoolMat.opacity=clamp(nightF*1.1+0.05,0,1)*clamp(bl,0,1)*fk;}
+  if(best){fireLight.position.set(best.x,best.y+0.9,best.z);fireLight.intensity=Math.max(0,nightF*0.9+0.08)*Math.min(bl,1.1)*1.15*fk;/* a warm pool round the fire, fading out over a few steps */}else fireLight.intensity=0;
+  firePoolMat.opacity=clamp(nightF*1.1+0.05,0,1)*clamp(bl,0,1)*fk*0.7;}
 /* ---- villager homes in coastal styles, one per personality (footprint ±1, door at the front centre, +z) ---- */
 function planks(p,c,x,y,z,w,h,d,axis='x'){const n=Math.max(2,Math.round((axis==='x'?w:d)/0.14));for(let i=0;i<n;i++){const t=(i+0.5)/n-0.5,sh=i%2?0.94:1.04;
   p.push(axis==='x'?P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x+t*w,y,z,0,0,0,w/n*0.96,h,d):P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x,y,z+t*d,0,0,0,w,h,d/n*0.96));}}
