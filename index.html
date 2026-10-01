@@ -9872,7 +9872,7 @@ const HSKIN=[0xfde3cf,0xf6d2b4,0xeec09a,0xd9a27a,0xc08660,0xa06a48,0x7a4e34,0x5a
 const charSrc={};/* id → {ok, scene, clips, atlas, wait} */
 function charLoad(id,cb){let s=charSrc[id];if(s&&s.ok){cb&&cb(s);return;}if(s&&s.failed){return;}
   if(s){if(cb)s.wait.push(cb);return;}s=charSrc[id]={ok:false,wait:cb?[cb]:[]};
-  new T.GLTFLoader().load('assets/characters/'+id+'.glb',g=>{
+  new T.GLTFLoader().load((window.CHAR_EMBED&&CHAR_EMBED[id])||'assets/characters/'+id+'.glb',/* (embedded by build --embed-chars for hosts that can't serve .glb) */g=>{
     let atlas=null;const drop=[];g.scene.traverse(o=>{if(o.name.startsWith('Weapon_'))drop.push(o);else if(o.isMesh&&o.material.map)atlas=o.material.map.image;});
     for(const o of drop)o.parent.remove(o);/* (each comes holding a prop: an axe, a lute…) */
     Object.assign(s,{ok:true,scene:g.scene,clips:g.animations,atlas});for(const f of s.wait)f(s);s.wait=[];},undefined,

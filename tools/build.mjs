@@ -5,7 +5,8 @@
 //   src/game/*.js    game modules, concatenated in filename order inside one IIFE
 //   vendor/three-r128/*.js  three.js r128 add-ons (GLTFLoader, SkeletonUtils), inlined before the game: /*@vendor*/
 //   assets/characters/*.glb  the player characters, loaded by the page at runtime (published beside index.html)
-// Usage: node tools/build.mjs [--out path] [--check]
+// Usage: node tools/build.mjs [--out path] [--check] [--embed-chars]
+//   --embed-chars  inlines assets/characters/*.glb into the page (for hosts that can't serve .glb files beside it)
 //   --check  exits non-zero if the built file differs from the committed one (use in CI)
 import {readFileSync,writeFileSync,readdirSync} from 'node:fs';
 import {join,dirname} from 'node:path';
@@ -23,6 +24,7 @@ const js=mods.map(f=>readFileSync(join(root,'src/game',f),'utf8').replace(/\n$/,
   if(dup.length){console.error('Duplicate top-level functions in src/game: '+dup.join(', '));process.exit(1);}}
 try{new vm.Script(`(function(){'use strict';\n${js}\n})`,{filename:'game.js'});}catch(e){console.error('Syntax error in src/game:',e.message);process.exit(1);}
 const vendor=readdirSync(join(root,'vendor/three-r128')).filter(f=>f.endsWith('.js')).sort().map(f=>`<script>\n${readFileSync(join(root,'vendor/three-r128',f),'utf8').replace(/\n$/,'')}\n</script>`).join('\n');
-const html=tpl.replace('/*@styles*/',()=>css).replace('/*@vendor*/',()=>vendor).replace('/*@game*/',()=>`<script>\n(function(){\n'use strict';\n${js}\n})();\n</script>`);
+const chars=args.includes('--embed-chars')?`<script>window.CHAR_EMBED={${readdirSync(join(root,'assets/characters')).filter(f=>f.endsWith('.glb')).map(f=>`${JSON.stringify(f.slice(0,-4))}:'data:model/gltf-binary;base64,${readFileSync(join(root,'assets/characters',f)).toString('base64')}'`).join(',')}};</script>\n`:'';
+const html=tpl.replace('/*@styles*/',()=>css).replace('/*@vendor*/',()=>chars+vendor).replace('/*@game*/',()=>`<script>\n(function(){\n'use strict';\n${js}\n})();\n</script>`);
 if(args.includes('--check')){const cur=readFileSync(out,'utf8');if(cur!==html){console.error('index.html is out of date: run `npm run build`');process.exit(1);}console.log('index.html is up to date');}
 else{writeFileSync(out,html);console.log(`built ${out} from ${mods.length} modules (${(html.length/1024).toFixed(0)} KB)`);}
