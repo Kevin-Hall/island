@@ -211,7 +211,10 @@ function applyUw(dt,tt){
 function uwSky(){const k=swim.uw;if(k<=0.02)return;if(k>0.5){for(const c of skyClouds)c.m.visible=false;moon.visible=false;rainbow.visible=false;shootLine.visible=false;}/* nothing of the sky shows through the sea */const u=skyMat.uniforms;u.zen.value.lerp(scene.fog.color,k);u.hz.value.lerp(scene.fog.color,k);u.ga.value*=1-k;u.disc.value*=1-k;}
 
 // ---- the swim pose: stretched out, a slow kick ----
-function swimPose(dt,tt,moving){const b=villager.children[0];if(!b)return;const uw=swim.under&&swim.depth>0.3,lean=uw?1.05:0.7,kick=moving?1:0.45;
+// a character (61b) keeps its idle clip in the water, with a slight forward lean and a gentle bob instead of strokes
+function swimPose(dt,tt,moving){const b=villager.children[0];if(!b)return;const uw=swim.under&&swim.depth>0.3,kick=moving?1:0.45;
+  if(b.userData.anim){b.rotation.x=lerp(b.rotation.x,uw?0.6:0.3,Math.min(1,dt*5));b.rotation.z=Math.sin(tt*1.7)*0.04;b.position.y=lerp(b.position.y,(uw?0.2:0.06)+Math.sin(tt*2.2)*0.035,Math.min(1,dt*5));b.scale.set(1,1,1);return;}
+  const lean=uw?1.05:0.7;
   b.rotation.x=lerp(b.rotation.x,lean,Math.min(1,dt*5));b.rotation.z=Math.sin(tt*2.6)*0.08*kick;b.position.y=lerp(b.position.y,uw?0.25:0.12,Math.min(1,dt*5));
   if(playerLimbs)swingLimbs(playerLimbs,tt*(moving?6:3),0.55*kick);else b.scale.set(1+Math.sin(tt*6)*0.03*kick,1-Math.sin(tt*6)*0.03*kick,1);}
 function unPose(){const b=villager.children[0];if(b){b.rotation.z=0;b.position.y=0;}}

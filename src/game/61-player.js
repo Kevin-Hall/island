@@ -1,6 +1,6 @@
 /* =========================================================
    Player looks: the original bunny, or any villager species model (npcModel), in a chosen fur and outfit colour.
-   Saved as S.look {sp, fur, shirt}. The body is always villager.children[0] (rooms clone it), so the held tool and rod stay put.
+   Saved as S.look {sp, fur, shirt} (a human: S.look.h, 61b-characters). The body is always villager.children[0] (rooms copy it: cloneBody), so the held tool and rod stay put.
    To add a look: an entry in LOOKS, plus a case in npcModel (57-villagers) if the species is new.
    ========================================================= */
 const LOOKS={
@@ -14,10 +14,13 @@ const LOOKS={
   penguin:{name:'Penguin',fur:[0x3a4a6a,0x5a6a8a]}};
 const OUTFITS=[0xd8453a,0x5a8ae0,0x6ab84a,0xf6d04a,0xf39ab0,0x9a6ad0,0x3a3440];
 const hexCss=c=>'#'+c.toString(16).padStart(6,'0');
-function playerBody(L){const b=L.sp==='human'?humanModel(L.h||{}):L.sp==='bunny'||!LOOKS[L.sp]?bunnyBody(L.fur,L.shirt):npcModel(L.sp,L.fur,L.shirt,null,'overalls');b.traverse(o=>{if(o.isMesh)o.castShadow=true;});return b;}
+function playerBody(L){const b=L.sp==='human'?charModel(curHuman()):L.sp==='bunny'||!LOOKS[L.sp]?bunnyBody(L.fur,L.shirt):npcModel(L.sp,L.fur,L.shirt,null,'overalls');b.traverse(o=>{if(o.isMesh)o.castShadow=true;});return b;}
 let playerLimbs=null;
-function applyLook(){const L=S.look,b=playerBody(L);villager.remove(villager.children[0]);villager.add(b);villager.children.unshift(villager.children.pop());
-  playerLimbs=L.sp==='bunny'?null:limbsOf(b);}
+// a character swaps in once its model has loaded (straight away if it already has), so you're never left invisible
+function applyLook(){const L=S.look;if(L.sp==='human'){const h=curHuman(),want=h.c+'|'+h.skin;applyLook.want=want;charLoad(h.c,()=>{if(applyLook.want===want&&S.look.sp==='human')setBody(playerBody(L));});return;}
+  applyLook.want=null;setBody(playerBody(L));}
+function setBody(b){villager.remove(villager.children[0]);villager.add(b);villager.children.unshift(villager.children.pop());
+  playerLimbs=S.look.sp==='bunny'||b.userData.char?null:limbsOf(b);}
 // preview thumbnails for the look picker, cached per species + colours
 const lookThumbs={};
 function lookThumb(sp,fur,shirt){if(sp==='human')return hThumb({});const k=sp+'|'+fur+'|'+shirt;return lookThumbs[k]||(lookThumbs[k]=snapThumb(playerBody({sp,fur,shirt}),128));}

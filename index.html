@@ -8584,7 +8584,7 @@ function buildRoom(kind,n){if(kind==='museum')return buildMuseum();if(kind==='ho
     put(extra[0],L-0.2,0.9,-1.57,extra[0],st.rug);put(extra[1],0.2,B,0,extra[1],st.rug);}
   const g=new T.Group();g.add(M(p));if(gl.length){const m=M(gl,glowMat);m.castShadow=false;g.add(m);}g.add(win);return{g,props,RW,RD};}
 function enterHouse(kind,b,n){if(inside)return;$('fade').classList.add('on');SFX.ui();
-  setTimeout(()=>{if(kind==='home')roomInit();/* 56c */const r=buildRoom(kind,n);roomScene.add(r.g);const pm=villager.children[0].clone();const me=new T.Group();me.add(pm);r.g.add(me);
+  setTimeout(()=>{if(kind==='home')roomInit();/* 56c */const r=buildRoom(kind,n);roomScene.add(r.g);const pm=cloneBody(villager.children[0]);const me=new T.Group();me.add(pm);r.g.add(me);
     let who=null;if(n&&(n.state==='home'||S.hour>=21||S.hour<6.5)){who=n.g.clone(true);who.visible=true;who.position.set(0.9,0,0.2);who.rotation.y=0.4;r.g.add(who);}
     inside={kind,b,n,room:r,me,who,wl:who?limbsOf(who):null,ml:null,x:0,y:0,lv:0,tlv:0,path:null,z:r.RD/2-0.8,tx:0,tz:r.RD/2-0.8,face:Math.PI,title:r.title||(kind==='home'?'Your '+HOUSES[S.house].toLowerCase():n.name+'’s house')};
     if(kind==='home')syncRoomItems();
@@ -8631,7 +8631,8 @@ function updateRoom(dt,tt){const I=inside;if(!I)return;let walking=false,climb=f
     else{const sp=Math.min(d,dt*(climb?1.7:2.6));I.x+=dx/d*sp;I.y+=dy/d*sp;I.z+=dz/d*sp;walking=true;I.face=climb?Math.PI:Math.atan2(dx,dz);}
     I.tx=I.x;I.tz=I.z;}
   else{const dx=I.tx-I.x,dz=I.tz-I.z,d=Math.hypot(dx,dz);walking=d>0.04;if(walking){const sp=Math.min(d,dt*2.6);I.x+=dx/d*sp;I.z+=dz/d*sp;I.face=Math.atan2(dx,dz);}}
-  I.me.position.set(I.x,(I.y||0)+(walking?Math.abs(Math.sin(tt*(climb?9:14)))*0.06:0),I.z);I.me.rotation.y+=angDiff(I.me.rotation.y,I.face)*Math.min(1,dt*8);
+  {const an=I.me.children[0]&&I.me.children[0].userData.anim;if(an)an.update(dt,walking?(climb?1.7:2.6):0,false);/* a character walks on its own clip */
+  I.me.position.set(I.x,(I.y||0)+(walking&&!an?Math.abs(Math.sin(tt*(climb?9:14)))*0.06:0),I.z);}I.me.rotation.y+=angDiff(I.me.rotation.y,I.face)*Math.min(1,dt*8);
   if(I.who){I.who.rotation.y+=angDiff(I.who.rotation.y,Math.atan2(I.x-I.who.position.x,I.z-I.who.position.z))*Math.min(1,dt*3);I.who.position.y=Math.sin(tt*2)*0.01;}
   roomCam.aspect=camera.aspect;if(I.room.follow){/* big rooms: the camera follows you, staying close so the world curve stays gentle */const cx=clamp(I.x,-I.room.RW/2+3,I.room.RW/2-3),cz=clamp(I.z,-I.room.RD/2+2.2,I.room.RD/2-2.2);I.cx=I.cx===undefined?cx:lerp(I.cx,cx,Math.min(1,dt*3));I.cz=I.cz===undefined?cz:lerp(I.cz,cz,Math.min(1,dt*3));const k=camera.aspect<0.8?1.55:1;/* stand further back on a tall phone */roomCam.position.set(I.cx,7.2*k,I.cz+6.8*k);roomCam.lookAt(I.cx,0.4,I.cz-0.9);}
   else if(I.room.dio){fitRoomCam(I.room.dio);roomScene.background.copy(skyZen).lerp(skyHz,0.45).lerp(_c.set(0x1a1830),nightF*0.55);}
@@ -9831,7 +9832,7 @@ function cursorAt(x,z,color=0xfff6e2){cursor.material.color.set(color);cursor.po
 
 /* =========================================================
    Player looks: the original bunny, or any villager species model (npcModel), in a chosen fur and outfit colour.
-   Saved as S.look {sp, fur, shirt}. The body is always villager.children[0] (rooms clone it), so the held tool and rod stay put.
+   Saved as S.look {sp, fur, shirt} (a human: S.look.h, 61b-characters). The body is always villager.children[0] (rooms copy it: cloneBody), so the held tool and rod stay put.
    To add a look: an entry in LOOKS, plus a case in npcModel (57-villagers) if the species is new.
    ========================================================= */
 const LOOKS={
@@ -9845,191 +9846,66 @@ const LOOKS={
   penguin:{name:'Penguin',fur:[0x3a4a6a,0x5a6a8a]}};
 const OUTFITS=[0xd8453a,0x5a8ae0,0x6ab84a,0xf6d04a,0xf39ab0,0x9a6ad0,0x3a3440];
 const hexCss=c=>'#'+c.toString(16).padStart(6,'0');
-function playerBody(L){const b=L.sp==='human'?humanModel(L.h||{}):L.sp==='bunny'||!LOOKS[L.sp]?bunnyBody(L.fur,L.shirt):npcModel(L.sp,L.fur,L.shirt,null,'overalls');b.traverse(o=>{if(o.isMesh)o.castShadow=true;});return b;}
+function playerBody(L){const b=L.sp==='human'?charModel(curHuman()):L.sp==='bunny'||!LOOKS[L.sp]?bunnyBody(L.fur,L.shirt):npcModel(L.sp,L.fur,L.shirt,null,'overalls');b.traverse(o=>{if(o.isMesh)o.castShadow=true;});return b;}
 let playerLimbs=null;
-function applyLook(){const L=S.look,b=playerBody(L);villager.remove(villager.children[0]);villager.add(b);villager.children.unshift(villager.children.pop());
-  playerLimbs=L.sp==='bunny'?null:limbsOf(b);}
+// a character swaps in once its model has loaded (straight away if it already has), so you're never left invisible
+function applyLook(){const L=S.look;if(L.sp==='human'){const h=curHuman(),want=h.c+'|'+h.skin;applyLook.want=want;charLoad(h.c,()=>{if(applyLook.want===want&&S.look.sp==='human')setBody(playerBody(L));});return;}
+  applyLook.want=null;setBody(playerBody(L));}
+function setBody(b){villager.remove(villager.children[0]);villager.add(b);villager.children.unshift(villager.children.pop());
+  playerLimbs=S.look.sp==='bunny'||b.userData.char?null:limbsOf(b);}
 // preview thumbnails for the look picker, cached per species + colours
 const lookThumbs={};
 function lookThumb(sp,fur,shirt){if(sp==='human')return hThumb({});const k=sp+'|'+fur+'|'+shirt;return lookThumbs[k]||(lookThumbs[k]=snapThumb(playerBody({sp,fur,shirt}),128));}
 function setLook(ch){Object.assign(S.look,ch);if(ch.sp&&!ch.fur)S.look.fur=LOOKS[ch.sp].fur[0];applyLook();hearts(vil.x,1.1,vil.z);SFX.pop();save();}
 /* =========================================================
-   Human characters, and the character editor
+   Player characters (artist-made), and the character editor
    ========================================================= */
-// A human player (S.look.sp 'human', its choices in S.look.h) is built by humanModel: chibi proportions to stand
-// with the villagers (a big round head, a small body), with the same named limb pivots (armL/armR/footL/footR) and
-// face meshes (open/blink/happy, smile/talk) as npcModel, so walking, swimming, blinking and rooms all just work.
-// The editor (openCharEd) zooms in on you in the world with a tray of choices: boy/girl, skin, hair style and colour,
-// eyes, face details, top, bottoms, shoes and something to wear on your head. Drag to turn round, Shuffle for a surprise.
+// A human player (S.look.sp 'human', its choice in S.look.h {c, skin}) is one of the preset characters in CHARS:
+// rigged, animated low-poly people by Quaternius (CC0), shipped as assets/characters/<id>.glb beside the page. Each
+// file loads once, the first time it's needed (charLoad), and every use (you, your copy in a room, the editor's model,
+// thumbnails) is a clone of it (charModel) at one shared scale (CHAR_SCALE), painted with the game's toon shading from
+// the artist's own colour atlas. A skin tone recolours the atlas's skin texel, nothing else (charMat). CharacterAnimator
+// plays the artist's Idle, Walk and Run clips. The editor (openCharEd) picks a character and a skin tone.
+const CHARS=[{id:'anne',name:'Anne',skin:[4,9]},{id:'henry',name:'Henry',skin:[4,11]}];/* skin: the atlas texel (column, row) their skin is painted from */
+const CHAR_SCALE=0.68;/* the artists' ~1.6-unit people, brought to the player's height (~1.1, the same as before) */
 const HSKIN=[0xfde3cf,0xf6d2b4,0xeec09a,0xd9a27a,0xc08660,0xa06a48,0x7a4e34,0x5a3826];
-const HHAIR=[0x2a2026,0x4a2e22,0x7a4a2a,0xb07a40,0xe0b860,0xf0dca0,0xc8502a,0xe8e4dc,0x8a8a98,0xf08ab0,0x6a9ae8,0x7ac87a,0xa87ad8];
-const HEYES=[0x3a2a22,0x6a4a2a,0x3a6a9a,0x4a8a5a,0x7a7a8a,0x8a5ab8];
-const HCLOTH=[0xd8453a,0xf08a3a,0xf6d04a,0x6ab84a,0x3ab8a8,0x5a8ae0,0x3a4a7a,0x9a6ad0,0xf39ab0,0xf4f0ea,0x8a8a98,0x3a3440,0x8a5a3a];
-const HSTYLE={
-  hair:[['short','Short'],['side','Side part'],['spiky','Spiky'],['buzz','Buzz'],['curly','Curly'],['mohawk','Mohawk'],['bob','Bob'],['long','Long'],['ponytail','Ponytail'],['pigtails','Pigtails'],['bun','Top bun'],['afro','Afro']],
-  top:[['tee','T-shirt'],['stripe','Stripy tee'],['hoodie','Hoodie'],['sweater','Sweater'],['tank','Vest top'],['overalls','Overalls'],['dress','Dress'],['jacket','Jacket']],
-  bot:[['shorts','Shorts'],['trousers','Trousers'],['skirt','Skirt']],
-  hat:[['none','Nothing'],['cap','Cap'],['beanie','Beanie'],['sunhat','Sun hat'],['bow','Bow'],['flower','Flower'],['headband','Headband'],['band','Bandana']]};
-const HDEF={boy:{g:'boy',skin:2,hair:'short',hairC:2,eye:3,top:'sweater',topC:0x4a8a4a,bot:'trousers',botC:0x6a4a34,shoe:0xf4f0ea,hat:'none',glasses:0,blush:1,freckles:0},
-  girl:{g:'girl',skin:1,hair:'long',hairC:2,eye:1,top:'overalls',topC:0xf4f0ea,bot:'shorts',botC:0x7aa0d8,shoe:0xf6c84a,hat:'flower',glasses:0,blush:1,freckles:0}};
-// The model is sculpted from shaped geometry, in the proportions of a young person drawn in a cosy pixel-art style:
-// a head about a third of the height, egg-shaped (round cranium, narrower jaw and chin: headPt), ears and a nose;
-// anime-style eyes (white, coloured iris, pupil, catchlights, a lash line) and brows drawn on the head's own surface
-// (onHead); hair as a base shell over the head that dips under the skin across the face (hairGeo) with tapered locks
-// on top (lock: a tousled crown, a fringe that falls in points, locks over the ears); a neck, a torso with shoulders,
-// chest and waist; arms with an elbow and a hand; legs with thigh, knee, calf and a sneaker; all turned on a lathe.
-const HEAD_R=[0.205,0.232,0.215],HEAD_Y=0.985,HUM_S=0.86,_hgeo=new Map();
-// the head's shape: a sphere, a little squarer at the cheekbones, tapering to a soft chin below
-function headPt(x,y,z){let X=x,Y=y,Z=z;if(y<0){const t=-y,k=1-0.34*Math.pow(t,1.6);X*=k;Z*=1-0.18*Math.pow(t,1.6);Y*=1.06;}else{X*=1+0.04*Math.sin(Math.PI*y);}
-  if(z>0)Z*=0.95;return[X*HEAD_R[0],Y*HEAD_R[1],Z*HEAD_R[2]];}
-// a point on (or r× out from) the head, in the direction (u,v) across the face, and the angles to face out from it there
-function onHead(u,v,r=1){const w=Math.sqrt(Math.max(0,1-u*u-v*v)),[x,y,z]=headPt(u,v,w);return[x*r,HEAD_Y+y*r,z*r,Math.atan2(u,w),-Math.asin(clamp(v,-1,1))];}
-function headGeo(){if(_hgeo.has('head2'))return _hgeo.get('head2');const g=new T.SphereGeometry(1,40,30),a=g.attributes.position;
-  for(let i=0;i<a.count;i++){const [x,y,z]=headPt(a.getX(i),a.getY(i),a.getZ(i));a.setXYZ(i,x,y,z);}g.computeVertexNormals();smoothG(g);_hgeo.set('head2',g);return g;}
-// each style's base: where the fringe line sits, the hem at the sides and back, its volume, and how far long hair falls
-const HAIR_CUT={short:{f:0.4,hem:-0.08,back:-0.55,r:1.12,top:0.1},side:{f:'side',hem:-0.05,back:-0.5},spiky:{f:0.45,hem:-0.08,back:-0.5},buzz:{f:0.55,hem:-0.12,back:-0.45,r:1.03,top:0.01},
-  curly:{f:0.42,hem:-0.1,back:-0.5,r:1.1},mohawk:{f:0.6,hem:-0.15,back:-0.45,r:1.02,top:0},bob:{f:0.4,hem:-0.62,back:-0.62,side:0.62,pull:0.15},
-  long:{f:0.4,hem:-0.6,back:-0.95,side:0.62,pull:1.1},ponytail:{f:0.4,hem:-0.1,back:-0.55},pigtails:{f:0.4,hem:-0.1,back:-0.55},bun:{f:0.4,hem:-0.1,back:-0.55},afro:{f:0.45,hem:-0.3,back:-0.6,r:1.42,top:0.1}};
-function hairGeo(st){const key='h2'+st;if(_hgeo.has(key))return _hgeo.get(key);const C=HAIR_CUT[st]||HAIR_CUT.short,g=new T.SphereGeometry(1,56,42),a=g.attributes.position;
-  const fr=x=>C.f==='side'?0.5-0.32*clamp((x+0.55)/1.1,0,1):C.f+0.04*Math.cos(x*20);
-  const bare=(x,y,z)=>{const W=C.side||0.72,face=Math.min(fr(x)-y,W-Math.abs(x),(z-0.02)*1.5);
-    const lock=C.side&&z>-0.1&&Math.abs(x)>=C.side-0.02&&y>C.hem-0.05,hem=lock?-1:(z<-0.25?C.back:z<0?lerp(C.hem,C.back,-z/0.25):C.hem)-y;return Math.max(face,hem,-0.92-y);};
-  for(let i=0;i<a.count;i++){const x=a.getX(i),y=a.getY(i),z=a.getZ(i);
-    let r=(C.r||1.08)+(C.top??0.08)*Math.max(0,y);if(C.side&&Math.abs(x)>0.5)r+=0.03;if(st==='afro')r-=0.25*Math.max(0,z)*Math.max(0,-y+0.35);
-    const d=bare(x,y,z),k=clamp((d+0.03)/0.07,0,1);r=lerp(r,0.9,k*k*(3-2*k));
-    let [X,Y,Z]=headPt(x,y,z);X*=r;Y*=r;Z*=r;if(C.pull&&y<-0.1&&z<0.45&&d<0){const q=(-0.1-y)*C.pull*(1.1-Math.max(0,z));Y-=q*0.2;X*=1-q*0.1;}
-    a.setXYZ(i,X,Y,Z);}
-  g.computeVertexNormals();smoothG(g);_hgeo.set(key,g);return g;}
-function latheGeo(key,pts,seg=20){if(_hgeo.has(key))return _hgeo.get(key);const g=new T.LatheGeometry(pts.map(([r,y])=>new T.Vector2(Math.max(0.0005,r),y)),seg);g.computeVertexNormals();smoothG(g);_hgeo.set(key,g);return g;}
-// a lathe with knit ribs running down it (a sweater, its sleeves and cuffs): the radius ripples round the body
-function ribLathe(key,pts,ribs,amp){if(_hgeo.has(key))return _hgeo.get(key);const g=new T.LatheGeometry(pts.map(([r,y])=>new T.Vector2(Math.max(0.0005,r),y)),ribs*4),a=g.attributes.position;
-  for(let i=0;i<a.count;i++){const x=a.getX(i),z=a.getZ(i),k=1+amp*Math.cos(Math.atan2(z,x)*ribs);a.setX(i,x*k);a.setZ(i,z*k);}
-  g.computeVertexNormals();smoothG(g);_hgeo.set(key,g);return g;}
-// a tapered limb segment from radius r0 (at 0) to r1 (at -len), with rounded ends (ribbed: knitted)
-const seg2=(k,r0,r1,len,ribs=0)=>(ribs?(key,pts)=>ribLathe(key,pts,ribs,0.06):latheGeo)((ribs?'sgr':'sg')+k,[[0.0005,0],...[...Array(5)].map((_,i)=>{const a=i/4*Math.PI/2;return[Math.sin(a)*r0,-r0+Math.cos(a)*r0];}),...[...Array(5)].map((_,i)=>{const a=i/4*Math.PI/2;return[Math.cos(a)*r1,-len+r1-Math.sin(a)*r1-r1];}),[0.0005,-len-r1]].map(([r,y])=>[r,y]).reverse(),14);
-const tear=k=>latheGeo('tear'+k,[...Array(11)].map((_,i)=>{const t=i/10;return[Math.max(0.001,Math.sin(Math.PI*t)**0.75*(1-t*0.35)*0.5),t];}),16);
-// a lock of hair: a fat, flattened clump, thickest a little way up and tapering to a soft point, that arches out from root
-// to tip (following the round of the head: arch < 0) and flicks up at the end (flick < 0: away from the head)
-function lockGeo(arch,flick){arch=Math.round(arch*20)/20;flick=Math.round(flick*20)/20;/* (a handful of cached shapes) */const key='lk'+arch+'/'+flick;if(_hgeo.has(key))return _hgeo.get(key);
-  const RAD=[[0,0.4],[0.16,0.5],[0.4,0.47],[0.64,0.36],[0.82,0.22],[0.94,0.09],[1,0.004]],S=8,pos=[],idx=[];
-  for(const [t,r] of RAD){const zc=arch*2*t*(1-t)+flick*Math.max(0,t-0.55)**2*4.9;for(let j=0;j<S;j++){const a=j/S*6.283;pos.push(Math.cos(a)*r,t,zc+Math.sin(a)*r);}}
-  for(let i=0;i<RAD.length-1;i++)for(let j=0;j<S;j++){const a=i*S+j,b=i*S+(j+1)%S,c=a+S,d=b+S;idx.push(a,c,b,b,c,d);}
-  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();smoothG(g);_hgeo.set(key,g);return g;}
-// a lock from root to tip (points on or near the head), shaded from a deeper root to a sunlit tip
-function lock(p,col,root,tip,w,arch=-0.7,flick=-0.25){const dx=tip[0]-root[0],dy=tip[1]-root[1],dz=tip[2]-root[2],L=Math.hypot(dx,dy,dz);w*=1.22;
-  p.push(PG(lockGeo(arch,flick),lerpHex(col,0xfff4e0,0.1),lerpHex(col,0x1a1420,0.12),root[0],root[1],root[2],Math.atan2(Math.hypot(dx,dz),dy),Math.atan2(dx,dz),0,w,L,w*0.72));}
-const hairMat=toon({vertexColors:true,side:T.DoubleSide});
-function humanModel(h0){const h=Object.assign({},HDEF.boy,h0),g=new T.Group(),p=[],hp=[],sk=HSKIN[h.skin]??HSKIN[2],hc=HHAIR[h.hairC]??HHAIR[1],ec=HEYES[h.eye]??HEYES[0],tc=h.topC,bc=h.botC,girl=h.g==='girl';
-  const dk=(c,t)=>lerpHex(c,0x1a1420,t),lt=(c,t)=>lerpHex(c,0xffffff,t),dress=h.top==='dress',W=girl?1.0:1.1,hipY=0.38,shY=0.68,zS=0.72,DY=-0.12;
-  const longS=['hoodie','sweater','jacket'].includes(h.top),rib=h.top==='sweater'||h.top==='hoodie';
-  // torso: hips, waist, chest and shoulders, flattened front to back
-  const torso=(rib&&h.top==='sweater'?(k,q)=>ribLathe(k+'R',q,22,0.035):latheGeo)('torso'+(girl?'g':'b'),girl?[[0.0005,0.45],[0.12,0.45],[0.125,0.52],[0.105,0.6],[0.115,0.68],[0.13,0.74],[0.12,0.79],[0.06,0.83],[0.0005,0.84]]
-    :[[0.0005,0.45],[0.12,0.45],[0.125,0.52],[0.118,0.6],[0.13,0.68],[0.145,0.75],[0.13,0.8],[0.06,0.84],[0.0005,0.85]],24);
-  const knit=h.top==='sweater',kw=knit?1.04:1;
-  p.push(P(torso,tc,0,0,0,0,0,0,W*kw,1,zS*kw));
-  // a ribbed hem and a chunky rolled collar
-  if(rib)p.push(P(ribLathe('ribH2',[[0.123,0],[0.131,0.012],[0.131,0.04],[0.123,0.052]],30,0.03),dk(tc,0.1),0,0.445,0,0,0,0,W*kw,1,zS*kw*1.02),
-    P(ribLathe('ribN2',[[0.05,0],[0.066,0.008],[0.07,0.028],[0.064,0.046],[0.052,0.05]],16,0.05),dk(tc,0.06),0,0.815,0,0,0,0,W,1,zS*1.25));
-  if(h.top==='stripe')for(let i=0;i<4;i++)p.push(P(latheGeo('st2',[[0.128,0],[0.132,0.01],[0.128,0.02]]),0xf8f6f0,0,0.5+i*0.07,0,0,0,0,W*(i===3?1.08:1),1,zS*1.02));
-  if(h.top==='hoodie'){p.push(P(SPH_LO,dk(tc,0.1),0,0.82,-0.07,0,0,0,0.2,0.09,0.11),P(BOX,dk(tc,0.08),0,0.56,0.085,-0.06,0,0,0.13,0.06,0.015));for(const s of [-1,1])p.push(P(CYL8,0xf4f0ea,s*0.025,0.72,0.09,0,0,0,0.008,0.07,0.008));}
-  if(h.top==='jacket'){p.push(P(BOX,0xf4f0ea,0,0.66,0.087,-0.05,0,0,0.07,0.28,0.012));for(const s of [-1,1])p.push(P(BOX,dk(tc,0.15),s*0.045,0.76,0.082,-0.15,0,s*0.35,0.03,0.09,0.015));}
-  if(h.top==='overalls'){p.push(P(latheGeo('ovb',[[0.0005,0],[0.128,0],[0.125,0.12],[0.0005,0.12]]),bc,0,0.46,0,0,0,0,W*1.02,1,zS*1.03),P(BOX,bc,0,0.66,0.085,-0.05,0,0,0.13,0.12,0.012));
-    for(const s of [-1,1])p.push(P(BOX,bc,s*0.06,0.75,0.04,-0.6,0,0,0.03,0.12,0.012),P(SPH_LO,0xf0c040,s*0.055,0.71,0.09,0,0,0,0.018,0.018,0.01));}
-  // the lower half: trousers or shorts on the hips, a skirt or a dress flaring out
-  if(dress)p.push(P(latheGeo('dress2',[[0.0005,0.62],[0.11,0.62],[0.125,0.54],[0.17,0.4],[0.19,0.33],[0.0005,0.33]]),tc,0,0,0,0,0,0,W,1,0.85),P(latheGeo('dhem',[[0.188,0],[0.193,0.012],[0.186,0.024]]),lt(tc,0.4),0,0.33,0,0,0,0,W,1,0.85));
-  else if(h.bot==='skirt')p.push(P(latheGeo('skirt2',[[0.0005,0.56],[0.125,0.56],[0.16,0.44],[0.175,0.39],[0.0005,0.39]]),bc,0,0,0,0,0,0,W,1,0.85));
-  else if(h.top!=='overalls')p.push(P(latheGeo('pelvis',[[0.0005,0.42],[0.115,0.42],[0.125,0.48],[0.125,0.55],[0.0005,0.56]]),bc,0,0,0,0,0,0,W*(rib?0.94:1),1,zS*(rib?0.96:1.02)),...(rib?[]:[P(latheGeo('belt',[[0.126,0],[0.129,0.012],[0.126,0.022]]),dk(bc,0.35),0,0.535,0,0,0,0,W,1,zS*1.03)]));/* (a sweater or hoodie hides the belt) */
-  // neck and head
-  p.push(P(latheGeo('neck2',[[0.0005,0],[0.045,0],[0.042,0.05],[0.045,0.1],[0.0005,0.1]]),sk,0,0.8,0,0,0,0,1,1,0.9));
-  for(const q of p)q.y+=DY;/* the whole body sits lower: shorter legs */
-  p.push(P(headGeo(),sk,0,HEAD_Y,0));
-  const feat=(geo,col,u,v,sx,sy,sz,r=1.0,into=p,rz=0)=>{const [x,y,z,ry,rx]=onHead(u,v,r);into.push(P(geo,col,x,y,z,rx,ry,rz,sx,sy,sz));};
-  for(const s of [-1,1]){const [x,y,z]=headPt(s*0.99,-0.06,-0.05);p.push(P(SPH_LO,sk,x,HEAD_Y+y,z,0,s*0.3,0,0.045,0.07,0.035),P(SPH_XS,dk(sk,0.15),x+s*0.004,HEAD_Y+y,z+0.008,0,0,0,0.022,0.04,0.015));}/* ears */
-  feat(SPH_LO,sk,0,-0.22,0.034,0.05,0.04,1.0);feat(SPH_XS,dk(sk,0.16),0,-0.27,0.03,0.012,0.012,1.012);/* a nose, with a little shadow under it */
-  if(h.blush)for(const s of [-1,1])feat(SPH_LO,girl?0xf6a0ac:0xf29c94,s*0.5,-0.3,0.058,0.034,0.012,0.99);
-  if(h.freckles)for(const s of [-1,1])for(let i=0;i<4;i++)feat(SPH_XS,dk(sk,0.3),s*(0.2+i*0.07),-0.2-(i%2)*0.04,0.009,0.009,0.006,1.005);
-  for(const s of [-1,1])feat(BOX,dk(hc,0.15),s*0.34,0.16,girl?0.058:0.064,girl?0.009:0.014,0.01,1.008,p,s*(girl?-0.15:-0.06));/* brows */
-  // hair: the base, then locks
-  hp.push(P(hairGeo(h.hair),h.hair==='mohawk'?dk(hc,0.45):hc,0,HEAD_Y,0));
-  const R0=mulberry(hi(h.hair.length,h.hairC,7)),hl=lt(hc,0.08),hd=dk(hc,0.12),at=(u,v,r)=>{const [x,y,z]=onHead(u,v,r);return[x,y,z];};
-  const fringe=(n,len,spread=0.85,v0=0.55)=>{for(let i=0;i<n;i++){const u=(i/(n-1)-0.5)*spread,root=at(u*0.8,v0+0.25,1.12),tip=at(u+(R0()-0.5)*0.08,v0-len,1.1);lock(hp,i%2?hc:hl,root,tip,0.05+R0()*0.015);}};
-  const sph=(a,e,r)=>{const [x,y,z]=headPt(Math.sin(e)*Math.cos(a),Math.cos(e),Math.sin(e)*Math.sin(a));return[x*r,HEAD_Y+y*r,z*r];};
-  const crown=(n,out=1.2)=>{for(let i=0;i<n;i++){const a=i/n*6.283+R0()*0.4,e=0.12+R0()*0.6;if(Math.sin(a)>0.55&&e>0.45)continue;/* (the fringe covers the front) */
-    lock(hp,[hc,hl,hd][i%3],sph(a,e,1.04),sph(a+(R0()-0.5)*0.5,e+0.55+R0()*0.25,out),0.06+R0()*0.02);}};
-  const sides=(len)=>{for(const s of [-1,1])for(let i=0;i<3;i++){const root=at(s*0.82,0.35-i*0.12,1.08),tip=at(s*(0.9+R0()*0.05),0.1-len-i*0.08,1.12);lock(hp,i%2?hc:hd,root,tip,0.045);}};
-  switch(h.hair){
-    // a big, soft, tousled mop: fat locks sweeping out from a whorl at the back of the crown, a heavy fringe falling in
-    // points across the forehead, tufts over the ears and down the nape
-    case'short':{const W0=[-1.75,0.32];
-      for(let i=0;i<20;i++){const a=W0[0]+i/20*6.283+(R0()-0.5)*0.2,front=Math.sin(a)>0.35,e1=front?0.95+R0()*0.12:1.05+R0()*0.4;
-        lock(hp,[hc,hl,hc,hd][i%4],sph(a,0.12+R0()*0.18,1.06),sph(a+(R0()-0.5)*0.35,e1,1.17+R0()*0.05),0.105+R0()*0.025,-0.9,-0.35-R0()*0.3);}
-      for(let i=0;i<7;i++){const u=(i/6-0.5)*1.25,root=at(u*0.6,0.86,1.12),tip=at(u*1.05+(i%2?0.07:-0.05),0.34+R0()*0.08-(Math.abs(u)>0.5?0.08:0),1.13);lock(hp,i%2?hl:hc,root,tip,0.088+R0()*0.02,-0.7,-0.35);}
-      for(const s of [-1,1])for(let i=0;i<3;i++){const root=at(s*0.7,0.62-i*0.08,1.1),tip=at(s*(0.93+R0()*0.04),0.02-i*0.1,1.15);lock(hp,i%2?hc:hd,root,tip,0.085,-0.6,-0.45);}
-      for(let i=0;i<7;i++){const a=-Math.PI/2+(i/6-0.5)*2.4;lock(hp,i%2?hc:hd,sph(a,0.95,1.1),sph(a+(R0()-0.5)*0.2,1.85+R0()*0.15,1.12),0.1,-0.7,-0.5);}
-      break;}
-    case'side':crown(10,1.18);for(let i=0;i<7;i++){const u=-0.45+i*0.15,root=at(u-0.2,0.8,1.12),tip=at(u+0.25,0.42-i*0.025,1.12);lock(hp,i%2?hc:hl,root,tip,0.055);}sides(0.1);break;
-    case'spiky':for(let i=0;i<16;i++){const a=i/16*6.283,e=0.3+(i%3)*0.18,u=Math.cos(a)*Math.sin(e),v=Math.cos(e),w=Math.sin(a)*Math.sin(e);lock(hp,i%2?hc:hl,[u*HEAD_R[0]*0.9,HEAD_Y+v*HEAD_R[1]*0.9,w*HEAD_R[2]*0.9],[u*HEAD_R[0]*1.5,HEAD_Y+(v*1.25+0.2)*HEAD_R[1]*1.3,w*HEAD_R[2]*1.5],0.06);}fringe(5,0.22);break;
-    case'buzz':break;
-    case'curly':for(let i=0;i<28;i++){const a=R0()*6.283,e=0.15+R0()*1.1,u=Math.cos(a)*Math.sin(e),v=Math.cos(e),w=Math.sin(a)*Math.sin(e);if(w>0.3&&v<0.5)continue;const [x,y,z]=headPt(u,v,w);hp.push(P(SPH_LO,[hc,hl,hd][i%3],x*1.12,HEAD_Y+y*1.12,z*1.12,0,0,0,0.07,0.07,0.07));}fringe(5,0.2);break;
-    case'mohawk':for(let i=0;i<7;i++){const w=0.75-i*0.25,v=Math.sqrt(Math.max(0,1-w*w));lock(hp,i%2?hc:hl,[0,HEAD_Y+v*HEAD_R[1]*0.95,w*HEAD_R[2]*0.95],[0,HEAD_Y+(v+0.45)*HEAD_R[1]*1.1,(w-0.15)*HEAD_R[2]*1.2],0.07);}break;
-    case'bob':crown(8,1.12);fringe(7,0.32,0.9);for(const s of [-1,1])for(let i=0;i<4;i++){const z0=0.3-i*0.3;lock(hp,i%2?hc:hd,at(s*0.9,0.4,1.1).map((c,j)=>j===2?z0*HEAD_R[2]:c),[s*HEAD_R[0]*1.12,HEAD_Y-HEAD_R[1]*0.8,z0*HEAD_R[2]*1.1],0.07);}break;
-    case'long':crown(8,1.12);fringe(7,0.32,0.9);for(let i=0;i<9;i++){const a=Math.PI*0.08+i/8*Math.PI*0.84,x=Math.cos(a)*HEAD_R[0]*1.05,z=-Math.sin(a)*HEAD_R[2]*1.0+(Math.abs(Math.cos(a))>0.8?0.05:0);
-        lock(hp,i%2?hc:hd,[x,HEAD_Y+HEAD_R[1]*0.6,z],[x*1.15,HEAD_Y-HEAD_R[1]*2.2,z*1.1-0.03],0.09);}break;
-    case'ponytail':crown(8,1.12);fringe(6,0.3);hp.push(P(SPH_LO,0xd8453a,0,HEAD_Y+0.06,-HEAD_R[2]*1.06,0,0,0,0.05,0.05,0.04));for(let i=0;i<4;i++)lock(hp,i%2?hc:hd,[0,HEAD_Y+0.06,-HEAD_R[2]*1.1],[(i-1.5)*0.03,HEAD_Y-0.2,-HEAD_R[2]*1.5-i*0.01],0.08);break;
-    case'pigtails':crown(8,1.12);fringe(6,0.3);for(const s of [-1,1]){hp.push(P(SPH_LO,0xf39ab0,s*HEAD_R[0]*1.05,HEAD_Y+0.01,-0.04,0,0,0,0.045,0.045,0.045));for(let i=0;i<3;i++)lock(hp,i%2?hc:hd,[s*HEAD_R[0]*1.08,HEAD_Y,-0.04],[s*(HEAD_R[0]*1.4+i*0.02),HEAD_Y-0.24,-0.05+i*0.02],0.075);}break;
-    case'bun':crown(6,1.1);fringe(6,0.3);hp.push(P(SPH,hc,0,HEAD_Y+HEAD_R[1]*1.2,-0.04,0,0,0,0.15,0.13,0.15),P(latheGeo('bunr',[[0.05,0],[0.058,0.01],[0.05,0.02]]),0xf39ab0,0,HEAD_Y+HEAD_R[1]*1.08,-0.04));break;
-    case'afro':for(let i=0;i<18;i++){const a=R0()*6.283,e=0.2+R0()*1.1,u=Math.cos(a)*Math.sin(e),v=Math.cos(e),w=Math.sin(a)*Math.sin(e);if(w>0.4&&v<0.45)continue;const [x,y,z]=headPt(u,v,w);hp.push(P(SPH_LO,[hc,hl][i%2],x*1.4,HEAD_Y+y*1.35+0.03,z*1.38,0,0,0,0.11,0.11,0.11));}break;}
-  // something on your head
-  const hy=HEAD_Y+HEAD_R[1]*(h.hair==='afro'?1.5:h.hair==='bun'?1.3:h.hair==='spiky'?1.25:1.12);
-  switch(h.hat){
-    case'cap':hp.push(P(latheGeo('cap2',[[0.0005,0.13],[0.08,0.125],[0.16,0.08],[0.21,0],[0.0005,0]]),tc,0,hy-0.12,0,0,0,0,1,1,1.03),P(CYL12,tc,0,hy-0.11,0.17,0.15,0,0,0.24,0.012,0.15),P(SPH_XS,lt(tc,0.4),0,hy+0.01,0,0,0,0,0.035,0.025,0.035));break;
-    case'beanie':hp.push(P(latheGeo('bean2',[[0.0005,0.17],[0.1,0.16],[0.19,0.09],[0.215,0.01],[0.218,-0.04],[0.0005,-0.04]]),bc,0,hy-0.1,-0.01,0,0,0,1,1,1),P(SPH_LO,lt(bc,0.5),0,hy+0.08,-0.01,0,0,0,0.08,0.08,0.08));break;
-    case'sunhat':hp.push(P(CYL12,0xe8d090,0,hy-0.07,0,0,0,0,0.62,0.016,0.6),P(latheGeo('sun2',[[0.0005,0.1],[0.12,0.095],[0.16,0.03],[0.17,0],[0.0005,0]]),0xe8d090,0,hy-0.07,0),P(latheGeo('sunb2',[[0.164,0],[0.168,0.013],[0.162,0.026]]),tc,0,hy-0.07,0));break;
-    case'bow':for(const s of [-1,1])hp.push(P(ICO2,tc,0.09+s*0.04,hy-0.02,0.02,0,s*0.3,s*0.5,0.075,0.055,0.035));hp.push(P(ICO2,dk(tc,0.15),0.09,hy-0.02,0.025,0,0,0,0.03,0.03,0.03));break;
-    case'flower':for(let k=0;k<2;k++){const cx=0.11+k*0.05,cy=hy-0.04-k*0.025;for(let i=0;i<5;i++){const a=i/5*6.283;hp.push(P(SPH_LO,0xfff0a0,cx+Math.cos(a)*0.024,cy+Math.sin(a)*0.024,0.09,0,0,a,0.034,0.024,0.014));}hp.push(P(SPH_LO,0xf0a030,cx,cy,0.096,0,0,0,0.02,0.02,0.014));}break;
-    case'headband':hp.push(P(latheGeo('hb2',[[0.2,0],[0.204,0.014],[0.2,0.028]]),tc,0,HEAD_Y+HEAD_R[1]*0.55,-0.02,-0.3,0,0,0.98,1,1));break;
-    case'band':hp.push(P(latheGeo('bd2',[[0.198,0],[0.203,0.02],[0.198,0.04]]),tc,0,HEAD_Y+HEAD_R[1]*0.4,-0.01,-0.18,0,0,0.98,1,1),P(ICO2,tc,0.03,HEAD_Y+0.06,-0.2,0.4,0,0.6,0.05,0.08,0.02));break;}
-  if(h.glasses){for(const s of [-1,1])feat(latheGeo('lens2',[[0.03,0],[0.037,0.003],[0.03,0.006]]),0x2a2026,s*0.36,-0.06,1,1,1,1.06,hp);const [x,y,z]=onHead(0,-0.05,1.07);hp.push(P(BOX,0x2a2026,x,y,z,0,0,0,0.035,0.007,0.007));}
-  g.add(M(p));g.add(M(hp,hairMat));
-  // eyes: an almond white, a big coloured iris, a dark pupil, two catchlights and a lash line; closed and happy versions
-  const fp={open:[],blink:[],happy:[],smile:[],talk:[]},lid=new T.TorusGeometry(0.03,0.006,4,12,Math.PI*0.75);
-  for(const s of [-1,1]){const u=s*0.37,v=-0.07,sc=girl?1.12:1.07;
-    feat(SPH_LO,0xfbf8f4,u,v,0.068*sc,0.054*sc,0.016,1.0,fp.open);feat(SPH_LO,ec,u+s*-0.01,v-0.005,0.044*sc,0.054*sc,0.014,1.01,fp.open);feat(SPH_LO,0x140c10,u+s*-0.01,v-0.005,0.02*sc,0.03*sc,0.012,1.018,fp.open);
-    feat(SPH_XS,0xffffff,u+0.02,v+0.03,0.013,0.015,0.008,1.026,fp.open);feat(SPH_XS,0xffffff,u-0.015,v-0.035,0.007,0.007,0.006,1.026,fp.open);
-    feat(lid,0x1a1218,u,v+0.012,(girl?1.25:1.12)*sc,1.05,1,1.016,fp.open,0.12*Math.PI);
-    if(girl)feat(BOX,0x1a1218,u+s*0.075,v+0.05,0.026,0.006,0.006,1.018,fp.open,s*0.6);
-    feat(BOX,0x1a1218,u,v-0.01,0.06,0.009,0.009,1.01,fp.blink,0);feat(BOX,0x1a1218,u-0.025,v,0.032,0.008,0.008,1.01,fp.happy,0.5);feat(BOX,0x1a1218,u+0.025,v,0.032,0.008,0.008,1.01,fp.happy,-0.5);}
-  feat(new T.TorusGeometry(girl?0.026:0.03,girl?0.006:0.0055,5,12,Math.PI),girl?0xd06070:0x9a4a48,girl?0:0.012,-0.42,1,1,1,0.995,fp.smile,Math.PI+(girl?0:0.06));
-  feat(SPH_LO,0x6a2030,0,-0.44,0.04,0.03,0.014,0.99,fp.talk);feat(SPH_LO,0xf39ab0,0,-0.48,0.024,0.012,0.01,0.995,fp.talk);
-  const face={};for(const k in fp){const m=M(fp[k]);m.castShadow=false;m.visible=k==='open'||k==='smile';g.add(m);face[k]=m;}g.userData.face=face;
-  // arms: shoulder, upper arm, elbow, forearm, hand (sleeves and cuffs per top)
-  const kr=h.top==='sweater'?10:0,upper=seg2('ua2'+(girl?'g':'b'),girl?0.042:0.048,girl?0.036:0.04,0.12,kr),fore=seg2('fa2'+(girl?'g':'b'),girl?0.035:0.04,girl?0.03:0.033,0.11,kr);
-  const sleeveC=h.top==='tank'?sk:tc,foreC=longS?tc:sk;
-  for(const [nm,s] of [['armL',-1],['armR',1]]){const pv=new T.Group();pv.name=nm;pv.position.set(s*0.14*W,shY-0.03,0);pv.rotation.z=s*0.12;
-    const ap=[P(SPH_LO,sleeveC,0,0,0,0,0,0,0.1,0.09,0.09),P(upper,h.top==='dress'||h.top==='tank'?sk:sleeveC,0,0,0,0,0,0),P(fore,foreC,0,-0.125,0.0,-0.12,0,0)];
-    if(!longS&&h.top!=='tank'&&h.top!=='dress')ap.push(P(latheGeo('slv3',[[0.054,0],[0.057,0.04],[0.05,0.08],[0.0005,0.085]]),sleeveC,0,-0.085,0));
-    if(longS)ap.push(P(ribLathe('cuff3',[[0.035,0],[0.043,0.01],[0.044,0.032],[0.036,0.042]],12,0.06),dk(tc,0.1),0,-0.245,0.015,-0.12,0,0));
-    ap.push(P(SPH,sk,0,-0.275,0.02,0,0,0,0.07,0.08,0.052),P(SPH_LO,sk,s*-0.026,-0.26,0.038,0,0,s*0.5,0.026,0.04,0.026));/* hand and thumb */
-    pv.add(M(ap));g.add(pv);}
-  // legs: thigh, knee, calf, and a sneaker (sole, toe cap, laces)
-  const trou=!dress&&h.bot==='trousers',thigh=seg2(trou?'th3':'th2',trou?0.066:0.062,trou?0.056:0.05,0.14),calf=seg2(trou?'cf3':'cf2',trou?0.056:0.05,trou?0.05:0.038,0.15),legTop=trou?bc:sk,legBot=legTop;
-  for(const [nm,s] of [['footL',-1],['footR',1]]){const pv=new T.Group();pv.name=nm;pv.position.set(s*0.062*W,hipY,0);
-    const lp=[P(thigh,legTop,0,0,0),P(calf,legBot,0,-0.15,0)];if(h.bot==='shorts'&&!dress)lp.push(P(latheGeo('shrt2',[[0.066,0],[0.07,0.05],[0.068,0.1],[0.0005,0.11]]),bc,0,-0.09,0));
-    if(legBot===sk)lp.push(P(latheGeo('sock3',[[0.04,0],[0.043,0.02],[0.04,0.045]]),0xf6f2ea,0,-0.32,0));
-    if(trou)lp.push(P(latheGeo('tcuf',[[0.05,0],[0.058,0.008],[0.059,0.026],[0.052,0.034]]),dk(bc,0.14),0,-0.322,0));/* turned-up cuffs */
-    // chunky sneakers: a thick cupsole, a padded upper with a toe cap and an ankle collar, laces and a stripe down each side
-    {const sh=h.shoe,sole=lerpHex(sh,0xd0c8c0,sh===0xf4f0ea?0.55:0.2),acc=sh===0xf4f0ea?0x9a9aa8:lt(sh,0.55);
-      lp.push(P(SPH,sole,0,-0.376,0.026,0,0,0,0.112,0.042,0.19),P(SPH,sh,0,-0.35,0.018,0,0,0,0.102,0.078,0.165),P(SPH_LO,lt(sh,0.45),0,-0.36,0.088,0,0,0,0.078,0.042,0.062),
-        P(latheGeo('scol',[[0.044,0],[0.052,0.012],[0.047,0.022]]),dk(sh,0.12),0,-0.322,-0.008));
-      for(let i=0;i<2;i++)lp.push(P(BOX,0xf6f2ea,0,-0.316-i*0.008,0.045+i*0.022,0.5,0,0,0.046,0.006,0.012));
-      for(const q of [-1,1])lp.push(P(BOX,acc,q*0.05,-0.352,0.012,0,0,q*-0.3,0.006,0.02,0.075));}
-    pv.add(M(lp));g.add(pv);}
-  g.children.forEach(c=>{c.position.multiplyScalar(HUM_S);c.scale.multiplyScalar(HUM_S);});
+const charSrc={};/* id → {ok, scene, clips, atlas, wait} */
+function charLoad(id,cb){let s=charSrc[id];if(s&&s.ok){cb&&cb(s);return;}if(s&&s.failed){return;}
+  if(s){if(cb)s.wait.push(cb);return;}s=charSrc[id]={ok:false,wait:cb?[cb]:[]};
+  new T.GLTFLoader().load('assets/characters/'+id+'.glb',g=>{
+    let atlas=null;const drop=[];g.scene.traverse(o=>{if(o.name.startsWith('Weapon_'))drop.push(o);else if(o.isMesh&&o.material.map)atlas=o.material.map.image;});
+    for(const o of drop)o.parent.remove(o);/* (each comes holding a prop: an axe, a lute…) */
+    Object.assign(s,{ok:true,scene:g.scene,clips:g.animations,atlas});for(const f of s.wait)f(s);s.wait=[];},undefined,
+    e=>{s.failed=true;s.wait=[];console.warn('character '+id+' failed to load',e);toast('Your character couldn’t load. Check your connection and reopen the game.');});}
+// the material for a character in a skin tone: the toon ramp the whole island uses, over the artist's atlas with its
+// skin texel repainted (-1: as drawn). Flat-coloured texels, sampled crisply
+const charMats={};
+function charMat(id,skin){const k=id+'|'+skin;if(charMats[k])return charMats[k];const s=charSrc[id],C=CHARS.find(c=>c.id===id),cv=document.createElement('canvas');
+  cv.width=s.atlas.width;cv.height=s.atlas.height;const x=cv.getContext('2d');x.drawImage(s.atlas,0,0);
+  if(skin>=0&&C){const [u,v]=C.skin,sw=cv.width/32,sh=cv.height/32;x.fillStyle=hexCss(HSKIN[skin]);x.fillRect(u*sw,v*sh,sw,sh);}
+  const t=new T.CanvasTexture(cv);t.flipY=false;t.magFilter=t.minFilter=T.NearestFilter;t.generateMipmaps=false;
+  return charMats[k]=toon({map:t,skinning:true});}
+// a character, ready to place: a group holding a clone of the loaded model (empty until it has loaded), already in its
+// idle pose (never a T-pose); its CharacterAnimator is userData.anim
+function charModel(h){const g=new T.Group(),id=(CHARS.find(c=>c.id===h.c)||CHARS[0]).id,skin=h.skin??-1;g.userData.char={c:id,skin};
+  charLoad(id,s=>{const m=T.SkeletonUtils.clone(s.scene);m.scale.setScalar(CHAR_SCALE);
+    m.traverse(o=>{if(o.isMesh){o.material=charMat(id,skin);o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;}});
+    g.add(m);g.userData.anim=new CharacterAnimator(m,s.clips);});
   return g;}
+// idle when standing; when moving, walk blending into run with speed, each played at the rate that keeps its feet planted
+// (WALK_V, RUN_V: how fast the clips carry a character across the ground, at CHAR_SCALE). Swimming keeps the idle clip;
+// the lean and bob come from swimPose (76c-swim)
+const WALK_V=1.35*CHAR_SCALE,RUN_V=2.4*CHAR_SCALE;
+class CharacterAnimator{
+  constructor(root,clips){this.mx=new T.AnimationMixer(root);this.a=['Idle','Walk','Run'].map((n,i)=>{const a=this.mx.clipAction(clips.find(c=>c.name===n));a.play();a.setEffectiveWeight(i?0:1);return a;});this.w=[1,0,0];this.mx.update(0);}
+  update(dt,speed,swim){const m=swim?0:smooth(0.05,0.5,speed),r=smooth(WALK_V,RUN_V,speed),tw=[1-m,m*(1-r),m*r],k=Math.min(1,dt*10);
+    for(let i=0;i<3;i++){this.w[i]+=(tw[i]-this.w[i])*k;this.a[i].setEffectiveWeight(this.w[i]);}
+    this.a[1].timeScale=clamp(speed/WALK_V,0.6,3);this.a[2].timeScale=clamp(speed/RUN_V,0.6,3);this.mx.update(dt);}}
+// the player's body copied for a room (56-interiors): a character is re-cloned with its own rig, anything else copied
+function cloneBody(b){return b.userData.char?charModel(b.userData.char):b.clone();}
 /* ---- the editor ---- */
 let charEd=null;
-const H_TABS=[['look','Look'],['hair','Hair'],['face','Face'],['top','Top'],['bot','Bottoms'],['hat','Hats']];
-function curHuman(){if(!S.look.h)S.look.h=Object.assign({},HDEF.boy);return S.look.h;}
+function curHuman(){const h=S.look.h||(S.look.h={});if(!h.c){h.c=h.g==='girl'?'anne':'henry';if(!(h.skin>=-1&&h.skin<HSKIN.length))h.skin=-1;for(const k in h)if(k!=='c'&&k!=='skin')delete h[k];}/* (saves from the old sculpted humans keep their skin tone) */return h;}
 // the editor's own little studio: a soft backdrop and a round stage, so you can dress up anywhere (indoors, at sea…)
 const edScene=new T.Scene(),edCam=new T.PerspectiveCamera(30,1,0.05,60);
 {edScene.add(new T.HemisphereLight(0xfff2e6,0x8a7a8a,0.42));const d=new T.DirectionalLight(0xffe6c8,0.52);d.position.set(2.2,3.4,3);edScene.add(d);/* a warm key light, high on the right */const d2=new T.DirectionalLight(0xb8d0ff,0.3);d2.position.set(-2.5,2,-3);edScene.add(d2);/* a cool rim from behind */const d3=new T.DirectionalLight(0xfff0e6,0.16);d3.position.set(-1.5,0.8,5);edScene.add(d3);/* a soft fill from the front, so the face is evenly lit */
@@ -10038,41 +9914,34 @@ const edScene=new T.Scene(),edCam=new T.PerspectiveCamera(30,1,0.05,60);
   const st=M([P(CYL12,0xe8dcc8,0,-0.05,0,0,0,0,1.5,0.1,1.5),P(CYL12,0xc8b498,0,-0.12,0,0,0,0,1.56,0.06,1.56),P(CYL12,0xe0b8a0,0,0.002,0,0,0,0,1.1,0.004,1.1)]);st.castShadow=false;edScene.add(st);
   for(let i=0;i<14;i++){const an=i/14*6.283,r=2.2+Math.random()*1.5;const m=M([P(SPH_LO,[0xf8c8d8,0xfff0b0,0xc8e8ff,0xd8f0c8][i%4],0,0,0,0,0,0,0.12,0.12,0.12)],lumMat);m.position.set(Math.cos(an)*r,0.3+Math.random()*1.6,Math.sin(an)*r-1.5);m.userData.ph=Math.random()*6;edScene.add(m);}}
 let edModel=null;
-function edRebuild(){if(edModel){edScene.remove(edModel);edModel.traverse(o=>{if(o.isMesh&&o.geometry&&!o.geometry.userData.smooth)o.geometry.dispose();});}edModel=humanModel(curHuman());edScene.add(edModel);}
+function edRebuild(){if(edModel)edScene.remove(edModel);edModel=charModel(curHuman());edScene.add(edModel);}
 function openCharEd(){closeSheet&&closeSheet();if(chat)chatEnd();if(deco)decoClose();
+  for(const c of CHARS)charLoad(c.id,()=>{if(charEd)renderCharEd();});/* every preset, so picking one swaps at once */
   if(S.look.sp!=='human'){S.look.prev=S.look.sp;S.look.sp='human';curHuman();applyLook();}
-  charEd={tab:'look',spin:0,t:0};vil.tx=vil.x;vil.tz=vil.z;vil.path=null;edRebuild();
+  charEd={spin:0,t:0};vil.tx=vil.x;vil.tz=vil.z;vil.path=null;edRebuild();
   document.body.classList.add('chatting','chared');$('charEd').hidden=false;renderCharEd();SFX.ui();}
-function closeCharEd(){if(!charEd)return;charEd=null;edCam.clearViewOffset();if(inside&&inside.me){inside.me.clear();inside.me.add(villager.children[0].clone());}/* you, in the room you're in */$('charEd').hidden=true;document.body.classList.remove('chatting','chared');save();ctxSig='';updateCtx();updateHUD();hearts(vil.x,1.2,vil.z);SFX.level();}
+function closeCharEd(){if(!charEd)return;charEd=null;edCam.clearViewOffset();if(inside&&inside.me){inside.me.clear();inside.me.add(cloneBody(villager.children[0]));}/* you, in the room you're in */$('charEd').hidden=true;document.body.classList.remove('chatting','chared');save();ctxSig='';updateCtx();updateHUD();hearts(vil.x,1.2,vil.z);SFX.level();}
 function setH(ch){Object.assign(curHuman(),ch);applyLook();if(charEd){edRebuild();charEd.hop=0.3;}renderCharEd();SFX.pop();}
-function shuffleH(){const R=Math.random,pk=a=>a[Math.floor(R()*a.length)],g=R()<0.5?'boy':'girl';
-  setH({g,skin:Math.floor(R()*HSKIN.length),hair:pk(HSTYLE.hair)[0],hairC:Math.floor(R()*HHAIR.length),eye:Math.floor(R()*HEYES.length),top:pk(HSTYLE.top)[0],topC:pk(HCLOTH),bot:pk(HSTYLE.bot)[0],botC:pk(HCLOTH),shoe:pk(HCLOTH),hat:R()<0.5?'none':pk(HSTYLE.hat)[0],glasses:R()<0.2?1:0,blush:R()<0.6?1:0,freckles:R()<0.25?1:0});}
+function shuffleH(){setH({c:CHARS[Math.floor(Math.random()*CHARS.length)].id,skin:Math.floor(Math.random()*(HSKIN.length+1))-1});}
+// a character's portrait (blank until its model has loaded; the editor and the look sheet redraw when it arrives)
 const hThumbs={};
-function hThumb(ch){const h=Object.assign({},curHuman(),ch),k=JSON.stringify(h);if(hThumbs[k])return hThumbs[k];return hThumbs[k]=snapThumb(humanModel(h),96);}
-function renderCharEd(){if(!charEd)return;const h=curHuman(),t=charEd.tab;const sw=(arr,key,cur,idx)=>`<div class="hsw">${arr.map((c,i)=>`<button class="sw ${(idx?i:c)===cur?'on':''}" data-hk="${key}" data-hv="${idx?i:c}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`;
-  const tiles=(list,key)=>`<div class="htiles">${list.map(([id,n])=>`<button class="ht ${h[key]===id?'on':''}" data-hk="${key}" data-hs="${id}"><img src="${hThumb({[key]:id})}" alt=""><span>${n}</span></button>`).join('')}</div>`;
-  let b='';
-  if(t==='look')b=`<div class="hseg"><button class="${h.g==='boy'?'on':''}" data-hg="boy">Boy</button><button class="${h.g==='girl'?'on':''}" data-hg="girl">Girl</button></div><h4>Skin</h4>${sw(HSKIN,'skin',h.skin,1)}<h4>Eyes</h4>${sw(HEYES,'eye',h.eye,1)}<h4>Shoes</h4>${sw(HCLOTH,'shoe',h.shoe)}`;
-  if(t==='hair')b=`${tiles(HSTYLE.hair,'hair')}<h4>Colour</h4>${sw(HHAIR,'hairC',h.hairC,1)}`;
-  if(t==='face')b=`<div class="htog">${[['blush','Rosy cheeks'],['freckles','Freckles'],['glasses','Glasses']].map(([k,n])=>`<button class="${h[k]?'on':''}" data-ht="${k}">${n}</button>`).join('')}</div>`;
-  if(t==='top')b=`${tiles(HSTYLE.top,'top')}<h4>Colour</h4>${sw(HCLOTH,'topC',h.topC)}`;
-  if(t==='bot')b=h.top==='dress'?`<p class="hnote">You’re wearing a dress. Pick another top to choose bottoms.</p>`:`${tiles(HSTYLE.bot,'bot')}<h4>Colour</h4>${sw(HCLOTH,'botC',h.botC)}`;
-  if(t==='hat')b=`${tiles(HSTYLE.hat,'hat')}<p class="hnote">Caps, bows and headbands take your top’s colour; beanies your bottoms’.</p>`;
+function hThumb(ch){const h=Object.assign({},curHuman(),ch),k=h.c+'|'+h.skin;if(hThumbs[k])return hThumbs[k];
+  if(!(charSrc[h.c]&&charSrc[h.c].ok)){charLoad(h.c,()=>{if(charEd)renderCharEd();else if(sheet)renderSheet();});return'data:image/gif;base64,R0lGODlhAQABAAAAACw=';}
+  return hThumbs[k]=snapThumb(charModel(h),96);}
+function renderCharEd(){if(!charEd)return;const h=curHuman();
+  const tiles=`<div class="htiles">${CHARS.map(c=>`<button class="ht ${h.c===c.id?'on':''}" data-hc="${c.id}"><img src="${hThumb({c:c.id})}" alt=""><span>${c.name}</span></button>`).join('')}</div>`;
+  const sw=`<div class="hsw"><button class="sw own ${h.skin<0?'on':''}" data-hv="-1" title="As drawn" style="--sw:#d8c0a8"></button>${HSKIN.map((c,i)=>`<button class="sw ${h.skin===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`;
   $('charEd').innerHTML=`<div class="htop"><b>Your character</b><button class="hbtn" data-ha="shuffle">🎲 Shuffle</button>${S.look.prev&&S.look.prev!=='human'?`<button class="hbtn" data-ha="animal">Be an animal</button>`:''}<button class="pbtn go" data-ha="done">Done</button></div>
-    <div class="dtabs">${H_TABS.map(([k,n])=>`<button class="${t===k?'on':''}" data-htab="${k}">${n}</button>`).join('')}</div><div class="hbody">${b}</div>`;
+    <div class="hbody">${tiles}<h4>Skin</h4>${sw}</div>`;
   requestAnimationFrame(()=>{if(charEd){const W=window.innerWidth,H=window.innerHeight,px=$('charEd').offsetHeight;charEd.px=px;edCam.setViewOffset(W,H,0,px*0.5,W,H);}});}
 $('charEd').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!charEd)return;const d=b.dataset;
   if(d.ha==='done'){closeCharEd();return;}if(d.ha==='shuffle'){shuffleH();return;}if(d.ha==='animal'){S.look.sp=S.look.prev||'bunny';applyLook();closeCharEd();return;}
-  if(d.htab){charEd.tab=d.htab;SFX.ui();renderCharEd();return;}
-  if(d.hg){const keep=curHuman();if(keep.g!==d.hg){const D=HDEF[d.hg];setH({g:d.hg,hair:D.hair,top:D.top,bot:D.bot,hat:D.hat,topC:D.topC});}return;}
-  if(d.hs){setH({[d.hk]:d.hs});return;}if(d.hv!==undefined){setH({[d.hk]:+d.hv});return;}if(d.ht){setH({[d.ht]:curHuman()[d.ht]?0:1});return;}});
-// the camera: close and level, facing you; drag sideways to turn round
-// the studio camera: framed on you in the space above the tray; you turn slowly, sway, blink and bounce when something changes
+  if(d.hc){setH({c:d.hc});return;}if(d.hv!==undefined){setH({skin:+d.hv});return;}});
+// the studio camera: framed on you in the space above the tray; you idle, turn slowly, and hop when something changes
 function updateCharEd(dt,tt){if(!charEd||!edModel)return;charEd.t+=dt;const W=window.innerWidth,H=window.innerHeight,asp=W/H,f=1-(charEd.px||H*0.45)/H,tv=Math.tan(15*Math.PI/180);
   edCam.aspect=asp;const d=Math.max(0.64/(tv*f),0.5/(tv*asp))*1.05;edCam.position.set(0,0.6+d*0.1,d);edCam.lookAt(0,0.52,0);edCam.updateProjectionMatrix();
   charEd.hop=Math.max(0,(charEd.hop||0)-dt);edModel.position.y=Math.sin(Math.min(1,(0.3-charEd.hop)/0.3)*Math.PI)*(charEd.hop>0?0.08:0);
-  edModel.rotation.y=charEd.spin+Math.sin(tt*0.6)*0.25;const L=limbsOf(edModel);if(L[0]){L[0].rotation.x=Math.sin(tt*1.6)*0.08;L[1].rotation.x=-Math.sin(tt*1.6)*0.08;L[1].rotation.z=charEd.hop>0?1.4:0.3;}
-  const bl=(tt%3.6)<0.12;setFace(edModel,charEd.hop>0?'happy':bl?'blink':'open','smile');
+  edModel.rotation.y=charEd.spin+Math.sin(tt*0.6)*0.25;if(edModel.userData.anim)edModel.userData.anim.update(dt,0,false);
   for(const m of edScene.children)if(m.userData.ph!==undefined)m.position.y+=Math.sin(tt+m.userData.ph)*dt*0.1;}
 const charEdFocus=()=>chatFocus();
 /* =========================================================
@@ -11886,7 +11755,10 @@ function applyUw(dt,tt){
 function uwSky(){const k=swim.uw;if(k<=0.02)return;if(k>0.5){for(const c of skyClouds)c.m.visible=false;moon.visible=false;rainbow.visible=false;shootLine.visible=false;}/* nothing of the sky shows through the sea */const u=skyMat.uniforms;u.zen.value.lerp(scene.fog.color,k);u.hz.value.lerp(scene.fog.color,k);u.ga.value*=1-k;u.disc.value*=1-k;}
 
 // ---- the swim pose: stretched out, a slow kick ----
-function swimPose(dt,tt,moving){const b=villager.children[0];if(!b)return;const uw=swim.under&&swim.depth>0.3,lean=uw?1.05:0.7,kick=moving?1:0.45;
+// a character (61b) keeps its idle clip in the water, with a slight forward lean and a gentle bob instead of strokes
+function swimPose(dt,tt,moving){const b=villager.children[0];if(!b)return;const uw=swim.under&&swim.depth>0.3,kick=moving?1:0.45;
+  if(b.userData.anim){b.rotation.x=lerp(b.rotation.x,uw?0.6:0.3,Math.min(1,dt*5));b.rotation.z=Math.sin(tt*1.7)*0.04;b.position.y=lerp(b.position.y,(uw?0.2:0.06)+Math.sin(tt*2.2)*0.035,Math.min(1,dt*5));b.scale.set(1,1,1);return;}
+  const lean=uw?1.05:0.7;
   b.rotation.x=lerp(b.rotation.x,lean,Math.min(1,dt*5));b.rotation.z=Math.sin(tt*2.6)*0.08*kick;b.position.y=lerp(b.position.y,uw?0.25:0.12,Math.min(1,dt*5));
   if(playerLimbs)swingLimbs(playerLimbs,tt*(moving?6:3),0.55*kick);else b.scale.set(1+Math.sin(tt*6)*0.03*kick,1-Math.sin(tt*6)*0.03*kick,1);}
 function unPose(){const b=villager.children[0];if(b){b.rotation.z=0;b.position.y=0;}}
@@ -13745,9 +13617,12 @@ function frame(now){
         if(islMap.get(K(tx,tz))===isl.id&&isLand(tx,tz)&&!solidR(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)&&lineClear(vil.x,vil.z,tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}}}
     if(!S.sea){const ty=swim.on?swimY(tt):(surfY(vil.x,vil.z)||0.15);if(ty-vil.y>0.3&&vil.hop<=0&&!swim.on)vil.hop=0.4;vil.y=lerp(vil.y,ty,Math.min(1,dt*10));vil.hop=Math.max(0,vil.hop-dt);
       if(playerLimbs)swingLimbs(playerLimbs,tt*11,d>0.04?0.7:0);
-      villager.position.set(vil.x,vil.y+(d>0.04?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.4*Math.PI)*0.3*(vil.hop>0),vil.z);
-      {const body=villager.children[0],walk=d>0.04,st=walk?1+Math.sin(tt*28)*0.035:1+Math.sin(tt*2.4)*0.022,land=vil.hop>0&&vil.hop<0.08?0.88:1;
-        if(body&&!swim.on){body.scale.set(2-st*land,st*land,2-st*land);body.rotation.x=lerp(body.rotation.x,walk?0.1:poseLean,Math.min(1,dt*(walk?8:16)));}
+      // a character (61b) walks and idles on its own clips, at the speed you're really going; the others bob and squash
+      const body=villager.children[0],an=body&&body.userData.anim;
+      {const v=Math.hypot(vil.x-(vil.px??vil.x),vil.z-(vil.pz??vil.z))/Math.max(dt,1e-3);vil.spd=lerp(vil.spd||0,v,Math.min(1,dt*12));vil.px=vil.x;vil.pz=vil.z;if(an)an.update(dt,vil.spd,swim.on);}
+      villager.position.set(vil.x,vil.y+(d>0.04&&!an?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.4*Math.PI)*0.3*(vil.hop>0),vil.z);
+      {const walk=d>0.04,st=walk&&!an?1+Math.sin(tt*28)*0.035:1+Math.sin(tt*2.4)*0.022*(an?0:1),land=vil.hop>0&&vil.hop<0.08?0.88:1;
+        if(body&&!swim.on){body.scale.set(2-st*land,st*land,2-st*land);body.rotation.x=lerp(body.rotation.x,walk&&!an?0.1:poseLean,Math.min(1,dt*(walk?8:16)));}
         if(swim.on)swimPose(dt,tt,walk);}}
   }
   PL('move');wearPaths();
@@ -13886,7 +13761,8 @@ if(/[?&]debug\b/.test(location.search)){
     roomProp:l=>{if(!inside)return null;const q=inside.room.props.find(p=>p.label===l||p.k===l);if(!q)return null;_pv.set(q.x,q.y-curveDropFor(roomCam,q.x,q.z),q.z).project(roomCam);return[(_pv.x+1)/2*innerWidth,(1-_pv.y)/2*innerHeight];},roomMe:()=>inside&&{x:+inside.x.toFixed(2),y:+(inside.y||0).toFixed(2),z:+inside.z.toFixed(2),lv:inside.lv,path:inside.path&&inside.path.length},
     findObj:k=>{const o=S.objs.filter(o=>o.k===k);return o.length?[o[0].x,o[0].z,o.length]:null;},
     hedgeRow:()=>{const at=DS.freeRow(5);if(!at)return null;const [x,z]=at;const put=(x,z)=>{if(!objAt(x,z))S.objs.push({id:S.nextId++,k:'hedge',x,z,r:0});};for(let i=0;i<5;i++)put(x+i,z);put(x+4,z-1);put(x+4,z-2);put(x,z-2);syncObjs();return at;},
-    humanThumbs:(list,sz=200)=>list.map(h=>snapThumb(humanModel(h),sz)),charEd:()=>{openCharEd();return !!charEd;},charTab:t=>{charEd.tab=t;renderCharEd();},charSet:h=>setH(h),
+    charThumbs:(list,sz=200)=>list.map(h=>charSrc[h.c]&&charSrc[h.c].ok?snapThumb(charModel(h),sz):null),charLoad:()=>{for(const c of CHARS)charLoad(c.id);return CHARS.map(c=>[c.id,!!(charSrc[c.id]&&charSrc[c.id].ok),!!(charSrc[c.id]&&charSrc[c.id].failed)]);},charEd:()=>{openCharEd();return !!charEd;},charSet:h=>setH(h),
+    charState:()=>{const b=villager.children[0],an=b&&b.userData.anim;return{look:S.look.sp,h:S.look.h,body:b&&b.userData.char||null,loaded:!!an,weights:an?an.w.map(w=>+w.toFixed(2)):null,scale:an?an.a[0].getRoot().scale.x:null,speed:+(vil.spd||0).toFixed(2),height:(()=>{if(!an)return null;const bx=new T.Box3().setFromObject(b);return +(bx.max.y-bx.min.y).toFixed(3);})(),tpose:an?an.w.reduce((a,w)=>a+w,0)<0.5:null,room:inside&&inside.me?!!(inside.me.children[0]&&inside.me.children[0].userData.anim):null,bodyRot:b?+b.rotation.x.toFixed(2):null};},
     potGarden:()=>{const ks=POT_PLANTS.map(q=>'pot_'+q[0]),at=DS.freeRow(5);if(!at)return null;let i=0;for(let dz=0;dz<4&&i<ks.length;dz++)for(let dx=0;dx<5&&i<ks.length;dx++){const x=at[0]+dx,z=at[1]-dz;if(objAt(x,z))continue;S.objs.push({id:S.nextId++,k:ks[i++],x,z,r:0});}syncObjs();return at;},freeRow:(len=5)=>{for(const [x,z] of tileKeys()){let ok=true;for(let i=0;i<len&&ok;i++){const k=K(x+i,z);ok=canTill(x+i,z)&&farmQ(x+i,z)>1.3&&(lvlMap.get(k)||0)===(lvlMap.get(K(x,z))||0)&&!TOWN.bld.some(b=>Math.abs(b.x+0.5-(x+i))<4&&Math.abs(b.z+1-z)<4)&&!(S.boat&&Math.hypot(S.boat.x-(x+i),S.boat.z-z)<7);}if(ok)return[x,z];}return null;},
     give:(items)=>{Object.assign(S.inv,items||{'m:wood':14,'m:stone':11,'m:fiber':9,'g:shell':4,'f:sardine':2,'tomato|normal':3,'tomato|golden':1});updateHUD();},
     craft:i=>craft(i),sheet:(k,tab)=>openSheet(k,tab),closeSheet:()=>closeSheet(),

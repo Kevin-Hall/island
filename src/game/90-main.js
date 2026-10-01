@@ -25,9 +25,12 @@ function frame(now){
         if(islMap.get(K(tx,tz))===isl.id&&isLand(tx,tz)&&!solidR(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)&&lineClear(vil.x,vil.z,tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}}}
     if(!S.sea){const ty=swim.on?swimY(tt):(surfY(vil.x,vil.z)||0.15);if(ty-vil.y>0.3&&vil.hop<=0&&!swim.on)vil.hop=0.4;vil.y=lerp(vil.y,ty,Math.min(1,dt*10));vil.hop=Math.max(0,vil.hop-dt);
       if(playerLimbs)swingLimbs(playerLimbs,tt*11,d>0.04?0.7:0);
-      villager.position.set(vil.x,vil.y+(d>0.04?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.4*Math.PI)*0.3*(vil.hop>0),vil.z);
-      {const body=villager.children[0],walk=d>0.04,st=walk?1+Math.sin(tt*28)*0.035:1+Math.sin(tt*2.4)*0.022,land=vil.hop>0&&vil.hop<0.08?0.88:1;
-        if(body&&!swim.on){body.scale.set(2-st*land,st*land,2-st*land);body.rotation.x=lerp(body.rotation.x,walk?0.1:poseLean,Math.min(1,dt*(walk?8:16)));}
+      // a character (61b) walks and idles on its own clips, at the speed you're really going; the others bob and squash
+      const body=villager.children[0],an=body&&body.userData.anim;
+      {const v=Math.hypot(vil.x-(vil.px??vil.x),vil.z-(vil.pz??vil.z))/Math.max(dt,1e-3);vil.spd=lerp(vil.spd||0,v,Math.min(1,dt*12));vil.px=vil.x;vil.pz=vil.z;if(an)an.update(dt,vil.spd,swim.on);}
+      villager.position.set(vil.x,vil.y+(d>0.04&&!an?Math.abs(Math.sin(tt*14))*0.07:0)+Math.sin(vil.hop/0.4*Math.PI)*0.3*(vil.hop>0),vil.z);
+      {const walk=d>0.04,st=walk&&!an?1+Math.sin(tt*28)*0.035:1+Math.sin(tt*2.4)*0.022*(an?0:1),land=vil.hop>0&&vil.hop<0.08?0.88:1;
+        if(body&&!swim.on){body.scale.set(2-st*land,st*land,2-st*land);body.rotation.x=lerp(body.rotation.x,walk&&!an?0.1:poseLean,Math.min(1,dt*(walk?8:16)));}
         if(swim.on)swimPose(dt,tt,walk);}}
   }
   PL('move');wearPaths();

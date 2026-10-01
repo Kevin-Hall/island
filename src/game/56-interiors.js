@@ -51,7 +51,7 @@ function buildRoom(kind,n){if(kind==='museum')return buildMuseum();if(kind==='ho
     put(extra[0],L-0.2,0.9,-1.57,extra[0],st.rug);put(extra[1],0.2,B,0,extra[1],st.rug);}
   const g=new T.Group();g.add(M(p));if(gl.length){const m=M(gl,glowMat);m.castShadow=false;g.add(m);}g.add(win);return{g,props,RW,RD};}
 function enterHouse(kind,b,n){if(inside)return;$('fade').classList.add('on');SFX.ui();
-  setTimeout(()=>{if(kind==='home')roomInit();/* 56c */const r=buildRoom(kind,n);roomScene.add(r.g);const pm=villager.children[0].clone();const me=new T.Group();me.add(pm);r.g.add(me);
+  setTimeout(()=>{if(kind==='home')roomInit();/* 56c */const r=buildRoom(kind,n);roomScene.add(r.g);const pm=cloneBody(villager.children[0]);const me=new T.Group();me.add(pm);r.g.add(me);
     let who=null;if(n&&(n.state==='home'||S.hour>=21||S.hour<6.5)){who=n.g.clone(true);who.visible=true;who.position.set(0.9,0,0.2);who.rotation.y=0.4;r.g.add(who);}
     inside={kind,b,n,room:r,me,who,wl:who?limbsOf(who):null,ml:null,x:0,y:0,lv:0,tlv:0,path:null,z:r.RD/2-0.8,tx:0,tz:r.RD/2-0.8,face:Math.PI,title:r.title||(kind==='home'?'Your '+HOUSES[S.house].toLowerCase():n.name+'’s house')};
     if(kind==='home')syncRoomItems();
@@ -98,7 +98,8 @@ function updateRoom(dt,tt){const I=inside;if(!I)return;let walking=false,climb=f
     else{const sp=Math.min(d,dt*(climb?1.7:2.6));I.x+=dx/d*sp;I.y+=dy/d*sp;I.z+=dz/d*sp;walking=true;I.face=climb?Math.PI:Math.atan2(dx,dz);}
     I.tx=I.x;I.tz=I.z;}
   else{const dx=I.tx-I.x,dz=I.tz-I.z,d=Math.hypot(dx,dz);walking=d>0.04;if(walking){const sp=Math.min(d,dt*2.6);I.x+=dx/d*sp;I.z+=dz/d*sp;I.face=Math.atan2(dx,dz);}}
-  I.me.position.set(I.x,(I.y||0)+(walking?Math.abs(Math.sin(tt*(climb?9:14)))*0.06:0),I.z);I.me.rotation.y+=angDiff(I.me.rotation.y,I.face)*Math.min(1,dt*8);
+  {const an=I.me.children[0]&&I.me.children[0].userData.anim;if(an)an.update(dt,walking?(climb?1.7:2.6):0,false);/* a character walks on its own clip */
+  I.me.position.set(I.x,(I.y||0)+(walking&&!an?Math.abs(Math.sin(tt*(climb?9:14)))*0.06:0),I.z);}I.me.rotation.y+=angDiff(I.me.rotation.y,I.face)*Math.min(1,dt*8);
   if(I.who){I.who.rotation.y+=angDiff(I.who.rotation.y,Math.atan2(I.x-I.who.position.x,I.z-I.who.position.z))*Math.min(1,dt*3);I.who.position.y=Math.sin(tt*2)*0.01;}
   roomCam.aspect=camera.aspect;if(I.room.follow){/* big rooms: the camera follows you, staying close so the world curve stays gentle */const cx=clamp(I.x,-I.room.RW/2+3,I.room.RW/2-3),cz=clamp(I.z,-I.room.RD/2+2.2,I.room.RD/2-2.2);I.cx=I.cx===undefined?cx:lerp(I.cx,cx,Math.min(1,dt*3));I.cz=I.cz===undefined?cz:lerp(I.cz,cz,Math.min(1,dt*3));const k=camera.aspect<0.8?1.55:1;/* stand further back on a tall phone */roomCam.position.set(I.cx,7.2*k,I.cz+6.8*k);roomCam.lookAt(I.cx,0.4,I.cz-0.9);}
   else if(I.room.dio){fitRoomCam(I.room.dio);roomScene.background.copy(skyZen).lerp(skyHz,0.45).lerp(_c.set(0x1a1830),nightF*0.55);}
