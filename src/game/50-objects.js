@@ -44,7 +44,7 @@ function objGroup(kind,seed=1,rot=0){
     case'signpost':p.push(P(CYL8,0x7a5230,0,0.5,0,0,0,0,0.07,1.0,0.07),P(BOX,0xc8905a,0.18,0.82,0,0,0,0,0.5,0.16,0.04),P(CONE4,0xc8905a,0.46,0.82,0,0,0.785,-1.57,0.16,0.1,0.16),P(BOX,0xb8804a,-0.14,0.6,0,0,0.3,0,0.44,0.14,0.04),P(CONE4,0xb8804a,-0.38,0.6,-0.07,0,0.3+0.785,1.57,0.14,0.1,0.14));g.add(M(p));break;
     case'haybale':p.push(P(CYL12,0xe8c860,0,0.2,0,0,0,1.57,0.4,0.62,0.4),P(CYL12,0xd8b050,0.311,0.2,0,0,0,1.57,0.36,0.01,0.36),P(CYL12,0xd8b050,-0.311,0.2,0,0,0,1.57,0.36,0.01,0.36),P(CYL12,0x9a6a3a,0.15,0.2,0,0,0,1.57,0.41,0.03,0.41),P(CYL12,0x9a6a3a,-0.15,0.2,0,0,0,1.57,0.41,0.03,0.41));for(let i=0;i<6;i++)p.push(P(BOX,0xf0d878,(R()-0.5)*0.5,0.4,(R()-0.5)*0.3,R(),R()*3,R(),0.02,0.02,0.14));g.add(M(p));break;
     case'birdhouse':p.push(P(CYL8,0x7a5230,0,0.45,0,0,0,0,0.07,0.9,0.07),P(BOX,0xf2d8b0,0,0.98,0,0,0,0,0.3,0.28,0.28),P(PRISM,0xd8604a,0,1.16,0,0,0,0,0.2,0.1,0.34),P(CYL12,0x3a2a2a,0,1.0,0.141,1.57,0,0,0.09,0.01,0.09),P(CYL6,0x7a5230,0,0.92,0.18,1.57,0,0,0.02,0.1,0.02),P(ICO2,0x5a8ae0,0.02,1.24,0.02,0,0,0,0.1,0.08,0.12),P(CONE4,0xf6a830,0.02,1.24,0.09,1.57,0,0,0.03,0.05,0.03));g.add(M(p));break;
-    case'hedge':p.push(P(BOX,0x3e7a30,0,0.25,0,0,0,0,0.92,0.5,0.5),P(ICO2,0x4a8a38,0,0.48,0,0,0,0,0.94,0.14,0.5));for(let i=0;i<22;i++){const x=(R()-0.5)*0.9,y=0.1+R()*0.45,sd=R()<0.5?-1:1;lf(p,GREENS[i%4],x,y,sd*0.24,sd>0?0:3.14,0.3,0.14,0.1);}if(R()<0.5)for(let i=0;i<4;i++)bloom(p,0xffffff,0xf6d04a,(R()-0.5)*0.8,0.52,(R()-0.5)*0.3,0.05);g.add(M(p));break;
+    case'hedge':g.add(M(hedgeParts(R,objCtx,rot),leafMat));break;
     case'chime':{p.push(P(CYL8,0x7a5230,0,0.5,0,0,0,0,0.06,1.0,0.06),P(BOX,0x7a5230,0.15,0.98,0,0,0,0,0.36,0.05,0.05));g.add(M(p));const hang=[];for(let i=0;i<4;i++){hang.push(P(BOX,0xe8e0d0,0.05+i*0.07,0.85,0,0,0,0,0.005,0.24,0.005),P(ICO2,[0xf6e0e8,0xf8f4ee,0xe8d4a8,0xd8ecf4][i],0.05+i*0.07,0.72-(i%2)*0.05,0,0,i,0,0.07,0.06,0.03));}
       const hm=M(hang);g.add(hm);g.userData.anim=(t)=>{hm.rotation.z=Math.sin(t*2.3+seed)*0.08;};break;}
     case'gnome':p.push(P(ICO2,0x5a8ae0,0,0.14,0,0,0,0,0.3,0.28,0.26),P(ICO2,0xf4c8a8,0,0.32,0,0,0,0,0.2,0.18,0.18),P(ICO2,0xffffff,0,0.24,0.06,0,0,0,0.2,0.2,0.12),P(CONE12,0xd8453a,0,0.5,-0.01,-0.15,0,0,0.22,0.34,0.22),P(ICO2,0xf39ab0,0,0.31,0.1,0,0,0,0.05,0.04,0.04),
@@ -59,6 +59,22 @@ function objGroup(kind,seed=1,rot=0){
   }
   g.rotation.y=rot;return g;
 }
+// where the piece being built stands (set by syncObjs), so a hedge can reach out and join the hedges beside it
+let objCtx=null;
+// a clipped hedge: soft round lumps of leaves, lighter on top and shadowed below, shingled with leaf blades, a few tiny
+// flowers; it grows a lump towards every neighbouring hedge so a row of them reads as one long hedge (corners too)
+function hedgeParts(R,at,rot){const p=[],L=0x76b452,Mc=0x55923e,D=0x2c5a28,sh=0x1c3a1e;
+  const dirs=[];if(at)for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const o=objAt(at.x+dx,at.z+dz);if(o&&o.k==='hedge'){const c=Math.cos(rot),s=Math.sin(rot);dirs.push([dx*c-dz*s,dx*s+dz*c]);}}
+  const lumps=[[0,0,1]];if(dirs.length)for(const [x,z] of dirs)lumps.push([x*0.27,z*0.27,0.95],[x*0.5,z*0.5,0.95]);else lumps.push([-0.28,0,0.9],[0.28,0,0.9]);
+  const H=0.72;
+  for(const [x,z,s] of lumps){const w=0.6*s+R()*0.05;p.push(PG(SPH,lerpHex(L,Mc,0.35),sh,x,H*0.5,z,0,R()*3,0,w,H*(0.98+R()*0.06),w));}
+  // a flatter, brighter clipped top
+  for(const [x,z] of lumps)p.push(PG(SPH_LO,L,Mc,x,H*0.86,z,0,R()*3,0,0.5,0.22,0.5));
+  // leaf blades pointing out and down over the sides, dark near the ground and bright near the top
+  for(const [x,z] of lumps)for(let i=0;i<9;i++){const a=R()*6.283,fy=0.18+R()*0.7,dx=Math.cos(a),dz=Math.sin(a),dp=-0.6+fy*0.7,d=[dx*Math.cos(dp),Math.sin(dp),dz*Math.cos(dp)],r=0.3*Math.sqrt(Math.max(0.15,1-Math.pow(fy*1.9-0.95,2)));
+    const tip=fy>0.6?L:fy>0.35?Mc:lerpHex(Mc,D,0.5),base=fy>0.6?Mc:D,len=0.13+R()*0.04;p.push(PG(LEAF8,tip,base,x+dx*r+d[0]*len*0.3,H*fy+d[1]*len*0.3,z+dz*r+d[2]*len*0.3,Math.acos(clamp(d[1],-1,1)),Math.atan2(d[0],d[2]),0,len*0.9,len,len*0.35));}
+  if(R()<0.4)for(let i=0;i<5;i++){const [x,z]=lumps[Math.floor(R()*lumps.length)],a=R()*6.28;p.push(P(SPH_XS,R()<0.5?0xffffff:0xf8d8e8,x+Math.cos(a)*0.2,H*(0.55+R()*0.35),z+Math.sin(a)*0.2,0,0,0,0.07,0.05,0.07));}
+  return p;}
 const OBJ_H={pine:1.6,oak:1.1,palm:1.4,windmill:1.4,lantern:0.9,scarecrow:0.9,beehive:0.6,bench:0.4,well:1.0,birdhouse:1.1,signpost:0.9,gnome:0.5,hedge:0.5,chime:1.0,planter:0.4,flowerpot:0.4,haybale:0.5,
   mailbox:1.0,parasol:1.5,birdbath:0.7,lamppost:1.9,picnic:0.5,sundial:0.8,hammock:0.9,arbor:1.7,stall:1.3,swing:1.4,fountain:0.8,picket:0.5,chair:0.6,topiary:1.3,urn:0.6};
 function roof(p,col,gable,W,Hr,D,y,x=0,z=0){const sx=W/1.732,sy=Hr/1.5;
