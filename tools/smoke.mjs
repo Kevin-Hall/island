@@ -3,7 +3,7 @@
 // Fails on any uncaught page error or broken expectation. Screenshots go to tools/.smoke/.
 // Needs Playwright (`npm i -D playwright`, or set PLAYWRIGHT_PATH). Optional env:
 //   CHROME_PATH  chromium binary to use     THREE_JS  local three.min.js to serve instead of the CDN copy
-import {createRequire} from 'node:module';import {mkdirSync} from 'node:fs';import {join,dirname} from 'node:path';import {fileURLToPath,pathToFileURL} from 'node:url';
+import {createRequire} from 'node:module';import {mkdirSync,readFile} from 'node:fs';import {createServer} from 'node:http';import {join,dirname} from 'node:path';import {fileURLToPath} from 'node:url';
 const root=join(dirname(fileURLToPath(import.meta.url)),'..'),shots=join(root,'tools/.smoke');mkdirSync(shots,{recursive:true});
 const req=createRequire(import.meta.url);let pw;try{pw=req(process.env.PLAYWRIGHT_PATH||'playwright');}catch(e){console.error('Playwright not found: npm i -D playwright (or set PLAYWRIGHT_PATH)');process.exit(2);}
 const b=await pw.chromium.launch({executablePath:process.env.CHROME_PATH||undefined,args:['--use-gl=swiftshader','--ignore-gpu-blocklist']});
@@ -15,7 +15,12 @@ const ev=(f,a)=>pg.evaluate(f,a),wait=ms=>pg.waitForTimeout(ms);
 // poll instead of fixed waits: headless software rendering can drop to ~1 fps, which delays the game's own timers
 const waitFor=async(f,ms=12000)=>{const t=Date.now();while(Date.now()-t<ms){const v=await ev(f);if(v)return v;await wait(300);}return null;};
 const enter=async f=>{await ev(f);await waitFor(()=>DS.state().inside);return ev(()=>DS.state());},leave=async()=>{await ev(()=>DS.leave());await waitFor(()=>!DS.state().inside);};
-await pg.goto(pathToFileURL(join(root,'index.html')).href+'?debug');await wait(2500);
+// served over http (not file://), so the page can load its character models (assets/characters)
+const MIME={html:'text/html',js:'application/javascript',glb:'model/gltf-binary',png:'image/png'};
+const srv=createServer((q,r)=>{const f=join(root,decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/,'')||'index.html');if(!f.startsWith(root)){r.writeHead(403);r.end();return;}
+  readFile(f,(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':MIME[f.split('.').pop()]||'application/octet-stream'});r.end(d);});});
+await new Promise(ok=>srv.listen(0,'127.0.0.1',ok));
+await pg.goto(`http://127.0.0.1:${srv.address().port}/index.html?debug`);await wait(2500);
 // a new game starts adrift: an island seen from the sea; keep drifting to another, then make landfall on it
 check(await ev(()=>!!document.querySelector('#arrive .arr h2')),'a new game starts adrift, looking at an island from the sea');
 await pg.click('#arMore');await wait(2500);check(await ev(()=>!!document.querySelector('#arrive .arr h2')),'kept drifting to another island');
@@ -73,4 +78,4 @@ const far=await ev(()=>DS.islands().filter(i=>!i.grand&&i.id>0).sort((a,b)=>Math
 check(await ev(id=>DS.sailTo(id),far.id),`set sail for ${far.name}`);let hits=0;for(let t=0;t<40;t++){await wait(500);const bt=await ev(()=>DS.boat());if(bt.onLand)hits++;if(!bt.sailing)break;}
 check(hits===0,`boat never crossed land while sailing (${hits} samples on land)`);
 check(errors.length===0,errors.length?`page errors: ${errors.join(' | ')}`:'no page errors');
-await b.close();console.log(fails?`\n${fails} check(s) failed`:'\nall checks passed');process.exit(fails?1:0);
+await b.close();srv.close();console.log(fails?`\n${fails} check(s) failed`:'\nall checks passed');process.exit(fails?1:0);
