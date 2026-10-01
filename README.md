@@ -41,7 +41,7 @@ Built with three.js (r128). Everything is rendered at low resolution, then passe
 
 ## Development
 
-The game is built from `src/` into the single file `index.html`. See [ARCHITECTURE.md](ARCHITECTURE.md) for the module map, conventions and how to add content.
+The game is built from `src/` into `index.html`; the human player characters load from `assets/characters/` beside it, so serve the folder over http (e.g. `python3 -m http.server`) rather than opening the file directly. Characters are by [Quaternius](https://quaternius.com) (CC0). See [ARCHITECTURE.md](ARCHITECTURE.md) for the module map, conventions and how to add content.
 
 ```
 npm run build   # src/ → index.html (also fails on syntax errors)
