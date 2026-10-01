@@ -5,7 +5,9 @@
 // artist-made models shipped as assets/characters/<id>.glb beside the page (or inlined by build --embed-chars). Each
 // file loads once, the first time it's needed (charLoad), and every use (you, your copy in a room, the editor's model,
 // thumbnails) is a clone of it (charModel), fitted to the player's height (CHAR_H) and painted with the game's toon
-// shading. Three kinds:
+// shading. Four kinds:
+//  - buddies (61c): little round animals built in code, with a real rig and clips (build: their kind); the colour row
+//    recolours their body (colors)
 //  - painted (an AI-made model from a picture: the Campfire Kid): one mesh over a painted texture, no rig; a skin tone
 //    recolours the texture's skin-coloured pixels, keeping their painted shading (skin: 'paint'); it bobs and squashes
 //    as it walks, like the animals (90-main)
@@ -13,12 +15,17 @@
 //    tone repaints the atlas's skin texel (skin: [column,row]); CharacterAnimator plays its Idle, Walk and Run clips
 //  - static pieces with flat colours (zUp: modelled lying down): baked into two meshes, the skin (the material named in
 //    skin) and the rest coloured from their materials
-const CHARS=[{id:'kid',name:'Campfire Kid',skin:'paint'}];
+const CHARS=[{id:'pip',name:'Pip',build:'bird',colors:[0x2c3560,0x2a6a7a,0x6a3a6a,0x2e5a3a,0x7a4e34,0x2a2630,0x8a8a98,0xd8453a]},
+  {id:'pebble',name:'Pebble',build:'penguin',colors:[0x2a4ab8,0xd8302a,0x2a9a3a,0xf08ab0,0x2a2630,0x8a5ad0,0xf0802a,0x2ab8c8]},
+  {id:'mochi',name:'Mochi',build:'bunny',colors:[0xf6f3ee,0xf0dcc0,0xb8b4bc,0xa87a58,0x4a4048,0xf4c4d0,0xf6d8a8,0xc8b8e8]},
+  {id:'inky',name:'Inky',build:'cat',colors:[0x2a2630,0x8a8a98,0xf0a050,0xf6f3ee,0xe8d4b0,0x7a5a44,0x6a7a9a,0xf4c8a0]},
+  {id:'kid',name:'Campfire Kid',skin:'paint'}];
 const CHAR_H=1.07;/* every character stands the player's height, whatever units its artist used */
 const HSKIN=[0xfde3cf,0xf6d2b4,0xeec09a,0xd9a27a,0xc08660,0xa06a48,0x7a4e34,0x5a3826];
 const charSrc={};/* id → {ok, scene, clips, atlas, scale, wait} */
 function charLoad(id,cb){let s=charSrc[id];if(s&&s.ok){cb&&cb(s);return;}if(s&&s.failed){return;}
   if(s){if(cb)s.wait.push(cb);return;}s=charSrc[id]={ok:false,wait:cb?[cb]:[]};const C=CHARS.find(c=>c.id===id);
+  if(C.build){Object.assign(s,buddyRig(C.build),{ok:true,atlas:null,scale:1});for(const f of s.wait)f(s);s.wait=[];return;}/* (built in code, at the player's size: 61c) */
   const L=new T.GLTFLoader(),emb=window.CHAR_EMBED&&CHAR_EMBED[id];L.register(p=>({name:'charImages',loadTexture:i=>charTex(p,i)}));
   const done=g=>{let atlas=null;const drop=[];g.scene.traverse(o=>{if(o.name.startsWith('Weapon_'))drop.push(o);else if(o.isMesh&&o.material.map)atlas=o.material.map.image;});
       for(const o of drop)o.parent.remove(o);/* (some packs' characters come holding a prop) */
@@ -48,6 +55,7 @@ function charStatic(scene,C){scene.updateMatrixWorld(true);const up=new T.Matrix
 // (flat-coloured texels, sampled crisply); a static one's skin pieces in that colour
 const charMats={};
 function charMat(id,skin){const k=id+'|'+skin;if(charMats[k])return charMats[k];const s=charSrc[id],C=CHARS.find(c=>c.id===id);
+  if(C.colors)return charMats[k]=toon({color:C.colors[Math.max(0,skin)],skinning:true});/* a buddy's body colour */
   if(!s.atlas)return charMats[k]=toon(skin>=0?{color:HSKIN[skin]}:{vertexColors:true});
   const cv=document.createElement('canvas');cv.width=s.atlas.width;cv.height=s.atlas.height;const x=cv.getContext('2d');x.drawImage(s.atlas,0,0);
   if(skin>=0&&C.skin==='paint')paintSkin(x,cv.width,cv.height,HSKIN[skin]);
@@ -66,16 +74,17 @@ function paintSkin(x,w,h,to){const im=x.getImageData(0,0,w,h),d=im.data,hsl={},c
 function charModel(h){const g=new T.Group(),id=(CHARS.find(c=>c.id===h.c)||CHARS[0]).id,skin=h.skin??-1;g.userData.char={c:id,skin};
   charLoad(id,s=>{const m=T.SkeletonUtils.clone(s.scene);m.scale.setScalar(s.scale);
     m.traverse(o=>{if(o.isMesh){if(s.atlas||o.userData.skin)o.material=charMat(id,skin);o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;}});
-    g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale);});
+    g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds);});
   return g;}
 // idle when standing; when moving, walk blending into run with speed, each played at the rate that keeps its feet planted
-// (the clips carry a Quaternius character 1.35 and 2.4 of its own units a second). Swimming keeps the idle clip; the lean
+// (speeds: how far the walk and run clips carry it a second, in its own units; the Quaternius ones' by default). Swimming
+// keeps the idle clip; the lean
 // and bob come from swimPose (76c-swim)
 class CharacterAnimator{
-  constructor(root,clips,scale){this.wv=1.35*scale;this.rv=2.4*scale;this.mx=new T.AnimationMixer(root);this.a=['Idle','Walk','Run'].map((n,i)=>{const a=this.mx.clipAction(clips.find(c=>c.name===n));a.play();a.setEffectiveWeight(i?0:1);return a;});this.w=[1,0,0];this.mx.update(0);}
+  constructor(root,clips,scale,speeds=[1.35,2.4]){this.wv=speeds[0]*scale;this.rv=speeds[1]*scale;this.mx=new T.AnimationMixer(root);this.a=['Idle','Walk','Run'].map((n,i)=>{const a=this.mx.clipAction(clips.find(c=>c.name===n));a.play();a.setEffectiveWeight(i?0:1);return a;});this.w=[1,0,0];this.mx.update(0);}
   update(dt,speed,swim){const m=swim?0:smooth(0.05,0.5,speed),r=smooth(this.wv,this.rv,speed),tw=[1-m,m*(1-r),m*r],k=Math.min(1,dt*10);
     for(let i=0;i<3;i++){this.w[i]+=(tw[i]-this.w[i])*k;this.a[i].setEffectiveWeight(this.w[i]);}
-    this.a[1].timeScale=clamp(speed/this.wv,0.6,3);this.a[2].timeScale=clamp(speed/this.rv,0.6,3);this.mx.update(dt);}}
+    this.a[1].timeScale=clamp(speed/this.wv,0.6,4);this.a[2].timeScale=clamp(speed/this.rv,0.6,4);this.mx.update(dt);}}
 // the player's body copied for a room (56-interiors): a character is re-cloned with its own rig, anything else copied
 function cloneBody(b){return b.userData.char?charModel(b.userData.char):b.clone();}
 /* ---- the editor ---- */
@@ -97,21 +106,22 @@ function openCharEd(){closeSheet&&closeSheet();if(chat)chatEnd();if(deco)decoClo
   document.body.classList.add('chatting','chared');$('charEd').hidden=false;renderCharEd();SFX.ui();}
 function closeCharEd(){if(!charEd)return;charEd=null;edCam.clearViewOffset();if(inside&&inside.me){inside.me.clear();inside.me.add(cloneBody(villager.children[0]));}/* you, in the room you're in */$('charEd').hidden=true;document.body.classList.remove('chatting','chared');save();ctxSig='';updateCtx();updateHUD();hearts(vil.x,1.2,vil.z);SFX.level();}
 function setH(ch){Object.assign(curHuman(),ch);applyLook();if(charEd){edRebuild();charEd.hop=0.3;}renderCharEd();SFX.pop();}
-function shuffleH(){setH({c:CHARS[Math.floor(Math.random()*CHARS.length)].id,skin:Math.floor(Math.random()*(HSKIN.length+1))-1});}
+function shuffleH(){const C=CHARS[Math.floor(Math.random()*CHARS.length)],n=(C.colors||HSKIN).length;setH({c:C.id,skin:Math.floor(Math.random()*(n+1))-1});}
 // a character's portrait (blank until its model has loaded; the editor and the look sheet redraw when it arrives)
 const hThumbs={};
 function hThumb(ch){const h=Object.assign({},curHuman(),ch),k=h.c+'|'+h.skin;if(hThumbs[k])return hThumbs[k];
   if(!(charSrc[h.c]&&charSrc[h.c].ok)){charLoad(h.c,()=>{if(charEd)renderCharEd();else if(sheet)renderSheet();});return'data:image/gif;base64,R0lGODlhAQABAAAAACw=';}
   return hThumbs[k]=snapThumb(charModel(h),96);}
 function renderCharEd(){if(!charEd)return;const h=curHuman();
-  const tiles=`<div class="htiles">${CHARS.map(c=>`<button class="ht ${h.c===c.id?'on':''}" data-hc="${c.id}"><img src="${hThumb({c:c.id})}" alt=""><span>${c.name}</span></button>`).join('')}</div>`;
-  const sw=`<div class="hsw"><button class="sw own ${h.skin<0?'on':''}" data-hv="-1" title="As drawn" style="--sw:#d8c0a8"></button>${HSKIN.map((c,i)=>`<button class="sw ${h.skin===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`;
+  const tiles=`<div class="htiles">${CHARS.map(c=>`<button class="ht ${h.c===c.id?'on':''}" data-hc="${c.id}"><img src="${hThumb({c:c.id,skin:-1})}" alt=""><span>${c.name}</span></button>`).join('')}</div>`;
+  const C=CHARS.find(c=>c.id===h.c)||CHARS[0],sw=C.colors?`<div class="hsw">${C.colors.map((c,i)=>`<button class="sw ${Math.max(0,h.skin)===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`/* (a buddy: its body colours) */
+    :`<div class="hsw"><button class="sw own ${h.skin<0?'on':''}" data-hv="-1" title="As drawn" style="--sw:#d8c0a8"></button>${HSKIN.map((c,i)=>`<button class="sw ${h.skin===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`;
   $('charEd').innerHTML=`<div class="htop"><b>Your character</b><button class="hbtn" data-ha="shuffle">🎲 Shuffle</button>${S.look.prev&&S.look.prev!=='human'?`<button class="hbtn" data-ha="animal">Be an animal</button>`:''}<button class="pbtn go" data-ha="done">Done</button></div>
-    <div class="hbody">${tiles}<h4>Skin</h4>${sw}</div>`;
+    <div class="hbody">${tiles}<h4>${C.colors?'Colour':'Skin'}</h4>${sw}</div>`;
   requestAnimationFrame(()=>{if(charEd){const W=window.innerWidth,H=window.innerHeight,px=$('charEd').offsetHeight;charEd.px=px;edCam.setViewOffset(W,H,0,px*0.5,W,H);}});}
 $('charEd').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!charEd)return;const d=b.dataset;
   if(d.ha==='done'){closeCharEd();return;}if(d.ha==='shuffle'){shuffleH();return;}if(d.ha==='animal'){S.look.sp=S.look.prev||'bunny';applyLook();closeCharEd();return;}
-  if(d.hc){setH({c:d.hc});return;}if(d.hv!==undefined){setH({skin:+d.hv});return;}});
+  if(d.hc){if(d.hc!==curHuman().c)setH({c:d.hc,skin:-1});return;}if(d.hv!==undefined){setH({skin:+d.hv});return;}});
 // the studio camera: framed on you in the space above the tray; you idle, turn slowly, and hop when something changes
 function updateCharEd(dt,tt){if(!charEd||!edModel)return;charEd.t+=dt;const W=window.innerWidth,H=window.innerHeight,asp=W/H,f=1-(charEd.px||H*0.45)/H,tv=Math.tan(15*Math.PI/180);
   edCam.aspect=asp;const d=Math.max(0.64/(tv*f),0.5/(tv*asp))*1.05;edCam.position.set(0,0.6+d*0.1,d);edCam.lookAt(0,0.52,0);edCam.updateProjectionMatrix();
