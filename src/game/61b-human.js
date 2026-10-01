@@ -15,110 +15,133 @@ const HSTYLE={
   top:[['tee','T-shirt'],['stripe','Stripy tee'],['hoodie','Hoodie'],['sweater','Sweater'],['tank','Vest top'],['overalls','Overalls'],['dress','Dress'],['jacket','Jacket']],
   bot:[['shorts','Shorts'],['trousers','Trousers'],['skirt','Skirt']],
   hat:[['none','Nothing'],['cap','Cap'],['beanie','Beanie'],['sunhat','Sun hat'],['bow','Bow'],['flower','Flower'],['headband','Headband'],['band','Bandana']]};
-const HDEF={boy:{g:'boy',skin:2,hair:'side',hairC:1,eye:0,top:'tee',topC:0x5a8ae0,bot:'shorts',botC:0x3a4a7a,shoe:0xf4f0ea,hat:'none',glasses:0,blush:1,freckles:0},
+const HDEF={boy:{g:'boy',skin:2,hair:'short',hairC:1,eye:3,top:'sweater',topC:0x4a8a4a,bot:'trousers',botC:0x6a4a34,shoe:0xf4f0ea,hat:'none',glasses:0,blush:1,freckles:0},
   girl:{g:'girl',skin:1,hair:'long',hairC:2,eye:1,top:'overalls',topC:0xf4f0ea,bot:'shorts',botC:0x7aa0d8,shoe:0xf6c84a,hat:'flower',glasses:0,blush:1,freckles:0}};
-// The model is sculpted, not stacked: the head is a sphere pushed out towards a rounded cube (HEAD_R, squircle), the
-// hair one shell over it with the face cut out under a blunt fringe (hairGeo: each style is a fringe line, a hem,
-// a volume and, for long hair, a pull downwards), and the body, arms and legs are turned on a lathe (latheGeo).
-// Eyes, cheeks and mouth sit on the head's own surface (onHead), so the face is drawn on, not stuck on.
-const HEAD_R=[0.268,0.243,0.234],HEAD_Y=0.83,HSQ=2.5,_hgeo=new Map();
-const squ=(x,y,z)=>1/Math.pow(Math.abs(x)**HSQ+Math.abs(y)**HSQ+Math.abs(z)**HSQ,1/HSQ);
-// a point on the head (or r× out from it) in the direction (u,v) across the face
-function onHead(u,v,r=1){const w=Math.sqrt(Math.max(0,1-u*u-v*v)),s=squ(u,v,w)*r;return[u*s*HEAD_R[0],HEAD_Y+v*s*HEAD_R[1],w*s*HEAD_R[2],Math.atan2(u,w),-Math.asin(clamp(v,-1,1))];}
-function headGeo(){if(_hgeo.has('head'))return _hgeo.get('head');const g=new T.SphereGeometry(1,40,30),a=g.attributes.position;
-  for(let i=0;i<a.count;i++){const x=a.getX(i),y=a.getY(i),z=a.getZ(i),s=squ(x,y,z);a.setXYZ(i,x*s*HEAD_R[0],y*s*HEAD_R[1],z*s*HEAD_R[2]);}
-  g.computeVertexNormals();smoothG(g);_hgeo.set('head',g);return g;}
-const HAIR_CUT={short:{f:0.3,hem:-0.1,back:-0.55},side:{f:'side',hem:-0.1,back:-0.55},spiky:{f:0.32,hem:-0.12,back:-0.5},buzz:{f:0.5,hem:-0.18,back:-0.5,r:1.025,top:0.01},
-  curly:{f:0.34,hem:-0.15,back:-0.55,curl:1},mohawk:{f:0.55,hem:-0.2,back:-0.5,r:1.02,top:0},bob:{f:0.3,hem:-0.55,back:-0.6,side:0.6,pull:0.2},
-  long:{f:0.3,hem:-0.55,back:-0.95,side:0.6,pull:0.95},ponytail:{f:0.3,hem:-0.12,back:-0.6},pigtails:{f:0.3,hem:-0.15,back:-0.6},bun:{f:0.3,hem:-0.12,back:-0.6},afro:{f:0.38,hem:-0.3,back:-0.6,r:1.38,top:0.12}};
-function hairGeo(st){if(_hgeo.has(st))return _hgeo.get(st);const C=HAIR_CUT[st]||HAIR_CUT.short,g=new T.SphereGeometry(1,56,42),a=g.attributes.position;
-  const fr=x=>C.f==='side'?0.42-0.36*clamp((x+0.55)/1.1,0,1):C.f+0.03*Math.cos(x*22);
-  // how far a direction is inside the bare part (the face under the fringe, and below the hem): the hair dips under the
-  // skin there, so its edge is where the two surfaces meet, a clean curve whatever the mesh
-  const bare=(x,y,z)=>{const W=C.side||0.7,face=Math.min(fr(x)-y,W-Math.abs(x),(z-0.02)*1.5);
-    const lock=C.side&&z>-0.1&&Math.abs(x)>=C.side-0.02&&y>C.hem-0.05,hem=lock?-1:(z<-0.25?C.back:z<0?lerp(C.hem,C.back,-z/0.25):C.hem)-y;return Math.max(face,hem,-0.9-y);};
+// The model is sculpted from shaped geometry, in the proportions of a young person drawn in a cosy pixel-art style:
+// a head about a third of the height, egg-shaped (round cranium, narrower jaw and chin: headPt), ears and a nose;
+// anime-style eyes (white, coloured iris, pupil, catchlights, a lash line) and brows drawn on the head's own surface
+// (onHead); hair as a base shell over the head that dips under the skin across the face (hairGeo) with tapered locks
+// on top (lock: a tousled crown, a fringe that falls in points, locks over the ears); a neck, a torso with shoulders,
+// chest and waist; arms with an elbow and a hand; legs with thigh, knee, calf and a sneaker; all turned on a lathe.
+const HEAD_R=[0.205,0.232,0.215],HEAD_Y=0.985,HUM_S=0.86,_hgeo=new Map();
+// the head's shape: a sphere, a little squarer at the cheekbones, tapering to a soft chin below
+function headPt(x,y,z){let X=x,Y=y,Z=z;if(y<0){const t=-y,k=1-0.34*Math.pow(t,1.6);X*=k;Z*=1-0.18*Math.pow(t,1.6);Y*=1.06;}else{X*=1+0.04*Math.sin(Math.PI*y);}
+  if(z>0)Z*=0.95;return[X*HEAD_R[0],Y*HEAD_R[1],Z*HEAD_R[2]];}
+// a point on (or r× out from) the head, in the direction (u,v) across the face, and the angles to face out from it there
+function onHead(u,v,r=1){const w=Math.sqrt(Math.max(0,1-u*u-v*v)),[x,y,z]=headPt(u,v,w);return[x*r,HEAD_Y+y*r,z*r,Math.atan2(u,w),-Math.asin(clamp(v,-1,1))];}
+function headGeo(){if(_hgeo.has('head2'))return _hgeo.get('head2');const g=new T.SphereGeometry(1,40,30),a=g.attributes.position;
+  for(let i=0;i<a.count;i++){const [x,y,z]=headPt(a.getX(i),a.getY(i),a.getZ(i));a.setXYZ(i,x,y,z);}g.computeVertexNormals();smoothG(g);_hgeo.set('head2',g);return g;}
+// each style's base: where the fringe line sits, the hem at the sides and back, its volume, and how far long hair falls
+const HAIR_CUT={short:{f:0.42,hem:-0.05,back:-0.5},side:{f:'side',hem:-0.05,back:-0.5},spiky:{f:0.45,hem:-0.08,back:-0.5},buzz:{f:0.55,hem:-0.12,back:-0.45,r:1.03,top:0.01},
+  curly:{f:0.42,hem:-0.1,back:-0.5,r:1.1},mohawk:{f:0.6,hem:-0.15,back:-0.45,r:1.02,top:0},bob:{f:0.4,hem:-0.62,back:-0.62,side:0.62,pull:0.15},
+  long:{f:0.4,hem:-0.6,back:-0.95,side:0.62,pull:1.1},ponytail:{f:0.4,hem:-0.1,back:-0.55},pigtails:{f:0.4,hem:-0.1,back:-0.55},bun:{f:0.4,hem:-0.1,back:-0.55},afro:{f:0.45,hem:-0.3,back:-0.6,r:1.42,top:0.1}};
+function hairGeo(st){const key='h2'+st;if(_hgeo.has(key))return _hgeo.get(key);const C=HAIR_CUT[st]||HAIR_CUT.short,g=new T.SphereGeometry(1,56,42),a=g.attributes.position;
+  const fr=x=>C.f==='side'?0.5-0.32*clamp((x+0.55)/1.1,0,1):C.f+0.04*Math.cos(x*20);
+  const bare=(x,y,z)=>{const W=C.side||0.72,face=Math.min(fr(x)-y,W-Math.abs(x),(z-0.02)*1.5);
+    const lock=C.side&&z>-0.1&&Math.abs(x)>=C.side-0.02&&y>C.hem-0.05,hem=lock?-1:(z<-0.25?C.back:z<0?lerp(C.hem,C.back,-z/0.25):C.hem)-y;return Math.max(face,hem,-0.92-y);};
   for(let i=0;i<a.count;i++){const x=a.getX(i),y=a.getY(i),z=a.getZ(i);
-    let r=(C.r||1.075)+(C.top??0.06)*Math.max(0,y);if(C.curl)r+=0.035*Math.sin(7*Math.atan2(z,x))*Math.sin(6*y+1);if(C.side&&Math.abs(x)>0.5)r+=0.03;
-    if(st==='afro')r-=0.22*Math.max(0,z)*Math.max(0,-y+0.3);
+    let r=(C.r||1.08)+(C.top??0.08)*Math.max(0,y);if(C.side&&Math.abs(x)>0.5)r+=0.03;if(st==='afro')r-=0.25*Math.max(0,z)*Math.max(0,-y+0.35);
     const d=bare(x,y,z),k=clamp((d+0.03)/0.07,0,1);r=lerp(r,0.9,k*k*(3-2*k));
-    const s=squ(x,y,z)*r;let X=x*s*HEAD_R[0],Y=y*s*HEAD_R[1],Z=z*s*HEAD_R[2];
-    if(C.pull&&y<-0.1&&z<0.45&&d<0){const q=(-0.1-y)*C.pull*(1.1-Math.max(0,z));Y-=q*0.42;X*=1-q*0.12;}
+    let [X,Y,Z]=headPt(x,y,z);X*=r;Y*=r;Z*=r;if(C.pull&&y<-0.1&&z<0.45&&d<0){const q=(-0.1-y)*C.pull*(1.1-Math.max(0,z));Y-=q*0.2;X*=1-q*0.1;}
     a.setXYZ(i,X,Y,Z);}
-  g.computeVertexNormals();smoothG(g);_hgeo.set(st,g);return g;}
-// a shape turned on a lathe from a profile of [radius, height] points
-function latheGeo(key,pts,seg=20){if(_hgeo.has(key))return _hgeo.get(key);const g=new T.LatheGeometry(pts.map(([r,y])=>new T.Vector2(r,y)),seg);g.computeVertexNormals();smoothG(g);_hgeo.set(key,g);return g;}
-const capsule=(k,r,l)=>latheGeo('cap'+k,[...Array(7)].map((_,i)=>{const a=-Math.PI/2+i/6*Math.PI/2;return[Math.cos(a)*r,Math.sin(a)*r];}).concat([...Array(7)].map((_,i)=>{const a=i/6*Math.PI/2;return[Math.cos(a)*r,l+Math.sin(a)*r];})),14);
+  g.computeVertexNormals();smoothG(g);_hgeo.set(key,g);return g;}
+function latheGeo(key,pts,seg=20){if(_hgeo.has(key))return _hgeo.get(key);const g=new T.LatheGeometry(pts.map(([r,y])=>new T.Vector2(Math.max(0.0005,r),y)),seg);g.computeVertexNormals();smoothG(g);_hgeo.set(key,g);return g;}
+// a tapered limb segment from radius r0 (at 0) to r1 (at -len), with rounded ends
+const seg2=(k,r0,r1,len)=>latheGeo('sg'+k,[[0.0005,0],...[...Array(5)].map((_,i)=>{const a=i/4*Math.PI/2;return[Math.sin(a)*r0,-r0+Math.cos(a)*r0];}),...[...Array(5)].map((_,i)=>{const a=i/4*Math.PI/2;return[Math.cos(a)*r1,-len+r1-Math.sin(a)*r1-r1];}),[0.0005,-len-r1]].map(([r,y])=>[r,y]).reverse(),14);
 const tear=k=>latheGeo('tear'+k,[...Array(11)].map((_,i)=>{const t=i/10;return[Math.max(0.001,Math.sin(Math.PI*t)**0.75*(1-t*0.35)*0.5),t];}),16);
+// a lock of hair: thick at the root, tapering to a point
+const LOCK=latheGeo('lock',[[0.0005,0],[0.45,0.06],[0.5,0.2],[0.4,0.5],[0.22,0.8],[0.0005,1]],8);
+function lock(p,col,root,tip,w){const dx=tip[0]-root[0],dy=tip[1]-root[1],dz=tip[2]-root[2],L=Math.hypot(dx,dy,dz);w*=1.22;p.push(P(LOCK,col,root[0],root[1],root[2],Math.atan2(Math.hypot(dx,dz),dy),Math.atan2(dx,dz),0,w,L,w*0.7));}
 const hairMat=toon({vertexColors:true,side:T.DoubleSide});
 function humanModel(h0){const h=Object.assign({},HDEF.boy,h0),g=new T.Group(),p=[],hp=[],sk=HSKIN[h.skin]??HSKIN[2],hc=HHAIR[h.hairC]??HHAIR[1],ec=HEYES[h.eye]??HEYES[0],tc=h.topC,bc=h.botC,girl=h.g==='girl';
-  const dk=(c,t)=>lerpHex(c,0x1a1420,t),lt=(c,t)=>lerpHex(c,0xffffff,t),dress=h.top==='dress',legH=0.23,bodyY=legH-0.01,BW=girl?0.92:1.04;
-  // body: a soft bell, shirt above the waist and shorts, trousers or skirt below it (or one dress all the way down)
-  const topCol=h.top==='overalls'?tc:tc,shirt=latheGeo('shirt',[[0,0],[0.15,0],[0.16,0.04],[0.155,0.11],[0.13,0.17],[0.09,0.205],[0.03,0.22],[0,0.22]]);
-  p.push(P(shirt,topCol,0,bodyY+0.08,0,0,0,0,1,1,0.86));
-  if(h.top==='stripe')for(let i=0;i<3;i++)p.push(P(latheGeo('band',[[0.158,0],[0.162,0.01],[0.158,0.022]]),0xf8f6f0,0,bodyY+0.1+i*0.045,0,0,0,0,1-i*0.06,1,0.86-i*0.05));
-  if(dress)p.push(P(latheGeo('dress',[[0.001,0.2],[0.13,0.2],[0.16,0.14],[0.2,0.04],[0.22,0],[0.2,-0.012],[0.001,-0.012]]),tc,0,bodyY-0.04,0,0,0,0,1,1,0.88),P(latheGeo('hemband',[[0.215,0],[0.222,0.012],[0.214,0.022]]),lt(tc,0.4),0,bodyY-0.035,0,0,0,0,1,1,0.88));
-  else if(h.bot==='skirt')p.push(P(latheGeo('skirt',[[0.001,0.13],[0.15,0.13],[0.19,0.03],[0.2,0],[0.001,0]]),bc,0,bodyY-0.01,0,0,0,0,1,1,0.88));
-  else p.push(P(latheGeo('shorts',[[0.001,0],[0.15,0],[0.16,0.05],[0.155,0.11],[0.001,0.11]]),bc,0,bodyY,0,0,0,0,1,1,0.86));
-  if(h.top==='overalls'){p.push(P(latheGeo('bib',[[0.001,0],[0.152,0],[0.15,0.06],[0.001,0.06]]),bc,0,bodyY+0.1,0,0,0,0,1,1,0.88),P(BOX,bc,0,bodyY+0.2,0.11,-0.12,0,0,0.13,0.1,0.02));
-    for(const s of [-1,1])p.push(P(BOX,bc,s*0.07,bodyY+0.24,0.06,-0.5,0,0,0.035,0.13,0.02),P(SPH_LO,0xf6d04a,s*0.055,bodyY+0.235,0.115,0,0,0,0.025,0.025,0.012));}
-  if(h.top==='hoodie'){p.push(P(SPH_LO,dk(tc,0.12),0,bodyY+0.27,-0.1,0,0,0,0.22,0.1,0.12),P(BOX,dk(tc,0.1),0,bodyY+0.12,0.125,-0.1,0,0,0.13,0.06,0.02));for(const s of [-1,1])p.push(P(CYL8,0xf4f0ea,s*0.03,bodyY+0.2,0.12,0,0,0,0.012,0.07,0.012));}
-  if(h.top==='sweater')p.push(P(latheGeo('collar',[[0.07,0],[0.095,0.012],[0.075,0.03]]),dk(tc,0.12),0,bodyY+0.27,0,0,0,0,1,1,0.9));
-  if(h.top==='jacket'){p.push(P(BOX,0xf4f0ea,0,bodyY+0.17,0.115,-0.1,0,0,0.08,0.18,0.03));for(const s of [-1,1])p.push(P(BOX,dk(tc,0.15),s*0.05,bodyY+0.22,0.11,-0.2,0,s*0.35,0.035,0.1,0.02));}
-  if(h.top==='tank'||h.top==='dress')p.push(P(latheGeo('neck',[[0.001,0],[0.07,0],[0.07,0.03],[0.001,0.03]]),sk,0,bodyY+0.28,0,0,0,0,1,1,0.9));
-  for(const q of p){q.y=bodyY+(q.y-bodyY)*1.2;q.sy*=1.2;q.x*=BW;q.sx*=BW;}/* a taller, slimmer (girl) or broader (boy) body */
-  p.push(P(latheGeo('neckS',[[0.001,0],[0.05,0],[0.048,0.08],[0.001,0.08]]),sk,0,bodyY+0.31,0,0,0,0,1,1,0.9));
-  // head, and a face drawn on it
+  const dk=(c,t)=>lerpHex(c,0x1a1420,t),lt=(c,t)=>lerpHex(c,0xffffff,t),dress=h.top==='dress',W=girl?1.0:1.1,hipY=0.38,shY=0.68,zS=0.72,DY=-0.12;
+  const longS=['hoodie','sweater','jacket'].includes(h.top),rib=h.top==='sweater'||h.top==='hoodie';
+  // torso: hips, waist, chest and shoulders, flattened front to back
+  const torso=latheGeo('torso'+(girl?'g':'b'),girl?[[0.0005,0.45],[0.12,0.45],[0.125,0.52],[0.105,0.6],[0.115,0.68],[0.13,0.74],[0.12,0.79],[0.06,0.83],[0.0005,0.84]]
+    :[[0.0005,0.45],[0.12,0.45],[0.125,0.52],[0.118,0.6],[0.13,0.68],[0.145,0.75],[0.13,0.8],[0.06,0.84],[0.0005,0.85]],24);
+  p.push(P(torso,h.top==='tank'?tc:tc,0,0,0,0,0,0,W,1,zS));
+  if(rib)p.push(P(latheGeo('ribH',[[0.123,0],[0.129,0.012],[0.129,0.035],[0.123,0.045]]),dk(tc,0.08),0,0.45,0,0,0,0,W,1,zS*1.02),P(latheGeo('ribN',[[0.055,0],[0.064,0.012],[0.06,0.03]]),dk(tc,0.08),0,0.825,0,0,0,0,W,1,zS*1.2));
+  if(h.top==='stripe')for(let i=0;i<4;i++)p.push(P(latheGeo('st2',[[0.128,0],[0.132,0.01],[0.128,0.02]]),0xf8f6f0,0,0.5+i*0.07,0,0,0,0,W*(i===3?1.08:1),1,zS*1.02));
+  if(h.top==='hoodie'){p.push(P(SPH_LO,dk(tc,0.1),0,0.82,-0.07,0,0,0,0.2,0.09,0.11),P(BOX,dk(tc,0.08),0,0.56,0.085,-0.06,0,0,0.13,0.06,0.015));for(const s of [-1,1])p.push(P(CYL8,0xf4f0ea,s*0.025,0.72,0.09,0,0,0,0.008,0.07,0.008));}
+  if(h.top==='jacket'){p.push(P(BOX,0xf4f0ea,0,0.66,0.087,-0.05,0,0,0.07,0.28,0.012));for(const s of [-1,1])p.push(P(BOX,dk(tc,0.15),s*0.045,0.76,0.082,-0.15,0,s*0.35,0.03,0.09,0.015));}
+  if(h.top==='overalls'){p.push(P(latheGeo('ovb',[[0.0005,0],[0.128,0],[0.125,0.12],[0.0005,0.12]]),bc,0,0.46,0,0,0,0,W*1.02,1,zS*1.03),P(BOX,bc,0,0.66,0.085,-0.05,0,0,0.13,0.12,0.012));
+    for(const s of [-1,1])p.push(P(BOX,bc,s*0.06,0.75,0.04,-0.6,0,0,0.03,0.12,0.012),P(SPH_LO,0xf0c040,s*0.055,0.71,0.09,0,0,0,0.018,0.018,0.01));}
+  // the lower half: trousers or shorts on the hips, a skirt or a dress flaring out
+  if(dress)p.push(P(latheGeo('dress2',[[0.0005,0.62],[0.11,0.62],[0.125,0.54],[0.17,0.4],[0.19,0.33],[0.0005,0.33]]),tc,0,0,0,0,0,0,W,1,0.85),P(latheGeo('dhem',[[0.188,0],[0.193,0.012],[0.186,0.024]]),lt(tc,0.4),0,0.33,0,0,0,0,W,1,0.85));
+  else if(h.bot==='skirt')p.push(P(latheGeo('skirt2',[[0.0005,0.56],[0.125,0.56],[0.16,0.44],[0.175,0.39],[0.0005,0.39]]),bc,0,0,0,0,0,0,W,1,0.85));
+  else if(h.top!=='overalls')p.push(P(latheGeo('pelvis',[[0.0005,0.42],[0.115,0.42],[0.125,0.48],[0.125,0.55],[0.0005,0.56]]),bc,0,0,0,0,0,0,W,1,zS*1.02),P(latheGeo('belt',[[0.126,0],[0.129,0.012],[0.126,0.022]]),dk(bc,0.35),0,0.535,0,0,0,0,W,1,zS*1.03));
+  // neck and head
+  p.push(P(latheGeo('neck2',[[0.0005,0],[0.045,0],[0.042,0.05],[0.045,0.1],[0.0005,0.1]]),sk,0,0.8,0,0,0,0,1,1,0.9));
+  for(const q of p)q.y+=DY;/* the whole body sits lower: shorter legs */
   p.push(P(headGeo(),sk,0,HEAD_Y,0));
-  const feat=(geo,col,u,v,sx,sy,sz,r=1.0,into=p)=>{const [x,y,z,ry,rx]=onHead(u,v,r);into.push(P(geo,col,x,y,z,rx,ry,0,sx,sy,sz));};
-  if(h.blush)for(const s of [-1,1])feat(SPH_LO,girl?0xf7a0b0:0xf0aaa4,s*0.5,-0.25,girl?0.075:0.065,0.042,0.02,0.985);
-  feat(SPH_XS,dk(sk,0.1),0,-0.16,0.03,0.022,0.018,1.0);/* a little nose */
-  if(h.freckles)for(const s of [-1,1])for(let i=0;i<3;i++)feat(SPH_XS,dk(sk,0.32),s*(0.38+i*0.06),-0.14-(i%2)*0.04,0.014,0.014,0.008,1.0);
-  for(const s of [-1,1]){const [x,y,z,ry,rx]=onHead(s*0.3,girl?0.17:0.155,1.006);p.push(P(BOX,dk(hc,0.12),x,y,z,rx,ry,s*(girl?-0.12:-0.03),girl?0.07:0.078,girl?0.011:0.016,0.012));}/* brows: thin and arched, or straighter and bolder */
-  const hairShell=hairGeo(h.hair);hp.push(P(hairShell,h.hair==='mohawk'?dk(hc,0.45):hc,0,HEAD_Y,0));
-  // the extras some styles have
-  const [tx,ty,tz]=onHead(0,0.7,1.1);
+  const feat=(geo,col,u,v,sx,sy,sz,r=1.0,into=p,rz=0)=>{const [x,y,z,ry,rx]=onHead(u,v,r);into.push(P(geo,col,x,y,z,rx,ry,rz,sx,sy,sz));};
+  for(const s of [-1,1]){const [x,y,z]=headPt(s*0.99,-0.06,-0.05);p.push(P(SPH_LO,sk,x,HEAD_Y+y,z,0,s*0.3,0,0.045,0.07,0.035),P(SPH_XS,dk(sk,0.15),x+s*0.004,HEAD_Y+y,z+0.008,0,0,0,0.022,0.04,0.015));}/* ears */
+  feat(SPH_LO,sk,0,-0.22,0.034,0.05,0.04,1.0);feat(SPH_XS,dk(sk,0.16),0,-0.27,0.03,0.012,0.012,1.012);/* a nose, with a little shadow under it */
+  if(h.blush)for(const s of [-1,1])feat(SPH_LO,girl?0xf6a0ac:0xf0a8a0,s*0.5,-0.3,0.05,0.03,0.012,0.99);
+  if(h.freckles)for(const s of [-1,1])for(let i=0;i<4;i++)feat(SPH_XS,dk(sk,0.3),s*(0.2+i*0.07),-0.2-(i%2)*0.04,0.009,0.009,0.006,1.005);
+  for(const s of [-1,1])feat(BOX,dk(hc,0.15),s*0.34,0.16,girl?0.058:0.064,girl?0.009:0.014,0.01,1.008,p,s*(girl?-0.15:-0.06));/* brows */
+  // hair: the base, then locks
+  hp.push(P(hairGeo(h.hair),h.hair==='mohawk'?dk(hc,0.45):hc,0,HEAD_Y,0));
+  const R0=mulberry(hi(h.hair.length,h.hairC,7)),hl=lt(hc,0.08),hd=dk(hc,0.12),at=(u,v,r)=>{const [x,y,z]=onHead(u,v,r);return[x,y,z];};
+  const fringe=(n,len,spread=0.85,v0=0.55)=>{for(let i=0;i<n;i++){const u=(i/(n-1)-0.5)*spread,root=at(u*0.8,v0+0.25,1.12),tip=at(u+(R0()-0.5)*0.08,v0-len,1.1);lock(hp,i%2?hc:hl,root,tip,0.05+R0()*0.015);}};
+  const sph=(a,e,r)=>{const [x,y,z]=headPt(Math.sin(e)*Math.cos(a),Math.cos(e),Math.sin(e)*Math.sin(a));return[x*r,HEAD_Y+y*r,z*r];};
+  const crown=(n,out=1.2)=>{for(let i=0;i<n;i++){const a=i/n*6.283+R0()*0.4,e=0.12+R0()*0.6;if(Math.sin(a)>0.55&&e>0.45)continue;/* (the fringe covers the front) */
+    lock(hp,[hc,hl,hd][i%3],sph(a,e,1.04),sph(a+(R0()-0.5)*0.5,e+0.55+R0()*0.25,out),0.06+R0()*0.02);}};
+  const sides=(len)=>{for(const s of [-1,1])for(let i=0;i<3;i++){const root=at(s*0.82,0.35-i*0.12,1.08),tip=at(s*(0.9+R0()*0.05),0.1-len-i*0.08,1.12);lock(hp,i%2?hc:hd,root,tip,0.045);}};
   switch(h.hair){
-    case'spiky':for(let i=0;i<9;i++){const a=i/9*6.283,[x,y,z]=onHead(Math.cos(a)*0.4,0.82,1.06);hp.push(P(CONE8,hc,x,y,z,Math.sin(a)*0.55,0,-Math.cos(a)*0.55,0.09,0.15,0.09));}break;
-    case'mohawk':for(let i=0;i<6;i++){const v=0.95-Math.abs(i-2.5)*0.05,zz=0.55-i*0.22,[x,y,z]=onHead(0,Math.sqrt(Math.max(0,1-zz*zz))*Math.sign(1),1.0);hp.push(P(CONE8,hc,0,HEAD_Y+HEAD_R[1]*0.95+0.04,zz*HEAD_R[2],-0.6+i*0.24,0,0,0.07,0.16,0.12));}break;
-    case'ponytail':hp.push(P(SPH_LO,0xd8453a,0,HEAD_Y+0.13,-HEAD_R[2]*1.12,0,0,0,0.08,0.08,0.06),P(tear('pt'),hc,0,HEAD_Y+0.14,-HEAD_R[2]*1.18,Math.PI-0.65,0,0,0.3,0.42,0.26));break;
-    case'pigtails':for(const s of [-1,1])hp.push(P(SPH_LO,0xf39ab0,s*HEAD_R[0]*1.12,HEAD_Y+0.03,-0.05,0,0,0,0.07,0.07,0.07),P(tear('pg'),hc,s*HEAD_R[0]*1.16,HEAD_Y+0.03,-0.05,Math.PI,0,s*0.45,0.26,0.4,0.24));break;
-    case'bun':hp.push(P(SPH,hc,0,HEAD_Y+HEAD_R[1]*1.2,-0.07,0,0,0,0.22,0.2,0.22),P(latheGeo('bunring',[[0.07,0],[0.08,0.012],[0.07,0.022]]),0xf39ab0,0,HEAD_Y+HEAD_R[1]*1.0,-0.06));break;}
-  // something on your head (sat on the hair)
-  const hy=HEAD_Y+HEAD_R[1]*(h.hair==='afro'?1.45:h.hair==='bun'?1.25:1.08);
+    case'short':crown(14,1.22);fringe(6,0.3);sides(0.12);break;
+    case'side':crown(10,1.18);for(let i=0;i<7;i++){const u=-0.45+i*0.15,root=at(u-0.2,0.8,1.12),tip=at(u+0.25,0.42-i*0.025,1.12);lock(hp,i%2?hc:hl,root,tip,0.055);}sides(0.1);break;
+    case'spiky':for(let i=0;i<16;i++){const a=i/16*6.283,e=0.3+(i%3)*0.18,u=Math.cos(a)*Math.sin(e),v=Math.cos(e),w=Math.sin(a)*Math.sin(e);lock(hp,i%2?hc:hl,[u*HEAD_R[0]*0.9,HEAD_Y+v*HEAD_R[1]*0.9,w*HEAD_R[2]*0.9],[u*HEAD_R[0]*1.5,HEAD_Y+(v*1.25+0.2)*HEAD_R[1]*1.3,w*HEAD_R[2]*1.5],0.06);}fringe(5,0.22);break;
+    case'buzz':break;
+    case'curly':for(let i=0;i<28;i++){const a=R0()*6.283,e=0.15+R0()*1.1,u=Math.cos(a)*Math.sin(e),v=Math.cos(e),w=Math.sin(a)*Math.sin(e);if(w>0.3&&v<0.5)continue;const [x,y,z]=headPt(u,v,w);hp.push(P(SPH_LO,[hc,hl,hd][i%3],x*1.12,HEAD_Y+y*1.12,z*1.12,0,0,0,0.07,0.07,0.07));}fringe(5,0.2);break;
+    case'mohawk':for(let i=0;i<7;i++){const w=0.75-i*0.25,v=Math.sqrt(Math.max(0,1-w*w));lock(hp,i%2?hc:hl,[0,HEAD_Y+v*HEAD_R[1]*0.95,w*HEAD_R[2]*0.95],[0,HEAD_Y+(v+0.45)*HEAD_R[1]*1.1,(w-0.15)*HEAD_R[2]*1.2],0.07);}break;
+    case'bob':crown(8,1.12);fringe(7,0.32,0.9);for(const s of [-1,1])for(let i=0;i<4;i++){const z0=0.3-i*0.3;lock(hp,i%2?hc:hd,at(s*0.9,0.4,1.1).map((c,j)=>j===2?z0*HEAD_R[2]:c),[s*HEAD_R[0]*1.12,HEAD_Y-HEAD_R[1]*0.8,z0*HEAD_R[2]*1.1],0.07);}break;
+    case'long':crown(8,1.12);fringe(7,0.32,0.9);for(let i=0;i<9;i++){const a=Math.PI*0.08+i/8*Math.PI*0.84,x=Math.cos(a)*HEAD_R[0]*1.05,z=-Math.sin(a)*HEAD_R[2]*1.0+(Math.abs(Math.cos(a))>0.8?0.05:0);
+        lock(hp,i%2?hc:hd,[x,HEAD_Y+HEAD_R[1]*0.6,z],[x*1.15,HEAD_Y-HEAD_R[1]*2.2,z*1.1-0.03],0.09);}break;
+    case'ponytail':crown(8,1.12);fringe(6,0.3);hp.push(P(SPH_LO,0xd8453a,0,HEAD_Y+0.06,-HEAD_R[2]*1.06,0,0,0,0.05,0.05,0.04));for(let i=0;i<4;i++)lock(hp,i%2?hc:hd,[0,HEAD_Y+0.06,-HEAD_R[2]*1.1],[(i-1.5)*0.03,HEAD_Y-0.2,-HEAD_R[2]*1.5-i*0.01],0.08);break;
+    case'pigtails':crown(8,1.12);fringe(6,0.3);for(const s of [-1,1]){hp.push(P(SPH_LO,0xf39ab0,s*HEAD_R[0]*1.05,HEAD_Y+0.01,-0.04,0,0,0,0.045,0.045,0.045));for(let i=0;i<3;i++)lock(hp,i%2?hc:hd,[s*HEAD_R[0]*1.08,HEAD_Y,-0.04],[s*(HEAD_R[0]*1.4+i*0.02),HEAD_Y-0.24,-0.05+i*0.02],0.075);}break;
+    case'bun':crown(6,1.1);fringe(6,0.3);hp.push(P(SPH,hc,0,HEAD_Y+HEAD_R[1]*1.2,-0.04,0,0,0,0.15,0.13,0.15),P(latheGeo('bunr',[[0.05,0],[0.058,0.01],[0.05,0.02]]),0xf39ab0,0,HEAD_Y+HEAD_R[1]*1.08,-0.04));break;
+    case'afro':for(let i=0;i<18;i++){const a=R0()*6.283,e=0.2+R0()*1.1,u=Math.cos(a)*Math.sin(e),v=Math.cos(e),w=Math.sin(a)*Math.sin(e);if(w>0.4&&v<0.45)continue;const [x,y,z]=headPt(u,v,w);hp.push(P(SPH_LO,[hc,hl][i%2],x*1.4,HEAD_Y+y*1.35+0.03,z*1.38,0,0,0,0.11,0.11,0.11));}break;}
+  // something on your head
+  const hy=HEAD_Y+HEAD_R[1]*(h.hair==='afro'?1.5:h.hair==='bun'?1.3:h.hair==='spiky'?1.25:1.12);
   switch(h.hat){
-    case'cap':hp.push(P(latheGeo('capdome',[[0.001,0.2],[0.12,0.19],[0.25,0.12],[0.34,0],[0.001,0]]),tc,0,hy-0.17,0,0,0,0,1.14,0.95,1.12),P(CYL12,tc,0,hy-0.15,0.27,0.1,0,0,0.38,0.02,0.24),P(SPH_XS,lt(tc,0.4),0,hy+0.0,0,0,0,0,0.05,0.04,0.05));break;
-    case'beanie':hp.push(P(latheGeo('beanie',[[0.001,0.26],[0.16,0.24],[0.3,0.13],[0.35,0.02],[0.355,-0.06],[0.001,-0.06]]),bc,0,hy-0.14,-0.01,0,0,0,1.1,1.05,1.05),P(SPH_LO,lt(bc,0.5),0,hy+0.13,-0.01,0,0,0,0.12,0.12,0.12));break;
-    case'sunhat':hp.push(P(CYL12,0xe8d090,0,hy-0.1,0,0,0,0,0.98,0.025,0.94),P(latheGeo('sunhat',[[0.001,0.16],[0.2,0.15],[0.26,0.05],[0.27,0],[0.001,0]]),0xe8d090,0,hy-0.1,0),P(latheGeo('hatband',[[0.262,0],[0.266,0.02],[0.258,0.04]]),tc,0,hy-0.1,0));break;
-    case'bow':for(const s of [-1,1])hp.push(P(ICO2,tc,0.14+s*0.06,hy-0.02,0.02,0,s*0.3,s*0.5,0.11,0.08,0.05));hp.push(P(ICO2,dk(tc,0.15),0.14,hy-0.02,0.03,0,0,0,0.045,0.045,0.045));break;
-    case'flower':for(let k=0;k<2;k++){const cx=0.17+k*0.07,cy=hy-0.05-k*0.035;for(let i=0;i<5;i++){const a=i/5*6.283;hp.push(P(SPH_LO,0xfff0a0,cx+Math.cos(a)*0.035,cy+Math.sin(a)*0.035,0.13,0,0,a,0.05,0.035,0.02));}hp.push(P(SPH_LO,0xf0a030,cx,cy,0.14,0,0,0,0.03,0.03,0.02));}break;
-    case'headband':hp.push(P(latheGeo('hband',[[0.335,0],[0.34,0.02],[0.335,0.04]]),tc,0,HEAD_Y+HEAD_R[1]*0.55,-0.02,-0.3,0,0,1,1,0.92));break;
-    case'band':hp.push(P(latheGeo('bandana',[[0.33,0],[0.338,0.03],[0.33,0.06]]),tc,0,HEAD_Y+HEAD_R[1]*0.42,-0.01,-0.18,0,0,1,1,0.92),P(ICO2,tc,0.05,HEAD_Y+0.1,-0.29,0.4,0,0.6,0.07,0.12,0.03),P(ICO2,tc,-0.04,HEAD_Y+0.08,-0.29,0.3,0,-0.5,0.06,0.11,0.03));break;}
-  if(h.glasses){for(const s of [-1,1]){feat(latheGeo('lens',[[0.04,0],[0.05,0.004],[0.04,0.008]]),0x2a2026,s*0.3,-0.05,1,1,1,1.03,hp);}const [x,y,z]=onHead(0,-0.04,1.04);hp.push(P(BOX,0x2a2026,x,y,z,0,0,0,0.05,0.01,0.01));}
-  g.add(M(p));if(hp.length){const hm=M(hp,hairMat);g.add(hm);}
-  // eyes: small dark ovals set wide, a glint in each; closed and happy versions; a little smile
-  const fp={open:[],blink:[],happy:[],smile:[],talk:[]};
-  const lid=new T.TorusGeometry(0.04,0.006,4,12,Math.PI*0.8);
-  for(const s of [-1,1]){const u=s*0.3,v=-0.05,ew=girl?0.066:0.058,eh=girl?0.09:0.078,ff=(q,rz)=>{const o=fp.open[fp.open.length-1];o.rz=rz;};
-    feat(SPH_LO,0x1a1218,u,v,ew,eh,0.025,1.0,fp.open);feat(SPH_LO,ec,u,v-0.03,ew*0.72,eh*0.55,0.02,1.012,fp.open);feat(SPH_LO,lerpHex(ec,0x000000,0.5),u,v-0.012,ew*0.4,eh*0.35,0.02,1.018,fp.open);
-    feat(SPH_XS,0xffffff,u+s*-0.012+0.028,v+0.055,0.022,0.026,0.01,1.03,fp.open);feat(SPH_XS,0xffffff,u-0.02,v-0.06,0.01,0.01,0.008,1.03,fp.open);
-    feat(lid,0x1a1218,u,v+0.03,girl?1.08:0.95,1,1,1.012,fp.open);ff(0,0.3*Math.PI*0.4);
-    if(girl){feat(BOX,0x1a1218,u+s*0.075,v+0.075,0.04,0.009,0.01,1.014,fp.open);ff(0,s*0.55);feat(BOX,0x1a1218,u+s*0.085,v+0.045,0.032,0.008,0.01,1.014,fp.open);ff(0,s*0.2);}
-    feat(BOX,0x1a1218,u,v-0.02,0.06,0.012,0.012,1.01,fp.blink);if(girl){feat(BOX,0x1a1218,u+s*0.04,v-0.03,0.025,0.008,0.01,1.012,fp.blink);fp.blink[fp.blink.length-1].rz=-s*0.5;}
-    feat(BOX,0x1a1218,u-0.035,v,0.035,0.011,0.011,1.01,fp.happy);fp.happy[fp.happy.length-1].rz=0.6;feat(BOX,0x1a1218,u+0.035,v,0.035,0.011,0.011,1.01,fp.happy);fp.happy[fp.happy.length-1].rz=-0.6;}
-  const smile=latheGeo('smileL',[[0.001,0],[0.03,0],[0.03,0.004],[0.001,0.004]],10);
-  feat(new T.TorusGeometry(girl?0.024:0.03,girl?0.007:0.006,5,12,Math.PI),girl?0xd8607a:0x8a3a40,girl?0:0.02,-0.28,1,1,1,1.0,fp.smile);fp.smile[0].rz=Math.PI+(girl?0:0.12);
-  feat(SPH_LO,0x6a2030,0,-0.3,0.05,0.04,0.02,0.995,fp.talk);feat(SPH_LO,0xf39ab0,0,-0.34,0.03,0.015,0.012,1.0,fp.talk);
+    case'cap':hp.push(P(latheGeo('cap2',[[0.0005,0.13],[0.08,0.125],[0.16,0.08],[0.21,0],[0.0005,0]]),tc,0,hy-0.12,0,0,0,0,1,1,1.03),P(CYL12,tc,0,hy-0.11,0.17,0.15,0,0,0.24,0.012,0.15),P(SPH_XS,lt(tc,0.4),0,hy+0.01,0,0,0,0,0.035,0.025,0.035));break;
+    case'beanie':hp.push(P(latheGeo('bean2',[[0.0005,0.17],[0.1,0.16],[0.19,0.09],[0.215,0.01],[0.218,-0.04],[0.0005,-0.04]]),bc,0,hy-0.1,-0.01,0,0,0,1,1,1),P(SPH_LO,lt(bc,0.5),0,hy+0.08,-0.01,0,0,0,0.08,0.08,0.08));break;
+    case'sunhat':hp.push(P(CYL12,0xe8d090,0,hy-0.07,0,0,0,0,0.62,0.016,0.6),P(latheGeo('sun2',[[0.0005,0.1],[0.12,0.095],[0.16,0.03],[0.17,0],[0.0005,0]]),0xe8d090,0,hy-0.07,0),P(latheGeo('sunb2',[[0.164,0],[0.168,0.013],[0.162,0.026]]),tc,0,hy-0.07,0));break;
+    case'bow':for(const s of [-1,1])hp.push(P(ICO2,tc,0.09+s*0.04,hy-0.02,0.02,0,s*0.3,s*0.5,0.075,0.055,0.035));hp.push(P(ICO2,dk(tc,0.15),0.09,hy-0.02,0.025,0,0,0,0.03,0.03,0.03));break;
+    case'flower':for(let k=0;k<2;k++){const cx=0.11+k*0.05,cy=hy-0.04-k*0.025;for(let i=0;i<5;i++){const a=i/5*6.283;hp.push(P(SPH_LO,0xfff0a0,cx+Math.cos(a)*0.024,cy+Math.sin(a)*0.024,0.09,0,0,a,0.034,0.024,0.014));}hp.push(P(SPH_LO,0xf0a030,cx,cy,0.096,0,0,0,0.02,0.02,0.014));}break;
+    case'headband':hp.push(P(latheGeo('hb2',[[0.2,0],[0.204,0.014],[0.2,0.028]]),tc,0,HEAD_Y+HEAD_R[1]*0.55,-0.02,-0.3,0,0,0.98,1,1));break;
+    case'band':hp.push(P(latheGeo('bd2',[[0.198,0],[0.203,0.02],[0.198,0.04]]),tc,0,HEAD_Y+HEAD_R[1]*0.4,-0.01,-0.18,0,0,0.98,1,1),P(ICO2,tc,0.03,HEAD_Y+0.06,-0.2,0.4,0,0.6,0.05,0.08,0.02));break;}
+  if(h.glasses){for(const s of [-1,1])feat(latheGeo('lens2',[[0.03,0],[0.037,0.003],[0.03,0.006]]),0x2a2026,s*0.36,-0.06,1,1,1,1.06,hp);const [x,y,z]=onHead(0,-0.05,1.07);hp.push(P(BOX,0x2a2026,x,y,z,0,0,0,0.035,0.007,0.007));}
+  g.add(M(p));g.add(M(hp,hairMat));
+  // eyes: an almond white, a big coloured iris, a dark pupil, two catchlights and a lash line; closed and happy versions
+  const fp={open:[],blink:[],happy:[],smile:[],talk:[]},lid=new T.TorusGeometry(0.03,0.006,4,12,Math.PI*0.75);
+  for(const s of [-1,1]){const u=s*0.37,v=-0.07,sc=girl?1.1:1;
+    feat(SPH_LO,0xfbf8f4,u,v,0.068*sc,0.052*sc,0.016,1.0,fp.open);feat(SPH_LO,ec,u+s*-0.01,v-0.005,0.04*sc,0.05*sc,0.014,1.01,fp.open);feat(SPH_LO,0x140c10,u+s*-0.01,v-0.005,0.02*sc,0.03*sc,0.012,1.018,fp.open);
+    feat(SPH_XS,0xffffff,u+0.02,v+0.03,0.013,0.015,0.008,1.026,fp.open);feat(SPH_XS,0xffffff,u-0.015,v-0.035,0.007,0.007,0.006,1.026,fp.open);
+    feat(lid,0x1a1218,u,v+0.012,(girl?1.25:1.12)*sc,1.05,1,1.016,fp.open,0.12*Math.PI);
+    if(girl)feat(BOX,0x1a1218,u+s*0.075,v+0.05,0.026,0.006,0.006,1.018,fp.open,s*0.6);
+    feat(BOX,0x1a1218,u,v-0.01,0.06,0.009,0.009,1.01,fp.blink,0);feat(BOX,0x1a1218,u-0.025,v,0.032,0.008,0.008,1.01,fp.happy,0.5);feat(BOX,0x1a1218,u+0.025,v,0.032,0.008,0.008,1.01,fp.happy,-0.5);}
+  feat(new T.TorusGeometry(girl?0.026:0.03,girl?0.006:0.0055,5,12,Math.PI),girl?0xd06070:0x9a4a48,girl?0:0.012,-0.42,1,1,1,0.995,fp.smile,Math.PI+(girl?0:0.06));
+  feat(SPH_LO,0x6a2030,0,-0.44,0.04,0.03,0.014,0.99,fp.talk);feat(SPH_LO,0xf39ab0,0,-0.48,0.024,0.012,0.01,0.995,fp.talk);
   const face={};for(const k in fp){const m=M(fp[k]);m.castShadow=false;m.visible=k==='open'||k==='smile';g.add(m);face[k]=m;}g.userData.face=face;
-  // arms: soft tubes with a sleeve and a mitten hand, on shoulder pivots; legs: little tubes with round shoes
-  const longS=['hoodie','sweater','jacket'].includes(h.top),noS=h.top==='tank'||h.top==='overalls'&&false,arm=capsule('arm2',girl?0.038:0.043,0.15);
-  for(const [nm,s] of [['armL',-1],['armR',1]]){const pv=new T.Group();pv.name=nm;pv.position.set(s*0.14*BW,bodyY+0.3,0);pv.rotation.z=s*0.3;
-    const ap=[P(arm,longS?tc:sk,0,-0.2,0,0,0,0)];if(!noS&&h.top!=='tank'&&h.top!=='dress')ap.push(P(latheGeo('sleeve'+(longS?'L':'S'),longS?[[0.05,0],[0.054,0.1],[0.048,0.13]]:[[0.052,0],[0.058,0.05],[0.05,0.07]]),h.top==='overalls'?tc:tc,0,longS?-0.13:-0.065,0));
-    ap.push(P(SPH,sk,0,-0.21,0.005,0,0,0,girl?0.085:0.095,girl?0.09:0.1,0.09));pv.add(M(ap));g.add(pv);}
-  const leg=capsule('leg2',girl?0.04:0.045,0.14),legC=dress||h.bot!=='trousers'?sk:bc;
-  for(const [nm,s] of [['footL',-1],['footR',1]]){const pv=new T.Group();pv.name=nm;pv.position.set(s*0.065*BW,legH+0.02,0);
-    const lp=[P(leg,legC,0,-0.2,0,0,0,0),P(SPH,h.shoe,0,-0.205,0.02,0,0,0,0.105,0.08,0.15),P(CYL12,lt(h.shoe,0.5),0,-0.24,0.02,0,0,0,0.1,0.012,0.14)];
-    if(h.top!=='dress'&&h.bot!=='trousers')lp.push(P(latheGeo('sock',[[0.047,0],[0.05,0.02],[0.046,0.045]]),0xf6f2ea,0,-0.19,0,0,0,0,girl?0.9:1,1,1));/* socks */
+  // arms: shoulder, upper arm, elbow, forearm, hand (sleeves and cuffs per top)
+  const upper=seg2('ua2'+(girl?'g':'b'),girl?0.042:0.048,girl?0.036:0.04,0.12),fore=seg2('fa2'+(girl?'g':'b'),girl?0.035:0.04,girl?0.03:0.033,0.11);
+  const sleeveC=h.top==='tank'?sk:tc,foreC=longS?tc:sk;
+  for(const [nm,s] of [['armL',-1],['armR',1]]){const pv=new T.Group();pv.name=nm;pv.position.set(s*0.14*W,shY-0.03,0);pv.rotation.z=s*0.12;
+    const ap=[P(SPH_LO,sleeveC,0,0,0,0,0,0,0.1,0.09,0.09),P(upper,h.top==='dress'||h.top==='tank'?sk:sleeveC,0,0,0,0,0,0),P(fore,foreC,0,-0.125,0.0,-0.12,0,0)];
+    if(!longS&&h.top!=='tank'&&h.top!=='dress')ap.push(P(latheGeo('slv3',[[0.054,0],[0.057,0.04],[0.05,0.08],[0.0005,0.085]]),sleeveC,0,-0.085,0));
+    if(longS)ap.push(P(latheGeo('cuff2',[[0.035,0],[0.041,0.012],[0.041,0.03],[0.035,0.04]]),dk(tc,0.1),0,-0.245,0.015,-0.12,0,0));
+    ap.push(P(SPH,sk,0,-0.275,0.02,0,0,0,0.07,0.08,0.052),P(SPH_LO,sk,s*-0.026,-0.26,0.038,0,0,s*0.5,0.026,0.04,0.026));/* hand and thumb */
+    pv.add(M(ap));g.add(pv);}
+  // legs: thigh, knee, calf, and a sneaker (sole, toe cap, laces)
+  const thigh=seg2('th2',0.062,0.05,0.14),calf=seg2('cf2',0.05,0.038,0.15),legTop=!dress&&h.bot==='trousers'?bc:sk,legBot=legTop;
+  for(const [nm,s] of [['footL',-1],['footR',1]]){const pv=new T.Group();pv.name=nm;pv.position.set(s*0.062*W,hipY,0);
+    const lp=[P(thigh,legTop,0,0,0),P(calf,legBot,0,-0.15,0)];if(h.bot==='shorts'&&!dress)lp.push(P(latheGeo('shrt2',[[0.066,0],[0.07,0.05],[0.068,0.1],[0.0005,0.11]]),bc,0,-0.09,0));
+    if(legBot===sk)lp.push(P(latheGeo('sock3',[[0.04,0],[0.043,0.02],[0.04,0.045]]),0xf6f2ea,0,-0.32,0));
+    lp.push(P(SPH,lt(h.shoe,0.55),0,-0.365,0.022,0,0,0,0.095,0.038,0.16),P(SPH,h.shoe,0,-0.345,0.02,0,0,0,0.088,0.065,0.14),P(SPH_LO,lt(h.shoe,0.7),0,-0.35,0.08,0,0,0,0.06,0.032,0.045),P(BOX,0xf6f2ea,0,-0.318,0.045,0.5,0,0,0.04,0.004,0.045));
     pv.add(M(lp));g.add(pv);}
+  g.children.forEach(c=>{c.position.multiplyScalar(HUM_S);c.scale.multiplyScalar(HUM_S);});
   return g;}
 /* ---- the editor ---- */
 let charEd=null;
@@ -163,7 +186,7 @@ $('charEd').addEventListener('click',e=>{const b=e.target.closest('button');if(!
 // the camera: close and level, facing you; drag sideways to turn round
 // the studio camera: framed on you in the space above the tray; you turn slowly, sway, blink and bounce when something changes
 function updateCharEd(dt,tt){if(!charEd||!edModel)return;charEd.t+=dt;const W=window.innerWidth,H=window.innerHeight,asp=W/H,f=1-(charEd.px||H*0.45)/H,tv=Math.tan(15*Math.PI/180);
-  edCam.aspect=asp;const d=Math.max(0.78/(tv*f),0.62/(tv*asp))*1.05;edCam.position.set(0,0.62+d*0.12,d);edCam.lookAt(0,0.56,0);edCam.updateProjectionMatrix();
+  edCam.aspect=asp;const d=Math.max(0.64/(tv*f),0.5/(tv*asp))*1.05;edCam.position.set(0,0.6+d*0.1,d);edCam.lookAt(0,0.52,0);edCam.updateProjectionMatrix();
   charEd.hop=Math.max(0,(charEd.hop||0)-dt);edModel.position.y=Math.sin(Math.min(1,(0.3-charEd.hop)/0.3)*Math.PI)*(charEd.hop>0?0.08:0);
   edModel.rotation.y=charEd.spin+Math.sin(tt*0.6)*0.25;const L=limbsOf(edModel);if(L[0]){L[0].rotation.x=Math.sin(tt*1.6)*0.08;L[1].rotation.x=-Math.sin(tt*1.6)*0.08;L[1].rotation.z=charEd.hop>0?1.4:0.3;}
   const bl=(tt%3.6)<0.12;setFace(edModel,charEd.hop>0?'happy':bl?'blink':'open','smile');
