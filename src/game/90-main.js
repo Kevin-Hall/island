@@ -34,7 +34,7 @@ function frame(now){
   updateBoat(dt,tt);updateFrontier(dt,tt);
   if(S.sea){vil.hop=Math.max(0,vil.hop-dt);villager.position.set(vil.x,0.14+Math.sin(tt*1.5)*0.04+Math.sin(vil.hop/0.35*Math.PI)*0.3*(vil.hop>0),vil.z);if(!fishing)villager.rotation.y=S.boat.r;}
   if(introCam){introCam.t+=dt;const u=smooth(0,1,introCam.t/7);cam.dist=lerp(10,introCam.d,u);cam.pitch=lerp(0.22,introCam.p,u);cam.yaw=lerp(introCam.y-0.5,introCam.y,u);if(introCam.t>=7||drag||pinch)introCam=null;}
-  const k=paint?0:Math.min(1,dt*5);updateChat(dt,tt);const [fx,fz]=chatFocus();cam.tx+=(fx-cam.tx)*k;cam.tz+=(fz-cam.tz)*k;PL('boat');applyCam();cullIslands();PL('cull');updateNearGrass(dt);PL('near'); // hold the view still while drag-farming so tiles stay under the finger
+  const k=paint?0:Math.min(1,dt*5);updateChat(dt,tt);updateCharEd(dt,tt);const [fx,fz]=charEd?charEdFocus():chatFocus();cam.tx+=(fx-cam.tx)*k;cam.tz+=(fz-cam.tz)*k;PL('boat');applyCam();cullIslands();PL('cull');updateNearGrass(dt);PL('near'); // hold the view still while drag-farming so tiles stay under the finger
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
   fogW=lerp(fogW,wxNow()==='fog'&&!S.sea?1:0,Math.min(1,dt*0.6));scene.fog.near=Math.max(4,camD()+45-fogBoost*30-fogW*50);scene.fog.far=camD()+300-fogBoost*200-fogW*245;/* foggy days close the world in *//* a light haze: neighbouring islands stay green on the horizon */
@@ -117,6 +117,7 @@ else if(!S.scratch){if(farmNew)setTimeout(()=>toast('Across the bridge to the we
 if(isNew){setTimeout(()=>toast('Welcome to Driftseed Isle! Tap soil to plant, and tap ripe crops to harvest.','',ICON.sprout),500);
   setTimeout(()=>toast('Your boat waits at the dock. Sail to other islands to fill your Islandex!','',ICON.boat),4200);}
 else if(!S.boatTip)setTimeout(()=>toast('New: your boat waits at the dock! Sail to new islands and fill your Islandex.','',ICON.boat),800);
+if(!isNew&&!S.tipHuman&&S.look.sp!=='human'){S.tipHuman=1;setTimeout(()=>toast('New: make your own boy or girl character! Tap your level badge, then <b>Your look</b>.','rare',ICON.star),6000);}
 }
 if(away.length||(Date.now()-(S.t||Date.now()))>3*3600000){afterSim(away,'');setTimeout(()=>morningCard(away,true),isNew?0:1500);}/* back after a while: what changed */
 if(!isNew)showTitle();

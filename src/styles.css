@@ -606,3 +606,30 @@ body.chatting .hud,body.chatting .clockb,body.chatting #bar,body.chatting #apps,
 .copts button:nth-child(2){animation-delay:.05s}.copts button:nth-child(3){animation-delay:.1s}.copts button:nth-child(4){animation-delay:.15s}
 .copts button:active{transform:scale(.97)}.copts button.hi{background:#2cc3b2;color:#fff}
 @keyframes chatIn2{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+
+/* ---------- the character editor (61b) ---------- */
+.chared{position:fixed;z-index:21;left:0;right:0;bottom:0;background:rgba(255,252,244,.97);border-radius:24px 24px 0 0;box-shadow:0 -8px 28px rgba(30,20,10,.2);
+  padding:12px 0 calc(env(safe-area-inset-bottom,0px) + 12px);max-height:48vh;display:flex;flex-direction:column;gap:8px;animation:chatIn3 .35s cubic-bezier(.2,.9,.3,1.1)}
+@keyframes chatIn3{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.chared .htop{display:flex;align-items:center;gap:8px;padding:0 14px}.chared .htop b{flex:1;font-size:17px;color:var(--ink)}
+.chared .hbtn{border:none;background:var(--wash);border-radius:999px;padding:8px 12px;font:inherit;font-size:13px;font-weight:700;color:var(--ink)}
+.chared .htop .pbtn{padding:8px 16px;font-size:15px}
+.chared .dtabs{display:flex;gap:6px;padding:0 14px;overflow-x:auto;scrollbar-width:none}.chared .dtabs::-webkit-scrollbar{display:none}
+.chared .dtabs button{border:none;background:var(--wash);color:var(--ink2);border-radius:999px;padding:7px 14px;font:inherit;font-size:13.5px;font-weight:700;white-space:nowrap}
+.chared .dtabs button.on{background:var(--teal);color:#fff;box-shadow:0 2px 0 var(--teal-d)}
+.chared .hbody{overflow-y:auto;padding:2px 14px 4px}
+.chared h4{margin:10px 0 6px;font-size:12px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em}
+.chared .hsw{display:flex;flex-wrap:wrap;gap:8px}
+.chared .hsw .sw{width:34px;height:34px;border-radius:50%;border:none;background:var(--sw);box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
+.chared .hsw .sw.on{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--teal)}
+.chared .htiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px}
+.chared .ht{border:none;background:#fff;border-radius:14px;box-shadow:0 2px 0 var(--line);padding:4px 2px 6px;display:flex;flex-direction:column;align-items:center;font:inherit;color:var(--ink)}
+.chared .ht img{width:62px;height:62px}.chared .ht span{font-size:11px;font-weight:700}
+.chared .ht.on{box-shadow:0 0 0 3px var(--teal)}
+.chared .hseg{display:flex;background:var(--wash);border-radius:999px;padding:4px;gap:4px;width:max-content}
+.chared .hseg button{border:none;background:none;border-radius:999px;padding:8px 22px;font:inherit;font-size:15px;font-weight:700;color:var(--ink2)}
+.chared .hseg button.on{background:#fff;color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.chared .htog{display:flex;flex-wrap:wrap;gap:8px}.chared .htog button{border:none;background:var(--wash);border-radius:999px;padding:10px 16px;font:inherit;font-size:14px;font-weight:700;color:var(--ink2)}
+.chared .htog button.on{background:var(--teal);color:#fff}
+.chared .hnote{font-size:12.5px;color:var(--ink2);margin:8px 0 0}
+body.chared .chatveil{opacity:.5}

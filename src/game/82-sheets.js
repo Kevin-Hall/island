@@ -122,12 +122,13 @@ function renderSheet(){
       h+=`<button class="card" data-isle="${isl.id}"><img class="px" src="${isl.home?ICON.sprout:ICON.chart}" alt=""><span class="grow"><span class="nm">${isl.name}</span><br><span class="sub">${isl.home?'Your island':islKind(isl)+' island'} · ${d<4?'you are here':d+' leagues away'}${tot?` · ${got}/${tot} local plants & bugs`:''}</span></span></button>`;}
     h+='</div>';}
   else if(sheet.kind==='look'){$('sheetTitle').textContent='Your look';tabs([]);const L=S.look;
+    h+=`<button class="card lookrow human" data-human="1"><img src="${hThumb({})}" alt=""><span class="grow"><span class="nm">${L.sp==='human'?'Edit your character':'Be a human'}</span><br><span class="sub">Boy or girl: hair, face, clothes and more</span></span><span class="sub" style="font-size:22px">›</span></button><h3 class="sech">Or an animal</h3>`;
     h+=`<div class="looks">${Object.keys(LOOKS).map(sp=>`<button class="lk ${L.sp===sp?'on':''}" data-look="${sp}"><img src="${lookThumb(sp,sp===L.sp?L.fur:LOOKS[sp].fur[0],L.shirt)}" alt=""><span>${LOOKS[sp].name}</span></button>`).join('')}</div>`;
     h+=`<h3 class="sech">${L.sp==='duck'||L.sp==='penguin'?'Feathers':L.sp==='frog'?'Skin':'Fur'}</h3><div class="swatches">${LOOKS[L.sp].fur.map(c=>`<button class="sw ${L.fur===c?'on':''}" data-fur="${c}" style="--sw:${hexCss(c)}" aria-label="Colour"></button>`).join('')}</div>`;
     h+=`<h3 class="sech">Outfit</h3><div class="swatches">${OUTFITS.map(c=>`<button class="sw ${L.shirt===c?'on':''}" data-shirt="${c}" style="--sw:${hexCss(c)}" aria-label="Outfit colour"></button>`).join('')}</div>`;
     h+=`<p class="note">Changes show on your villager right away, and you can switch any time from the Island menu.</p>`;}
   else if(sheet.kind==='settings'){$('sheetTitle').textContent='Settings';tabs([]);const b=LV[lv];
-    h+=`<button class="card lookrow" data-openlook="1"><img src="${lookThumb(S.look.sp,S.look.fur,S.look.shirt)}" alt=""><span class="grow"><span class="nm">Your look</span><br><span class="sub">${LOOKS[S.look.sp]?.name||'Bunny'} · change animal and colours</span></span><span class="sub" style="font-size:22px">›</span></button>`;
+    h+=`<button class="card lookrow" data-openlook="1"><img src="${lookThumb(S.look.sp,S.look.fur,S.look.shirt)}" alt=""><span class="grow"><span class="nm">Your look</span><br><span class="sub">${S.look.sp==='human'?'Human':LOOKS[S.look.sp]?.name||'Bunny'} · change your character</span></span><span class="sub" style="font-size:22px">›</span></button>`;
     h+=`<div class="tiles"><div><b>${lv}</b><span>${b?fmt(b-S.xp)+' XP to go':'Max level'}</span></div><div><b>${S.day}</b><span>Day</span></div><div><b>${fmt(S.earned)}</b><span>Shells earned</span></div></div>`;
     h+=`<h3 class="sech">Sound & display</h3><div class="group">`;
     h+=`<div class="setrow"><span>Sound effects</span><button class="iswitch ${S.sound?'on':''}" data-snd="${S.sound?0:1}" aria-label="Sound"></button></div>`;
@@ -181,6 +182,7 @@ $('sheetTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]
 $('sheetBody').addEventListener('click',e=>{
   const el=e.target.closest('button');if(!el||el.disabled)return;const d=el.dataset;
   if(d.openlook){openSheet('look');return;}
+  if(d.human){closeSheet();openCharEd();return;}
   if(d.look){setLook({sp:d.look});renderSheet();return;}if(d.fur){setLook({fur:+d.fur});renderSheet();return;}if(d.shirt){setLook({shirt:+d.shirt});renderSheet();return;}
   if(d.seed){S.seed=d.seed;S.tool='seeds';SFX.ui();updateHUD();renderTools();showHeld();closeSheet();return;}
   if(d.pick){sheet.sel=d.pick;SFX.ui();renderSheet();return;}

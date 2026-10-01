@@ -16,7 +16,7 @@ function pick(cx,cy){
   if(rb&&rd<bd&&Math.sqrt(rd)<tp*0.8)return{x:rb[0],z:rb[1],river:true};
   if(best&&Math.sqrt(bd)<tp*0.8)return{x:best[0],z:best[1]};
   return null;}
-function onTap(cx,cy){buzz(6);if(chat){chatTap();return;}/* talking (57d) */
+function onTap(cx,cy){buzz(6);if(charEd)return;/* the character editor: taps go to its tray (61b) */if(chat){chatTap();return;}/* talking (57d) */
   if(inside){if(!$('actionBar').hidden&&!$('actionBar').classList.contains('tapnext')){clearAction();return;}roomTap(cx,cy);return;}
   if(shoot&&!shoot.wished){makeWish();return;}
   if(caught){dismissCatch();return;}
@@ -87,6 +87,7 @@ canvas.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.
   if(paint&&ptrs.size===1){const hit=pick(e.clientX,e.clientY);if(hit)paintAt(hit.x,hit.z);return;}
   if(drag&&drag.lay&&ptrs.size===1){const hit=pick(e.clientX,e.clientY);if(hit&&placing&&(hit.x!==placing.x||hit.z!==placing.z))layFloorAt(hit.x,hit.z);return;} // hold and drag to lay a path
   if(ptrs.size===1&&drag){const dx=e.clientX-drag.lx,dy=e.clientY-drag.ly;drag.lx=e.clientX;drag.ly=e.clientY;
+    if(charEd){charEd.spin+=dx*0.012;return;}/* turn round in the character editor */
     if(!drag.moved&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>9)drag.moved=true;
     if(drag.moved&&!inside){cam.yaw-=dx*0.009;const uwc=typeof swim!=='undefined'&&swim.uw>0.02;cam.pitch=clamp(cam.pitch+dy*0.005,uwc?-0.5:0.35,uwc?0.8:1.2);/* under water you can look up at the surface */}}});
 function endPtr(e){if(!ptrs.has(e.pointerId))return;const wasOne=ptrs.size===1;ptrs.delete(e.pointerId);clearTimeout(holdT);if(drag&&drag.item&&ptrs.size===0)decoDrop(drag.moved);if(paint&&ptrs.size===0)endPaint();

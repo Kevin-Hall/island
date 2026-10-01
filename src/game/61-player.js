@@ -14,11 +14,11 @@ const LOOKS={
   penguin:{name:'Penguin',fur:[0x3a4a6a,0x5a6a8a]}};
 const OUTFITS=[0xd8453a,0x5a8ae0,0x6ab84a,0xf6d04a,0xf39ab0,0x9a6ad0,0x3a3440];
 const hexCss=c=>'#'+c.toString(16).padStart(6,'0');
-function playerBody(L){const b=L.sp==='bunny'||!LOOKS[L.sp]?bunnyBody(L.fur,L.shirt):npcModel(L.sp,L.fur,L.shirt,null,'overalls');b.traverse(o=>{if(o.isMesh)o.castShadow=true;});return b;}
+function playerBody(L){const b=L.sp==='human'?humanModel(L.h||{}):L.sp==='bunny'||!LOOKS[L.sp]?bunnyBody(L.fur,L.shirt):npcModel(L.sp,L.fur,L.shirt,null,'overalls');b.traverse(o=>{if(o.isMesh)o.castShadow=true;});return b;}
 let playerLimbs=null;
 function applyLook(){const L=S.look,b=playerBody(L);villager.remove(villager.children[0]);villager.add(b);villager.children.unshift(villager.children.pop());
   playerLimbs=L.sp==='bunny'?null:limbsOf(b);}
 // preview thumbnails for the look picker, cached per species + colours
 const lookThumbs={};
-function lookThumb(sp,fur,shirt){const k=sp+'|'+fur+'|'+shirt;return lookThumbs[k]||(lookThumbs[k]=snapThumb(playerBody({sp,fur,shirt}),128));}
+function lookThumb(sp,fur,shirt){if(sp==='human')return hThumb({});const k=sp+'|'+fur+'|'+shirt;return lookThumbs[k]||(lookThumbs[k]=snapThumb(playerBody({sp,fur,shirt}),128));}
 function setLook(ch){Object.assign(S.look,ch);if(ch.sp&&!ch.fur)S.look.fur=LOOKS[ch.sp].fur[0];applyLook();hearts(vil.x,1.1,vil.z);SFX.pop();save();}
