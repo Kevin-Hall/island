@@ -582,3 +582,27 @@ img.pix{image-rendering:crisp-edges;image-rendering:pixelated}
 .decosel button[data-da="done"]{background:var(--green);color:#fff}
 .decosel button[data-da="store"]{background:#fde0da;color:#b8503e}
 .dnote{grid-row:span 2;width:260px;font-size:13px;color:var(--ink2);margin:6px 0}
+
+/* ---------- talking (57d): a quiet card, the world framed around the two of you ---------- */
+.chatveil{position:fixed;inset:0;z-index:9;pointer-events:none;opacity:0;transition:opacity .5s;
+  background:linear-gradient(to bottom,rgba(20,14,30,.28),transparent 16%,transparent 58%,rgba(20,14,30,.34))}
+body.chatting .chatveil{opacity:1}
+body.chatting .hud,body.chatting .clockb,body.chatting #bar,body.chatting #apps,body.chatting #ctx,body.chatting #seamarks,body.chatting #actionBar{opacity:0;pointer-events:none;transition:opacity .3s}
+.hud,.clockb,#bar,#apps,#ctx{transition:opacity .3s}
+.chat{position:fixed;z-index:20;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:min(560px,calc(100vw - 24px));animation:chatIn .35s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes chatIn{from{opacity:0;transform:translate(-50%,16px)}to{opacity:1;transform:translate(-50%,0)}}
+.cbox{position:relative;background:rgba(255,252,244,.95);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:22px;padding:22px 22px 18px;
+  box-shadow:0 12px 34px rgba(30,20,10,.22);min-height:92px}
+.cname{position:absolute;top:-13px;left:18px;color:#fff;font-weight:700;font-size:14px;padding:4px 13px 5px;border-radius:999px;letter-spacing:.02em;box-shadow:0 3px 8px rgba(0,0,0,.15)}
+.csub{position:absolute;top:8px;right:16px;font-size:11px;font-weight:600;color:#b8a890;letter-spacing:.02em;text-transform:capitalize}
+.ctext{font-size:17px;line-height:1.5;color:#4a3a2a;font-weight:500;min-height:52px;white-space:pre-wrap}
+.cbox.narr{background:rgba(250,246,236,.9)}.cbox.narr .ctext{font-style:italic;color:#8a7a62;font-size:15.5px}
+.cbox.me .ctext{color:#2a7a70}
+.cmore{position:absolute;right:20px;bottom:12px;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:9px solid #c8b090;animation:cmore .9s ease-in-out infinite}
+@keyframes cmore{50%{transform:translateY(4px)}}
+.copts{display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-bottom:12px}
+.copts button{border:none;background:rgba(255,252,244,.97);color:#4a3a2a;border-radius:18px 18px 5px 18px;padding:11px 17px;font:inherit;font-size:15.5px;font-weight:600;
+  box-shadow:0 5px 16px rgba(30,20,10,.16);max-width:86%;text-align:left;animation:chatIn2 .28s both}
+.copts button:nth-child(2){animation-delay:.05s}.copts button:nth-child(3){animation-delay:.1s}.copts button:nth-child(4){animation-delay:.15s}
+.copts button:active{transform:scale(.97)}.copts button.hi{background:#2cc3b2;color:#fff}
+@keyframes chatIn2{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}

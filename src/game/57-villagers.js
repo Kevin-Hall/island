@@ -167,10 +167,11 @@ function npcLine(n){const P0=PERS[n.pers],h=S.hour;const ctx=[];
   ctx.push(`I heard ${CROPS[S.demand].name.toLowerCase()} is selling for a fortune today!`);const d=S.npc[n.i];if(d.f>=5)ctx.push('I’m really glad you moved to '+TOWN.name+', you know?');if(d.lastGift&&S.day-d.lastGift.day<=3)ctx.push(`I’m still enjoying that ${nameOf(d.lastGift.key)} you gave me!`,`Thanks again for the ${nameOf(d.lastGift.key)}. You remembered!`);
   const r=Math.random(),special=r<0.35?activityLine(n):r<0.65?memoryLine(n):r<0.8?neighbourLine(n):null;if(special)return special;
   const all=[...P0.lines,...ctx];const line=all[Math.floor(Math.random()*all.length)];return Math.random()<0.35?`${line} ${n.cp[0].toUpperCase()+n.cp.slice(1)}!`:line;}
-function talkTo(n){if(n.state==='home')return;if(n.act&&n.act.k==='chat'){const q=n.act.with;if(q&&q.act&&q.act.with===n)endActivity(q);}n.state='talk';n.t=0;n.path=null;walkTo(n.x,n.z);SFX.ui();const d=S.npc[n.i];
+function talkTo(n){if(n.state==='home')return;if(n.act&&n.act.k==='chat'){const q=n.act.with;if(q&&q.act&&q.act.with===n)endActivity(q);}n.state='talk';n.t=0;n.path=null;{/* stop a step away from them, on the side you came from */const dx=vil.x-n.x,dz=vil.z-n.z,d=Math.hypot(dx,dz)||1;walkTo(n.x+dx/d*1.1,n.z+dz/d*1.1);}SFX.ui();const d=S.npc[n.i];
   if(d.talk!==S.day){d.talk=S.day;jrNote('talk');d.f=Math.min(10,d.f+(buffOn('friend')?2:1));hearts(n.x,n.y+1,n.z);}
-  setTimeout(()=>showTalk(n,npcLine(n)),0);}
-function showTalk(n,line){n.talkT=Math.min(2.4,0.6+line.length*0.025);const d=S.npc[n.i],w=npcWish(n),btns=[];
+  setTimeout(()=>startChat(n),0);/* 57d */}
+function showTalk(n,line){startChat(n,line);}/* the old action-bar chat, kept for reference */
+function showTalkOld(n,line){n.talkT=Math.min(2.4,0.6+line.length*0.025);const d=S.npc[n.i],w=npcWish(n),btns=[];
   let msg=`<b>${n.name}:</b> ${line}`;
   if(!w.done){const have=invFor(w.k);msg+=`<br><small>${n.name} is hoping for ${/^[aeiou]/i.test(nameOf(w.k))?'an':'a'} <b>${nameOf(w.k)}</b> today.</small>`;
     btns.push({label:have?'Give '+nameOf(have):'Need one',cls:'go',disabled:!have,fn:()=>giveWish(n,have)});}
@@ -182,5 +183,5 @@ function giveWish(n,key){const d=S.npc[n.i];if(!key||!S.inv[key])return;d.lastGi
   else{const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+3;extra=` and <b>3 ${CROPS[id].name} seeds</b>`;}
   if(d.f>=5&&!d.gift5){d.gift5=1;S.store.lantern=(S.store.lantern||0)+1;S.shells+=500;extra+=`. ${n.name} also slips you a Lantern and 500 shells — “for being such a good friend!”`;}
   if(d.f>=10&&!d.gift10){d.gift10=1;S.store.clover=(S.store.clover||0)+1;extra+=`. Best friends! ${n.name} gives you a Lucky Clover.`;}
-  setAction(`<b>${n.name}:</b> Oh, a ${nameOf(key)}! You’re a treasure! Here, take this: <b>${fmt(pay)} shells</b>${extra}.`,[{label:'Aw, thanks!',cls:'go',fn:()=>{clearAction();n.state='idle';n.wait=2;}}],`${n.name} · ♥ ${d.f}/10`);updateHUD();}
+  chatAfterGift(n,key,pay,extra);updateHUD();}
 

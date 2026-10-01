@@ -34,7 +34,7 @@ function frame(now){
   updateBoat(dt,tt);updateFrontier(dt,tt);
   if(S.sea){vil.hop=Math.max(0,vil.hop-dt);villager.position.set(vil.x,0.14+Math.sin(tt*1.5)*0.04+Math.sin(vil.hop/0.35*Math.PI)*0.3*(vil.hop>0),vil.z);if(!fishing)villager.rotation.y=S.boat.r;}
   if(introCam){introCam.t+=dt;const u=smooth(0,1,introCam.t/7);cam.dist=lerp(10,introCam.d,u);cam.pitch=lerp(0.22,introCam.p,u);cam.yaw=lerp(introCam.y-0.5,introCam.y,u);if(introCam.t>=7||drag||pinch)introCam=null;}
-  const k=paint?0:Math.min(1,dt*5);cam.tx+=(vil.x-cam.tx)*k;cam.tz+=(vil.z-cam.tz)*k;PL('boat');applyCam();cullIslands();PL('cull');updateNearGrass(dt);PL('near'); // hold the view still while drag-farming so tiles stay under the finger
+  const k=paint?0:Math.min(1,dt*5);updateChat(dt,tt);const [fx,fz]=chatFocus();cam.tx+=(fx-cam.tx)*k;cam.tz+=(fz-cam.tz)*k;PL('boat');applyCam();cullIslands();PL('cull');updateNearGrass(dt);PL('near'); // hold the view still while drag-farming so tiles stay under the finger
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
   fogW=lerp(fogW,wxNow()==='fog'&&!S.sea?1:0,Math.min(1,dt*0.6));scene.fog.near=Math.max(4,camD()+45-fogBoost*30-fogW*50);scene.fog.far=camD()+300-fogBoost*200-fogW*245;/* foggy days close the world in *//* a light haze: neighbouring islands stay green on the horizon */
