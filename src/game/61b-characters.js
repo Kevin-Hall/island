@@ -5,12 +5,15 @@
 // artist-made models shipped as assets/characters/<id>.glb beside the page (or inlined by build --embed-chars). Each
 // file loads once, the first time it's needed (charLoad), and every use (you, your copy in a room, the editor's model,
 // thumbnails) is a clone of it (charModel), fitted to the player's height (CHAR_H) and painted with the game's toon
-// shading. Two kinds:
-//  - rigged and animated (Quaternius, CC0: Anne, Henry): one skinned mesh over a colour atlas; a skin tone repaints the
-//    atlas's skin texel (skin: [column,row]); CharacterAnimator plays their Idle, Walk and Run clips
-//  - static (no rig: Cozy): its pieces baked into two meshes, the skin (the material named in skin) and the rest coloured
-//    from their materials; it bobs and squashes as it walks, like the animals (90-main)
-const CHARS=[{id:'cozy',name:'Cozy',skin:'Warm skin',zUp:true},{id:'anne',name:'Anne',skin:[4,9]},{id:'henry',name:'Henry',skin:[4,11]}];
+// shading. Three kinds:
+//  - painted (an AI-made model from a picture: the Campfire Kid): one mesh over a painted texture, no rig; a skin tone
+//    recolours the texture's skin-coloured pixels, keeping their painted shading (skin: 'paint'); it bobs and squashes
+//    as it walks, like the animals (90-main)
+//  - rigged and animated (e.g. Quaternius, or a picture rigged in Mixamo): one skinned mesh over a colour atlas; a skin
+//    tone repaints the atlas's skin texel (skin: [column,row]); CharacterAnimator plays its Idle, Walk and Run clips
+//  - static pieces with flat colours (zUp: modelled lying down): baked into two meshes, the skin (the material named in
+//    skin) and the rest coloured from their materials
+const CHARS=[{id:'kid',name:'Campfire Kid',skin:'paint'}];
 const CHAR_H=1.07;/* every character stands the player's height, whatever units its artist used */
 const HSKIN=[0xfde3cf,0xf6d2b4,0xeec09a,0xd9a27a,0xc08660,0xa06a48,0x7a4e34,0x5a3826];
 const charSrc={};/* id → {ok, scene, clips, atlas, scale, wait} */
@@ -18,8 +21,9 @@ function charLoad(id,cb){let s=charSrc[id];if(s&&s.ok){cb&&cb(s);return;}if(s&&s
   if(s){if(cb)s.wait.push(cb);return;}s=charSrc[id]={ok:false,wait:cb?[cb]:[]};const C=CHARS.find(c=>c.id===id);
   const L=new T.GLTFLoader(),emb=window.CHAR_EMBED&&CHAR_EMBED[id];L.register(p=>({name:'charImages',loadTexture:i=>charTex(p,i)}));
   const done=g=>{let atlas=null;const drop=[];g.scene.traverse(o=>{if(o.name.startsWith('Weapon_'))drop.push(o);else if(o.isMesh&&o.material.map)atlas=o.material.map.image;});
-      for(const o of drop)o.parent.remove(o);/* (Anne and Henry come holding a prop: an axe, a lute) */
-      const scene=g.animations.length?g.scene:charStatic(g.scene,C),bx=new T.Box3().setFromObject(scene);
+      for(const o of drop)o.parent.remove(o);/* (some packs' characters come holding a prop) */
+      const sc=g.animations.length||atlas?g.scene:charStatic(g.scene,C),bx=new T.Box3().setFromObject(sc),scene=new T.Group();
+      sc.position.y-=bx.min.y;scene.add(sc);/* feet on the ground, wherever the artist put the origin */
       Object.assign(s,{ok:true,scene,clips:g.animations,atlas,scale:CHAR_H/(bx.max.y-bx.min.y)});for(const f of s.wait)f(s);s.wait=[];},
     fail=e=>{s.failed=true;s.wait=[];console.warn('character '+id+' failed to load',e);toast('Your character couldn’t load. Check your connection and reopen the game.');};
   if(emb){const b=atob(emb.slice(emb.indexOf(',')+1)),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);L.parse(u.buffer,'',done,fail);}
@@ -46,9 +50,17 @@ const charMats={};
 function charMat(id,skin){const k=id+'|'+skin;if(charMats[k])return charMats[k];const s=charSrc[id],C=CHARS.find(c=>c.id===id);
   if(!s.atlas)return charMats[k]=toon(skin>=0?{color:HSKIN[skin]}:{vertexColors:true});
   const cv=document.createElement('canvas');cv.width=s.atlas.width;cv.height=s.atlas.height;const x=cv.getContext('2d');x.drawImage(s.atlas,0,0);
-  if(skin>=0){const [u,v]=C.skin,sw=cv.width/32,sh=cv.height/32;x.fillStyle=hexCss(HSKIN[skin]);x.fillRect(u*sw,v*sh,sw,sh);}
-  const t=new T.CanvasTexture(cv);t.flipY=false;t.magFilter=t.minFilter=T.NearestFilter;t.generateMipmaps=false;
+  if(skin>=0&&C.skin==='paint')paintSkin(x,cv.width,cv.height,HSKIN[skin]);
+  else if(skin>=0){const [u,v]=C.skin,sw=cv.width/32,sh=cv.height/32;x.fillStyle=hexCss(HSKIN[skin]);x.fillRect(u*sw,v*sh,sw,sh);}
+  const t=new T.CanvasTexture(cv);t.flipY=false;if(C.skin!=='paint'){t.magFilter=t.minFilter=T.NearestFilter;t.generateMipmaps=false;}/* (an atlas of flat texels stays crisp; a painting is smoothed) */
   return charMats[k]=toon({map:t,skinning:true});}
+// a skin tone on a painted texture: pixels the colour of skin (warm, fairly light, not grey) take the new tone, scaled
+// by how light each was against the skin's middle tone, so the painted shading and blush stay
+function paintSkin(x,w,h,to){const im=x.getImageData(0,0,w,h),d=im.data,hsl={},c=new T.Color(),hit=[];let ls=[];
+  for(let i=0;i<d.length;i+=4){c.setRGB(d[i]/255,d[i+1]/255,d[i+2]/255).getHSL(hsl);const hd=hsl.h*360;if(hd>4&&hd<38&&hsl.s>0.3&&hsl.l>0.42&&hsl.l<0.9){hit.push(i);ls.push(hsl.l);}}
+  if(!hit.length)return;ls.sort((a,b)=>a-b);const mid=ls[ls.length>>1],T0=new T.Color(to);
+  for(const i of hit){c.setRGB(d[i]/255,d[i+1]/255,d[i+2]/255).getHSL(hsl);const k=hsl.l/mid;d[i]=clamp(T0.r*k*255,0,255);d[i+1]=clamp(T0.g*k*255,0,255);d[i+2]=clamp(T0.b*k*255,0,255);}
+  x.putImageData(im,0,0);}
 // a character, ready to place: a group holding a clone of the loaded model (empty until it has loaded); a rigged one is
 // already in its idle pose (never a T-pose), with its CharacterAnimator in userData.anim
 function charModel(h){const g=new T.Group(),id=(CHARS.find(c=>c.id===h.c)||CHARS[0]).id,skin=h.skin??-1;g.userData.char={c:id,skin};
@@ -68,7 +80,7 @@ class CharacterAnimator{
 function cloneBody(b){return b.userData.char?charModel(b.userData.char):b.clone();}
 /* ---- the editor ---- */
 let charEd=null;
-function curHuman(){const h=S.look.h||(S.look.h={});if(!h.c){h.c=h.g==='girl'?'anne':'cozy';if(!(h.skin>=-1&&h.skin<HSKIN.length))h.skin=-1;for(const k in h)if(k!=='c'&&k!=='skin')delete h[k];}/* (saves from the old sculpted humans keep their skin tone) */return h;}
+function curHuman(){const h=S.look.h||(S.look.h={});if(!CHARS.some(c=>c.id===h.c)){h.c=CHARS[0].id;if(!(h.skin>=-1&&h.skin<HSKIN.length))h.skin=-1;for(const k in h)if(k!=='c'&&k!=='skin')delete h[k];}/* (saves from earlier characters keep their skin tone) */return h;}
 // the editor's own little studio: a soft backdrop and a round stage, so you can dress up anywhere (indoors, at sea…)
 const edScene=new T.Scene(),edCam=new T.PerspectiveCamera(30,1,0.05,60);
 {edScene.add(new T.HemisphereLight(0xfff2e6,0x8a7a8a,0.42));const d=new T.DirectionalLight(0xffe6c8,0.52);d.position.set(2.2,3.4,3);edScene.add(d);/* a warm key light, high on the right */const d2=new T.DirectionalLight(0xb8d0ff,0.3);d2.position.set(-2.5,2,-3);edScene.add(d2);/* a cool rim from behind */const d3=new T.DirectionalLight(0xfff0e6,0.16);d3.position.set(-1.5,0.8,5);edScene.add(d3);/* a soft fill from the front, so the face is evenly lit */
