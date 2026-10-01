@@ -15,13 +15,13 @@ const HSTYLE={
   top:[['tee','T-shirt'],['stripe','Stripy tee'],['hoodie','Hoodie'],['sweater','Sweater'],['tank','Vest top'],['overalls','Overalls'],['dress','Dress'],['jacket','Jacket']],
   bot:[['shorts','Shorts'],['trousers','Trousers'],['skirt','Skirt']],
   hat:[['none','Nothing'],['cap','Cap'],['beanie','Beanie'],['sunhat','Sun hat'],['bow','Bow'],['flower','Flower'],['headband','Headband'],['band','Bandana']]};
-const HDEF={boy:{g:'boy',skin:2,hair:'short',hairC:1,eye:0,top:'tee',topC:0x5a8ae0,bot:'shorts',botC:0x3a4a7a,shoe:0xf4f0ea,hat:'none',glasses:0,blush:1,freckles:0},
-  girl:{g:'girl',skin:1,hair:'ponytail',hairC:2,eye:1,top:'dress',topC:0xf39ab0,bot:'skirt',botC:0x5a8ae0,shoe:0xd8453a,hat:'bow',glasses:0,blush:1,freckles:0}};
+const HDEF={boy:{g:'boy',skin:2,hair:'side',hairC:1,eye:0,top:'tee',topC:0x5a8ae0,bot:'shorts',botC:0x3a4a7a,shoe:0xf4f0ea,hat:'none',glasses:0,blush:1,freckles:0},
+  girl:{g:'girl',skin:1,hair:'long',hairC:2,eye:1,top:'overalls',topC:0xf4f0ea,bot:'shorts',botC:0x7aa0d8,shoe:0xf6c84a,hat:'flower',glasses:0,blush:1,freckles:0}};
 // The model is sculpted, not stacked: the head is a sphere pushed out towards a rounded cube (HEAD_R, squircle), the
 // hair one shell over it with the face cut out under a blunt fringe (hairGeo: each style is a fringe line, a hem,
 // a volume and, for long hair, a pull downwards), and the body, arms and legs are turned on a lathe (latheGeo).
 // Eyes, cheeks and mouth sit on the head's own surface (onHead), so the face is drawn on, not stuck on.
-const HEAD_R=[0.31,0.28,0.27],HEAD_Y=0.71,HSQ=2.5,_hgeo=new Map();
+const HEAD_R=[0.268,0.243,0.234],HEAD_Y=0.83,HSQ=2.5,_hgeo=new Map();
 const squ=(x,y,z)=>1/Math.pow(Math.abs(x)**HSQ+Math.abs(y)**HSQ+Math.abs(z)**HSQ,1/HSQ);
 // a point on the head (or r× out from it) in the direction (u,v) across the face
 function onHead(u,v,r=1){const w=Math.sqrt(Math.max(0,1-u*u-v*v)),s=squ(u,v,w)*r;return[u*s*HEAD_R[0],HEAD_Y+v*s*HEAD_R[1],w*s*HEAD_R[2],Math.atan2(u,w),-Math.asin(clamp(v,-1,1))];}
@@ -51,7 +51,7 @@ const capsule=(k,r,l)=>latheGeo('cap'+k,[...Array(7)].map((_,i)=>{const a=-Math.
 const tear=k=>latheGeo('tear'+k,[...Array(11)].map((_,i)=>{const t=i/10;return[Math.max(0.001,Math.sin(Math.PI*t)**0.75*(1-t*0.35)*0.5),t];}),16);
 const hairMat=toon({vertexColors:true,side:T.DoubleSide});
 function humanModel(h0){const h=Object.assign({},HDEF.boy,h0),g=new T.Group(),p=[],hp=[],sk=HSKIN[h.skin]??HSKIN[2],hc=HHAIR[h.hairC]??HHAIR[1],ec=HEYES[h.eye]??HEYES[0],tc=h.topC,bc=h.botC,girl=h.g==='girl';
-  const dk=(c,t)=>lerpHex(c,0x1a1420,t),lt=(c,t)=>lerpHex(c,0xffffff,t),dress=h.top==='dress',legH=0.17,bodyY=legH-0.01;
+  const dk=(c,t)=>lerpHex(c,0x1a1420,t),lt=(c,t)=>lerpHex(c,0xffffff,t),dress=h.top==='dress',legH=0.23,bodyY=legH-0.01,BW=girl?0.92:1.04;
   // body: a soft bell, shirt above the waist and shorts, trousers or skirt below it (or one dress all the way down)
   const topCol=h.top==='overalls'?tc:tc,shirt=latheGeo('shirt',[[0,0],[0.15,0],[0.16,0.04],[0.155,0.11],[0.13,0.17],[0.09,0.205],[0.03,0.22],[0,0.22]]);
   p.push(P(shirt,topCol,0,bodyY+0.08,0,0,0,0,1,1,0.86));
@@ -65,12 +65,15 @@ function humanModel(h0){const h=Object.assign({},HDEF.boy,h0),g=new T.Group(),p=
   if(h.top==='sweater')p.push(P(latheGeo('collar',[[0.07,0],[0.095,0.012],[0.075,0.03]]),dk(tc,0.12),0,bodyY+0.27,0,0,0,0,1,1,0.9));
   if(h.top==='jacket'){p.push(P(BOX,0xf4f0ea,0,bodyY+0.17,0.115,-0.1,0,0,0.08,0.18,0.03));for(const s of [-1,1])p.push(P(BOX,dk(tc,0.15),s*0.05,bodyY+0.22,0.11,-0.2,0,s*0.35,0.035,0.1,0.02));}
   if(h.top==='tank'||h.top==='dress')p.push(P(latheGeo('neck',[[0.001,0],[0.07,0],[0.07,0.03],[0.001,0.03]]),sk,0,bodyY+0.28,0,0,0,0,1,1,0.9));
+  for(const q of p){q.y=bodyY+(q.y-bodyY)*1.2;q.sy*=1.2;q.x*=BW;q.sx*=BW;}/* a taller, slimmer (girl) or broader (boy) body */
+  p.push(P(latheGeo('neckS',[[0.001,0],[0.05,0],[0.048,0.08],[0.001,0.08]]),sk,0,bodyY+0.31,0,0,0,0,1,1,0.9));
   // head, and a face drawn on it
   p.push(P(headGeo(),sk,0,HEAD_Y,0));
   const feat=(geo,col,u,v,sx,sy,sz,r=1.0,into=p)=>{const [x,y,z,ry,rx]=onHead(u,v,r);into.push(P(geo,col,x,y,z,rx,ry,0,sx,sy,sz));};
-  if(h.blush)for(const s of [-1,1])feat(SPH_LO,0xf6a0a4,s*0.5,-0.24,0.085,0.05,0.02,0.985);
+  if(h.blush)for(const s of [-1,1])feat(SPH_LO,girl?0xf7a0b0:0xf0aaa4,s*0.5,-0.25,girl?0.075:0.065,0.042,0.02,0.985);
+  feat(SPH_XS,dk(sk,0.1),0,-0.16,0.03,0.022,0.018,1.0);/* a little nose */
   if(h.freckles)for(const s of [-1,1])for(let i=0;i<3;i++)feat(SPH_XS,dk(sk,0.32),s*(0.38+i*0.06),-0.14-(i%2)*0.04,0.014,0.014,0.008,1.0);
-  const showBrow=['buzz','mohawk','afro','side'].includes(h.hair);if(showBrow)for(const s of [-1,1])feat(BOX,dk(hc,0.1),s*0.3,0.2,0.07,0.014,0.012,1.005);
+  for(const s of [-1,1]){const [x,y,z,ry,rx]=onHead(s*0.3,girl?0.17:0.155,1.006);p.push(P(BOX,dk(hc,0.12),x,y,z,rx,ry,s*(girl?-0.12:-0.03),girl?0.07:0.078,girl?0.011:0.016,0.012));}/* brows: thin and arched, or straighter and bolder */
   const hairShell=hairGeo(h.hair);hp.push(P(hairShell,h.hair==='mohawk'?dk(hc,0.45):hc,0,HEAD_Y,0));
   // the extras some styles have
   const [tx,ty,tz]=onHead(0,0.7,1.1);
@@ -80,7 +83,6 @@ function humanModel(h0){const h=Object.assign({},HDEF.boy,h0),g=new T.Group(),p=
     case'ponytail':hp.push(P(SPH_LO,0xd8453a,0,HEAD_Y+0.13,-HEAD_R[2]*1.12,0,0,0,0.08,0.08,0.06),P(tear('pt'),hc,0,HEAD_Y+0.14,-HEAD_R[2]*1.18,Math.PI-0.65,0,0,0.3,0.42,0.26));break;
     case'pigtails':for(const s of [-1,1])hp.push(P(SPH_LO,0xf39ab0,s*HEAD_R[0]*1.12,HEAD_Y+0.03,-0.05,0,0,0,0.07,0.07,0.07),P(tear('pg'),hc,s*HEAD_R[0]*1.16,HEAD_Y+0.03,-0.05,Math.PI,0,s*0.45,0.26,0.4,0.24));break;
     case'bun':hp.push(P(SPH,hc,0,HEAD_Y+HEAD_R[1]*1.2,-0.07,0,0,0,0.22,0.2,0.22),P(latheGeo('bunring',[[0.07,0],[0.08,0.012],[0.07,0.022]]),0xf39ab0,0,HEAD_Y+HEAD_R[1]*1.0,-0.06));break;}
-  if(girl&&!['buzz','mohawk'].includes(h.hair))for(const s of [-1,1])feat(BOX,0x1e1620,s*0.36,0.06,0.03,0.008,0.008,1.01);/* lashes */
   // something on your head (sat on the hair)
   const hy=HEAD_Y+HEAD_R[1]*(h.hair==='afro'?1.45:h.hair==='bun'?1.25:1.08);
   switch(h.hat){
@@ -95,33 +97,48 @@ function humanModel(h0){const h=Object.assign({},HDEF.boy,h0),g=new T.Group(),p=
   g.add(M(p));if(hp.length){const hm=M(hp,hairMat);g.add(hm);}
   // eyes: small dark ovals set wide, a glint in each; closed and happy versions; a little smile
   const fp={open:[],blink:[],happy:[],smile:[],talk:[]};
-  for(const s of [-1,1]){const u=s*0.31,v=-0.07;feat(SPH_LO,0x1a1218,u,v,0.058,0.082,0.025,1.0,fp.open);feat(SPH_LO,ec,u,v-0.035,0.03,0.035,0.02,1.012,fp.open);feat(SPH_XS,0xffffff,u+0.03,v+0.06,0.018,0.022,0.01,1.025,fp.open);
-    feat(BOX,0x1a1218,u,v-0.02,0.055,0.012,0.012,1.01,fp.blink);feat(BOX,0x1a1218,u-0.035,v,0.035,0.011,0.011,1.01,fp.happy);fp.happy[fp.happy.length-1].rz=0.6;feat(BOX,0x1a1218,u+0.035,v,0.035,0.011,0.011,1.01,fp.happy);fp.happy[fp.happy.length-1].rz=-0.6;}
+  const lid=new T.TorusGeometry(0.04,0.006,4,12,Math.PI*0.8);
+  for(const s of [-1,1]){const u=s*0.3,v=-0.05,ew=girl?0.066:0.058,eh=girl?0.09:0.078,ff=(q,rz)=>{const o=fp.open[fp.open.length-1];o.rz=rz;};
+    feat(SPH_LO,0x1a1218,u,v,ew,eh,0.025,1.0,fp.open);feat(SPH_LO,ec,u,v-0.03,ew*0.72,eh*0.55,0.02,1.012,fp.open);feat(SPH_LO,lerpHex(ec,0x000000,0.5),u,v-0.012,ew*0.4,eh*0.35,0.02,1.018,fp.open);
+    feat(SPH_XS,0xffffff,u+s*-0.012+0.028,v+0.055,0.022,0.026,0.01,1.03,fp.open);feat(SPH_XS,0xffffff,u-0.02,v-0.06,0.01,0.01,0.008,1.03,fp.open);
+    feat(lid,0x1a1218,u,v+0.03,girl?1.08:0.95,1,1,1.012,fp.open);ff(0,0.3*Math.PI*0.4);
+    if(girl){feat(BOX,0x1a1218,u+s*0.075,v+0.075,0.04,0.009,0.01,1.014,fp.open);ff(0,s*0.55);feat(BOX,0x1a1218,u+s*0.085,v+0.045,0.032,0.008,0.01,1.014,fp.open);ff(0,s*0.2);}
+    feat(BOX,0x1a1218,u,v-0.02,0.06,0.012,0.012,1.01,fp.blink);if(girl){feat(BOX,0x1a1218,u+s*0.04,v-0.03,0.025,0.008,0.01,1.012,fp.blink);fp.blink[fp.blink.length-1].rz=-s*0.5;}
+    feat(BOX,0x1a1218,u-0.035,v,0.035,0.011,0.011,1.01,fp.happy);fp.happy[fp.happy.length-1].rz=0.6;feat(BOX,0x1a1218,u+0.035,v,0.035,0.011,0.011,1.01,fp.happy);fp.happy[fp.happy.length-1].rz=-0.6;}
   const smile=latheGeo('smileL',[[0.001,0],[0.03,0],[0.03,0.004],[0.001,0.004]],10);
-  feat(new T.TorusGeometry(0.028,0.006,5,12,Math.PI),0x7a2a34,0,-0.27,1,1,1,1.0,fp.smile);fp.smile[0].rz=Math.PI;
+  feat(new T.TorusGeometry(girl?0.024:0.03,girl?0.007:0.006,5,12,Math.PI),girl?0xd8607a:0x8a3a40,girl?0:0.02,-0.28,1,1,1,1.0,fp.smile);fp.smile[0].rz=Math.PI+(girl?0:0.12);
   feat(SPH_LO,0x6a2030,0,-0.3,0.05,0.04,0.02,0.995,fp.talk);feat(SPH_LO,0xf39ab0,0,-0.34,0.03,0.015,0.012,1.0,fp.talk);
   const face={};for(const k in fp){const m=M(fp[k]);m.castShadow=false;m.visible=k==='open'||k==='smile';g.add(m);face[k]=m;}g.userData.face=face;
   // arms: soft tubes with a sleeve and a mitten hand, on shoulder pivots; legs: little tubes with round shoes
-  const longS=['hoodie','sweater','jacket'].includes(h.top),noS=h.top==='tank'||h.top==='overalls'&&false,arm=capsule('arm',0.042,0.11);
-  for(const [nm,s] of [['armL',-1],['armR',1]]){const pv=new T.Group();pv.name=nm;pv.position.set(s*0.14,bodyY+0.25,0);pv.rotation.z=s*0.35;
-    const ap=[P(arm,longS?tc:sk,0,-0.16,0,0,0,0)];if(!noS&&h.top!=='tank'&&h.top!=='dress')ap.push(P(latheGeo('sleeve'+(longS?'L':'S'),longS?[[0.05,0],[0.054,0.1],[0.048,0.13]]:[[0.052,0],[0.058,0.05],[0.05,0.07]]),h.top==='overalls'?tc:tc,0,longS?-0.13:-0.065,0));
-    ap.push(P(SPH,sk,0,-0.17,0.005,0,0,0,0.1,0.1,0.095));pv.add(M(ap));g.add(pv);}
-  const leg=capsule('leg',0.045,0.08),legC=dress||h.bot!=='trousers'?sk:bc;
-  for(const [nm,s] of [['footL',-1],['footR',1]]){const pv=new T.Group();pv.name=nm;pv.position.set(s*0.065,legH+0.02,0);
-    const lp=[P(leg,legC,0,-0.14,0,0,0,0),P(SPH,h.shoe,0,-0.15,0.02,0,0,0,0.11,0.08,0.15),P(CYL12,lt(h.shoe,0.5),0,-0.185,0.02,0,0,0,0.105,0.012,0.14)];
-    if(h.top!=='dress'&&h.bot==='shorts')lp.push(P(SPH_XS,0xf6f2ea,0,-0.11,0,0,0,0,0.095,0.02,0.095));/* socks */
+  const longS=['hoodie','sweater','jacket'].includes(h.top),noS=h.top==='tank'||h.top==='overalls'&&false,arm=capsule('arm2',girl?0.038:0.043,0.15);
+  for(const [nm,s] of [['armL',-1],['armR',1]]){const pv=new T.Group();pv.name=nm;pv.position.set(s*0.14*BW,bodyY+0.3,0);pv.rotation.z=s*0.3;
+    const ap=[P(arm,longS?tc:sk,0,-0.2,0,0,0,0)];if(!noS&&h.top!=='tank'&&h.top!=='dress')ap.push(P(latheGeo('sleeve'+(longS?'L':'S'),longS?[[0.05,0],[0.054,0.1],[0.048,0.13]]:[[0.052,0],[0.058,0.05],[0.05,0.07]]),h.top==='overalls'?tc:tc,0,longS?-0.13:-0.065,0));
+    ap.push(P(SPH,sk,0,-0.21,0.005,0,0,0,girl?0.085:0.095,girl?0.09:0.1,0.09));pv.add(M(ap));g.add(pv);}
+  const leg=capsule('leg2',girl?0.04:0.045,0.14),legC=dress||h.bot!=='trousers'?sk:bc;
+  for(const [nm,s] of [['footL',-1],['footR',1]]){const pv=new T.Group();pv.name=nm;pv.position.set(s*0.065*BW,legH+0.02,0);
+    const lp=[P(leg,legC,0,-0.2,0,0,0,0),P(SPH,h.shoe,0,-0.205,0.02,0,0,0,0.105,0.08,0.15),P(CYL12,lt(h.shoe,0.5),0,-0.24,0.02,0,0,0,0.1,0.012,0.14)];
+    if(h.top!=='dress'&&h.bot!=='trousers')lp.push(P(latheGeo('sock',[[0.047,0],[0.05,0.02],[0.046,0.045]]),0xf6f2ea,0,-0.19,0,0,0,0,girl?0.9:1,1,1));/* socks */
     pv.add(M(lp));g.add(pv);}
   return g;}
 /* ---- the editor ---- */
 let charEd=null;
 const H_TABS=[['look','Look'],['hair','Hair'],['face','Face'],['top','Top'],['bot','Bottoms'],['hat','Hats']];
 function curHuman(){if(!S.look.h)S.look.h=Object.assign({},HDEF.boy);return S.look.h;}
-function openCharEd(){closeSheet&&closeSheet();if(inside||S.sea)return toast('Step outside onto dry land to change your look.');
+// the editor's own little studio: a soft backdrop and a round stage, so you can dress up anywhere (indoors, at sea…)
+const edScene=new T.Scene(),edCam=new T.PerspectiveCamera(30,1,0.05,60);
+{edScene.add(new T.HemisphereLight(0xf4f0ff,0x8a9ab0,0.5));const d=new T.DirectionalLight(0xfff0e0,0.55);d.position.set(1.5,4,3);edScene.add(d);const d2=new T.DirectionalLight(0xc8dcff,0.18);d2.position.set(-3,1.5,-2);edScene.add(d2);const d3=new T.DirectionalLight(0xfff4ea,0.32);d3.position.set(0,0.6,5);edScene.add(d3);/* a soft fill from the front, so the face is evenly lit */
+  const bg=new T.SphereGeometry(20,24,16),c=[],a=bg.attributes.position;for(let i=0;i<a.count;i++){const t=clamp((a.getY(i)+6)/22,0,1);const q=new T.Color(0xe8d4c4).lerp(new T.Color(0x9cc4dc),t);c.push(q.r,q.g,q.b);}
+  bg.setAttribute('color',new T.Float32BufferAttribute(c,3));edScene.add(new T.Mesh(bg,new T.MeshBasicMaterial({vertexColors:true,side:T.BackSide,fog:false})));
+  const st=M([P(CYL12,0xe8dcc8,0,-0.05,0,0,0,0,1.5,0.1,1.5),P(CYL12,0xc8b498,0,-0.12,0,0,0,0,1.56,0.06,1.56),P(CYL12,0xe0b8a0,0,0.002,0,0,0,0,1.1,0.004,1.1)]);st.castShadow=false;edScene.add(st);
+  for(let i=0;i<14;i++){const an=i/14*6.283,r=2.2+Math.random()*1.5;const m=M([P(SPH_LO,[0xf8c8d8,0xfff0b0,0xc8e8ff,0xd8f0c8][i%4],0,0,0,0,0,0,0.12,0.12,0.12)],lumMat);m.position.set(Math.cos(an)*r,0.3+Math.random()*1.6,Math.sin(an)*r-1.5);m.userData.ph=Math.random()*6;edScene.add(m);}}
+let edModel=null;
+function edRebuild(){if(edModel){edScene.remove(edModel);edModel.traverse(o=>{if(o.isMesh&&o.geometry&&!o.geometry.userData.smooth)o.geometry.dispose();});}edModel=humanModel(curHuman());edScene.add(edModel);}
+function openCharEd(){closeSheet&&closeSheet();if(chat)chatEnd();if(deco)decoClose();
   if(S.look.sp!=='human'){S.look.prev=S.look.sp;S.look.sp='human';curHuman();applyLook();}
-  introCam=null;charEd={tab:'look',spin:0,saved:{dist:cam.dist,pitch:cam.pitch,yaw:cam.yaw}};vil.tx=vil.x;vil.tz=vil.z;vil.path=null;
+  charEd={tab:'look',spin:0,t:0};vil.tx=vil.x;vil.tz=vil.z;vil.path=null;edRebuild();
   document.body.classList.add('chatting','chared');$('charEd').hidden=false;renderCharEd();SFX.ui();}
-function closeCharEd(){if(!charEd)return;chatBack={...charEd.saved,t:0};charEd=null;camera.clearViewOffset();$('charEd').hidden=true;document.body.classList.remove('chatting','chared');save();ctxSig='';updateCtx();updateHUD();hearts(vil.x,1.2,vil.z);SFX.level();}
-function setH(ch){Object.assign(curHuman(),ch);applyLook();renderCharEd();SFX.pop();}
+function closeCharEd(){if(!charEd)return;charEd=null;edCam.clearViewOffset();if(inside&&inside.me){inside.me.clear();inside.me.add(villager.children[0].clone());}/* you, in the room you're in */$('charEd').hidden=true;document.body.classList.remove('chatting','chared');save();ctxSig='';updateCtx();updateHUD();hearts(vil.x,1.2,vil.z);SFX.level();}
+function setH(ch){Object.assign(curHuman(),ch);applyLook();if(charEd){edRebuild();charEd.hop=0.3;}renderCharEd();SFX.pop();}
 function shuffleH(){const R=Math.random,pk=a=>a[Math.floor(R()*a.length)],g=R()<0.5?'boy':'girl';
   setH({g,skin:Math.floor(R()*HSKIN.length),hair:pk(HSTYLE.hair)[0],hairC:Math.floor(R()*HHAIR.length),eye:Math.floor(R()*HEYES.length),top:pk(HSTYLE.top)[0],topC:pk(HCLOTH),bot:pk(HSTYLE.bot)[0],botC:pk(HCLOTH),shoe:pk(HCLOTH),hat:R()<0.5?'none':pk(HSTYLE.hat)[0],glasses:R()<0.2?1:0,blush:R()<0.6?1:0,freckles:R()<0.25?1:0});}
 const hThumbs={};
@@ -137,15 +154,18 @@ function renderCharEd(){if(!charEd)return;const h=curHuman(),t=charEd.tab;const 
   if(t==='hat')b=`${tiles(HSTYLE.hat,'hat')}<p class="hnote">Caps, bows and headbands take your top’s colour; beanies your bottoms’.</p>`;
   $('charEd').innerHTML=`<div class="htop"><b>Your character</b><button class="hbtn" data-ha="shuffle">🎲 Shuffle</button>${S.look.prev&&S.look.prev!=='human'?`<button class="hbtn" data-ha="animal">Be an animal</button>`:''}<button class="pbtn go" data-ha="done">Done</button></div>
     <div class="dtabs">${H_TABS.map(([k,n])=>`<button class="${t===k?'on':''}" data-htab="${k}">${n}</button>`).join('')}</div><div class="hbody">${b}</div>`;
-  requestAnimationFrame(()=>{if(charEd){const W=window.innerWidth,H=window.innerHeight,px=$('charEd').offsetHeight;camera.setViewOffset(W,H,0,px*0.32,W,H);}});}
+  requestAnimationFrame(()=>{if(charEd){const W=window.innerWidth,H=window.innerHeight,px=$('charEd').offsetHeight;charEd.px=px;edCam.setViewOffset(W,H,0,px*0.5,W,H);}});}
 $('charEd').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!charEd)return;const d=b.dataset;
   if(d.ha==='done'){closeCharEd();return;}if(d.ha==='shuffle'){shuffleH();return;}if(d.ha==='animal'){S.look.sp=S.look.prev||'bunny';applyLook();closeCharEd();return;}
   if(d.htab){charEd.tab=d.htab;SFX.ui();renderCharEd();return;}
   if(d.hg){const keep=curHuman();if(keep.g!==d.hg){const D=HDEF[d.hg];setH({g:d.hg,hair:D.hair,top:D.top,bot:D.bot,hat:D.hat,topC:D.topC});}return;}
   if(d.hs){setH({[d.hk]:d.hs});return;}if(d.hv!==undefined){setH({[d.hk]:+d.hv});return;}if(d.ht){setH({[d.ht]:curHuman()[d.ht]?0:1});return;}});
 // the camera: close and level, facing you; drag sideways to turn round
-function updateCharEd(dt,tt){if(!charEd)return;const s=charEd.saved,k=Math.min(1,dt*3);
-  camera.fov+=(CHAT_FOV-camera.fov)*k;camera.updateProjectionMatrix();
-  const dist=(camera.aspect<0.8?7.2:5.4)*Math.tan(FOV0*Math.PI/360)/Math.tan(CHAT_FOV*Math.PI/360);cam.dist+=(dist-cam.dist)*k;cam.pitch+=(0.26-cam.pitch)*k;
-  villager.rotation.y=cam.yaw+charEd.spin+Math.sin(tt*0.8)*0.06;if(Math.random()<dt*0.3)vil.hop=0.25;}
-const charEdFocus=()=>[vil.x-Math.sin(cam.yaw)*0.2,vil.z-Math.cos(cam.yaw)*0.2];
+// the studio camera: framed on you in the space above the tray; you turn slowly, sway, blink and bounce when something changes
+function updateCharEd(dt,tt){if(!charEd||!edModel)return;charEd.t+=dt;const W=window.innerWidth,H=window.innerHeight,asp=W/H,f=1-(charEd.px||H*0.45)/H,tv=Math.tan(15*Math.PI/180);
+  edCam.aspect=asp;const d=Math.max(0.78/(tv*f),0.62/(tv*asp))*1.05;edCam.position.set(0,0.62+d*0.12,d);edCam.lookAt(0,0.56,0);edCam.updateProjectionMatrix();
+  charEd.hop=Math.max(0,(charEd.hop||0)-dt);edModel.position.y=Math.sin(Math.min(1,(0.3-charEd.hop)/0.3)*Math.PI)*(charEd.hop>0?0.08:0);
+  edModel.rotation.y=charEd.spin+Math.sin(tt*0.6)*0.25;const L=limbsOf(edModel);if(L[0]){L[0].rotation.x=Math.sin(tt*1.6)*0.08;L[1].rotation.x=-Math.sin(tt*1.6)*0.08;L[1].rotation.z=charEd.hop>0?1.4:0.3;}
+  const bl=(tt%3.6)<0.12;setFace(edModel,charEd.hop>0?'happy':bl?'blink':'open','smile');
+  for(const m of edScene.children)if(m.userData.ph!==undefined)m.position.y+=Math.sin(tt+m.userData.ph)*dt*0.1;}
+const charEdFocus=()=>chatFocus();

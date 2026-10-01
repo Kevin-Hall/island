@@ -72,7 +72,7 @@ function frame(now){
   saveT+=dt;if(saveT>5){saveT=0;save();}
   PL('hudSave');const tLogic=performance.now();
   const shadowNow=!swim.noShadow&&(shadowFrame++&1)===0;
-  updateSkyDome();uwSky();renderer.setRenderTarget(rt);if(inside){updateRoom(dt,tt);renderer.shadowMap.needsUpdate=shadowNow;renderer.render(roomScene,roomCam);}else{renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.shadowMap.needsUpdate=shadowNow;/* (set just before the scene, or the sky pass would use it up) */renderer.render(scene,camera);FRAME_STAT.calls=renderer.info.render.calls;FRAME_STAT.tris=renderer.info.render.triangles;renderer.autoClear=true;}FRAME_STAT.logic=tLogic-now;FRAME_STAT.render=performance.now()-tLogic;renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);
+  updateSkyDome();uwSky();renderer.setRenderTarget(rt);if(charEd){renderer.render(edScene,edCam);}/* the character editor's studio (61b) */else if(inside){updateRoom(dt,tt);renderer.shadowMap.needsUpdate=shadowNow;renderer.render(roomScene,roomCam);}else{renderer.render(skyScene,post.cam);renderer.autoClear=false;renderer.clearDepth();renderer.shadowMap.needsUpdate=shadowNow;/* (set just before the scene, or the sky pass would use it up) */renderer.render(scene,camera);FRAME_STAT.calls=renderer.info.render.calls;FRAME_STAT.tris=renderer.info.render.triangles;renderer.autoClear=true;}FRAME_STAT.logic=tLogic-now;FRAME_STAT.render=performance.now()-tLogic;renderer.setRenderTarget(null);renderer.render(post.scene,post.cam);
   requestAnimationFrame(frame);
 }
 
