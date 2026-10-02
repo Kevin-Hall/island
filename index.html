@@ -9865,8 +9865,8 @@ function setLook(ch){Object.assign(S.look,ch);if(ch.sp&&!ch.fur)S.look.fur=LOOKS
 // file loads once, the first time it's needed (charLoad), and every use (you, your copy in a room, the editor's model,
 // thumbnails) is a clone of it (charModel), fitted to the player's height (CHAR_H) and painted with the game's toon
 // shading. Four kinds:
-//  - buddies (61c): little round animals built in code, with a real rig and clips (build: their kind); the colour row
-//    recolours their body (colors)
+//  - Mochi (61c): a bunny sculpted and rigged in code, with smooth clips (build); the colour row recolours its body
+//    (colors)
 //  - painted (an AI-made model from a picture: the Campfire Kid): one mesh over a painted texture, no rig; a skin tone
 //    recolours the texture's skin-coloured pixels, keeping their painted shading (skin: 'paint'); it bobs and squashes
 //    as it walks, like the animals (90-main)
@@ -9874,17 +9874,14 @@ function setLook(ch){Object.assign(S.look,ch);if(ch.sp&&!ch.fur)S.look.fur=LOOKS
 //    tone repaints the atlas's skin texel (skin: [column,row]); CharacterAnimator plays its Idle, Walk and Run clips
 //  - static pieces with flat colours (zUp: modelled lying down): baked into two meshes, the skin (the material named in
 //    skin) and the rest coloured from their materials
-const CHARS=[{id:'pip',name:'Pip',build:'bird',colors:[0x2c3560,0x2a6a7a,0x6a3a6a,0x2e5a3a,0x7a4e34,0x2a2630,0x8a8a98,0xd8453a]},
-  {id:'pebble',name:'Pebble',build:'penguin',colors:[0x2a4ab8,0xd8302a,0x2a9a3a,0xf08ab0,0x2a2630,0x8a5ad0,0xf0802a,0x2ab8c8]},
-  {id:'mochi',name:'Mochi',build:'bunny',colors:[0xf6f3ee,0xf0dcc0,0xb8b4bc,0xa87a58,0x4a4048,0xf4c4d0,0xf6d8a8,0xc8b8e8]},
-  {id:'inky',name:'Inky',build:'cat',colors:[0x2a2630,0x8a8a98,0xf0a050,0xf6f3ee,0xe8d4b0,0x7a5a44,0x6a7a9a,0xf4c8a0]},
+const CHARS=[{id:'mochi',name:'Mochi',build:'mochi',colors:[0xfaf8f4,0xf3e3c8,0xf6cfd6,0xd8d0ec,0xc8dcef,0xcfe6d2,0xcac6c2,0xe8c8a8]},
   {id:'kid',name:'Campfire Kid',skin:'paint'}];
 const CHAR_H=1.07;/* every character stands the player's height, whatever units its artist used */
 const HSKIN=[0xfde3cf,0xf6d2b4,0xeec09a,0xd9a27a,0xc08660,0xa06a48,0x7a4e34,0x5a3826];
 const charSrc={};/* id → {ok, scene, clips, atlas, scale, wait} */
 function charLoad(id,cb){let s=charSrc[id];if(s&&s.ok){cb&&cb(s);return;}if(s&&s.failed){return;}
   if(s){if(cb)s.wait.push(cb);return;}s=charSrc[id]={ok:false,wait:cb?[cb]:[]};const C=CHARS.find(c=>c.id===id);
-  if(C.build){Object.assign(s,buddyRig(C.build),{ok:true,atlas:null,scale:1});for(const f of s.wait)f(s);s.wait=[];return;}/* (built in code, at the player's size: 61c) */
+  if(C.build){Object.assign(s,mochiRig(),{ok:true,atlas:null,scale:0.92});/* (ears and all, a little taller than the others) */for(const f of s.wait)f(s);s.wait=[];return;}/* (built in code, at the player's size: 61c) */
   const L=new T.GLTFLoader(),emb=window.CHAR_EMBED&&CHAR_EMBED[id];L.register(p=>({name:'charImages',loadTexture:i=>charTex(p,i)}));
   const done=g=>{let atlas=null;const drop=[];g.scene.traverse(o=>{if(o.name.startsWith('Weapon_'))drop.push(o);else if(o.isMesh&&o.material.map)atlas=o.material.map.image;});
       for(const o of drop)o.parent.remove(o);/* (some packs' characters come holding a prop) */
@@ -9914,7 +9911,7 @@ function charStatic(scene,C){scene.updateMatrixWorld(true);const up=new T.Matrix
 // (flat-coloured texels, sampled crisply); a static one's skin pieces in that colour
 const charMats={};
 function charMat(id,skin){const k=id+'|'+skin;if(charMats[k])return charMats[k];const s=charSrc[id],C=CHARS.find(c=>c.id===id);
-  if(C.colors)return charMats[k]=toon({color:C.colors[Math.max(0,skin)],skinning:true});/* a buddy's body colour */
+  if(C.colors)return charMats[k]=toon({color:C.colors[Math.max(0,skin)],skinning:true});/* Mochi's body colour */
   if(!s.atlas)return charMats[k]=toon(skin>=0?{color:HSKIN[skin]}:{vertexColors:true});
   const cv=document.createElement('canvas');cv.width=s.atlas.width;cv.height=s.atlas.height;const x=cv.getContext('2d');x.drawImage(s.atlas,0,0);
   if(skin>=0&&C.skin==='paint')paintSkin(x,cv.width,cv.height,HSKIN[skin]);
@@ -9972,8 +9969,8 @@ function hThumb(ch){const h=Object.assign({},curHuman(),ch),k=h.c+'|'+h.skin;if(
   if(!(charSrc[h.c]&&charSrc[h.c].ok)){charLoad(h.c,()=>{if(charEd)renderCharEd();else if(sheet)renderSheet();});return'data:image/gif;base64,R0lGODlhAQABAAAAACw=';}
   return hThumbs[k]=snapThumb(charModel(h),96);}
 function renderCharEd(){if(!charEd)return;const h=curHuman();
-  const tiles=`<div class="htiles">${CHARS.map(c=>`<button class="ht ${h.c===c.id?'on':''}" data-hc="${c.id}"><img src="${hThumb({c:c.id,skin:-1})}" alt=""><span>${c.name}</span></button>`).join('')}</div>`;
-  const C=CHARS.find(c=>c.id===h.c)||CHARS[0],sw=C.colors?`<div class="hsw">${C.colors.map((c,i)=>`<button class="sw ${Math.max(0,h.skin)===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`/* (a buddy: its body colours) */
+  const tiles=`<div class="htiles">${CHARS.map(c=>`<button class="ht ${h.c===c.id?'on':''}" data-hc="${c.id}"><img src="${hThumb({c:c.id,skin:-1})}" alt="" style="background:#ddd3c6;border-radius:10px"><span>${c.name}</span></button>`).join('')}</div>`;
+  const C=CHARS.find(c=>c.id===h.c)||CHARS[0],sw=C.colors?`<div class="hsw">${C.colors.map((c,i)=>`<button class="sw ${Math.max(0,h.skin)===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`/* (Mochi: its body colours) */
     :`<div class="hsw"><button class="sw own ${h.skin<0?'on':''}" data-hv="-1" title="As drawn" style="--sw:#d8c0a8"></button>${HSKIN.map((c,i)=>`<button class="sw ${h.skin===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`;
   $('charEd').innerHTML=`<div class="htop"><b>Your character</b><button class="hbtn" data-ha="shuffle">🎲 Shuffle</button>${S.look.prev&&S.look.prev!=='human'?`<button class="hbtn" data-ha="animal">Be an animal</button>`:''}<button class="pbtn go" data-ha="done">Done</button></div>
     <div class="hbody">${tiles}<h4>${C.colors?'Colour':'Skin'}</h4>${sw}</div>`;
@@ -9989,69 +9986,115 @@ function updateCharEd(dt,tt){if(!charEd||!edModel)return;charEd.t+=dt;const W=wi
   for(const m of edScene.children)if(m.userData.ph!==undefined)m.position.y+=Math.sin(tt+m.userData.ph)*dt*0.1;}
 const charEdFocus=()=>chatFocus();
 /* =========================================================
-   Buddies: small, round animal characters built in code, with a real rig and clips
+   Mochi: the player's bunny, sculpted and rigged in code
    ========================================================= */
-// In the spirit of A Short Hike's bird and bold, simple animal faces: a soft egg of a body under a big round head, big
-// eyes, stubby feet and little wings or paws. Every buddy shares one tiny skeleton (Hips → Body → Head and two
-// Wings, Hips → two Feet); each part is bound whole to one bone, so the shapes stay round as they move. Their clips
-// (Idle, Walk, Run) are keyframed here and played by CharacterAnimator (61b) like any artist's model. The body (the
-// meshes marked userData.skin) takes the colour picked in the editor; eyes, beaks, jackets and feet keep their own.
-const BONES=[['Hips',null,0,0.17,0],['Body','Hips',0,0.22,0],['Head','Body',0,0.64,0],['WingL','Body',-0.27,0.5,0],['WingR','Body',0.27,0.5,0],['FootL','Hips',-0.12,0.17,0],['FootR','Hips',0.12,0.17,0]];
-// parts per buddy: [bone, body colour?, P(...)] (body-coloured parts ignore their colour: the material sets it)
-function buddyParts(kind){const B=0,o=[],add=(bone,body,...ps)=>{for(const p of ps)o.push([bone,body,p]);};
-  const eyes=(y,z,w,h,pupil,white=true)=>{for(const s of [-1,1]){if(white)add('Head',0,P(SPH,0xfbf8f2,s*0.13,y,z,0,s*0.38,0,w,h,0.07));
-      add('Head',0,P(SPH,0x14101a,s*0.135,y-0.01,z+(white?0.025:0),0,s*0.38,0,pupil,pupil*1.2,0.05),P(SPH_XS,0xffffff,s*0.12,y+0.025,z+(white?0.05:0.025),0,0,0,0.028,0.028,0.02));}};
-  const feet=c=>{for(const [b,s] of [['FootL',-1],['FootR',1]])add(b,0,P(CYL6,c,s*0.12,0.1,0,0,0,0,0.05,0.14,0.05),P(SPH,c,s*0.12,0.035,0.05,0,0,0,0.13,0.06,0.19));};
-  const blob=()=>add('Body',1,P(SPH,B,0,0.4,0,0,0,0,0.66,0.62,0.6)),head=(r=1)=>add('Head',1,P(SPH,B,0,0.8,0.02,0,0,0,0.62*r,0.58*r,0.58*r));
-  switch(kind){
-    case'bird':blob();head();// a little hooded bird in a red jacket
-      add('Body',0,P(SPH,0xd8453a,0,0.34,0,0,0,0,0.7,0.42,0.64));
-      add('Head',1,P(CONE6,B,0.02,1.1,-0.04,-0.4,0,0.3,0.1,0.18,0.08),P(CONE6,B,-0.05,1.08,-0.06,-0.5,0,-0.4,0.08,0.14,0.07));
-      add('Head',0,P(CONE6,0xf2a23a,0,0.76,0.33,Math.PI/2,0,0,0.12,0.2,0.09));eyes(0.86,0.24,0.17,0.2,0.08);
-      for(const [b,s] of [['WingL',-1],['WingR',1]])add(b,1,P(SPH,B,s*0.34,0.4,0,0,0,s*-0.35,0.12,0.3,0.22));feet(0xf2a23a);break;
-    case'penguin':blob();head();// a round penguin, white-bellied, like the ones you dressed up online
-      add('Body',0,P(SPH,0xfbf8f2,0,0.42,0.13,0,0,0,0.5,0.56,0.42));add('Head',0,P(SPH,0xfbf8f2,0,0.76,0.17,0,0,0,0.44,0.36,0.38));
-      add('Head',0,P(CONE6,0xf2a23a,0,0.76,0.34,Math.PI/2,0,0,0.11,0.16,0.08));eyes(0.88,0.26,0.13,0.16,0.07);
-      for(const [b,s] of [['WingL',-1],['WingR',1]])add(b,1,P(SPH,B,s*0.35,0.36,0,0,0,s*-0.25,0.1,0.36,0.2));feet(0xf2a23a);break;
-    case'bunny':blob();head();// a soft bunny with long ears and a scarf
-      for(const s of [-1,1])add('Head',1,P(SPH,B,s*0.12,1.2,-0.02,0,0,s*-0.12,0.13,0.44,0.09));
-      for(const s of [-1,1])add('Head',0,P(SPH,0xf4b8c4,s*0.12,1.2,0.025,0,0,s*-0.12,0.07,0.32,0.03));
-      add('Head',0,P(SPH,0xf08aa0,0,0.76,0.3,0,0,0,0.07,0.05,0.05));eyes(0.84,0.26,0,0,0.07,false);
-      add('Body',0,P(CYL12,0x3ab8a8,0,0.6,0,0,0,0,0.52,0.07,0.5),P(SPH,0x3ab8a8,0.14,0.52,0.22,0.3,0.3,0,0.12,0.2,0.06));
-      for(const [b,s] of [['WingL',-1],['WingR',1]])add(b,1,P(SPH,B,s*0.33,0.38,0.06,0,0,0,0.13,0.18,0.13));feet(0xf6f0ea);break;
-    case'cat':blob();head();// a little black cat with big eyes
-      for(const s of [-1,1])add('Head',1,P(CONE6,B,s*0.17,1.07,0,0,0,s*-0.25,0.17,0.2,0.1));
-      add('Head',0,P(SPH,0xfbf8f2,0,0.73,0.24,0,0,0,0.22,0.13,0.12),P(SPH,0xf08aa0,0,0.77,0.3,0,0,0,0.05,0.035,0.04));eyes(0.86,0.22,0.17,0.2,0.09);
-      add('Body',1,P(CYL6,B,0,0.32,-0.36,-0.9,0,0,0.06,0.3,0.06),P(SPH,B,0,0.46,-0.46,0,0,0,0.08,0.08,0.08));
-      for(const [b,s] of [['WingL',-1],['WingR',1]])add(b,1,P(SPH,B,s*0.33,0.38,0.06,0,0,0,0.13,0.18,0.13));feet(0x2a2630);break;}
-  return o;}
-// the rig and its clips, built once per buddy: two skinned meshes (body colour, everything else) on one skeleton
-function buddyRig(kind){const bones={},list=[];
-  for(const [n,par,x,y,z] of BONES){const b=new T.Bone();b.name=n;const p=par?BONES.find(q=>q[0]===par):null;b.position.set(x-(p?p[2]:0),y-(p?p[3]:0),z-(p?p[4]:0));if(par)bones[par].add(b);bones[n]=b;list.push(b);}
-  const scene=new T.Group(),parts=buddyParts(kind);scene.add(bones.Hips);scene.updateMatrixWorld(true);
-  for(const body of [1,0]){const gs=[],idx=[];for(const name of Object.keys(bones)){const ps=parts.filter(q=>q[0]===name&&q[1]===body).map(q=>q[2]);if(!ps.length)continue;gs.push(merge(ps));idx.push(list.indexOf(bones[name]));}
-    if(!gs.length)continue;const g=new T.BufferGeometry(),n=gs.reduce((t,q)=>t+q.attributes.position.count,0),si=new Uint16Array(n*4),sw=new Float32Array(n*4);let o=0;
-    for(const a of ['position','normal','color']){const arr=new Float32Array(n*3);let k=0;for(const q of gs){arr.set(q.attributes[a].array,k);k+=q.attributes[a].array.length;}g.setAttribute(a,new T.BufferAttribute(arr,3));}
-    gs.forEach((q,i)=>{for(let v=0;v<q.attributes.position.count;v++){si[(o+v)*4]=idx[i];sw[(o+v)*4]=1;}o+=q.attributes.position.count;});
-    g.setAttribute('skinIndex',new T.BufferAttribute(si,4));g.setAttribute('skinWeight',new T.BufferAttribute(sw,4));g.computeBoundingSphere();
-    const m=new T.SkinnedMesh(g,toon({vertexColors:true,skinning:true}));m.name=body?'BuddyBody':'BuddyBits';m.userData.skin=!!body;scene.add(m);m.bind(new T.Skeleton(list));}
-  return{scene,clips:buddyClips(),speeds:[0.52,1.1]};}
-// keyframed clips, sampled from little functions of the cycle's phase t (0..1). Walk and run swing the feet from the hip
-// (a step of about 0.15 units at walk), bob the body twice a cycle, rock it side to side and flap the wings; idle breathes
-let _buddyClips=null;
-function buddyClips(){if(_buddyClips)return _buddyClips;const N=24,TAU=Math.PI*2,q=new T.Quaternion(),e=new T.Euler();
-  const rot=(bone,dur,f)=>{const ts=[],vs=[];for(let i=0;i<=N;i++){const t=i/N;ts.push(t*dur);const [x,y,z]=f(t);q.setFromEuler(e.set(x,y,z));vs.push(q.x,q.y,q.z,q.w);}return new T.QuaternionKeyframeTrack(bone+'.quaternion',ts,vs);};
-  const vec=(bone,prop,dur,f)=>{const ts=[],vs=[];for(let i=0;i<=N;i++){const t=i/N;ts.push(t*dur);vs.push(...f(t));}return new T.VectorKeyframeTrack(bone+'.'+prop,ts,vs);};
-  const gait=(name,dur,amp,bob,lean,flap)=>new T.AnimationClip(name,dur,[
-    rot('FootL',dur,t=>[Math.sin(t*TAU)*amp,0,0]),rot('FootR',dur,t=>[-Math.sin(t*TAU)*amp,0,0]),
-    vec('Hips','position',dur,t=>[0,0.17+Math.abs(Math.sin(t*TAU))*bob,0]),
-    rot('Body',dur,t=>[lean,Math.sin(t*TAU)*0.08,Math.sin(t*TAU)*0.09]),rot('Head',dur,t=>[-lean*0.5,0,-Math.sin(t*TAU)*0.06]),
-    rot('WingL',dur,t=>[0,0,-(flap+Math.sin(t*TAU*2)*flap*0.6)]),rot('WingR',dur,t=>[0,0,flap+Math.sin(t*TAU*2)*flap*0.6])]);
-  const idle=new T.AnimationClip('Idle',2.4,[vec('Body','scale',2.4,t=>[1-Math.sin(t*TAU)*0.012,1+Math.sin(t*TAU)*0.025,1-Math.sin(t*TAU)*0.012]),
-    rot('Head',2.4,t=>[Math.sin(t*TAU)*0.04,Math.sin(t*TAU*0.5)*0.12,Math.sin(t*TAU*0.5+1)*0.07]),
-    rot('WingL',2.4,t=>[0,0,-0.06-Math.sin(t*TAU)*0.05]),rot('WingR',2.4,t=>[0,0,0.06+Math.sin(t*TAU)*0.05]),
-    rot('FootL',2.4,()=>[0,0,0]),rot('FootR',2.4,()=>[0,0,0]),vec('Hips','position',2.4,()=>[0,0.17,0])]);
-  return _buddyClips=[idle,gait('Walk',0.56,0.6,0.035,0.05,0.22),gait('Run',0.38,0.95,0.06,0.2,0.55)];}
+// One soft, seamless shape, drawn the way a cartoonist would: a little pear of a body under a big round head, two long
+// ears, stubby paws and feet and a puff of a tail, all melted together (a signed distance field, each part blended into
+// the next with smin). mochiSurface meshes it once (surface nets, every vertex settled onto the surface and shaded by
+// its true normal), so there are no seams or facets. Each vertex is weighted to the bones of the parts it's nearest,
+// blending across the joints, so the ears bend and the body squashes like rubber rather than moving in rigid chunks.
+// The face is a few small shapes on the head: dot eyes with a glint (on their own bones, so they blink), a pink nose,
+// a little ω mouth, blush and pink inner ears. Its clips (mochiClips): an idle that breathes, sways and twitches its
+// ears and blinks; a waddling walk with ears that lag behind; and a run that's a bunny hop, squashing as it lands.
+// CharacterAnimator (61b) plays them like an artist's clips; the body takes the colour picked in the editor.
+const MOCHI_BONES=[['Hips',null,0,0.2,0],['Spine','Hips',0,0.36,0],['Head','Spine',0,0.55,0],
+  ['EarL1','Head',-0.09,0.86,-0.03],['EarL2','EarL1',-0.11,1.02,-0.04],['EarR1','Head',0.09,0.86,-0.03],['EarR2','EarR1',0.11,1.02,-0.04],
+  ['ArmL','Spine',-0.19,0.46,0.03],['ArmR','Spine',0.19,0.46,0.03],['FootL','Hips',-0.1,0.13,0.02],['FootR','Hips',0.1,0.13,0.02],['EyeL','Head',0,0,0],['EyeR','Head',0,0,0]];
+// the parts: a distance (negative inside), the bone that carries it, and how softly it melts into the rest
+function mochiParts(){const V=(x,y,z)=>new T.Vector3(x,y,z);
+  const ell=(c,r)=>(x,y,z)=>{const px=(x-c.x)/r.x,py=(y-c.y)/r.y,pz=(z-c.z)/r.z,k0=Math.hypot(px,py,pz),k1=Math.hypot(px/r.x,py/r.y,pz/r.z);return k1?k0*(k0-1)/k1:-Math.min(r.x,r.y,r.z);};
+  const cap=(a,b,r0,r1,flat=1)=>(x,y,z)=>{const zz=a.z+(z-a.z)/flat,bx=b.x-a.x,by=b.y-a.y,bz=b.z-a.z,px=x-a.x,py=y-a.y,pz=zz-a.z,t=clamp((px*bx+py*by+pz*bz)/(bx*bx+by*by+bz*bz),0,1);
+    return(Math.hypot(px-bx*t,py-by*t,pz-bz*t)-(r0+(r1-r0)*t))*Math.min(1,flat);};
+  const ears=[];for(const s of [-1,1]){const S=s<0?'L':'R';ears.push({d:cap(V(s*0.085,0.8,-0.03),V(s*0.11,1.01,-0.04),0.062,0.066,0.55),bone:'Ear'+S+'1',k:0.05},{d:cap(V(s*0.11,1.01,-0.04),V(s*0.13,1.2,-0.05),0.066,0.05,0.55),bone:'Ear'+S+'2',k:0.03});}
+  return[{d:ell(V(0,0.27,0.01),V(0.27,0.22,0.24)),bone:'Hips',k:0},{d:ell(V(0,0.42,0),V(0.22,0.18,0.2)),bone:'Spine',k:0.08},
+    {d:ell(V(0,0.71,0.02),V(0.29,0.245,0.255)),bone:'Head',k:0.09},...ears,
+    {d:cap(V(-0.18,0.47,0.04),V(-0.22,0.34,0.11),0.05,0.048),bone:'ArmL',k:0.04},{d:cap(V(0.18,0.47,0.04),V(0.22,0.34,0.11),0.05,0.048),bone:'ArmR',k:0.04},
+    {d:ell(V(-0.1,0.045,0.06),V(0.078,0.05,0.115)),bone:'FootL',k:0.05},{d:ell(V(0.1,0.045,0.06),V(0.078,0.05,0.115)),bone:'FootR',k:0.05},
+    {d:ell(V(0,0.25,-0.25),V(0.075,0.075,0.07)),bone:'Hips',k:0.03}];}
+const smin=(a,b,k)=>{if(!k)return Math.min(a,b);const h=Math.max(k-Math.abs(a-b),0)/k;return Math.min(a,b)-h*h*k*0.25;};
+// mesh the surface f=0 inside the box (surface nets): one vertex per cell the surface passes through, joined into quads
+// across every grid edge it crosses, then each vertex pulled onto the surface and given the field's gradient as normal
+function mochiSurface(f,lo,hi,h){const n=[0,1,2].map(a=>Math.ceil((hi[a]-lo[a])/h)+1),[nx,ny,nz]=n,F=new Float32Array(nx*ny*nz),id=(i,j,k)=>i+nx*(j+ny*k);
+  for(let k=0;k<nz;k++)for(let j=0;j<ny;j++)for(let i=0;i<nx;i++)F[id(i,j,k)]=f(lo[0]+i*h,lo[1]+j*h,lo[2]+k*h);
+  const C=new Int32Array((nx-1)*(ny-1)*(nz-1)).fill(-1),cid=(i,j,k)=>i+(nx-1)*(j+(ny-1)*k),pos=[],idx=[];
+  const CO=[[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1]],ED=[[0,1],[2,3],[4,5],[6,7],[0,2],[1,3],[4,6],[5,7],[0,4],[1,5],[2,6],[3,7]],v=new Float32Array(8);
+  for(let k=0;k<nz-1;k++)for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){let m=0;for(let c=0;c<8;c++){v[c]=F[id(i+CO[c][0],j+CO[c][1],k+CO[c][2])];if(v[c]<0)m|=1<<c;}if(m===0||m===255)continue;
+    let sx=0,sy=0,sz=0,cnt=0;for(const [a,b] of ED){if((v[a]<0)===(v[b]<0))continue;const t=v[a]/(v[a]-v[b]);sx+=CO[a][0]+(CO[b][0]-CO[a][0])*t;sy+=CO[a][1]+(CO[b][1]-CO[a][1])*t;sz+=CO[a][2]+(CO[b][2]-CO[a][2])*t;cnt++;}
+    C[cid(i,j,k)]=pos.length/3;pos.push(lo[0]+(i+sx/cnt)*h,lo[1]+(j+sy/cnt)*h,lo[2]+(k+sz/cnt)*h);}
+  const quad=(a,b,c,d)=>{if(a<0||b<0||c<0||d<0)return;idx.push(a,b,c,a,c,d);};
+  for(let k=1;k<nz-1;k++)for(let j=1;j<ny-1;j++)for(let i=1;i<nx-1;i++){const p=F[id(i,j,k)]<0;
+    if(i<nx-1&&p!==(F[id(i+1,j,k)]<0))quad(C[cid(i,j-1,k-1)],C[cid(i,j,k-1)],C[cid(i,j,k)],C[cid(i,j-1,k)]);
+    if(j<ny-1&&p!==(F[id(i,j+1,k)]<0))quad(C[cid(i-1,j,k-1)],C[cid(i-1,j,k)],C[cid(i,j,k)],C[cid(i,j,k-1)]);
+    if(k<nz-1&&p!==(F[id(i,j,k+1)]<0))quad(C[cid(i-1,j-1,k)],C[cid(i,j-1,k)],C[cid(i,j,k)],C[cid(i-1,j,k)]);}
+  const e=h*0.25,grad=(x,y,z,o)=>{o[0]=f(x+e,y,z)-f(x-e,y,z);o[1]=f(x,y+e,z)-f(x,y-e,z);o[2]=f(x,y,z+e)-f(x,y,z-e);const l=Math.hypot(o[0],o[1],o[2])||1;o[0]/=l;o[1]/=l;o[2]/=l;return o;},g=[0,0,0],nor=new Float32Array(pos.length);
+  for(let i=0;i<pos.length;i+=3){for(let it=0;it<3;it++){const d=f(pos[i],pos[i+1],pos[i+2]);grad(pos[i],pos[i+1],pos[i+2],g);pos[i]-=g[0]*d;pos[i+1]-=g[1]*d;pos[i+2]-=g[2]*d;}grad(pos[i],pos[i+1],pos[i+2],g);nor[i]=g[0];nor[i+1]=g[1];nor[i+2]=g[2];}
+  for(let t=0;t<idx.length;t+=3){const a=idx[t]*3,b=idx[t+1]*3,c=idx[t+2]*3,ux=pos[b]-pos[a],uy=pos[b+1]-pos[a+1],uz=pos[b+2]-pos[a+2],wx=pos[c]-pos[a],wy=pos[c+1]-pos[a+1],wz=pos[c+2]-pos[a+2];
+    if((uy*wz-uz*wy)*nor[a]+(uz*wx-ux*wz)*nor[a+1]+(ux*wy-uy*wx)*nor[a+2]<0){const s=idx[t+1];idx[t+1]=idx[t+2];idx[t+2]=s;}}/* (each triangle faces outwards) */
+  const g2=new T.BufferGeometry();g2.setAttribute('position',new T.Float32BufferAttribute(pos,3));g2.setAttribute('normal',new T.BufferAttribute(nor,3));g2.setIndex(idx);return g2;}
+// the rig: built once (the surface takes a moment), then cloned for every use like any loaded model
+let _mochi=null;
+function mochiRig(){if(_mochi)return{scene:T.SkeletonUtils.clone(_mochi.scene),clips:_mochi.clips,speeds:_mochi.speeds};
+  const parts=mochiParts(),f=(x,y,z)=>{let d=1e9;for(const p of parts)d=smin(d,p.d(x,y,z),p.k);return d;};
+  const body=mochiSurface(f,[-0.42,-0.02,-0.38],[0.42,1.3,0.36],0.016);
+  // the face and the inside of the ears: small shapes set on the surface, found by marching out from inside the head
+  const c=new T.Vector3(0,0.71,0.02),hit=(dx,dy,dz)=>{const d=new T.Vector3(dx,dy,dz).normalize();let a=0,b=0.5;for(let i=0;i<30;i++){const m=(a+b)/2,p=c.clone().addScaledVector(d,m);if(f(p.x,p.y,p.z)<0)a=m;else b=m;}
+      const p=c.clone().addScaledVector(d,a),n=new T.Vector3(f(p.x+1e-3,p.y,p.z)-f(p.x-1e-3,p.y,p.z),f(p.x,p.y+1e-3,p.z)-f(p.x,p.y-1e-3,p.z),f(p.x,p.y,p.z+1e-3)-f(p.x,p.y,p.z-1e-3)).normalize();return{p,n};};
+  const bits=[],put=(geo,col,p,n,sx,sy,sz,spin=0,bone)=>{const g=geo.clone(),q=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,0,1),n),m=new T.Matrix4().compose(p,q.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),spin)),new T.Vector3(sx,sy,sz));
+      g.applyMatrix4(m);const k=g.attributes.position.count,cc=new T.Color(col),ca=new Float32Array(k*3);for(let i=0;i<k;i++)ca.set([cc.r,cc.g,cc.b],i*3);g.setAttribute('color',new T.BufferAttribute(ca,3));const out=g.index?g.toNonIndexed():g;out.userData.bone=bone;bits.push(out);};
+  const S=new T.SphereGeometry(1,16,12),eyes={};
+  for(const s of [-1,1]){const e=hit(s*0.4,0.03,1);eyes[s]=e.p;put(S,0x1c1622,e.p.clone().addScaledVector(e.n,0.004),e.n,0.03,0.046,0.02,0,s<0?'EyeL':'EyeR');
+    put(S,0xffffff,e.p.clone().addScaledVector(e.n,0.019).add(new T.Vector3(s*-0.008,0.016,0)),e.n,0.011,0.012,0.006,0,s<0?'EyeL':'EyeR');
+    const b=hit(s*0.66,-0.2,0.72);put(S,0xf6b4bf,b.p.clone().addScaledVector(b.n,-0.004),b.n,0.052,0.03,0.016);
+    put(S,0xf3b8c4,new T.Vector3(s*0.115,1.02,0.0),new T.Vector3(s*0.08,0,1).normalize(),0.03,0.13,0.022,s*0.12);}
+  {const e=hit(0,-0.12,1);put(S,0xf08aa0,e.p.clone().addScaledVector(e.n,0.003),e.n,0.022,0.015,0.012);
+    const m=hit(0,-0.27,1),arc=new T.TorusGeometry(0.016,0.0042,6,14,Math.PI);for(const s of [-1,1])put(arc,0x3a2430,m.p.clone().addScaledVector(m.n,0.002).add(new T.Vector3(s*0.016,0.004,0)),m.n,1,1,1,Math.PI);}
+  // the bones, and each vertex's weights: the parts it's nearest, blended across the joints
+  const bones={},list=[];for(const [nm,par,x,y,z] of MOCHI_BONES){const b=new T.Bone();b.name=nm;let w=new T.Vector3(x,y,z);if(nm==='EyeL')w=eyes[-1].clone();if(nm==='EyeR')w=eyes[1].clone();b.userData.w=w;
+    const pw=par?bones[par].userData.w:new T.Vector3();b.position.copy(w).sub(pw);if(par)bones[par].add(b);bones[nm]=b;list.push(b);}
+  const bi=nm=>list.indexOf(bones[nm]),weigh=(g,only)=>{const P=g.attributes.position,n=P.count,si=new Uint16Array(n*4),sw=new Float32Array(n*4),ds=new Array(parts.length);
+    for(let i=0;i<n;i++){if(only){si[i*4]=bi(only);sw[i*4]=1;continue;}const x=P.getX(i),y=P.getY(i),z=P.getZ(i);let mn=1e9;for(let p=0;p<parts.length;p++){ds[p]=parts[p].d(x,y,z);mn=Math.min(mn,ds[p]);}
+      const acc=new Map();for(let p=0;p<parts.length;p++){const w=Math.exp(-(ds[p]-mn)/0.022);if(w<0.02)continue;acc.set(parts[p].bone,(acc.get(parts[p].bone)||0)+w);}
+      const top=[...acc].sort((a,b)=>b[1]-a[1]).slice(0,4),tot=top.reduce((a,q)=>a+q[1],0);top.forEach(([b,w],k)=>{si[i*4+k]=bi(b);sw[i*4+k]=w/tot;});}
+    g.setAttribute('skinIndex',new T.BufferAttribute(si,4));g.setAttribute('skinWeight',new T.BufferAttribute(sw,4));return g;};
+  const scene=new T.Group();scene.add(bones.Hips);scene.updateMatrixWorld(true);const skel=new T.Skeleton(list);
+  const bm=new T.SkinnedMesh(weigh(body),toon({color:0xfaf8f4,skinning:true}));bm.name='MochiBody';bm.userData.skin=true;scene.add(bm);bm.bind(skel);
+  const merged=new T.BufferGeometry(),parts2=bits.map(g=>weigh(g,g.userData.bone));for(const a of ['position','normal','color','skinIndex','skinWeight']){const C=a==='skinIndex'?Uint16Array:Float32Array,sz=parts2[0].attributes[a].itemSize,arr=new C(parts2.reduce((t,g)=>t+g.attributes[a].array.length,0));let o=0;for(const g of parts2){arr.set(g.attributes[a].array,o);o+=g.attributes[a].array.length;}merged.setAttribute(a,new T.BufferAttribute(arr,sz));}
+  const fm=new T.SkinnedMesh(merged,toon({vertexColors:true,skinning:true}));fm.name='MochiFace';scene.add(fm);fm.bind(skel);
+  _mochi={scene,clips:mochiClips(),speeds:[0.4,2.6]};return{scene:T.SkeletonUtils.clone(scene),clips:_mochi.clips,speeds:_mochi.speeds};}
+// the clips, sampled densely from smooth functions of each cycle's phase (whole turns only, so every loop is seamless);
+// the ears always trail the body a little (follow-through), the head counters the body's sway
+function mochiClips(){const N=60,TAU=Math.PI*2,q=new T.Quaternion(),e=new T.Euler(),B={};for(const b of MOCHI_BONES)B[b[0]]=b;
+  const rest=n=>{const b=B[n],p=b[1]?B[b[1]]:null;return[b[2]-(p?p[2]:0),b[3]-(p?p[3]:0),b[4]-(p?p[4]:0)];};
+  const R=(n,dur,fn)=>{const ts=[],vs=[];for(let i=0;i<=N;i++){const t=i/N;ts.push(t*dur);q.setFromEuler(e.set(...fn(t*TAU,t)));vs.push(q.x,q.y,q.z,q.w);}return new T.QuaternionKeyframeTrack(n+'.quaternion',ts,vs);};
+  const V3=(n,prop,dur,fn)=>{const ts=[],vs=[];for(let i=0;i<=N;i++){const t=i/N;ts.push(t*dur);vs.push(...fn(t*TAU,t));}return new T.VectorKeyframeTrack(n+'.'+prop,ts,vs);};
+  const bump=(t,at,w)=>{let d=Math.abs(t-at);d=Math.min(d,1-d);return Math.exp(-(d/w)*(d/w));};
+  const H=rest('Hips'),FL=rest('FootL'),FR=rest('FootR');
+  const ears=(dur,fn)=>['L','R'].flatMap((s,i)=>{const sg=i?1:-1;return[R('Ear'+s+'1',dur,(a,t)=>fn(a,t,sg,1)),R('Ear'+s+'2',dur,(a,t)=>fn(a,t,sg,2))];});
+  const idle=new T.AnimationClip('Idle',3.6,[
+    V3('Hips','position',3.6,()=>H),V3('Spine','scale',3.6,a=>[1-Math.sin(a)*0.012,1+Math.sin(a)*0.022,1-Math.sin(a)*0.012]),R('Spine',3.6,a=>[Math.sin(a)*0.02,0,0]),
+    R('Head',3.6,a=>[Math.sin(2*a+1)*0.03,Math.sin(a)*0.08,Math.sin(a+0.5)*0.05]),
+    ...ears(3.6,(a,t,s,k)=>k===1?[Math.sin(a-0.7)*0.05-0.04,0,s*(0.07+Math.sin(a-0.8)*0.04)]:[Math.sin(a-1.3)*0.08+(s>0?bump(t,0.62,0.025):0)*0.45,0,0]),
+    R('ArmL',3.6,a=>[Math.sin(a)*0.05,0,-0.05]),R('ArmR',3.6,a=>[Math.sin(a)*0.05,0,0.05]),R('FootL',3.6,()=>[0,0,0]),R('FootR',3.6,()=>[0,0,0]),
+    V3('FootL','position',3.6,()=>FL),V3('FootR','position',3.6,()=>FR),
+    V3('EyeL','scale',3.6,(a,t)=>[1,1-0.92*bump(t,0.42,0.018),1]),V3('EyeR','scale',3.6,(a,t)=>[1,1-0.92*bump(t,0.42,0.018),1])]);
+  const walk=new T.AnimationClip('Walk',0.8,[
+    V3('Hips','position',0.8,a=>[0,H[1]+0.012*(1-Math.cos(2*a)),0]),V3('Spine','scale',0.8,()=>[1,1,1]),R('Spine',0.8,a=>[0.03,Math.sin(a)*0.06,Math.sin(a)*0.07]),
+    R('Head',0.8,a=>[0.02*Math.cos(2*a),-Math.sin(a-0.3)*0.04,-Math.sin(a-0.4)*0.06]),
+    ...ears(0.8,(a,t,s,k)=>k===1?[-0.1-0.07*Math.sin(2*a-1),0,s*0.06+Math.sin(a-0.9)*0.06]:[-0.1*Math.sin(2*a-1.6),0,0]),
+    R('ArmL',0.8,a=>[-Math.sin(a)*0.4,0,-0.08]),R('ArmR',0.8,a=>[Math.sin(a)*0.4,0,0.08]),
+    R('FootL',0.8,a=>[Math.sin(a)*0.45,0,0]),R('FootR',0.8,a=>[-Math.sin(a)*0.45,0,0]),
+    V3('FootL','position',0.8,a=>[FL[0],FL[1]+Math.max(0,Math.cos(a))*0.035,FL[2]]),V3('FootR','position',0.8,a=>[FR[0],FR[1]+Math.max(0,-Math.cos(a))*0.035,FR[2]]),
+    V3('EyeL','scale',0.8,()=>[1,1,1]),V3('EyeR','scale',0.8,()=>[1,1,1])]);
+  // the hop: up and over in the air, a squash as it lands and a stretch on the way up; ears flop back, then forward
+  const land=t=>bump(t,0,0.07),air=t=>Math.sin(Math.PI*t);
+  const run=new T.AnimationClip('Run',0.56,[
+    V3('Hips','position',0.56,(a,t)=>[0,H[1]+0.2*air(t)-0.035*land(t),0]),V3('Spine','scale',0.56,(a,t)=>{const y=1-0.14*land(t)+0.07*air(t),xz=1/Math.sqrt(y);return[xz,y,xz];}),
+    R('Spine',0.56,(a,t)=>[0.16-0.1*land(t),0,0]),R('Head',0.56,a=>[-0.08*Math.cos(a),0,0]),
+    ...ears(0.56,(a,t,s,k)=>k===1?[-0.25+0.3*Math.cos(a-0.8),0,s*0.1]:[-0.22*Math.cos(a-1.4),0,0]),
+    R('ArmL',0.56,a=>[-0.3,0,-0.4-0.2*Math.sin(a)]),R('ArmR',0.56,a=>[-0.3,0,0.4+0.2*Math.sin(a)]),
+    R('FootL',0.56,(a,t)=>[-0.55*air(t)+0.2*land(t),0,0]),R('FootR',0.56,(a,t)=>[-0.55*air(t)+0.2*land(t),0,0]),
+    V3('FootL','position',0.56,()=>FL),V3('FootR','position',0.56,()=>FR),V3('EyeL','scale',0.56,()=>[1,1,1]),V3('EyeR','scale',0.56,()=>[1,1,1])]);
+  return[idle,walk,run];}
 /* =========================================================
    Time of day
    ========================================================= */
@@ -12837,7 +12880,7 @@ function renderSheet(){
       h+=`<button class="card" data-isle="${isl.id}"><img class="px" src="${isl.home?ICON.sprout:ICON.chart}" alt=""><span class="grow"><span class="nm">${isl.name}</span><br><span class="sub">${isl.home?'Your island':islKind(isl)+' island'} · ${d<4?'you are here':d+' leagues away'}${tot?` · ${got}/${tot} local plants & bugs`:''}</span></span></button>`;}
     h+='</div>';}
   else if(sheet.kind==='look'){$('sheetTitle').textContent='Your look';tabs([]);const L=S.look;
-    h+=`<button class="card lookrow human" data-human="1"><img src="${hThumb({})}" alt=""><span class="grow"><span class="nm">${L.sp==='human'?'Edit your character':'Pick a character'}</span><br><span class="sub">Pip, Pebble, Mochi, Inky or the Campfire Kid, in your colours</span></span><span class="sub" style="font-size:22px">›</span></button><h3 class="sech">Or an animal</h3>`;
+    h+=`<button class="card lookrow human" data-human="1"><img src="${hThumb({})}" alt="" style="background:#ddd3c6;border-radius:10px"><span class="grow"><span class="nm">${L.sp==='human'?'Edit your character':'Pick a character'}</span><br><span class="sub">Mochi the bunny or the Campfire Kid, in your colours</span></span><span class="sub" style="font-size:22px">›</span></button><h3 class="sech">Or an animal</h3>`;
     h+=`<div class="looks">${Object.keys(LOOKS).map(sp=>`<button class="lk ${L.sp===sp?'on':''}" data-look="${sp}"><img src="${lookThumb(sp,sp===L.sp?L.fur:LOOKS[sp].fur[0],L.shirt||OUTFITS[0])}" alt=""><span>${LOOKS[sp].name}</span></button>`).join('')}</div>`;
     if(LOOKS[L.sp]){h+=`<h3 class="sech">${L.sp==='duck'||L.sp==='penguin'?'Feathers':L.sp==='frog'?'Skin':'Fur'}</h3><div class="swatches">${LOOKS[L.sp].fur.map(c=>`<button class="sw ${L.fur===c?'on':''}" data-fur="${c}" style="--sw:${hexCss(c)}" aria-label="Colour"></button>`).join('')}</div>`;
       h+=`<h3 class="sech">Outfit</h3><div class="swatches">${OUTFITS.map(c=>`<button class="sw ${L.shirt===c?'on':''}" data-shirt="${c}" style="--sw:${hexCss(c)}" aria-label="Outfit colour"></button>`).join('')}</div>`;}/* (a human's colours are in the character editor) */

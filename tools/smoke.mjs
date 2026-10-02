@@ -80,11 +80,11 @@ check(hits===0,`boat never crossed land while sailing (${hits} samples on land)`
 // characters (61b): the editor loads the models; picking one swaps you at once, standing at the player's height
 await ev(()=>DS.fastTravel(0));await waitFor(()=>!DS.state().sea);await wait(1500);
 await ev(()=>DS.charEd());const ld=await waitFor(()=>{const l=DS.charLoad();return l.every(q=>q[1])&&l;},20000);check(!!ld,`character models loaded (${JSON.stringify(ld)})`);
-{let cs=await waitFor(()=>DS.charState().loaded&&DS.charState());check(cs&&!cs.tpose&&cs.height>0.95&&cs.height<1.2,`you're a character, idling at the player's height (${cs&&cs.height})`);
-  for(const c of ['kid','pebble','mochi','inky','pip']){await ev(c=>DS.charSet({c,skin:3}),c);cs=await ev(()=>DS.charState());check(cs.body&&cs.body.c===c&&cs.loaded,`picking ${c} swaps the model straight away`);}
+{let cs=await waitFor(()=>DS.charState().loaded&&DS.charState());check(cs&&!cs.tpose&&cs.height>0.95&&cs.height<1.35,`you're a character, idling at about the player's height (ears and all) (${cs&&cs.height})`);
+  for(const c of ['kid','mochi']){await ev(c=>DS.charSet({c,skin:3}),c);cs=await ev(()=>DS.charState());check(cs.body&&cs.body.c===c&&cs.loaded,`picking ${c} swaps the model straight away`);}
   await pg.screenshot({path:join(shots,'5-character.png')});await pg.getByRole('button',{name:'Done'}).click();
   await wait(800);await ev(()=>DS.walkTest());/* (a walk past the nearest tree) */
-  const run=await waitFor(()=>{const s=DS.charState();return s.weights&&s.weights[0]<0.3&&s;},6000);check(!!run,`walking plays Pip's walk/run clips (${run&&run.weights})`);
+  const run=await waitFor(()=>{const s=DS.charState();return s.weights&&s.weights[0]<0.3&&s;},6000);check(!!run,`walking plays Mochi's walk/hop clips (${run&&run.weights})`);
   const idle=await waitFor(()=>{const s=DS.charState();return s.weights&&s.weights[0]>0.95&&s;},12000);check(!!idle,'standing still goes back to idle');}
 check(errors.length===0,errors.length?`page errors: ${errors.join(' | ')}`:'no page errors');
 await b.close();srv.close();console.log(fails?`\n${fails} check(s) failed`:'\nall checks passed');process.exit(fails?1:0);

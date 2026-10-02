@@ -6,8 +6,8 @@
 // file loads once, the first time it's needed (charLoad), and every use (you, your copy in a room, the editor's model,
 // thumbnails) is a clone of it (charModel), fitted to the player's height (CHAR_H) and painted with the game's toon
 // shading. Four kinds:
-//  - buddies (61c): little round animals built in code, with a real rig and clips (build: their kind); the colour row
-//    recolours their body (colors)
+//  - Mochi (61c): a bunny sculpted and rigged in code, with smooth clips (build); the colour row recolours its body
+//    (colors)
 //  - painted (an AI-made model from a picture: the Campfire Kid): one mesh over a painted texture, no rig; a skin tone
 //    recolours the texture's skin-coloured pixels, keeping their painted shading (skin: 'paint'); it bobs and squashes
 //    as it walks, like the animals (90-main)
@@ -15,17 +15,14 @@
 //    tone repaints the atlas's skin texel (skin: [column,row]); CharacterAnimator plays its Idle, Walk and Run clips
 //  - static pieces with flat colours (zUp: modelled lying down): baked into two meshes, the skin (the material named in
 //    skin) and the rest coloured from their materials
-const CHARS=[{id:'pip',name:'Pip',build:'bird',colors:[0x2c3560,0x2a6a7a,0x6a3a6a,0x2e5a3a,0x7a4e34,0x2a2630,0x8a8a98,0xd8453a]},
-  {id:'pebble',name:'Pebble',build:'penguin',colors:[0x2a4ab8,0xd8302a,0x2a9a3a,0xf08ab0,0x2a2630,0x8a5ad0,0xf0802a,0x2ab8c8]},
-  {id:'mochi',name:'Mochi',build:'bunny',colors:[0xf6f3ee,0xf0dcc0,0xb8b4bc,0xa87a58,0x4a4048,0xf4c4d0,0xf6d8a8,0xc8b8e8]},
-  {id:'inky',name:'Inky',build:'cat',colors:[0x2a2630,0x8a8a98,0xf0a050,0xf6f3ee,0xe8d4b0,0x7a5a44,0x6a7a9a,0xf4c8a0]},
+const CHARS=[{id:'mochi',name:'Mochi',build:'mochi',colors:[0xfaf8f4,0xf3e3c8,0xf6cfd6,0xd8d0ec,0xc8dcef,0xcfe6d2,0xcac6c2,0xe8c8a8]},
   {id:'kid',name:'Campfire Kid',skin:'paint'}];
 const CHAR_H=1.07;/* every character stands the player's height, whatever units its artist used */
 const HSKIN=[0xfde3cf,0xf6d2b4,0xeec09a,0xd9a27a,0xc08660,0xa06a48,0x7a4e34,0x5a3826];
 const charSrc={};/* id → {ok, scene, clips, atlas, scale, wait} */
 function charLoad(id,cb){let s=charSrc[id];if(s&&s.ok){cb&&cb(s);return;}if(s&&s.failed){return;}
   if(s){if(cb)s.wait.push(cb);return;}s=charSrc[id]={ok:false,wait:cb?[cb]:[]};const C=CHARS.find(c=>c.id===id);
-  if(C.build){Object.assign(s,buddyRig(C.build),{ok:true,atlas:null,scale:1});for(const f of s.wait)f(s);s.wait=[];return;}/* (built in code, at the player's size: 61c) */
+  if(C.build){Object.assign(s,mochiRig(),{ok:true,atlas:null,scale:0.92});/* (ears and all, a little taller than the others) */for(const f of s.wait)f(s);s.wait=[];return;}/* (built in code, at the player's size: 61c) */
   const L=new T.GLTFLoader(),emb=window.CHAR_EMBED&&CHAR_EMBED[id];L.register(p=>({name:'charImages',loadTexture:i=>charTex(p,i)}));
   const done=g=>{let atlas=null;const drop=[];g.scene.traverse(o=>{if(o.name.startsWith('Weapon_'))drop.push(o);else if(o.isMesh&&o.material.map)atlas=o.material.map.image;});
       for(const o of drop)o.parent.remove(o);/* (some packs' characters come holding a prop) */
@@ -55,7 +52,7 @@ function charStatic(scene,C){scene.updateMatrixWorld(true);const up=new T.Matrix
 // (flat-coloured texels, sampled crisply); a static one's skin pieces in that colour
 const charMats={};
 function charMat(id,skin){const k=id+'|'+skin;if(charMats[k])return charMats[k];const s=charSrc[id],C=CHARS.find(c=>c.id===id);
-  if(C.colors)return charMats[k]=toon({color:C.colors[Math.max(0,skin)],skinning:true});/* a buddy's body colour */
+  if(C.colors)return charMats[k]=toon({color:C.colors[Math.max(0,skin)],skinning:true});/* Mochi's body colour */
   if(!s.atlas)return charMats[k]=toon(skin>=0?{color:HSKIN[skin]}:{vertexColors:true});
   const cv=document.createElement('canvas');cv.width=s.atlas.width;cv.height=s.atlas.height;const x=cv.getContext('2d');x.drawImage(s.atlas,0,0);
   if(skin>=0&&C.skin==='paint')paintSkin(x,cv.width,cv.height,HSKIN[skin]);
@@ -113,8 +110,8 @@ function hThumb(ch){const h=Object.assign({},curHuman(),ch),k=h.c+'|'+h.skin;if(
   if(!(charSrc[h.c]&&charSrc[h.c].ok)){charLoad(h.c,()=>{if(charEd)renderCharEd();else if(sheet)renderSheet();});return'data:image/gif;base64,R0lGODlhAQABAAAAACw=';}
   return hThumbs[k]=snapThumb(charModel(h),96);}
 function renderCharEd(){if(!charEd)return;const h=curHuman();
-  const tiles=`<div class="htiles">${CHARS.map(c=>`<button class="ht ${h.c===c.id?'on':''}" data-hc="${c.id}"><img src="${hThumb({c:c.id,skin:-1})}" alt=""><span>${c.name}</span></button>`).join('')}</div>`;
-  const C=CHARS.find(c=>c.id===h.c)||CHARS[0],sw=C.colors?`<div class="hsw">${C.colors.map((c,i)=>`<button class="sw ${Math.max(0,h.skin)===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`/* (a buddy: its body colours) */
+  const tiles=`<div class="htiles">${CHARS.map(c=>`<button class="ht ${h.c===c.id?'on':''}" data-hc="${c.id}"><img src="${hThumb({c:c.id,skin:-1})}" alt="" style="background:#ddd3c6;border-radius:10px"><span>${c.name}</span></button>`).join('')}</div>`;
+  const C=CHARS.find(c=>c.id===h.c)||CHARS[0],sw=C.colors?`<div class="hsw">${C.colors.map((c,i)=>`<button class="sw ${Math.max(0,h.skin)===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`/* (Mochi: its body colours) */
     :`<div class="hsw"><button class="sw own ${h.skin<0?'on':''}" data-hv="-1" title="As drawn" style="--sw:#d8c0a8"></button>${HSKIN.map((c,i)=>`<button class="sw ${h.skin===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`;
   $('charEd').innerHTML=`<div class="htop"><b>Your character</b><button class="hbtn" data-ha="shuffle">🎲 Shuffle</button>${S.look.prev&&S.look.prev!=='human'?`<button class="hbtn" data-ha="animal">Be an animal</button>`:''}<button class="pbtn go" data-ha="done">Done</button></div>
     <div class="hbody">${tiles}<h4>${C.colors?'Colour':'Skin'}</h4>${sw}</div>`;
