@@ -637,9 +637,9 @@ body.chatting .hud,body.chatting .clockb,body.chatting #bar,body.chatting #apps,
 .chared .hsw{display:flex;flex-wrap:wrap;gap:8px}
 .chared .hsw .sw{width:34px;height:34px;border-radius:50%;border:none;background:var(--sw);box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
 .chared .hsw .sw.on{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--teal)}
-.chared .htiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px}
+.chared .htiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px}
 .chared .ht{border:none;background:#fff;border-radius:14px;box-shadow:0 2px 0 var(--line);padding:4px 2px 6px;display:flex;flex-direction:column;align-items:center;font:inherit;color:var(--ink)}
-.chared .ht img{width:62px;height:62px}.chared .ht span{font-size:11px;font-weight:700}
+.chared .ht img{width:54px;height:54px}.chared .ht span{font-size:11px;font-weight:700}
 .chared .ht.on{box-shadow:0 0 0 3px var(--teal)}
 .chared .hseg{display:flex;background:var(--wash);border-radius:999px;padding:4px;gap:4px;width:max-content}
 .chared .hseg button{border:none;background:none;border-radius:999px;padding:8px 22px;font:inherit;font-size:15px;font-weight:700;color:var(--ink2)}
@@ -9880,7 +9880,9 @@ function setLook(ch){Object.assign(S.look,ch);if(ch.sp&&!ch.fur)S.look.fur=LOOKS
 //    skin) and the rest coloured from their materials
 const CHARS=[{id:'sprite',name:'Sprite',skin:'paint',clips:{Walk:'Walking',Run:'Running'},emotes:{spin:'360_Power_Spin_Jump',flip:'Backflip_Sweep_Kick'},speeds:[0.95,4.8]},
   {id:'willow',name:'Willow',base:'sprite',hair:'long',outfit:{top:0,bot:6,hair:-1}},/* Sprite's body with long hair and a bow */
-  {id:'pip',name:'Pip',build:'pip',dress:true,styles:['Tousled','Bob','Buns','Long']},/* a very simple little person, in your colours (61d) */
+  {id:'pip',name:'Pip',build:'pip',dress:true,styles:['Tousled','Bob','Buns','Long'],ownCol:(h,t)=>PIP_OWN[t]},
+  {id:'sprig',name:'Sprig',build:'sprig',dress:true,scale:1.06,styles:['Straw','Mushroom','Wizard','Explorer'],tabs:['skin','hair','top','shoe'],tabNames:{hair:'Hat',top:'Smock',shoe:'Boots'},
+    cols:{hair:[0xdcae62,0xd9524a,0x6c62b8,0xe4d2a2,0x7caa5c,0x4f7fb8,0xe98aa0,0x5a4a44]},ownCol:(h,t)=>t==='hair'?SPRIG_HATS[h.style|0].own:SPRIG_DRESS.own[t]},/* a little gardener-explorer under a big hat (61e) *//* a very simple little person, in your colours (61d) */
   {id:'mochi',name:'Mochi',build:'mochi',colors:[0xfaf8f4,0xf3e3c8,0xf6cfd6,0xd8d0ec,0xc8dcef,0xcfe6d2,0xcac6c2,0xe8c8a8]},
 ];
 // a character's whole entry: one made from another (base) shares its model, clips and texture, adding its own hair and outfit
@@ -9899,7 +9901,7 @@ const charSrc={};/* id → {ok, scene, clips, atlas, scale, wait} */
 function charLoad(id,cb){let s=charSrc[id];if(s&&s.ok){cb&&cb(s);return;}if(s&&s.failed){return;}
   const C=charDef(id);if(C.base){charLoad(C.base,b=>{charSrc[id]=b;cb&&cb(b);});return;}/* (the same model as its base) */
   if(s){if(cb)s.wait.push(cb);return;}s=charSrc[id]={ok:false,wait:cb?[cb]:[]};
-  if(C.build){const R=C.build==='pip'?pipRig():mochiRig(),bx=new T.Box3().setFromObject(R.scene);Object.assign(s,R,{ok:true,atlas:null,scale:C.build==='pip'?CHAR_H/(bx.max.y-bx.min.y):0.92});/* (Mochi: ears and all, a little taller than the others) */for(const f of s.wait)f(s);s.wait=[];return;}/* (built in code, at the player's size: 61c) */
+  if(C.build){const R=C.build==='pip'?pipRig():C.build==='sprig'?sprigRig():mochiRig(),bx=new T.Box3().setFromObject(R.scene);Object.assign(s,R,{ok:true,atlas:null,scale:C.scale||(C.build==='pip'?CHAR_H/(bx.max.y-bx.min.y):0.92)});/* (Mochi: ears and all, a little taller than the others) */for(const f of s.wait)f(s);s.wait=[];return;}/* (built in code, at the player's size: 61c) */
   const L=new T.GLTFLoader(),emb=window.CHAR_EMBED&&CHAR_EMBED[id];L.register(p=>({name:'charImages',loadTexture:i=>charTex(p,i)}));
   const done=g=>{let atlas=null;const drop=[];g.scene.traverse(o=>{if(o.name.startsWith('Weapon_'))drop.push(o);else if(o.isMesh&&o.material.map)atlas=o.material.map.image;});
       for(const o of drop)o.parent.remove(o);/* (some packs' characters come holding a prop) */
@@ -9981,15 +9983,16 @@ function hairGeos(){if(_hairG)return _hairG;const V=(x,y,z)=>new T.Vector3(x,y,z
   return _hairG={hair:mochiSurface(hair,[-0.45,0.78,-0.44],[0.45,1.76,0.12],0.014),bow:mochiSurface(bow,[-0.17,1.39,-0.4],[0.17,1.55,-0.27],0.008)};}
 function addHair(m,look,s){const hc=look.hair>=0?OUTFIT.hair.cols[look.hair]:(paintSorts(s),s.hairTone),G=hairGeos();headMesh(m,G.hair,hc);headMesh(m,G.bow,0xf27b93);}
 // a mesh (in the model's rest pose) worn on a character's head: skinned wholly to the head bone, so it turns and nods
-function headMesh(m,g,col){let b=null;m.traverse(o=>{if(o.isSkinnedMesh&&!b)b=o;});if(!b)return;const hi=b.skeleton.bones.findIndex(o=>o.name==='mixamorigHead'||o.name==='Head');if(hi<0)return;
+function headMesh(m,g,col){/* (col null: the mesh's own vertex colours) */let b=null;m.traverse(o=>{if(o.isSkinnedMesh&&!b)b=o;});if(!b)return;const hi=b.skeleton.bones.findIndex(o=>o.name==='mixamorigHead'||o.name==='Head');if(hi<0)return;
   if(!g.attributes.skinIndex){const n=g.attributes.position.count,si=new Uint16Array(n*4),sw=new Float32Array(n*4);for(let i=0;i<n;i++){si[i*4]=hi;sw[i*4]=1;}g.setAttribute('skinIndex',new T.BufferAttribute(si,4));g.setAttribute('skinWeight',new T.BufferAttribute(sw,4));}
-  const k='hair|'+col,me=new T.SkinnedMesh(g,charMats[k]||(charMats[k]=toon({color:col,skinning:true})));me.bind(b.skeleton,b.bindMatrix);me.castShadow=true;me.receiveShadow=true;me.frustumCulled=false;b.parent.add(me);}
+  const k='hair|'+col,me=new T.SkinnedMesh(g,charMats[k]||(charMats[k]=toon(col===null?{vertexColors:true,skinning:true}:{color:col,skinning:true})));me.bind(b.skeleton,b.bindMatrix);me.castShadow=true;me.receiveShadow=true;me.frustumCulled=false;b.parent.add(me);}
 // a character, ready to place: a group holding a clone of the loaded model (empty until it has loaded); a rigged one is
 // already in its idle pose (never a T-pose), with its CharacterAnimator in userData.anim
 function charModel(h){const g=new T.Group(),C=charDef(h.c),id=C.id,look=charLook(C,h);g.userData.char=look;
   charLoad(id,s=>{const m=T.SkeletonUtils.clone(s.scene);m.scale.setScalar(s.scale);
-    m.traverse(o=>{if(o.isMesh){if(o.userData.dress)o.geometry=pipLook(o.geometry,look);else if(s.atlas||o.userData.skin)o.material=charMat(id,look);o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;}});
-    if(C.hair)addHair(m,look,s);if(C.styles)headMesh(m,pipHair(look.style|0),look.hair>=0?OUTFIT.hair.cols[look.hair]:PIP_OWN.hair);g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds,s.emotes);});
+    m.traverse(o=>{if(o.isMesh){if(o.userData.dress)o.geometry=dressGeo(o.geometry,look,o.userData.dress);else if(s.atlas||o.userData.skin)o.material=charMat(id,look);o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;}});
+    if(C.hair)addHair(m,look,s);if(C.build==='pip')headMesh(m,pipHair(look.style|0),look.hair>=0?OUTFIT.hair.cols[look.hair]:PIP_OWN.hair);
+    if(C.build==='sprig'){const st=look.style|0;headMesh(m,dressGeo(sprigHat(st),look,sprigHatDress(st)),null);}g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds,s.emotes);});
   return g;}
 // idle when standing; when moving, walk blending into run with speed, each played at the rate that keeps its feet planted
 // (speeds: how far the walk and run clips carry it a second, in its own units; the Quaternius ones' by default). Swimming
@@ -10050,10 +10053,10 @@ function hThumb(ch){const h=charLook(charDef((ch&&ch.c)||curHuman().c),Object.as
   return hThumbs[k]=snapThumb(charModel(h),96);}
 function renderCharEd(){if(!charEd)return;const h=curHuman();
   const tiles=`<div class="htiles">${CHARS.map(c=>`<button class="ht ${h.c===c.id?'on':''}" data-hc="${c.id}"><img src="${hThumb({c:c.id})}" alt="" style="background:#ddd3c6;border-radius:10px"><span>${c.name}</span></button>`).join('')}</div>`;
-  const C=charDef(h.c),parts=dressable(C)?['skin',...Object.keys(OUTFIT)]:[],tab=parts.includes(charEd.tab)?charEd.tab:'skin',cur=tab==='skin'?h.skin:h[tab]??-1;
+  const C=charDef(h.c),parts=dressable(C)?C.tabs||['skin',...Object.keys(OUTFIT)]:[],tab=parts.includes(charEd.tab)?charEd.tab:'skin',cur=tab==='skin'?h.skin:h[tab]??-1;
   const sw=C.colors?`<div class="hsw">${C.colors.map((c,i)=>`<button class="sw ${Math.max(0,h.skin)===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`/* (Mochi: its body colours) */
-    :`<div class="hsw"><button class="sw own ${cur<0?'on':''}" data-hv="-1" title="As drawn" style="--sw:${hexCss(C.dress?PIP_OWN[tab]:tab==='skin'?0xd8c0a8:OUTFIT[tab].own)}"></button>${(tab==='skin'?HSKIN:OUTFIT[tab].cols).map((c,i)=>`<button class="sw ${cur===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`;
-  const head=parts.length?`<div class="htabs">${parts.map(k=>`<button class="htab ${k===tab?'on':''}" data-ht="${k}">${k==='skin'?'Skin':OUTFIT[k].name}</button>`).join('')}</div>`:`<h4>${C.colors?'Colour':'Skin'}</h4>`;
+    :`<div class="hsw"><button class="sw own ${cur<0?'on':''}" data-hv="-1" title="As drawn" style="--sw:${hexCss(C.ownCol?C.ownCol(h,tab):tab==='skin'?0xd8c0a8:OUTFIT[tab].own)}"></button>${(tab==='skin'?HSKIN:(C.cols&&C.cols[tab])||OUTFIT[tab].cols).map((c,i)=>`<button class="sw ${cur===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`;
+  const head=parts.length?`<div class="htabs">${parts.map(k=>`<button class="htab ${k===tab?'on':''}" data-ht="${k}">${(C.tabNames&&C.tabNames[k])||(k==='skin'?'Skin':OUTFIT[k].name)}</button>`).join('')}</div>`:`<h4>${C.colors?'Colour':'Skin'}</h4>`;
   $('charEd').innerHTML=`<div class="htop"><b>Your character</b><button class="hbtn" data-ha="shuffle">🎲 Shuffle</button>${S.look.prev&&S.look.prev!=='human'?`<button class="hbtn" data-ha="animal">Be an animal</button>`:''}<button class="pbtn go" data-ha="done">Done</button></div>
     <div class="hbody">${tiles}${head}${tab==='hair'&&C.styles?`<div class="htabs hstyle">${C.styles.map((n,i)=>`<button class="${(h.style|0)===i?'on':''}" data-hs="${i}">${n}</button>`).join('')}</div>`:''}${sw}</div>`;
   requestAnimationFrame(()=>{if(charEd){const W=window.innerWidth,H=window.innerHeight,px=$('charEd').offsetHeight;charEd.px=px;edCam.setViewOffset(W,H,0,px*0.5,W,H);}});}
@@ -10191,7 +10194,7 @@ function mochiClips(){const {rest,R,V3,bump}=rigKit(MOCHI_BONES);
    ========================================================= */
 // A kawaii chibi: a head half its height, hair in a style of your choosing (pipHair) and a sprout on top, a small
 // slim body, thin arms with round hands, and tiny legs on rounded shoes, all melted into one smooth shape like Mochi (sdfRig, 61c). Each part is skin, top, bottoms or
-// shoes, and the editor colours each of them (pipLook paints the body's vertices, so every look shares one mesh). The
+// shoes, and the editor colours each of them (dressGeo paints the body's vertices, so every look shares one mesh). The
 // face sits low: big eyes with whites, a brown iris and two glints under a lash line (they blink), blush and a tiny smile. Clips: an idle that breathes, sways
 // and looks about; a bouncy walk with swinging arms; a leaning run; and two emotes, a twirl and a cheer.
 const PIP_BONES=[['Hips',null,0,0.2,0],['Spine','Hips',0,0.28,0],['Head','Spine',0,0.43,0],
@@ -10210,13 +10213,19 @@ function pipParts(){const V=(x,y,z)=>new T.Vector3(x,y,z),ss=(a,b,x)=>{const t=c
       {d:cap(V(s*0.052,0.2,0),V(s*0.052,0.065,0),0.04,0.036),bone:'Leg'+S,k:0.03,col:'bot'},{d:ell(V(s*0.054,0.036,0.022),V(0.048,0.038,0.07)),bone:'Leg'+S,k:0.02,col:'shoe'});}
   return P;}
 let _pip=null;
+// a code-built character whose body is painted per look: each vertex holds its share of each colour in `labels`
+// (its nearest parts, blended over a few millimetres, so the edges between colours are clean and smooth)
+function dressWeights(g,parts,labels){const P=g.attributes.position,n=P.count,L=labels.length,w=new Float32Array(n*L),ds=new Array(parts.length),lab=parts.map(p=>labels.indexOf(p.col));
+  for(let i=0;i<n;i++){const x=P.getX(i),y=P.getY(i),z=P.getZ(i);let mn=1e9;for(let p=0;p<parts.length;p++){ds[p]=parts[p].d(x,y,z);mn=Math.min(mn,ds[p]);}
+    let t=0;for(let p=0;p<parts.length;p++){const v=Math.exp(-(ds[p]-mn)/0.005);w[i*L+lab[p]]+=v;t+=v;}for(let k=0;k<L;k++)w[i*L+k]/=t;}
+  g.setAttribute('part',new T.BufferAttribute(w,L));g.setAttribute('color',new T.BufferAttribute(new Float32Array(n*3),3));return g;}
+function dressRig(o){const scene=sdfRig(Object.assign({},o,{body:g=>(dressWeights(g,o.parts,o.dress.labels),toon({vertexColors:true,skinning:true}))}));
+  scene.getObjectByName(o.name+'Body').userData.dress=o.dress;return scene;}
+// a colour for one part of a dressed character's look: the picked swatch, or its own colour
+function dressCol(dress,look,p){const i=look[p];return i>=0?(p==='skin'?HSKIN:(dress.cols&&dress.cols[p])||OUTFIT[p].cols)[i]:dress.own[p];}
+const PIP_DRESS={labels:PIP_PARTS,own:PIP_OWN};
 function pipRig(){if(!_pip){const parts=pipParts();
-  const scene=sdfRig({bones:PIP_BONES,parts,lo:[-0.32,-0.02,-0.32],hi:[0.32,1.1,0.3],h:0.012,c:new T.Vector3(0,0.675,0),name:'Pip',
-    body:g=>{/* each vertex's share of each colour: its nearest parts, blended over a few millimetres, so the edges between colours are clean and smooth */
-      const P=g.attributes.position,n=P.count,L=PIP_PARTS.length,w=new Float32Array(n*L),ds=new Array(parts.length),lab=parts.map(p=>PIP_PARTS.indexOf(p.col));
-      for(let i=0;i<n;i++){const x=P.getX(i),y=P.getY(i),z=P.getZ(i);let mn=1e9;for(let p=0;p<parts.length;p++){ds[p]=parts[p].d(x,y,z);mn=Math.min(mn,ds[p]);}
-        let t=0;for(let p=0;p<parts.length;p++){const v=Math.exp(-(ds[p]-mn)/0.005);w[i*L+lab[p]]+=v;t+=v;}for(let k=0;k<L;k++)w[i*L+k]/=t;}
-      g.setAttribute('part',new T.BufferAttribute(w,L));g.setAttribute('color',new T.BufferAttribute(new Float32Array(n*3),3));return toon({vertexColors:true,skinning:true});},
+  const scene=dressRig({bones:PIP_BONES,parts,dress:PIP_DRESS,lo:[-0.32,-0.02,-0.32],hi:[0.32,1.1,0.3],h:0.012,c:new T.Vector3(0,0.675,0),name:'Pip',
     face:(hit,put,S)=>{const eyes={};
       // big eyes set low and wide: a white, a warm brown iris and a dark pupil, two glints, and a dark lash line arched
       // over the top (all on the eye's bone, so a blink closes them to a line); blush just under and outside; a tiny smile
@@ -10228,15 +10237,15 @@ function pipRig(){if(!_pip){const parts=pipParts();
         const b=hit(s*0.62,-0.4,0.68);put(S,0xf6a3ac,b.p.clone().addScaledVector(b.n,-0.004),b.n,0.046,0.026,0.014);}
       const m=hit(0,-0.4,1);put(new T.TorusGeometry(0.014,0.0042,6,16,Math.PI),0x6a3236,m.p.clone().addScaledVector(m.n,0.002).add(new T.Vector3(0,0.008,0)),m.n,1,1,1,Math.PI);
       return eyes;}});
-  scene.getObjectByName('PipBody').userData.dress=true;_pip={scene,clips:pipClips()};}
+  _pip={scene,clips:pipClips()};}
   const [idle,walk,run,spin,flip]=_pip.clips;return{scene:T.SkeletonUtils.clone(_pip.scene),clips:[idle,walk,run],emotes:{spin,flip},speeds:[0.55,3.2]};}
-// a look on Pip's body: a copy of the mesh's geometry sharing all but its colours, each vertex its part's colour
-const pipGeos={};
-function pipLook(g,look){const k=PIP_PARTS.map(p=>look[p]).join('|');if(pipGeos[k])return pipGeos[k];const n=new T.BufferGeometry();
+// a look on a dressed mesh: a copy of its geometry sharing all but its colours, each vertex its parts' colours blended
+const dressGeos={};
+function dressGeo(g,look,dress){const k=g.uuid+'|'+dress.labels.map(p=>look[p]).join('|');if(dressGeos[k])return dressGeos[k];const n=new T.BufferGeometry();
   for(const a in g.attributes)n.setAttribute(a,g.attributes[a]);n.setIndex(g.index);
-  const col=PIP_PARTS.map(p=>new T.Color(look[p]>=0?(p==='skin'?HSKIN:OUTFIT[p].cols)[look[p]]:PIP_OWN[p])),L=col.length,w=g.attributes.part.array,nv=w.length/L,ca=new Float32Array(nv*3);
-  for(let i=0;i<nv;i++)for(let k=0;k<L;k++){const f=w[i*L+k];if(!f)continue;ca[i*3]+=col[k].r*f;ca[i*3+1]+=col[k].g*f;ca[i*3+2]+=col[k].b*f;}n.setAttribute('color',new T.BufferAttribute(ca,3));return pipGeos[k]=n;}
-function pipClips(){const {rest,R,V3,bump}=rigKit(PIP_BONES),H=rest('Hips'),LL=rest('LegL'),LR=rest('LegR'),still=(d,names)=>names.map(n=>R(n,d,()=>[0,0,0]));
+  const col=dress.labels.map(p=>new T.Color(dressCol(dress,look,p))),L=col.length,w=g.attributes.part.array,nv=w.length/L,ca=new Float32Array(nv*3);
+  for(let i=0;i<nv;i++)for(let k=0;k<L;k++){const f=w[i*L+k];if(!f)continue;ca[i*3]+=col[k].r*f;ca[i*3+1]+=col[k].g*f;ca[i*3+2]+=col[k].b*f;}n.setAttribute('color',new T.BufferAttribute(ca,3));return dressGeos[k]=n;}
+function pipClips(BONES=PIP_BONES){const {rest,R,V3,bump}=rigKit(BONES),H=rest('Hips'),LL=rest('LegL'),LR=rest('LegR'),still=(d,names)=>names.map(n=>R(n,d,()=>[0,0,0]));
   const eyes=(d,fn=()=>[1,1,1])=>[V3('EyeL','scale',d,fn),V3('EyeR','scale',d,fn)],legsAt=d=>[V3('LegL','position',d,()=>LL),V3('LegR','position',d,()=>LR)];
   const idle=new T.AnimationClip('Idle',3.2,[V3('Hips','position',3.2,()=>H),R('Hips',3.2,a=>[0,Math.sin(a)*0.04,0]),
     V3('Spine','scale',3.2,a=>[1-Math.sin(a)*0.01,1+Math.sin(a)*0.025,1-Math.sin(a)*0.01]),R('Spine',3.2,a=>[Math.sin(a)*0.02,0,Math.sin(a+1)*0.02]),
@@ -10298,6 +10307,65 @@ function pipHair(style){if(_pipHair[style])return _pipHair[style];const V=(x,y,z
       ...[-0.13,0,0.13].map(x0=>lock(V(x0,0.5,-0.2),V(x0*1.1,0.44,-0.22),V(x0*1.15,0.4,-0.2),0.06)));k=0.05;}
   const f=(x,y,z)=>{let d=1e9;for(const p of parts)d=smin(d,p(x,y,z),k);return d;};
   return _pipHair[style]=mochiSurface(f,[-0.4,0.34,-0.42],[0.4,1.0,0.38],0.009);}
+/* =========================================================
+   Sprig: a little gardener-explorer under a big hat, sculpted and rigged in code
+   ========================================================= */
+// A tiny storybook creature: a pale round head whose whole face is two tall black eyes (with faint blush), a bell of
+// a smock with a ruffled hem, little tapering arms, short legs in boots, and a hat that's most of the silhouette. Built
+// like Pip (dressRig, 61d): one smooth body painted per look (skin, smock, boots), Pip's clips on the same bones, and
+// the hat its own mesh on the head bone (headMesh, 61b), one of four (SPRIG_HATS): a gardener's straw hat, a spotted
+// mushroom cap, a floppy wizard's hat, an explorer's pith helmet. Each hat has its colour (the Hat tab) and a fixed
+// accent (its band, or the mushroom's spots), and the mushroom a pale underside.
+const SPRIG_BONES=[['Hips',null,0,0.2,0],['Spine','Hips',0,0.3,0],['Head','Spine',0,0.44,0],
+  ['ArmL','Spine',-0.068,0.39,0],['ArmR','Spine',0.068,0.39,0],['LegL','Hips',-0.048,0.21,0],['LegR','Hips',0.048,0.21,0],['EyeL','Head',0,0,0],['EyeR','Head',0,0,0]];
+const SPRIG_DRESS={labels:['skin','top','shoe'],own:{skin:0xf4ead8,top:0x8fae5a,shoe:0x8a5a3a}};
+const SPRIG_HATS=[{name:'Straw',own:0xdcae62,band:0x8a5a34},{name:'Mushroom',own:0xd9524a,band:0xfff6ea},{name:'Wizard',own:0x6c62b8,band:0xf2c14e},{name:'Explorer',own:0xe4d2a2,band:0x6b4a32}];
+const SPRIG_HAT_COLS=[0xdcae62,0xd9524a,0x6c62b8,0xe4d2a2,0x7caa5c,0x4f7fb8,0xe98aa0,0x5a4a44];
+const sdE=(c,r)=>(x,y,z)=>{const px=(x-c.x)/r.x,py=(y-c.y)/r.y,pz=(z-c.z)/r.z,k0=Math.hypot(px,py,pz),k1=Math.hypot(px/r.x,py/r.y,pz/r.z);return k1?k0*(k0-1)/k1:-Math.min(r.x,r.y,r.z);};
+const sdC=(a,b,r0,r1)=>(x,y,z)=>{const bx=b.x-a.x,by=b.y-a.y,bz=b.z-a.z,px=x-a.x,py=y-a.y,pz=z-a.z,t=clamp((px*bx+py*by+pz*bz)/(bx*bx+by*by+bz*bz),0,1);return Math.hypot(px-bx*t,py-by*t,pz-bz*t)-(r0+(r1-r0)*t);};
+const sdRing=(y0,R,r)=>(x,y,z)=>Math.hypot(Math.hypot(x,z)-R,y-y0)-r;/* (a torus round the y axis) */
+const sdMax=(a,b,k)=>-smin(-a,-b,k);
+// a brim: a flat disc of radius R and even thickness, its rim rounded, its edge drooping by `droop` (a squashed
+// ellipsoid would thin to nothing at the edge, and mesh raggedly there)
+const sdBrim=(y0,R,t,droop=0,sz=1)=>(x,y,z)=>{const r=Math.hypot(x,z/sz),yy=y-(y0-droop*(Math.min(r,R)/R)**2);return Math.hypot(Math.max(r-R,0),yy)-t;};
+function sprigParts(){const V=(x,y,z)=>new T.Vector3(x,y,z),ss=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
+  // the smock: a bell from the shoulders to a ruffled hem
+  const bell=(x,y,z)=>{const t=clamp((0.43-y)/0.23,0,1),r=0.066+0.094*Math.pow(t,1.3)+0.008*Math.sin(Math.atan2(x,z)*8)*ss(0.27,0.2,y);return sdMax(sdMax(Math.hypot(x,z/0.92)-r,y-0.43,0.03),0.2-y,0.025);};
+  const P=[{d:sdE(V(0,0.6,0),V(0.2,0.19,0.19)),bone:'Head',k:0,col:'skin'},{d:bell,bone:'Spine',k:0.04,col:'top'}];
+  for(const s of [-1,1]){const S=s<0?'L':'R';
+    P.push({d:sdC(V(s*0.066,0.405,0),V(s*0.112,0.335,0.008),0.032,0.029),bone:'Arm'+S,k:0.025,col:'top'},{d:sdC(V(s*0.112,0.335,0.008),V(s*0.148,0.272,0.016),0.025,0.012),bone:'Arm'+S,k:0.015,col:'skin'},
+      {d:sdC(V(s*0.048,0.22,0),V(s*0.048,0.07,0),0.03,0.028),bone:'Leg'+S,k:0.02,col:'skin'},{d:sdE(V(s*0.05,0.042,0.018),V(0.044,0.042,0.062)),bone:'Leg'+S,k:0.02,col:'shoe'});}
+  return P;}
+let _sprig=null;
+function sprigRig(){if(!_sprig){const scene=dressRig({bones:SPRIG_BONES,parts:sprigParts(),dress:SPRIG_DRESS,lo:[-0.26,-0.02,-0.24],hi:[0.26,0.82,0.24],h:0.01,c:new T.Vector3(0,0.6,0),name:'Sprig',
+    face:(hit,put,S)=>{const eyes={};
+      // the whole face: two tall black eyes, set wide and a little low, each with a faint glint; a hint of blush
+      for(const s of [-1,1]){const E=s<0?'EyeL':'EyeR',e=hit(s*0.31,-0.12,1);eyes[s]=e.p;put(S,0x1d1820,e.p.clone().addScaledVector(e.n,0.002),e.n,0.024,0.044,0.012,0,E);
+        put(S,0xffffff,e.p.clone().addScaledVector(e.n,0.012).add(new T.Vector3(s*-0.006,0.018,0)),e.n,0.006,0.008,0.003,0,E);
+        const b=hit(s*0.56,-0.36,0.78);put(S,0xf2b4ae,b.p.clone().addScaledVector(b.n,-0.003),b.n,0.03,0.016,0.01);}
+      return eyes;}});
+  _sprig={scene,clips:pipClips(SPRIG_BONES)};}
+  const [idle,walk,run,spin,flip]=_sprig.clips;return{scene:T.SkeletonUtils.clone(_sprig.scene),clips:[idle,walk,run],emotes:{spin,flip},speeds:[0.55,3.2]};}
+// the hats, each built once: a smooth shape painted in its colour (hair: the Hat tab), its accent (band) and, for the
+// mushroom, its pale gills (gill)
+const _sprigHats={},SPRIG_HAT_LABELS=['hair','band','gill'];
+function sprigHatDress(st){const H=SPRIG_HATS[st];return{labels:SPRIG_HAT_LABELS,own:{hair:H.own,band:H.band,gill:0xf2e4cc},cols:{hair:SPRIG_HAT_COLS}};}
+function sprigHat(st){if(_sprigHats[st])return _sprigHats[st];const V=(x,y,z)=>new T.Vector3(x,y,z),P=[];let k=0.03;
+  if(st===0){/* the straw hat: a wide brim drooping at its edge, a tall crown leaning back to a soft point, a band */
+    P.push({d:sdBrim(0.735,0.35,0.016,0.05),col:'hair'},
+      {d:sdC(V(0,0.73,0),V(0,0.9,-0.025),0.168,0.105),col:'hair'},{d:sdC(V(0,0.9,-0.025),V(0.01,1.04,-0.1),0.105,0.014),col:'hair'},{d:sdRing(0.775,0.158,0.024),col:'band'});}
+  else if(st===1){/* the mushroom: a broad dome with white spots, its rim curling under onto pale gills */
+    const cap=sdE(V(0,0.78,0),V(0.36,0.21,0.36));P.push({d:(x,y,z)=>{const r=Math.hypot(x,z);return sdMax(cap(x,y,z),(0.735-0.07*(r/0.36)**2)-y,0.03);},col:'hair'},{d:sdE(V(0,0.722,0),V(0.31,0.03,0.31)),col:'gill'});
+    for(const [az,el,r] of [[20,62,0.05],[-60,38,0.04],[95,30,0.042],[160,52,0.045],[-140,30,0.038],[-15,22,0.032],[55,24,0.03],[220,70,0.036]]){const a=az*Math.PI/180,e=el*Math.PI/180,p=V(Math.sin(a)*Math.cos(e)*0.36,0.78+Math.sin(e)*0.21,Math.cos(a)*Math.cos(e)*0.36);
+      p.sub(V(0,0.78,0)).multiplyScalar(0.94).add(V(0,0.78,0));P.push({d:sdE(p,V(r,r*0.8,r)),col:'band'});}k=0.015;}
+  else if(st===2){/* the wizard's hat: a small brim and a tall floppy cone that bends over at the tip, a gold band */
+    P.push({d:sdBrim(0.735,0.25,0.015,0.02),col:'hair'},{d:sdC(V(0,0.73,0),V(0.015,0.92,-0.02),0.158,0.1),col:'hair'},{d:sdC(V(0.015,0.92,-0.02),V(0.08,1.06,-0.05),0.1,0.055),col:'hair'},
+      {d:sdC(V(0.08,1.06,-0.05),V(0.2,1.05,-0.08),0.055,0.02),col:'hair'},{d:sdC(V(0.2,1.05,-0.08),V(0.25,0.99,-0.09),0.02,0.008),col:'hair'},{d:sdRing(0.77,0.15,0.022),col:'band'});k=0.04;}
+  else{/* the pith helmet: a high dome over a short all-round brim, a band and a button on top */
+    const dome=sdE(V(0,0.74,0),V(0.232,0.19,0.25));P.push({d:(x,y,z)=>sdMax(dome(x,y,z),0.72-y,0.02),col:'hair'},{d:(x,y,z)=>sdBrim(0.722,0.29,0.015,0.015,1.08)(x,y,z-0.012),col:'hair'},
+      {d:sdRing(0.758,0.226,0.02),col:'band'},{d:sdE(V(0,0.928,0),V(0.024,0.016,0.024)),col:'band'});k=0.02;}
+  const f=(x,y,z)=>{let d=1e9;for(const p of P)d=smin(d,p.d(x,y,z),k);return d;};
+  return _sprigHats[st]=dressWeights(mochiSurface(f,[-0.42,0.6,-0.42],[0.42,1.12,0.42],0.01),P,SPRIG_HAT_LABELS);}
 /* =========================================================
    Time of day
    ========================================================= */
@@ -13083,7 +13151,7 @@ function renderSheet(){
       h+=`<button class="card" data-isle="${isl.id}"><img class="px" src="${isl.home?ICON.sprout:ICON.chart}" alt=""><span class="grow"><span class="nm">${isl.name}</span><br><span class="sub">${isl.home?'Your island':islKind(isl)+' island'} · ${d<4?'you are here':d+' leagues away'}${tot?` · ${got}/${tot} local plants & bugs`:''}</span></span></button>`;}
     h+='</div>';}
   else if(sheet.kind==='look'){$('sheetTitle').textContent='Your look';tabs([]);const L=S.look;
-    h+=`<button class="card lookrow human" data-human="1"><img src="${hThumb({})}" alt="" style="background:#ddd3c6;border-radius:10px"><span class="grow"><span class="nm">${L.sp==='human'?'Edit your character':'Pick a character'}</span><br><span class="sub">Sprite, Willow, Pip or Mochi the bunny, in your own clothes and colours</span></span><span class="sub" style="font-size:22px">›</span></button><h3 class="sech">Or an animal</h3>`;
+    h+=`<button class="card lookrow human" data-human="1"><img src="${hThumb({})}" alt="" style="background:#ddd3c6;border-radius:10px"><span class="grow"><span class="nm">${L.sp==='human'?'Edit your character':'Pick a character'}</span><br><span class="sub">Sprite, Willow, Pip, Sprig or Mochi the bunny, in your own clothes and colours</span></span><span class="sub" style="font-size:22px">›</span></button><h3 class="sech">Or an animal</h3>`;
     h+=`<div class="looks">${Object.keys(LOOKS).map(sp=>`<button class="lk ${L.sp===sp?'on':''}" data-look="${sp}"><img src="${lookThumb(sp,sp===L.sp?L.fur:LOOKS[sp].fur[0],L.shirt||OUTFITS[0])}" alt=""><span>${LOOKS[sp].name}</span></button>`).join('')}</div>`;
     if(LOOKS[L.sp]){h+=`<h3 class="sech">${L.sp==='duck'||L.sp==='penguin'?'Feathers':L.sp==='frog'?'Skin':'Fur'}</h3><div class="swatches">${LOOKS[L.sp].fur.map(c=>`<button class="sw ${L.fur===c?'on':''}" data-fur="${c}" style="--sw:${hexCss(c)}" aria-label="Colour"></button>`).join('')}</div>`;
       h+=`<h3 class="sech">Outfit</h3><div class="swatches">${OUTFITS.map(c=>`<button class="sw ${L.shirt===c?'on':''}" data-shirt="${c}" style="--sw:${hexCss(c)}" aria-label="Outfit colour"></button>`).join('')}</div>`;}/* (a human's colours are in the character editor) */

@@ -3,7 +3,7 @@
    ========================================================= */
 // A kawaii chibi: a head half its height, hair in a style of your choosing (pipHair) and a sprout on top, a small
 // slim body, thin arms with round hands, and tiny legs on rounded shoes, all melted into one smooth shape like Mochi (sdfRig, 61c). Each part is skin, top, bottoms or
-// shoes, and the editor colours each of them (pipLook paints the body's vertices, so every look shares one mesh). The
+// shoes, and the editor colours each of them (dressGeo paints the body's vertices, so every look shares one mesh). The
 // face sits low: big eyes with whites, a brown iris and two glints under a lash line (they blink), blush and a tiny smile. Clips: an idle that breathes, sways
 // and looks about; a bouncy walk with swinging arms; a leaning run; and two emotes, a twirl and a cheer.
 const PIP_BONES=[['Hips',null,0,0.2,0],['Spine','Hips',0,0.28,0],['Head','Spine',0,0.43,0],
@@ -22,13 +22,19 @@ function pipParts(){const V=(x,y,z)=>new T.Vector3(x,y,z),ss=(a,b,x)=>{const t=c
       {d:cap(V(s*0.052,0.2,0),V(s*0.052,0.065,0),0.04,0.036),bone:'Leg'+S,k:0.03,col:'bot'},{d:ell(V(s*0.054,0.036,0.022),V(0.048,0.038,0.07)),bone:'Leg'+S,k:0.02,col:'shoe'});}
   return P;}
 let _pip=null;
+// a code-built character whose body is painted per look: each vertex holds its share of each colour in `labels`
+// (its nearest parts, blended over a few millimetres, so the edges between colours are clean and smooth)
+function dressWeights(g,parts,labels){const P=g.attributes.position,n=P.count,L=labels.length,w=new Float32Array(n*L),ds=new Array(parts.length),lab=parts.map(p=>labels.indexOf(p.col));
+  for(let i=0;i<n;i++){const x=P.getX(i),y=P.getY(i),z=P.getZ(i);let mn=1e9;for(let p=0;p<parts.length;p++){ds[p]=parts[p].d(x,y,z);mn=Math.min(mn,ds[p]);}
+    let t=0;for(let p=0;p<parts.length;p++){const v=Math.exp(-(ds[p]-mn)/0.005);w[i*L+lab[p]]+=v;t+=v;}for(let k=0;k<L;k++)w[i*L+k]/=t;}
+  g.setAttribute('part',new T.BufferAttribute(w,L));g.setAttribute('color',new T.BufferAttribute(new Float32Array(n*3),3));return g;}
+function dressRig(o){const scene=sdfRig(Object.assign({},o,{body:g=>(dressWeights(g,o.parts,o.dress.labels),toon({vertexColors:true,skinning:true}))}));
+  scene.getObjectByName(o.name+'Body').userData.dress=o.dress;return scene;}
+// a colour for one part of a dressed character's look: the picked swatch, or its own colour
+function dressCol(dress,look,p){const i=look[p];return i>=0?(p==='skin'?HSKIN:(dress.cols&&dress.cols[p])||OUTFIT[p].cols)[i]:dress.own[p];}
+const PIP_DRESS={labels:PIP_PARTS,own:PIP_OWN};
 function pipRig(){if(!_pip){const parts=pipParts();
-  const scene=sdfRig({bones:PIP_BONES,parts,lo:[-0.32,-0.02,-0.32],hi:[0.32,1.1,0.3],h:0.012,c:new T.Vector3(0,0.675,0),name:'Pip',
-    body:g=>{/* each vertex's share of each colour: its nearest parts, blended over a few millimetres, so the edges between colours are clean and smooth */
-      const P=g.attributes.position,n=P.count,L=PIP_PARTS.length,w=new Float32Array(n*L),ds=new Array(parts.length),lab=parts.map(p=>PIP_PARTS.indexOf(p.col));
-      for(let i=0;i<n;i++){const x=P.getX(i),y=P.getY(i),z=P.getZ(i);let mn=1e9;for(let p=0;p<parts.length;p++){ds[p]=parts[p].d(x,y,z);mn=Math.min(mn,ds[p]);}
-        let t=0;for(let p=0;p<parts.length;p++){const v=Math.exp(-(ds[p]-mn)/0.005);w[i*L+lab[p]]+=v;t+=v;}for(let k=0;k<L;k++)w[i*L+k]/=t;}
-      g.setAttribute('part',new T.BufferAttribute(w,L));g.setAttribute('color',new T.BufferAttribute(new Float32Array(n*3),3));return toon({vertexColors:true,skinning:true});},
+  const scene=dressRig({bones:PIP_BONES,parts,dress:PIP_DRESS,lo:[-0.32,-0.02,-0.32],hi:[0.32,1.1,0.3],h:0.012,c:new T.Vector3(0,0.675,0),name:'Pip',
     face:(hit,put,S)=>{const eyes={};
       // big eyes set low and wide: a white, a warm brown iris and a dark pupil, two glints, and a dark lash line arched
       // over the top (all on the eye's bone, so a blink closes them to a line); blush just under and outside; a tiny smile
@@ -40,15 +46,15 @@ function pipRig(){if(!_pip){const parts=pipParts();
         const b=hit(s*0.62,-0.4,0.68);put(S,0xf6a3ac,b.p.clone().addScaledVector(b.n,-0.004),b.n,0.046,0.026,0.014);}
       const m=hit(0,-0.4,1);put(new T.TorusGeometry(0.014,0.0042,6,16,Math.PI),0x6a3236,m.p.clone().addScaledVector(m.n,0.002).add(new T.Vector3(0,0.008,0)),m.n,1,1,1,Math.PI);
       return eyes;}});
-  scene.getObjectByName('PipBody').userData.dress=true;_pip={scene,clips:pipClips()};}
+  _pip={scene,clips:pipClips()};}
   const [idle,walk,run,spin,flip]=_pip.clips;return{scene:T.SkeletonUtils.clone(_pip.scene),clips:[idle,walk,run],emotes:{spin,flip},speeds:[0.55,3.2]};}
-// a look on Pip's body: a copy of the mesh's geometry sharing all but its colours, each vertex its part's colour
-const pipGeos={};
-function pipLook(g,look){const k=PIP_PARTS.map(p=>look[p]).join('|');if(pipGeos[k])return pipGeos[k];const n=new T.BufferGeometry();
+// a look on a dressed mesh: a copy of its geometry sharing all but its colours, each vertex its parts' colours blended
+const dressGeos={};
+function dressGeo(g,look,dress){const k=g.uuid+'|'+dress.labels.map(p=>look[p]).join('|');if(dressGeos[k])return dressGeos[k];const n=new T.BufferGeometry();
   for(const a in g.attributes)n.setAttribute(a,g.attributes[a]);n.setIndex(g.index);
-  const col=PIP_PARTS.map(p=>new T.Color(look[p]>=0?(p==='skin'?HSKIN:OUTFIT[p].cols)[look[p]]:PIP_OWN[p])),L=col.length,w=g.attributes.part.array,nv=w.length/L,ca=new Float32Array(nv*3);
-  for(let i=0;i<nv;i++)for(let k=0;k<L;k++){const f=w[i*L+k];if(!f)continue;ca[i*3]+=col[k].r*f;ca[i*3+1]+=col[k].g*f;ca[i*3+2]+=col[k].b*f;}n.setAttribute('color',new T.BufferAttribute(ca,3));return pipGeos[k]=n;}
-function pipClips(){const {rest,R,V3,bump}=rigKit(PIP_BONES),H=rest('Hips'),LL=rest('LegL'),LR=rest('LegR'),still=(d,names)=>names.map(n=>R(n,d,()=>[0,0,0]));
+  const col=dress.labels.map(p=>new T.Color(dressCol(dress,look,p))),L=col.length,w=g.attributes.part.array,nv=w.length/L,ca=new Float32Array(nv*3);
+  for(let i=0;i<nv;i++)for(let k=0;k<L;k++){const f=w[i*L+k];if(!f)continue;ca[i*3]+=col[k].r*f;ca[i*3+1]+=col[k].g*f;ca[i*3+2]+=col[k].b*f;}n.setAttribute('color',new T.BufferAttribute(ca,3));return dressGeos[k]=n;}
+function pipClips(BONES=PIP_BONES){const {rest,R,V3,bump}=rigKit(BONES),H=rest('Hips'),LL=rest('LegL'),LR=rest('LegR'),still=(d,names)=>names.map(n=>R(n,d,()=>[0,0,0]));
   const eyes=(d,fn=()=>[1,1,1])=>[V3('EyeL','scale',d,fn),V3('EyeR','scale',d,fn)],legsAt=d=>[V3('LegL','position',d,()=>LL),V3('LegR','position',d,()=>LR)];
   const idle=new T.AnimationClip('Idle',3.2,[V3('Hips','position',3.2,()=>H),R('Hips',3.2,a=>[0,Math.sin(a)*0.04,0]),
     V3('Spine','scale',3.2,a=>[1-Math.sin(a)*0.01,1+Math.sin(a)*0.025,1-Math.sin(a)*0.01]),R('Spine',3.2,a=>[Math.sin(a)*0.02,0,Math.sin(a+1)*0.02]),

@@ -625,9 +625,9 @@ body.chatting .hud,body.chatting .clockb,body.chatting #bar,body.chatting #apps,
 .chared .hsw{display:flex;flex-wrap:wrap;gap:8px}
 .chared .hsw .sw{width:34px;height:34px;border-radius:50%;border:none;background:var(--sw);box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
 .chared .hsw .sw.on{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--teal)}
-.chared .htiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px}
+.chared .htiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px}
 .chared .ht{border:none;background:#fff;border-radius:14px;box-shadow:0 2px 0 var(--line);padding:4px 2px 6px;display:flex;flex-direction:column;align-items:center;font:inherit;color:var(--ink)}
-.chared .ht img{width:62px;height:62px}.chared .ht span{font-size:11px;font-weight:700}
+.chared .ht img{width:54px;height:54px}.chared .ht span{font-size:11px;font-weight:700}
 .chared .ht.on{box-shadow:0 0 0 3px var(--teal)}
 .chared .hseg{display:flex;background:var(--wash);border-radius:999px;padding:4px;gap:4px;width:max-content}
 .chared .hseg button{border:none;background:none;border-radius:999px;padding:8px 22px;font:inherit;font-size:15px;font-weight:700;color:var(--ink2)}

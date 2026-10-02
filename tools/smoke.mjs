@@ -81,7 +81,7 @@ check(hits===0,`boat never crossed land while sailing (${hits} samples on land)`
 await ev(()=>DS.fastTravel(0));await waitFor(()=>!DS.state().sea);await wait(1500);
 await ev(()=>DS.charEd());const ld=await waitFor(()=>{const l=DS.charLoad();return l.every(q=>q[1])&&l;},20000);check(!!ld,`character models loaded (${JSON.stringify(ld)})`);
 {let cs=await waitFor(()=>DS.charState().loaded&&DS.charState());check(cs&&!cs.tpose&&cs.height>0.95&&cs.height<1.35,`you're a character, idling at about the player's height (ears and all) (${cs&&cs.height})`);
-  for(const c of ['mochi','pip','willow','sprite']){await ev(c=>DS.charSet({c,skin:3}),c);cs=await ev(()=>DS.charState());check(cs.body&&cs.body.c===c&&cs.loaded,`picking ${c} swaps the model straight away`);}
+  for(const c of ['mochi','pip','sprig','willow','sprite']){await ev(c=>DS.charSet({c,skin:3}),c);cs=await ev(()=>DS.charState());check(cs.body&&cs.body.c===c&&cs.loaded,`picking ${c} swaps the model straight away`);}
   await pg.screenshot({path:join(shots,'5-character.png')});await pg.getByRole('button',{name:'Done'}).click();
   await wait(800);await ev(()=>DS.charSet({c:'pip',style:2}));cs=await ev(()=>DS.charState());check(cs.body&&cs.body.c==='pip'&&cs.body.style===2&&cs.loaded,'a hairstyle carries onto your character');await ev(()=>DS.charSet({c:'sprite',style:0}));
   await ev(()=>DS.charSet({top:2,shoe:0}));cs=await ev(()=>DS.charState());check(cs.body&&cs.body.top===2&&cs.body.shoe===0&&cs.loaded,'clothes colours carry onto your character');
