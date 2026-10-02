@@ -631,6 +631,9 @@ body.chatting .hud,body.chatting .clockb,body.chatting #bar,body.chatting #apps,
 .chared .dtabs button.on{background:var(--teal);color:#fff;box-shadow:0 2px 0 var(--teal-d)}
 .chared .hbody{overflow-y:auto;padding:2px 14px 4px}
 .chared h4{margin:10px 0 6px;font-size:12px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em}
+.chared .htabs{display:flex;gap:6px;margin:10px 0 8px;overflow-x:auto;scrollbar-width:none}.chared .htabs::-webkit-scrollbar{display:none}
+.chared .htabs button{border:none;background:var(--wash);color:var(--ink2);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;font-weight:700;white-space:nowrap}
+.chared .htabs button.on{background:var(--teal);color:#fff;box-shadow:0 2px 0 var(--teal-d)}
 .chared .hsw{display:flex;flex-wrap:wrap;gap:8px}
 .chared .hsw .sw{width:34px;height:34px;border-radius:50%;border:none;background:var(--sw);box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
 .chared .hsw .sw.on{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--teal)}
@@ -9876,13 +9879,24 @@ function setLook(ch){Object.assign(S.look,ch);if(ch.sp&&!ch.fur)S.look.fur=LOOKS
 //  - static pieces with flat colours (zUp: modelled lying down): baked into two meshes, the skin (the material named in
 //    skin) and the rest coloured from their materials
 const CHARS=[{id:'sprite',name:'Sprite',skin:'paint',clips:{Walk:'Walking',Run:'Running'},emotes:{spin:'360_Power_Spin_Jump',flip:'Backflip_Sweep_Kick'},speeds:[0.95,4.8]},
+  {id:'willow',name:'Willow',base:'sprite',hair:'long',outfit:{top:0,bot:6,hair:-1}},/* Sprite's body with long hair and a bow */
   {id:'mochi',name:'Mochi',build:'mochi',colors:[0xfaf8f4,0xf3e3c8,0xf6cfd6,0xd8d0ec,0xc8dcef,0xcfe6d2,0xcac6c2,0xe8c8a8]},
 ];
+// a character's whole entry: one made from another (base) shares its model, clips and texture, adding its own hair and outfit
+const charDef=id=>{const C=CHARS.find(c=>c.id===id)||CHARS[0];return C.base?Object.assign({},CHARS.find(c=>c.id===C.base),C):C;};
+// clothes for a painted character: each part of its texture (found by colour and by how high it sits on the body) in a
+// colour of yours, keeping its painted shading; -1 keeps it as drawn (own: the swatch for that)
+const OUTFIT={hair:{name:'Hair',own:0x6b3a1f,cols:[0x2a1c14,0x161417,0xb5652a,0xe2bd72,0x8e3f2c,0xd8d2ca,0xee9fc0,0x86a8dc]},
+  top:{name:'Top',own:0x2f9e5a,cols:[0xe98aa0,0xf3c35a,0x74a9de,0xbfa3e3,0xf2ede4,0xe4683f,0x3f5a85,0xf08c5a]},
+  bot:{name:'Bottoms',own:0x7a4a2c,cols:[0x3c5d8f,0x2e3440,0xcaa87e,0x6f8f5c,0xeaa2b6,0xefe9df,0x8fa9cf,0x7a62a8]},
+  shoe:{name:'Shoes',own:0xf2f0ec,cols:[0xe25a4a,0xf2c14e,0x5b8fd6,0xf0a6c0,0x3a3a3a,0x6fbf8a]}};
+const charLook=(C,o={})=>Object.assign({c:C.id,skin:-1},C.skin==='paint'?{hair:-1,top:-1,bot:-1,shoe:-1}:{},C.outfit,o);
 const CHAR_H=1.07;/* every character stands the player's height, whatever units its artist used */
 const HSKIN=[0xfde3cf,0xf6d2b4,0xeec09a,0xd9a27a,0xc08660,0xa06a48,0x7a4e34,0x5a3826];
 const charSrc={};/* id → {ok, scene, clips, atlas, scale, wait} */
 function charLoad(id,cb){let s=charSrc[id];if(s&&s.ok){cb&&cb(s);return;}if(s&&s.failed){return;}
-  if(s){if(cb)s.wait.push(cb);return;}s=charSrc[id]={ok:false,wait:cb?[cb]:[]};const C=CHARS.find(c=>c.id===id);
+  const C=charDef(id);if(C.base){charLoad(C.base,b=>{charSrc[id]=b;cb&&cb(b);});return;}/* (the same model as its base) */
+  if(s){if(cb)s.wait.push(cb);return;}s=charSrc[id]={ok:false,wait:cb?[cb]:[]};
   if(C.build){Object.assign(s,mochiRig(),{ok:true,atlas:null,scale:0.92});/* (ears and all, a little taller than the others) */for(const f of s.wait)f(s);s.wait=[];return;}/* (built in code, at the player's size: 61c) */
   const L=new T.GLTFLoader(),emb=window.CHAR_EMBED&&CHAR_EMBED[id];L.register(p=>({name:'charImages',loadTexture:i=>charTex(p,i)}));
   const done=g=>{let atlas=null;const drop=[];g.scene.traverse(o=>{if(o.name.startsWith('Weapon_'))drop.push(o);else if(o.isMesh&&o.material.map)atlas=o.material.map.image;});
@@ -9911,30 +9925,68 @@ function charStatic(scene,C){scene.updateMatrixWorld(true);const up=new T.Matrix
     for(const a of ['position','normal','color']){const arr=new Float32Array(gs.reduce((t,q)=>t+q.attributes[a].array.length,0));let o=0;for(const q of gs){arr.set(q.attributes[a].array,o);o+=q.attributes[a].array.length;}g.setAttribute(a,new T.BufferAttribute(arr,3));}
     const me=new T.Mesh(g,toon({vertexColors:true}));me.userData.skin=k==='skin';out.add(me);}
   return out;}
-// the material for a character's skin in a tone (-1: as drawn): a rigged one's atlas with its skin texel repainted
-// (flat-coloured texels, sampled crisply); a static one's skin pieces in that colour
+// the material for a character in a look (skin tone, and clothes for a painted one; -1: as drawn): a rigged one's atlas
+// with its skin texel repainted (flat-coloured texels, sampled crisply); a painted one's texture repainted (paintChar); a
+// static one's skin pieces in that colour
 const charMats={};
-function charMat(id,skin){const k=id+'|'+skin;if(charMats[k])return charMats[k];const s=charSrc[id],C=CHARS.find(c=>c.id===id);
+function charMat(id,h){const C=charDef(id),skin=h.skin??-1,k=[id,skin,h.hair,h.top,h.bot,h.shoe].join('|');if(charMats[k])return charMats[k];const s=charSrc[id];
   if(C.colors)return charMats[k]=toon({color:C.colors[Math.max(0,skin)],skinning:true});/* Mochi's body colour */
   if(!s.atlas)return charMats[k]=toon(skin>=0?{color:HSKIN[skin]}:{vertexColors:true});
   const cv=document.createElement('canvas');cv.width=s.atlas.width;cv.height=s.atlas.height;const x=cv.getContext('2d');x.drawImage(s.atlas,0,0);
-  if(skin>=0&&C.skin==='paint')paintSkin(x,cv.width,cv.height,HSKIN[skin]);
+  if(C.skin==='paint')paintChar(x,cv.width,cv.height,s,h);
   else if(skin>=0){const [u,v]=C.skin,sw=cv.width/32,sh=cv.height/32;x.fillStyle=hexCss(HSKIN[skin]);x.fillRect(u*sw,v*sh,sw,sh);}
   const t=new T.CanvasTexture(cv);t.flipY=false;if(C.skin!=='paint'){t.magFilter=t.minFilter=T.NearestFilter;t.generateMipmaps=false;}/* (an atlas of flat texels stays crisp; a painting is smoothed) */
   return charMats[k]=toon({map:t,skinning:true});}
-// a skin tone on a painted texture: pixels the colour of skin (warm, fairly light, not grey) take the new tone, scaled
-// by how light each was against the skin's middle tone, so the painted shading and blush stay
-function paintSkin(x,w,h,to){const im=x.getImageData(0,0,w,h),d=im.data,hsl={},c=new T.Color(),hit=[];let ls=[];
-  for(let i=0;i<d.length;i+=4){c.setRGB(d[i]/255,d[i+1]/255,d[i+2]/255).getHSL(hsl);const hd=hsl.h*360;if(hd>4&&hd<38&&hsl.s>0.3&&hsl.l>0.42&&hsl.l<0.9){hit.push(i);ls.push(hsl.l);}}
-  if(!hit.length)return;ls.sort((a,b)=>a-b);const mid=ls[ls.length>>1],T0=new T.Color(to);
-  for(const i of hit){c.setRGB(d[i]/255,d[i+1]/255,d[i+2]/255).getHSL(hsl);const k=hsl.l/mid;d[i]=clamp(T0.r*k*255,0,255);d[i+1]=clamp(T0.g*k*255,0,255);d[i+2]=clamp(T0.b*k*255,0,255);}
+// how high on the body each texel of a painted texture sits (0 the soles, 255 the top of the head): its triangles drawn
+// at their UVs, shaded by their height in the rest pose (a little wider than themselves, to cover the seams)
+function paintHeights(s,w,h){if(s.hmap)return s.hmap;let m0=null;s.scene.traverse(o=>{if(o.isSkinnedMesh&&!m0)m0=o;});
+  const g=m0.geometry,P=g.attributes.position,U=g.attributes.uv,I=g.index,cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');
+  g.computeBoundingBox();const y0=g.boundingBox.min.y,yh=g.boundingBox.max.y-y0;x.lineWidth=2;x.lineJoin='round';
+  for(let t=0;t<I.count;t+=3){const a=I.getX(t),b=I.getX(t+1),c=I.getX(t+2),v=Math.round(clamp(((P.getY(a)+P.getY(b)+P.getY(c))/3-y0)/yh,0,1)*255);
+    x.fillStyle=x.strokeStyle=`rgb(${v},${v},${v})`;x.beginPath();x.moveTo(U.getX(a)*w,U.getY(a)*h);x.lineTo(U.getX(b)*w,U.getY(b)*h);x.lineTo(U.getX(c)*w,U.getY(c)*h);x.closePath();x.fill();x.stroke();}
+  const d=x.getImageData(0,0,w,h).data,m=new Uint8Array(w*h);for(let i=0;i<m.length;i++)m[i]=d[i*4];return s.hmap=m;}
+// a look on a painted texture: each texel sorted once by its own colour and height (skin: warm, fairly light; hair:
+// brown above the collar; bottoms: brown below it; top: green below the face; shoes: white or grey at the feet), then
+// each sort taking its new colour scaled by how light the texel was against that sort's middle tone, so the painted
+// shading, knit and blush stay
+function paintChar(x,w,h,s,look){const want={skin:look.skin>=0?HSKIN[look.skin]:null};for(const k in OUTFIT)want[k]=look[k]>=0?OUTFIT[k].cols[look[k]]:null;
+  if(!Object.values(want).some(v=>v!==null))return;const im=x.getImageData(0,0,w,h),d=im.data,S=paintSorts(s);
+  for(const k in want){const S0=S[k];if(want[k]===null||!S0.i.length)continue;const T0=new T.Color(want[k]);
+    S0.i.forEach((i,j)=>{const f=S0.l[j]/S0.mid;d[i]=clamp(T0.r*f*255,0,255);d[i+1]=clamp(T0.g*f*255,0,255);d[i+2]=clamp(T0.b*f*255,0,255);});}
   x.putImageData(im,0,0);}
+// the sorting, done once per model (with the painted hair's middle colour, for hair added to it)
+function paintSorts(s){if(s.sorts)return s.sorts;const w=s.atlas.width,h=s.atlas.height,cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');x.drawImage(s.atlas,0,0);
+  const d=x.getImageData(0,0,w,h).data,hm=paintHeights(s,w,h),hsl={},c=new T.Color(),S={skin:{i:[],l:[]}};for(const k in OUTFIT)S[k]={i:[],l:[]};
+  for(let p=0,i=0;i<d.length;p++,i+=4){c.setRGB(d[i]/255,d[i+1]/255,d[i+2]/255).getHSL(hsl);const hd=hsl.h*360,y=hm[p]/255,ch=(Math.max(d[i],d[i+1],d[i+2])-Math.min(d[i],d[i+1],d[i+2]))/255;let k=null;
+    if(y<0.14&&ch<0.12&&hsl.l>0.5)k='shoe';/* (near white, HSL's saturation means little: go by the spread of the channels) */
+    else if(hd>4&&hd<38&&hsl.s>0.3&&hsl.l>0.42&&hsl.l<0.9)k='skin';
+    else if(hd<45&&hsl.s>0.12&&hsl.l>0.04&&hsl.l<0.45)k=y>0.6?'hair':'bot';
+    else if(hd>80&&hd<180&&hsl.s>0.15&&y<0.66)k='top';
+    if(k){S[k].i.push(i);S[k].l.push(hsl.l);}}
+  for(const k in S){const ls=S[k].l.slice().sort((a,b)=>a-b);S[k].mid=ls[ls.length>>1]||1;}
+  const H=S.hair,t=[0,0,0];let n=0;H.i.forEach((i,j)=>{if(Math.abs(H.l[j]-H.mid)<0.04){t[0]+=d[i];t[1]+=d[i+1];t[2]+=d[i+2];n++;}});
+  s.hairTone=n?new T.Color(t[0]/n/255,t[1]/n/255,t[2]/n/255).getHex():OUTFIT.hair.own;return s.sorts=S;}
+// long hair for a character made from a base (Willow): a smooth shell from the crown to below the shoulders, behind the
+// face, with combed ridges, and a bow; skinned wholly to the head bone, so it turns and nods with it
+let _hairG=null;
+function hairGeos(){if(_hairG)return _hairG;const V=(x,y,z)=>new T.Vector3(x,y,z),q=new T.Vector3();
+  const ell=(p,c,r)=>{q.subVectors(p,c);const k=Math.hypot(q.x/r.x,q.y/r.y,q.z/r.z);return(k-1)*Math.min(r.x,r.y,r.z);},
+    rbox=(p,c,b,r)=>{const dx=Math.abs(p.x-c.x)-b.x+r,dy=Math.abs(p.y-c.y)-b.y+r,dz=Math.abs(p.z-c.z)-b.z+r;return Math.hypot(Math.max(dx,0),Math.max(dy,0),Math.max(dz,0))+Math.min(Math.max(dx,dy,dz),0)-r;},
+    smax=(a,b,k)=>-smin(-a,-b,k),p=V(0,0,0);
+  const hair=(x,y,z)=>{p.set(x,y,z);let d=smin(ell(p,V(0,1.31,-0.03),V(0.335,0.37,0.31)),rbox(p,V(0,1.05,-0.12),V(0.26,0.2,0.11),0.09),0.14);
+    d=smax(d,z-0.03+Math.max(0,y-1.5)*0.6,0.05);/* (open in front, for the face) */const lo=clamp((1.42-y)/0.25,0,1);return d+0.007*lo*Math.sin(Math.atan2(x,-z)*26);},
+    bow=(x,y,z)=>{p.set(x,y,z);return smin(Math.min(ell(p,V(-0.075,1.47,-0.33),V(0.075,0.055,0.035)),ell(p,V(0.075,1.47,-0.33),V(0.075,0.055,0.035))),ell(p,V(0,1.47,-0.345),V(0.032,0.034,0.03)),0.02);};
+  return _hairG={hair:mochiSurface(hair,[-0.45,0.78,-0.44],[0.45,1.76,0.12],0.014),bow:mochiSurface(bow,[-0.17,1.39,-0.4],[0.17,1.55,-0.27],0.008)};}
+function addHair(m,look,s){let b=null;m.traverse(o=>{if(o.isSkinnedMesh&&!b)b=o;});if(!b)return;const hi=b.skeleton.bones.findIndex(o=>o.name==='mixamorigHead');if(hi<0)return;
+  const G=hairGeos(),hc=look.hair>=0?OUTFIT.hair.cols[look.hair]:(paintSorts(s),s.hairTone);
+  for(const [g,col] of [[G.hair,hc],[G.bow,0xf27b93]]){if(!g.attributes.skinIndex){const n=g.attributes.position.count,si=new Uint16Array(n*4),sw=new Float32Array(n*4);for(let i=0;i<n;i++){si[i*4]=hi;sw[i*4]=1;}g.setAttribute('skinIndex',new T.BufferAttribute(si,4));g.setAttribute('skinWeight',new T.BufferAttribute(sw,4));}
+    const k='hair|'+col;const me=new T.SkinnedMesh(g,charMats[k]||(charMats[k]=toon({color:col,skinning:true})));me.bind(b.skeleton,b.bindMatrix);me.castShadow=true;me.frustumCulled=false;b.parent.add(me);}}
 // a character, ready to place: a group holding a clone of the loaded model (empty until it has loaded); a rigged one is
 // already in its idle pose (never a T-pose), with its CharacterAnimator in userData.anim
-function charModel(h){const g=new T.Group(),id=(CHARS.find(c=>c.id===h.c)||CHARS[0]).id,skin=h.skin??-1;g.userData.char={c:id,skin};
+function charModel(h){const g=new T.Group(),C=charDef(h.c),id=C.id,look=charLook(C,h);g.userData.char=look;
   charLoad(id,s=>{const m=T.SkeletonUtils.clone(s.scene);m.scale.setScalar(s.scale);
-    m.traverse(o=>{if(o.isMesh){if(s.atlas||o.userData.skin)o.material=charMat(id,skin);o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;}});
-    g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds,s.emotes);});
+    m.traverse(o=>{if(o.isMesh){if(s.atlas||o.userData.skin)o.material=charMat(id,look);o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;}});
+    if(C.hair)addHair(m,look,s);g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds,s.emotes);});
   return g;}
 // idle when standing; when moving, walk blending into run with speed, each played at the rate that keeps its feet planted
 // (speeds: how far the walk and run clips carry it a second, in its own units; the Quaternius ones' by default). Swimming
@@ -9985,22 +10037,27 @@ function openCharEd(){closeSheet&&closeSheet();if(chat)chatEnd();if(deco)decoClo
   document.body.classList.add('chatting','chared');$('charEd').hidden=false;renderCharEd();SFX.ui();}
 function closeCharEd(){if(!charEd)return;charEd=null;edCam.clearViewOffset();if(inside&&inside.me){inside.me.clear();inside.me.add(cloneBody(villager.children[0]));}/* you, in the room you're in */$('charEd').hidden=true;document.body.classList.remove('chatting','chared');save();ctxSig='';updateCtx();updateHUD();hearts(vil.x,1.2,vil.z);SFX.level();}
 function setH(ch){Object.assign(curHuman(),ch);applyLook();if(charEd){edRebuild();charEd.hop=0.3;}renderCharEd();SFX.pop();}
-function shuffleH(){const C=CHARS[Math.floor(Math.random()*CHARS.length)],n=(C.colors||HSKIN).length;setH({c:C.id,skin:Math.floor(Math.random()*(n+1))-1});}
+const rnd=n=>Math.floor(Math.random()*(n+1))-1;/* (-1: as drawn) */
+function shuffleH(){const C=charDef(CHARS[Math.floor(Math.random()*CHARS.length)].id),o={skin:rnd((C.colors||HSKIN).length)};
+  if(C.skin==='paint')for(const k in OUTFIT)o[k]=rnd(OUTFIT[k].cols.length);setH(charLook(C,o));}
 // a character's portrait (blank until its model has loaded; the editor and the look sheet redraw when it arrives)
 const hThumbs={};
-function hThumb(ch){const h=Object.assign({},curHuman(),ch),k=h.c+'|'+h.skin;if(hThumbs[k])return hThumbs[k];
+function hThumb(ch){const h=charLook(charDef((ch&&ch.c)||curHuman().c),Object.assign({},ch&&ch.c?{}:curHuman(),ch)),k=[h.c,h.skin,h.hair,h.top,h.bot,h.shoe].join('|');if(hThumbs[k])return hThumbs[k];
   if(!(charSrc[h.c]&&charSrc[h.c].ok)){charLoad(h.c,()=>{if(charEd)renderCharEd();else if(sheet)renderSheet();});return'data:image/gif;base64,R0lGODlhAQABAAAAACw=';}
   return hThumbs[k]=snapThumb(charModel(h),96);}
 function renderCharEd(){if(!charEd)return;const h=curHuman();
-  const tiles=`<div class="htiles">${CHARS.map(c=>`<button class="ht ${h.c===c.id?'on':''}" data-hc="${c.id}"><img src="${hThumb({c:c.id,skin:-1})}" alt="" style="background:#ddd3c6;border-radius:10px"><span>${c.name}</span></button>`).join('')}</div>`;
-  const C=CHARS.find(c=>c.id===h.c)||CHARS[0],sw=C.colors?`<div class="hsw">${C.colors.map((c,i)=>`<button class="sw ${Math.max(0,h.skin)===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`/* (Mochi: its body colours) */
-    :`<div class="hsw"><button class="sw own ${h.skin<0?'on':''}" data-hv="-1" title="As drawn" style="--sw:#d8c0a8"></button>${HSKIN.map((c,i)=>`<button class="sw ${h.skin===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`;
+  const tiles=`<div class="htiles">${CHARS.map(c=>`<button class="ht ${h.c===c.id?'on':''}" data-hc="${c.id}"><img src="${hThumb({c:c.id})}" alt="" style="background:#ddd3c6;border-radius:10px"><span>${c.name}</span></button>`).join('')}</div>`;
+  const C=charDef(h.c),parts=C.skin==='paint'?['skin',...Object.keys(OUTFIT)]:[],tab=parts.includes(charEd.tab)?charEd.tab:'skin',cur=tab==='skin'?h.skin:h[tab]??-1;
+  const sw=C.colors?`<div class="hsw">${C.colors.map((c,i)=>`<button class="sw ${Math.max(0,h.skin)===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`/* (Mochi: its body colours) */
+    :`<div class="hsw"><button class="sw own ${cur<0?'on':''}" data-hv="-1" title="As drawn" style="--sw:${hexCss(tab==='skin'?0xd8c0a8:OUTFIT[tab].own)}"></button>${(tab==='skin'?HSKIN:OUTFIT[tab].cols).map((c,i)=>`<button class="sw ${cur===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`;
+  const head=parts.length?`<div class="htabs">${parts.map(k=>`<button class="htab ${k===tab?'on':''}" data-ht="${k}">${k==='skin'?'Skin':OUTFIT[k].name}</button>`).join('')}</div>`:`<h4>${C.colors?'Colour':'Skin'}</h4>`;
   $('charEd').innerHTML=`<div class="htop"><b>Your character</b><button class="hbtn" data-ha="shuffle">🎲 Shuffle</button>${S.look.prev&&S.look.prev!=='human'?`<button class="hbtn" data-ha="animal">Be an animal</button>`:''}<button class="pbtn go" data-ha="done">Done</button></div>
-    <div class="hbody">${tiles}<h4>${C.colors?'Colour':'Skin'}</h4>${sw}</div>`;
+    <div class="hbody">${tiles}${head}${sw}</div>`;
   requestAnimationFrame(()=>{if(charEd){const W=window.innerWidth,H=window.innerHeight,px=$('charEd').offsetHeight;charEd.px=px;edCam.setViewOffset(W,H,0,px*0.5,W,H);}});}
 $('charEd').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!charEd)return;const d=b.dataset;
   if(d.ha==='done'){closeCharEd();return;}if(d.ha==='shuffle'){shuffleH();return;}if(d.ha==='animal'){S.look.sp=S.look.prev||'bunny';applyLook();closeCharEd();return;}
-  if(d.hc){if(d.hc!==curHuman().c){setH({c:d.hc,skin:-1});const an=edModel&&edModel.userData.anim;if(an)an.emote('spin');}return;}if(d.hv!==undefined){setH({skin:+d.hv});return;}});
+  if(d.ht){charEd.tab=d.ht;renderCharEd();SFX.ui();return;}
+  if(d.hc){if(d.hc!==curHuman().c){const h=curHuman();for(const k in h)if(k!=='c'&&k!=='skin')delete h[k];setH(charLook(charDef(d.hc),{skin:h.skin}));const an=edModel&&edModel.userData.anim;if(an)an.emote('spin');}return;}if(d.hv!==undefined){const t=charEd.tab&&charDef(curHuman().c).skin==='paint'?charEd.tab:'skin';setH({[t]:+d.hv});return;}});
 // the studio camera: framed on you in the space above the tray; you idle, turn slowly, and hop when something changes
 function updateCharEd(dt,tt){if(!charEd||!edModel)return;charEd.t+=dt;const W=window.innerWidth,H=window.innerHeight,asp=W/H,f=1-(charEd.px||H*0.45)/H,tv=Math.tan(15*Math.PI/180);
   edCam.aspect=asp;const d=Math.max(0.64/(tv*f),0.5/(tv*asp))*1.05;edCam.position.set(0,0.6+d*0.1,d);edCam.lookAt(0,0.52,0);edCam.updateProjectionMatrix();
@@ -12903,7 +12960,7 @@ function renderSheet(){
       h+=`<button class="card" data-isle="${isl.id}"><img class="px" src="${isl.home?ICON.sprout:ICON.chart}" alt=""><span class="grow"><span class="nm">${isl.name}</span><br><span class="sub">${isl.home?'Your island':islKind(isl)+' island'} · ${d<4?'you are here':d+' leagues away'}${tot?` · ${got}/${tot} local plants & bugs`:''}</span></span></button>`;}
     h+='</div>';}
   else if(sheet.kind==='look'){$('sheetTitle').textContent='Your look';tabs([]);const L=S.look;
-    h+=`<button class="card lookrow human" data-human="1"><img src="${hThumb({})}" alt="" style="background:#ddd3c6;border-radius:10px"><span class="grow"><span class="nm">${L.sp==='human'?'Edit your character':'Pick a character'}</span><br><span class="sub">Sprite the green-sweater kid or Mochi the bunny, in your colours</span></span><span class="sub" style="font-size:22px">›</span></button><h3 class="sech">Or an animal</h3>`;
+    h+=`<button class="card lookrow human" data-human="1"><img src="${hThumb({})}" alt="" style="background:#ddd3c6;border-radius:10px"><span class="grow"><span class="nm">${L.sp==='human'?'Edit your character':'Pick a character'}</span><br><span class="sub">Sprite, Willow or Mochi the bunny, in your own clothes and colours</span></span><span class="sub" style="font-size:22px">›</span></button><h3 class="sech">Or an animal</h3>`;
     h+=`<div class="looks">${Object.keys(LOOKS).map(sp=>`<button class="lk ${L.sp===sp?'on':''}" data-look="${sp}"><img src="${lookThumb(sp,sp===L.sp?L.fur:LOOKS[sp].fur[0],L.shirt||OUTFITS[0])}" alt=""><span>${LOOKS[sp].name}</span></button>`).join('')}</div>`;
     if(LOOKS[L.sp]){h+=`<h3 class="sech">${L.sp==='duck'||L.sp==='penguin'?'Feathers':L.sp==='frog'?'Skin':'Fur'}</h3><div class="swatches">${LOOKS[L.sp].fur.map(c=>`<button class="sw ${L.fur===c?'on':''}" data-fur="${c}" style="--sw:${hexCss(c)}" aria-label="Colour"></button>`).join('')}</div>`;
       h+=`<h3 class="sech">Outfit</h3><div class="swatches">${OUTFITS.map(c=>`<button class="sw ${L.shirt===c?'on':''}" data-shirt="${c}" style="--sw:${hexCss(c)}" aria-label="Outfit colour"></button>`).join('')}</div>`;}/* (a human's colours are in the character editor) */

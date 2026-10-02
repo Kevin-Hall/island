@@ -5,3 +5,4 @@ extensions dropped, since the game's toon shading only reads colour): 15 MB to 2
 game stands him in his rest pose with his arms lowered (`idleFrom`).
 The game lists characters in `CHARS` (src/game/61b-characters.js) and loads one only when it's needed. Rigged ones
 (Idle, Walk and Run clips, renamed through `clips`) animate; `tools/gltf2glb.mjs` repacks an embedded `.gltf` as `.glb`.
+Willow is the same model with long hair added in code (`addHair`); both take clothes colours from the editor.
