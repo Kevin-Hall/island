@@ -7,7 +7,8 @@ import {readFileSync,writeFileSync} from 'node:fs';
 const [inp,imgPath,out]=process.argv.slice(2);if(!out){console.error('usage: glbslim in.glb base-colour.jpg out.glb');process.exit(1);}
 const b=readFileSync(inp),jl=b.readUInt32LE(12),g=JSON.parse(b.subarray(20,20+jl).toString()),bin=b.subarray(20+jl+8);
 const img=readFileSync(imgPath),mime=/\.png$/i.test(imgPath)?'image/png':'image/jpeg';
-for(const m of g.materials||[]){const pb=m.pbrMetallicRoughness||{};m.pbrMetallicRoughness={baseColorTexture:pb.baseColorTexture?{index:0}:undefined,metallicFactor:0,roughnessFactor:1};delete m.normalTexture;delete m.occlusionTexture;delete m.emissiveTexture;}
+for(const m of g.materials||[]){const pb=m.pbrMetallicRoughness||{};m.pbrMetallicRoughness={baseColorTexture:pb.baseColorTexture?{index:0}:undefined,metallicFactor:0,roughnessFactor:1};delete m.normalTexture;delete m.occlusionTexture;delete m.emissiveTexture;delete m.extensions;}
+delete g.extensionsUsed;delete g.extensionsRequired;/* (material extensions such as specular go with the maps) */
 // rebuild the binary chunk from the buffer views the accessors use, plus the new image
 const used=[...new Set(g.accessors.map(a=>a.bufferView))],views=[],parts=[];let off=0;const remap={};
 const add=buf=>{const pad=(4-off%4)%4;if(pad){parts.push(Buffer.alloc(pad));off+=pad;}const v={buffer:0,byteOffset:off,byteLength:buf.length};parts.push(buf);off+=buf.length;views.push(v);return views.length-1;};

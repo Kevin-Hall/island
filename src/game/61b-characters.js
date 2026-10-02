@@ -8,15 +8,17 @@
 // shading. Four kinds:
 //  - Mochi (61c): a bunny sculpted and rigged in code, with smooth clips (build); the colour row recolours its body
 //    (colors)
-//  - painted (an AI-made model from a picture: the Campfire Kid): one mesh over a painted texture, no rig; a skin tone
-//    recolours the texture's skin-coloured pixels, keeping their painted shading (skin: 'paint'); it bobs and squashes
-//    as it walks, like the animals (90-main)
+//  - painted (an AI-made model from a picture, e.g. Sprite: made in Meshy, rigged and animated in Mixamo): one mesh over
+//    a painted texture; a skin tone recolours the texture's skin-coloured pixels, keeping their painted shading
+//    (skin: 'paint'); its clips are renamed by clips, given an idle if it has none (idleFrom), and its stunts become
+//    emotes; without a rig it would bob and squash as it walks, like the animals (90-main)
 //  - rigged and animated (e.g. Quaternius, or a picture rigged in Mixamo): one skinned mesh over a colour atlas; a skin
 //    tone repaints the atlas's skin texel (skin: [column,row]); CharacterAnimator plays its Idle, Walk and Run clips
 //  - static pieces with flat colours (zUp: modelled lying down): baked into two meshes, the skin (the material named in
 //    skin) and the rest coloured from their materials
-const CHARS=[{id:'mochi',name:'Mochi',build:'mochi',colors:[0xfaf8f4,0xf3e3c8,0xf6cfd6,0xd8d0ec,0xc8dcef,0xcfe6d2,0xcac6c2,0xe8c8a8]},
-  {id:'kid',name:'Campfire Kid',skin:'paint'}];
+const CHARS=[{id:'sprite',name:'Sprite',skin:'paint',clips:{Walk:'Walking',Run:'Running'},emotes:{spin:'360_Power_Spin_Jump',flip:'Backflip_Sweep_Kick'},speeds:[0.95,2.2]},
+  {id:'mochi',name:'Mochi',build:'mochi',colors:[0xfaf8f4,0xf3e3c8,0xf6cfd6,0xd8d0ec,0xc8dcef,0xcfe6d2,0xcac6c2,0xe8c8a8]},
+];
 const CHAR_H=1.07;/* every character stands the player's height, whatever units its artist used */
 const HSKIN=[0xfde3cf,0xf6d2b4,0xeec09a,0xd9a27a,0xc08660,0xa06a48,0x7a4e34,0x5a3826];
 const charSrc={};/* id → {ok, scene, clips, atlas, scale, wait} */
@@ -28,7 +30,9 @@ function charLoad(id,cb){let s=charSrc[id];if(s&&s.ok){cb&&cb(s);return;}if(s&&s
       for(const o of drop)o.parent.remove(o);/* (some packs' characters come holding a prop) */
       const sc=g.animations.length||atlas?g.scene:charStatic(g.scene,C),bx=new T.Box3().setFromObject(sc),scene=new T.Group();
       sc.position.y-=bx.min.y;scene.add(sc);/* feet on the ground, wherever the artist put the origin */
-      Object.assign(s,{ok:true,scene,clips:g.animations,atlas,scale:CHAR_H/(bx.max.y-bx.min.y)});for(const f of s.wait)f(s);s.wait=[];},
+      let clips=g.animations;const em={};if(C.clips)for(const c of clips){for(const k in C.clips)if(c.name===C.clips[k])c.name=k;for(const k in C.emotes||{})if(c.name===C.emotes[k])em[k]=c;}
+      if(clips.length&&!clips.some(c=>c.name==='Idle'))clips=[idleFrom(clips.find(c=>c.name==='Walk'),sc),...clips];
+      Object.assign(s,{ok:true,scene,clips,emotes:em,speeds:C.speeds,atlas,scale:CHAR_H/(bx.max.y-bx.min.y)});for(const f of s.wait)f(s);s.wait=[];},
     fail=e=>{s.failed=true;s.wait=[];console.warn('character '+id+' failed to load',e);toast('Your character couldn’t load. Check your connection and reopen the game.');};
   if(emb){const b=atob(emb.slice(emb.indexOf(',')+1)),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);L.parse(u.buffer,'',done,fail);}
   else L.load('assets/characters/'+id+'.glb',done,undefined,fail);}
@@ -71,17 +75,32 @@ function paintSkin(x,w,h,to){const im=x.getImageData(0,0,w,h),d=im.data,hsl={},c
 function charModel(h){const g=new T.Group(),id=(CHARS.find(c=>c.id===h.c)||CHARS[0]).id,skin=h.skin??-1;g.userData.char={c:id,skin};
   charLoad(id,s=>{const m=T.SkeletonUtils.clone(s.scene);m.scale.setScalar(s.scale);
     m.traverse(o=>{if(o.isMesh){if(s.atlas||o.userData.skin)o.material=charMat(id,skin);o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;}});
-    g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds);});
+    g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds,s.emotes);});
   return g;}
 // idle when standing; when moving, walk blending into run with speed, each played at the rate that keeps its feet planted
 // (speeds: how far the walk and run clips carry it a second, in its own units; the Quaternius ones' by default). Swimming
 // keeps the idle clip; the lean
 // and bob come from swimPose (76c-swim)
+// a model with walk and run but no idle (a Mixamo export): its walk held at the moment the feet are closest together,
+// breathing through the chest and slowly looking about, so it never stands in a T-pose
+function idleFrom(walk,root){const mx=new T.AnimationMixer(root),act=mx.clipAction(walk).play(),L=root.getObjectByProperty('name','mixamorigLeftFoot'),R=root.getObjectByProperty('name','mixamorigRightFoot'),v=new T.Vector3(),w=new T.Vector3();
+  let best=0,bd=1e9;if(L&&R)for(let i=0;i<60;i++){const t=walk.duration*i/60;mx.setTime(t);root.updateMatrixWorld(true);L.getWorldPosition(v);R.getWorldPosition(w);const d=Math.abs(v.z-w.z)+2*Math.abs(v.y-w.y);if(d<bd){bd=d;best=t;}}
+  act.stop();mx.uncacheRoot(root);const D=4,N=48,TAU=Math.PI*2,q=new T.Quaternion(),r=new T.Quaternion(),e=new T.Euler();
+  const sway={Spine2:a=>[Math.sin(a)*0.025,0,0],Neck:a=>[Math.sin(a+0.6)*0.015,Math.sin(a*0.5)*0.05,0],Head:a=>[Math.sin(2*a)*0.02,Math.sin(a*0.5+0.4)*0.09,Math.sin(a*0.5)*0.03],LeftArm:a=>[0,0,Math.sin(a)*0.03],RightArm:a=>[0,0,-Math.sin(a)*0.03]};
+  const tracks=walk.tracks.map(tr=>{const v0=Array.from(tr.createInterpolant().evaluate(best)),bone=tr.name.replace(/^mixamorig/,'').split('.')[0],f=tr.name.endsWith('.quaternion')&&sway[bone];
+    if(!f)return new tr.constructor(tr.name,[0,D],[...v0,...v0]);const ts=[],vs=[];
+    for(let i=0;i<=N;i++){const a=i/N*TAU;ts.push(i/N*D);q.fromArray(v0).multiply(r.setFromEuler(e.set(...f(a))));vs.push(q.x,q.y,q.z,q.w);}return new T.QuaternionKeyframeTrack(tr.name,ts,vs);});
+  return new T.AnimationClip('Idle',D,tracks);}
 class CharacterAnimator{
-  constructor(root,clips,scale,speeds=[1.35,2.4]){this.wv=speeds[0]*scale;this.rv=speeds[1]*scale;this.mx=new T.AnimationMixer(root);this.a=['Idle','Walk','Run'].map((n,i)=>{const a=this.mx.clipAction(clips.find(c=>c.name===n));a.play();a.setEffectiveWeight(i?0:1);return a;});this.w=[1,0,0];this.mx.update(0);}
+  constructor(root,clips,scale,speeds=[1.35,2.4],emotes={}){this.em=emotes;this.e=null;this.wv=speeds[0]*scale;this.rv=speeds[1]*scale;this.mx=new T.AnimationMixer(root);this.a=['Idle','Walk','Run'].map((n,i)=>{const a=this.mx.clipAction(clips.find(c=>c.name===n));a.play();a.setEffectiveWeight(i?0:1);return a;});this.w=[1,0,0];this.mx.update(0);}
+  // a one-off flourish (a spin jump, a backflip) over whatever it's doing; moving off or swimming cuts it short
+  emote(name){const c=this.em[name];if(!c)return;if(this.e)this.e.a.stop();const a=this.mx.clipAction(c);a.reset();a.setLoop(T.LoopOnce,1);a.clampWhenFinished=true;a.setEffectiveWeight(0);a.play();this.e={a,w:0,t:0,d:c.duration};}
   update(dt,speed,swim){const m=swim?0:smooth(0.05,0.5,speed),r=smooth(this.wv,this.rv,speed),tw=[1-m,m*(1-r),m*r],k=Math.min(1,dt*10);
-    for(let i=0;i<3;i++){this.w[i]+=(tw[i]-this.w[i])*k;this.a[i].setEffectiveWeight(this.w[i]);}
+    let ew=0;if(this.e){const E=this.e;E.t+=dt;const want=speed>0.3||swim||E.t>E.d-0.25?0:1;E.w+=(want-E.w)*Math.min(1,dt*8);E.a.setEffectiveWeight(E.w);ew=E.w;if(!want&&E.w<0.02&&E.t>0.2){E.a.stop();this.e=null;ew=0;}}
+    for(let i=0;i<3;i++){this.w[i]+=(tw[i]-this.w[i])*k;this.a[i].setEffectiveWeight(this.w[i]*(1-ew));}
     this.a[1].timeScale=clamp(speed/this.wv,0.6,4);this.a[2].timeScale=clamp(speed/this.rv,0.6,4);this.mx.update(dt);}}
+// a flourish from you (level-ups), if your character has one
+function playerEmote(name){const b=villager.children[0],an=b&&b.userData.anim;if(an)an.emote(name);}
 // the player's body copied for a room (56-interiors): a character is re-cloned with its own rig, anything else copied
 function cloneBody(b){return b.userData.char?charModel(b.userData.char):b.clone();}
 /* ---- the editor ---- */
@@ -118,7 +137,7 @@ function renderCharEd(){if(!charEd)return;const h=curHuman();
   requestAnimationFrame(()=>{if(charEd){const W=window.innerWidth,H=window.innerHeight,px=$('charEd').offsetHeight;charEd.px=px;edCam.setViewOffset(W,H,0,px*0.5,W,H);}});}
 $('charEd').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!charEd)return;const d=b.dataset;
   if(d.ha==='done'){closeCharEd();return;}if(d.ha==='shuffle'){shuffleH();return;}if(d.ha==='animal'){S.look.sp=S.look.prev||'bunny';applyLook();closeCharEd();return;}
-  if(d.hc){if(d.hc!==curHuman().c)setH({c:d.hc,skin:-1});return;}if(d.hv!==undefined){setH({skin:+d.hv});return;}});
+  if(d.hc){if(d.hc!==curHuman().c){setH({c:d.hc,skin:-1});const an=edModel&&edModel.userData.anim;if(an)an.emote('spin');}return;}if(d.hv!==undefined){setH({skin:+d.hv});return;}});
 // the studio camera: framed on you in the space above the tray; you idle, turn slowly, and hop when something changes
 function updateCharEd(dt,tt){if(!charEd||!edModel)return;charEd.t+=dt;const W=window.innerWidth,H=window.innerHeight,asp=W/H,f=1-(charEd.px||H*0.45)/H,tv=Math.tan(15*Math.PI/180);
   edCam.aspect=asp;const d=Math.max(0.64/(tv*f),0.5/(tv*asp))*1.05;edCam.position.set(0,0.6+d*0.1,d);edCam.lookAt(0,0.52,0);edCam.updateProjectionMatrix();

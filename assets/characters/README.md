@@ -1,5 +1,7 @@
-`kid.glb` (the Campfire Kid): made by the game's owner from a picture with Meshy AI, then slimmed by
-`tools/glbslim.mjs` (same mesh; the 4096px base colour shrunk to a 1024px JPEG; normal and metal/roughness maps
-dropped, since the game's toon shading only reads colour): 30 MB to 0.9 MB. A static model: no rig or clips yet.
+`sprite.glb` (Sprite, the green-sweater kid): made by the game's owner from a picture with Meshy AI, rigged and
+animated there (a Mixamo skeleton with Walking, Running and two stunt clips), then slimmed by `tools/glbslim.mjs`
+(same mesh, rig and clips; the base colour shrunk to a 1024px JPEG; normal and metal/roughness maps and material
+extensions dropped, since the game's toon shading only reads colour): 15 MB to 2.5 MB. It has no Idle clip, so the
+game makes one from the walk (`idleFrom`).
 The game lists characters in `CHARS` (src/game/61b-characters.js) and loads one only when it's needed. Rigged ones
-(Idle, Walk and Run clips) animate; `tools/gltf2glb.mjs` repacks an embedded `.gltf` as `.glb`.
+(Idle, Walk and Run clips, renamed through `clips`) animate; `tools/gltf2glb.mjs` repacks an embedded `.gltf` as `.glb`.

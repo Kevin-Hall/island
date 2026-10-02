@@ -37,7 +37,7 @@ function updateHUD(){
   updateCtx();
 }
 function tickShells(dt){if(shownShells!==S.shells){const d=S.shells-shownShells;shownShells+=Math.sign(d)*Math.max(1,Math.abs(d)*Math.min(1,dt*8));if(Math.abs(S.shells-shownShells)<1)shownShells=S.shells;$('shellTxt').textContent=fmt(shownShells);}}
-function addXP(n){const before=level();if(n>0&&restMul()>1)n=Math.max(n,Math.round(n*restMul()));/* well rested (56c) */S.xp+=n;const after=level();if(after>before&&S.scratch){heartLevelUp(before,after);return;}if(after>before){SFX.level();
+function addXP(n){const before=level();if(n>0&&restMul()>1)n=Math.max(n,Math.round(n*restMul()));/* well rested (56c) */S.xp+=n;const after=level();if(after>before)playerEmote('flip');/* a backflip, if your character can (61b) */if(after>before&&S.scratch){heartLevelUp(before,after);return;}if(after>before){SFX.level();
   const un=[...CROP_IDS.filter(id=>CROPS[id].lvl===after).map(id=>CROPS[id].name),...Object.keys(BUILD).filter(k=>BUILD[k].lvl===after).map(k=>BUILD[k].name)];
   if(after===MYSTERY.lvl)un.push('Mystery Seeds');
   toast(`Level ${after}!${un.length?' New: '+un.join(', '):''}`,'rare',ICON.star);}}
