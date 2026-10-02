@@ -58,15 +58,26 @@ const TOOL_ANIM={
   rod:{d:0.4,hit:0.5,k:[[0,0,0,0,0],[0.5,0.5,0,0,0.12],[1,0,0,0,0]]},
   terra:{d:0.5,hit:0.5,k:[[0,0,0,0,0],[0.38,-1.6,0,0.1,-0.2],[0.5,1.2,0,-0.1,0.4],[0.7,1.0,0,-0.1,0.34],[1,0,0,0,0]]},/* a big two-handed thump */
   hand:{d:0.3,hit:0.45,k:[[0,0,0,0,0],[0.45,0,0,0,0.3],[1,0,0,0,0]]}};/* reach out */
-let anim=null,poseLean=0,fishLean=0;
+let anim=null,poseLean=0,fishLean=0;const _hq=new T.Quaternion(),_he=new T.Euler(),_hv=new T.Vector3();
+// the hand a character holds its tools in (CHARS' hand: a bone, and where the palm is from it), once its model is in
+function handOf(b){if(!b||!b.userData.char)return null;if(b.userData.hand)return b.userData.hand;const H=charDef(b.userData.char.c).hand;if(!H)return null;
+  let bone=null;b.traverse(o=>{if(o.isBone&&o.name===H.bone&&!bone)bone=o;});if(!bone)return null;return b.userData.hand={bone,off:new T.Vector3(...H.off),arm:!!H.arm,w:0};}
 function swingTool(onHit){if(anim&&anim.hit)fireHit(anim);anim={A:TOOL_ANIM[S.tool]||TOOL_ANIM.hand,t:0,t0:performance.now(),hit:onHit||null};}
 function fireHit(a){const h=a.hit;a.hit=null;if(h)h();}
 function animKey(K,u){let i=1;while(i<K.length-1&&K[i][0]<u)i++;const a=K[i-1],b=K[i],t=smooth(0,1,(u-a[0])/(b[0]-a[0]||1));return[lerp(a[1],b[1],t),lerp(a[2],b[2],t),lerp(a[3],b[3],t),lerp(a[4],b[4],t)];}
 function updateTool(dt){toolHold.visible=!S.sea&&!fishing&&!rodAfter;const base=HELD_TILT[S.tool]||0;let v=[0,0,0,0];
   if(anim){const a=anim;a.t+=dt;/* frames or the clock, whichever is further on, so a slow frame never stalls a swing */
-    const u=Math.min(1,Math.max(a.t,(performance.now()-a.t0)/1000)/a.A.d);v=animKey(a.A.k,u);
+    const u=a.fz??Math.min(1,Math.max(a.t,(performance.now()-a.t0)/1000)/a.A.d);/* (fz: held at one moment, for the debug pose) */v=animKey(a.A.k,u);
     if(a.hit&&u>=a.A.hit)fireHit(a);if(anim===a&&u>=1)anim=null;}
-  toolHold.rotation.set(base+v[0],0,v[1]);toolHold.position.y=0.22+v[2];poseLean=anim?v[3]:fishLean;
+  toolHold.rotation.set(base+v[0],0,v[1]);poseLean=anim?v[3]:fishLean;
+  // a character holds it in its hand: the grip follows the hand on the tool's side wherever its clips move it, and a
+  // code-built one (Pip, Sprig, Mochi) reaches out with that arm to carry it, raising it for the wind-up and bringing
+  // it down through the blow
+  const hb=handOf(villager.children[0]),holding=hb&&((toolHold.visible&&heldMesh[S.tool])||(fishing&&!S.sea));
+  if(hb){hb.w=lerp(hb.w,holding?1:0,Math.min(1,dt*10));
+    if(hb.arm&&hb.w>0.01){const x=fishing?-0.85:-0.5+(v[0]<0?0.95*v[0]:-0.4*v[0]);_hq.setFromEuler(_he.set(x,0,0.22+0.35*v[1]));hb.bone.quaternion.slerp(_hq,hb.w);}
+    villager.updateMatrixWorld(true);const p=villager.worldToLocal(hb.bone.localToWorld(_hv.copy(hb.off)));toolHold.position.copy(p);rod.position.copy(p);}
+  else{toolHold.position.set(0.3,0.22+v[2],0.08);rod.position.set(0.2,0.22,0.08);}
   if(camShake>0)camShake=Math.max(0,camShake-dt*0.5);}
 
 /* ---- tapping the world ---- */
@@ -78,6 +89,9 @@ function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
   if(tool==='terra'&&isl&&isl.home){terraTap(x,z);return;}
   {const fd=findAt(x,z);if(fd&&(fd.k==='dig'||fd.k==='bubbles')){autoTool('shovel');actAt(x,z,()=>{digStab(x,z,0.6);/* two stabs: the hole opens, then whatever's buried comes up */swingTool(()=>{digStab(x,z,1);digSpot(fd);});});return;}if(fd){actAt(x,z,()=>collectFind(fd));return;}const pl=plantAt(x,z);if(pl){actAt(x,z,()=>pickPlant(pl));return;}}
   if(isl&&!isl.home&&nearHeart(isl,x,z)){actAt(x,z,()=>heartTap(isl));return;}
+  // another island: its trees come down to the axe (a tap with anything else just walks there), and placed decor can be
+  // tapped like at home
+  if(isl&&!isl.home){const t=isl.trees&&isl.trees.get(k);if(t){if(tool==='axe')actAt(x,z,()=>chopWild(isl,t));else{if(!S.axeHint){S.axeHint=1;toast('Hold the axe to cut down trees here.');}goTo(x,z);}return;}}
   if(!isl||!isl.home){goTo(x,z);return;}
   // town trees and rocks: shake or chop a tree, break a rock with the shovel
   const res=fixedAt(x,z)==='decor'&&TOWN.res.get(k);
@@ -106,6 +120,11 @@ function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
     case'axe':case'net':actAt(x,z,()=>{});return;}
   goTo(x,z);}
 // chop a town tree for wood: a few logs a day per tree, and the tree stays
+// a tree on another island: three blows, then it falls; it stays felled (S.felled), and the island is rebuilt without it
+function chopWild(isl,t){walkTo(t.x,t.z);vil.hop=0.2;t.hp=(t.hp??3)-1;const y=topY(t.x,t.z)+0.45;tone(140,0.07,'triangle',0.06);noise(0.06,0.04,900);chips(t.x,t.z,y);
+  if(t.hp>0)return;const F=S.felled||(S.felled={}),k=K(t.x,t.z);(F[isl.id]||(F[isl.id]=[])).push(k);fellTree({x:t.x,z:t.z,v:Math.floor(hash(t.x,t.z)*3),sc:1,r:hash(t.z,t.x)*6.28});
+  buildIsland(isl);rebuildLandList();cullIslands();
+  const n=3+(Math.random()<0.5?1:0)+(Math.random()<0.5?1:0);gain('m:wood',n);floatText(t.x,1.6,t.z,'+'+n+' '+MATS.wood.name,'gold');save();}
 function chopTree(x,z){const k=K(x,z),sh=S.shook[k]||{d:0,n:0,c:0};if(sh.d!==S.day){sh.d=S.day;sh.n=0;sh.c=0;}sh.c=sh.c||0;S.shook[k]=sh;const y=topY(x,z);
   tone(150,0.06,'triangle',0.07);noise(0.07,0.05,900);burst(x,y+0.5,z,0x9a6a3a,8,1.2,0.06);burst(x,y+1.5,z,0x6ab84a,6,1.0,0.07,3);
   if(sh.c>=3){toast('This tree has given all the wood it can today.');return;}sh.c++;

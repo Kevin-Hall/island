@@ -168,17 +168,22 @@ function buildIsland(isl){
     }
     pickHeart(isl,blocked);/* the withered heart tree (79-voyage) */
     const gr=shuffle(isl.grass.slice(),R),n=B.trees&&B.trees.length?Math.round(gr.length*(isl.grand?0.08:0.15)*(B.td??1)):0;
+    // its trees, each remembered (isl.trees) so it can be cut down; a felled one (S.felled) is still rolled, so every
+    // other tree comes out just as it was, but not drawn, and its tile is freed once the island is laid out
+    const fell=new Set((S.felled&&S.felled[isl.id])||[]);isl.trees=new Map();
+    const tree=(x,z,p)=>{const k=K(x,z);blocked.add(k);if(fell.has(k))return;tp.push(...p);isl.trees.set(k,{x,z});};
     let placed=0;for(const [x,z] of gr){if(placed>=n)break;if(blocked.has(K(x,z)))continue;
-      tp.push(...shift(treeParts(B.trees[Math.floor(R()*B.trees.length)],R,B.rock),x+(R()-0.5)*0.3,topY(x,z),z+(R()-0.5)*0.3,R()*6.28));blocked.add(K(x,z));placed++;}
+      tree(x,z,shift(treeParts(B.trees[Math.floor(R()*B.trees.length)],R,B.rock),x+(R()-0.5)*0.3,topY(x,z),z+(R()-0.5)*0.3,R()*6.28));placed++;}
     const sa=shuffle(isl.sand.slice(),R);for(let i=0;i<Math.min(4,sa.length);i++){const [x,z]=sa[i];parts.push(...shift(treeParts(isl.biome==='swamp'?'reeds':'rock',R,B.rock),x,topY(x,z),z,R()*6));blocked.add(K(x,z));}
     {const pn=({tropic:0.12,meadow:0.04,autumn:0.03,volcano:0.04})[isl.biome]||0;
       if(pn)for(const [x,z] of palmSpots(isl,R,Math.min(isl.grand?10:6,Math.ceil(isl.sand.length*pn)),(x,z)=>!blocked.has(K(x,z)))){
-        tp.push(...shift(treeParts(PALMS[Math.floor(R()*PALMS.length)],R,B.rock),x+(R()-0.5)*0.2,topY(x,z),z+(R()-0.5)*0.2,R()*6.28));blocked.add(K(x,z));}}
+        tree(x,z,shift(treeParts(PALMS[Math.floor(R()*PALMS.length)],R,B.rock),x+(R()-0.5)*0.2,topY(x,z),z+(R()-0.5)*0.2,R()*6.28));}}
     if(parts.length)g.add(M(parts));addVeg(isl,g,tp);
     if(glowParts.length){const m=M(glowParts,lumMat);m.castShadow=false;g.add(m);}
     if(isl.style)frDeco(isl,g,blocked);/* the frontier's strange decor (44b) */
     buildHeart(isl);
     isl.spots=gr.filter(([x,z])=>!blocked.has(K(x,z))).slice(0,Math.max(5,Math.min(isl.grand?30:18,Math.round(gr.length*0.18))));
+    for(const k of fell)blocked.delete(k);/* (a felled tree's tile is open ground now) */
   }
   isl.blocked=blocked;
   isl.edges=[];for(const [x,z] of [...isl.grass,...isl.sand])for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(!isLand(x+dx,z+dz)&&!riverSurf.has(K(x+dx,z+dz)))isl.edges.push([x+dx*0.5,z+dz*0.5,dx,dz,hash(x*3+dx,z*5+dz)*6.28]);

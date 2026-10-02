@@ -16,12 +16,12 @@
 //    tone repaints the atlas's skin texel (skin: [column,row]); CharacterAnimator plays its Idle, Walk and Run clips
 //  - static pieces with flat colours (zUp: modelled lying down): baked into two meshes, the skin (the material named in
 //    skin) and the rest coloured from their materials
-const CHARS=[{id:'sprite',name:'Sprite',skin:'paint',clips:{Walk:'Walking',Run:'Running'},emotes:{spin:'360_Power_Spin_Jump',flip:'Backflip_Sweep_Kick'},speeds:[0.95,4.8]},
+const CHARS=[{id:'sprite',name:'Sprite',skin:'paint',clips:{Walk:'Walking',Run:'Running'},emotes:{spin:'360_Power_Spin_Jump',flip:'Backflip_Sweep_Kick'},speeds:[0.95,4.8],hand:{bone:'mixamorigLeftHand',off:[0,0.06,0.01]}},
   {id:'willow',name:'Willow',base:'sprite',hair:'long',outfit:{top:0,bot:6,hair:-1}},/* Sprite's body with long hair and a bow */
-  {id:'pip',name:'Pip',build:'pip',dress:true,styles:['Tousled','Bob','Buns','Long'],ownCol:(h,t)=>PIP_OWN[t]},
-  {id:'sprig',name:'Sprig',build:'sprig',dress:true,scale:1.06,styles:['Straw','Mushroom','Wizard','Explorer'],tabs:['skin','hair','top','shoe'],tabNames:{hair:'Hat',top:'Smock',shoe:'Boots'},
+  {id:'pip',name:'Pip',build:'pip',dress:true,hand:{bone:'ArmR',off:[0.057,-0.13,0.016],arm:1},styles:['Tousled','Bob','Buns','Long'],ownCol:(h,t)=>PIP_OWN[t]},
+  {id:'sprig',name:'Sprig',build:'sprig',dress:true,hand:{bone:'ArmR',off:[0.072,-0.1,0.014],arm:1},scale:1.06,styles:['Straw','Mushroom','Wizard','Explorer'],tabs:['skin','hair','top','shoe'],tabNames:{hair:'Hat',top:'Smock',shoe:'Boots'},
     cols:{hair:[0xdcae62,0xd9524a,0x6c62b8,0xe4d2a2,0x7caa5c,0x4f7fb8,0xe98aa0,0x5a4a44]},ownCol:(h,t)=>t==='hair'?SPRIG_HATS[h.style|0].own:SPRIG_DRESS.own[t]},/* a little gardener-explorer under a big hat (61e) *//* a very simple little person, in your colours (61d) */
-  {id:'mochi',name:'Mochi',build:'mochi',colors:[0xfaf8f4,0xf3e3c8,0xf6cfd6,0xd8d0ec,0xc8dcef,0xcfe6d2,0xcac6c2,0xe8c8a8]},
+  {id:'mochi',name:'Mochi',build:'mochi',hand:{bone:'ArmR',off:[0.03,-0.12,0.08],arm:1},colors:[0xfaf8f4,0xf3e3c8,0xf6cfd6,0xd8d0ec,0xc8dcef,0xcfe6d2,0xcac6c2,0xe8c8a8]},
 ];
 // a character's whole entry: one made from another (base) shares its model, clips and texture, adding its own hair and outfit
 const charDef=id=>{const C=CHARS.find(c=>c.id===id)||CHARS[0];return C.base?Object.assign({},CHARS.find(c=>c.id===C.base),C):C;};

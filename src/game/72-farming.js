@@ -8,7 +8,7 @@ function goTo(x,z,cb){routeVil(x,z);vil.idle=0;vil.cb=cb||null;}
 // is a circle the player (radius PLAYER_R) slides round; routeVil finds a way round them with a small A* when needed
 const walkable=(x,z)=>{const t=landMap.get(K(x,z));return t==='grass'||t==='sand'||t==='bridge';};
 const SOLID_R={tree:0.32,bush:0.3,rock:0.34,boulder:0.4,stump:0.3},WALK_OVER=new Set(['flowers','cattail','rug','clover']),PLAYER_R=0.2;
-function solidR(x,z){if(S.sea||inside)return 0;const k=K(x,z);if(islMap.get(k)!==0)return 0;
+function solidR(x,z){if(S.sea||inside)return 0;const k=K(x,z);if(islMap.get(k)!==0){const o=islMap.has(k)&&objAt(x,z);return o&&!WALK_OVER.has(o.k)?0.4:0;}/* (away: only the decor you've placed there) */
   const e=debMesh.get(k);if(e&&e.d&&SOLID_R[e.d.k])return SOLID_R[e.d.k];
   if(fixedAt(x,z))return 0.4;const o=objAt(x,z);if(o&&!WALK_OVER.has(o.k))return 0.4;return 0;}
 // is (px,pz) clear of every solid near it? (ignoring any solid the point (ix,iz) is already inside, so you can always walk out)
@@ -104,7 +104,7 @@ function afterSim(out,label){rebuildSoil();syncAllCrops();syncLife();for(const i
   if(out.length){const rare=out.filter(c=>c.v!=='normal').length;toast(`${label}: ${out.length} crop${out.length>1?'s':''} ripened${rare?` — ${rare} rare!`:''}`,rare?'rare':'',ICON.sprout);}
   toast(`Day ${S.day}${S.rain?' — rain today':''}. The market wants <b>${CROPS[S.demand].name}</b>.`,'',seedIcon(S.demand));}
 function editTap(x,z){
-  if(!onHome(x,z))return;
+  if(!onLandAny(x,z))return;
   const f=fixedAt(x,z);if(f){toast(f==='house'?'Your home stays put — upgrade it in Shop → Island.':'The shipping bin stays by your home.');return;}
   const o=objAt(x,z)||floorAt(x,z); // the piece on top first, then the floor under it
   if(o){const B=BUILD[o.k];setAction(`<b>${B.name}</b>`,[
@@ -124,13 +124,15 @@ let placing=null,ghost=null;
 const ghostMat=new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0.7,depthWrite:false});
 // a floor needs a tile with no floor yet (a worn dirt path is fine: it paves over it); anything else needs no other piece,
 // and happily stands on a floor
-function canPlace(x,z,kind=placing&&placing.kind){const fl=isFloor(kind);return onHome(x,z)&&isLand(x,z)&&(fl||!TOWN.path.has(K(x,z)))&&landMap.get(K(x,z))!=='bridge'&&!debrisAt(x,z)&&!S.tiles[K(x,z)]&&!(fl?floorAt(x,z):objAt(x,z))&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z);}
-function nearestValid(x0,z0,kind){let best=null,bd=1e9;for(const [x,z] of [...islands[0].grass,...islands[0].sand]){if(!canPlace(x,z,kind))continue;const d=(x-x0)**2+(z-z0)**2;if(d<bd){bd=d;best=[x,z];}}return best;}
+// decor goes on any island you're on, home or away (S.objs is kept by tile, wherever it is)
+const onLandAny=(x,z)=>islMap.has(K(x,z));
+function canPlace(x,z,kind=placing&&placing.kind){const fl=isFloor(kind);return onLandAny(x,z)&&isLand(x,z)&&!(curIsl()&&!curIsl().home&&curIsl().blocked&&curIsl().blocked.has(K(x,z)))&&(fl||!TOWN.path.has(K(x,z)))&&landMap.get(K(x,z))!=='bridge'&&!debrisAt(x,z)&&!S.tiles[K(x,z)]&&!(fl?floorAt(x,z):objAt(x,z))&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z);}
+function nearestValid(x0,z0,kind){let best=null,bd=1e9;const isl=curIsl()||islands[0];for(const [x,z] of [...isl.grass,...isl.sand]){if(!canPlace(x,z,kind))continue;const d=(x-x0)**2+(z-z0)**2;if(d<bd){bd=d;best=[x,z];}}return best;}
 function startPlace(kind,fromStore,rot=0){
   closeSheet();clearAction();
-  if(S.sea||!onHome(Math.round(vil.x),Math.round(vil.z))){toast('Decor can only be placed on your home island.');return;}
+  if(S.sea||!onLandAny(Math.round(vil.x),Math.round(vil.z))){toast('Step ashore to place decor.');return;}
   const spot=nearestValid(Math.round(vil.x),Math.round(vil.z),kind);
-  if(!spot){toast('No free space left — expand your island in Shop → Island.');return;}
+  if(!spot){toast(curIsl()&&!curIsl().home?'No free space here.':'No free space left — expand your island in Shop → Island.');return;}
   placing={kind,fromStore,rot,x:spot[0],z:spot[1]};
   ghost=objGroup(kind,S.nextId,rot);ghost.traverse(o=>{if(o.isMesh){if(o.userData.noThumb)o.visible=false;else if(isFloor(kind)){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=0.75;o.position.y+=0.02;}else{o.material=ghostMat;o.castShadow=false;}}});
   scene.add(ghost);moveGhost(spot[0],spot[1]);

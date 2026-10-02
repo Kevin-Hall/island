@@ -7171,17 +7171,22 @@ function buildIsland(isl){
     }
     pickHeart(isl,blocked);/* the withered heart tree (79-voyage) */
     const gr=shuffle(isl.grass.slice(),R),n=B.trees&&B.trees.length?Math.round(gr.length*(isl.grand?0.08:0.15)*(B.td??1)):0;
+    // its trees, each remembered (isl.trees) so it can be cut down; a felled one (S.felled) is still rolled, so every
+    // other tree comes out just as it was, but not drawn, and its tile is freed once the island is laid out
+    const fell=new Set((S.felled&&S.felled[isl.id])||[]);isl.trees=new Map();
+    const tree=(x,z,p)=>{const k=K(x,z);blocked.add(k);if(fell.has(k))return;tp.push(...p);isl.trees.set(k,{x,z});};
     let placed=0;for(const [x,z] of gr){if(placed>=n)break;if(blocked.has(K(x,z)))continue;
-      tp.push(...shift(treeParts(B.trees[Math.floor(R()*B.trees.length)],R,B.rock),x+(R()-0.5)*0.3,topY(x,z),z+(R()-0.5)*0.3,R()*6.28));blocked.add(K(x,z));placed++;}
+      tree(x,z,shift(treeParts(B.trees[Math.floor(R()*B.trees.length)],R,B.rock),x+(R()-0.5)*0.3,topY(x,z),z+(R()-0.5)*0.3,R()*6.28));placed++;}
     const sa=shuffle(isl.sand.slice(),R);for(let i=0;i<Math.min(4,sa.length);i++){const [x,z]=sa[i];parts.push(...shift(treeParts(isl.biome==='swamp'?'reeds':'rock',R,B.rock),x,topY(x,z),z,R()*6));blocked.add(K(x,z));}
     {const pn=({tropic:0.12,meadow:0.04,autumn:0.03,volcano:0.04})[isl.biome]||0;
       if(pn)for(const [x,z] of palmSpots(isl,R,Math.min(isl.grand?10:6,Math.ceil(isl.sand.length*pn)),(x,z)=>!blocked.has(K(x,z)))){
-        tp.push(...shift(treeParts(PALMS[Math.floor(R()*PALMS.length)],R,B.rock),x+(R()-0.5)*0.2,topY(x,z),z+(R()-0.5)*0.2,R()*6.28));blocked.add(K(x,z));}}
+        tree(x,z,shift(treeParts(PALMS[Math.floor(R()*PALMS.length)],R,B.rock),x+(R()-0.5)*0.2,topY(x,z),z+(R()-0.5)*0.2,R()*6.28));}}
     if(parts.length)g.add(M(parts));addVeg(isl,g,tp);
     if(glowParts.length){const m=M(glowParts,lumMat);m.castShadow=false;g.add(m);}
     if(isl.style)frDeco(isl,g,blocked);/* the frontier's strange decor (44b) */
     buildHeart(isl);
     isl.spots=gr.filter(([x,z])=>!blocked.has(K(x,z))).slice(0,Math.max(5,Math.min(isl.grand?30:18,Math.round(gr.length*0.18))));
+    for(const k of fell)blocked.delete(k);/* (a felled tree's tile is open ground now) */
   }
   isl.blocked=blocked;
   isl.edges=[];for(const [x,z] of [...isl.grass,...isl.sand])for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(!isLand(x+dx,z+dz)&&!riverSurf.has(K(x+dx,z+dz)))isl.edges.push([x+dx*0.5,z+dz*0.5,dx,dz,hash(x*3+dx,z*5+dz)*6.28]);
@@ -9878,12 +9883,12 @@ function setLook(ch){Object.assign(S.look,ch);if(ch.sp&&!ch.fur)S.look.fur=LOOKS
 //    tone repaints the atlas's skin texel (skin: [column,row]); CharacterAnimator plays its Idle, Walk and Run clips
 //  - static pieces with flat colours (zUp: modelled lying down): baked into two meshes, the skin (the material named in
 //    skin) and the rest coloured from their materials
-const CHARS=[{id:'sprite',name:'Sprite',skin:'paint',clips:{Walk:'Walking',Run:'Running'},emotes:{spin:'360_Power_Spin_Jump',flip:'Backflip_Sweep_Kick'},speeds:[0.95,4.8]},
+const CHARS=[{id:'sprite',name:'Sprite',skin:'paint',clips:{Walk:'Walking',Run:'Running'},emotes:{spin:'360_Power_Spin_Jump',flip:'Backflip_Sweep_Kick'},speeds:[0.95,4.8],hand:{bone:'mixamorigLeftHand',off:[0,0.06,0.01]}},
   {id:'willow',name:'Willow',base:'sprite',hair:'long',outfit:{top:0,bot:6,hair:-1}},/* Sprite's body with long hair and a bow */
-  {id:'pip',name:'Pip',build:'pip',dress:true,styles:['Tousled','Bob','Buns','Long'],ownCol:(h,t)=>PIP_OWN[t]},
-  {id:'sprig',name:'Sprig',build:'sprig',dress:true,scale:1.06,styles:['Straw','Mushroom','Wizard','Explorer'],tabs:['skin','hair','top','shoe'],tabNames:{hair:'Hat',top:'Smock',shoe:'Boots'},
+  {id:'pip',name:'Pip',build:'pip',dress:true,hand:{bone:'ArmR',off:[0.057,-0.13,0.016],arm:1},styles:['Tousled','Bob','Buns','Long'],ownCol:(h,t)=>PIP_OWN[t]},
+  {id:'sprig',name:'Sprig',build:'sprig',dress:true,hand:{bone:'ArmR',off:[0.072,-0.1,0.014],arm:1},scale:1.06,styles:['Straw','Mushroom','Wizard','Explorer'],tabs:['skin','hair','top','shoe'],tabNames:{hair:'Hat',top:'Smock',shoe:'Boots'},
     cols:{hair:[0xdcae62,0xd9524a,0x6c62b8,0xe4d2a2,0x7caa5c,0x4f7fb8,0xe98aa0,0x5a4a44]},ownCol:(h,t)=>t==='hair'?SPRIG_HATS[h.style|0].own:SPRIG_DRESS.own[t]},/* a little gardener-explorer under a big hat (61e) *//* a very simple little person, in your colours (61d) */
-  {id:'mochi',name:'Mochi',build:'mochi',colors:[0xfaf8f4,0xf3e3c8,0xf6cfd6,0xd8d0ec,0xc8dcef,0xcfe6d2,0xcac6c2,0xe8c8a8]},
+  {id:'mochi',name:'Mochi',build:'mochi',hand:{bone:'ArmR',off:[0.03,-0.12,0.08],arm:1},colors:[0xfaf8f4,0xf3e3c8,0xf6cfd6,0xd8d0ec,0xc8dcef,0xcfe6d2,0xcac6c2,0xe8c8a8]},
 ];
 // a character's whole entry: one made from another (base) shares its model, clips and texture, adding its own hair and outfit
 const charDef=id=>{const C=CHARS.find(c=>c.id===id)||CHARS[0];return C.base?Object.assign({},CHARS.find(c=>c.id===C.base),C):C;};
@@ -10669,15 +10674,26 @@ const TOOL_ANIM={
   rod:{d:0.4,hit:0.5,k:[[0,0,0,0,0],[0.5,0.5,0,0,0.12],[1,0,0,0,0]]},
   terra:{d:0.5,hit:0.5,k:[[0,0,0,0,0],[0.38,-1.6,0,0.1,-0.2],[0.5,1.2,0,-0.1,0.4],[0.7,1.0,0,-0.1,0.34],[1,0,0,0,0]]},/* a big two-handed thump */
   hand:{d:0.3,hit:0.45,k:[[0,0,0,0,0],[0.45,0,0,0,0.3],[1,0,0,0,0]]}};/* reach out */
-let anim=null,poseLean=0,fishLean=0;
+let anim=null,poseLean=0,fishLean=0;const _hq=new T.Quaternion(),_he=new T.Euler(),_hv=new T.Vector3();
+// the hand a character holds its tools in (CHARS' hand: a bone, and where the palm is from it), once its model is in
+function handOf(b){if(!b||!b.userData.char)return null;if(b.userData.hand)return b.userData.hand;const H=charDef(b.userData.char.c).hand;if(!H)return null;
+  let bone=null;b.traverse(o=>{if(o.isBone&&o.name===H.bone&&!bone)bone=o;});if(!bone)return null;return b.userData.hand={bone,off:new T.Vector3(...H.off),arm:!!H.arm,w:0};}
 function swingTool(onHit){if(anim&&anim.hit)fireHit(anim);anim={A:TOOL_ANIM[S.tool]||TOOL_ANIM.hand,t:0,t0:performance.now(),hit:onHit||null};}
 function fireHit(a){const h=a.hit;a.hit=null;if(h)h();}
 function animKey(K,u){let i=1;while(i<K.length-1&&K[i][0]<u)i++;const a=K[i-1],b=K[i],t=smooth(0,1,(u-a[0])/(b[0]-a[0]||1));return[lerp(a[1],b[1],t),lerp(a[2],b[2],t),lerp(a[3],b[3],t),lerp(a[4],b[4],t)];}
 function updateTool(dt){toolHold.visible=!S.sea&&!fishing&&!rodAfter;const base=HELD_TILT[S.tool]||0;let v=[0,0,0,0];
   if(anim){const a=anim;a.t+=dt;/* frames or the clock, whichever is further on, so a slow frame never stalls a swing */
-    const u=Math.min(1,Math.max(a.t,(performance.now()-a.t0)/1000)/a.A.d);v=animKey(a.A.k,u);
+    const u=a.fz??Math.min(1,Math.max(a.t,(performance.now()-a.t0)/1000)/a.A.d);/* (fz: held at one moment, for the debug pose) */v=animKey(a.A.k,u);
     if(a.hit&&u>=a.A.hit)fireHit(a);if(anim===a&&u>=1)anim=null;}
-  toolHold.rotation.set(base+v[0],0,v[1]);toolHold.position.y=0.22+v[2];poseLean=anim?v[3]:fishLean;
+  toolHold.rotation.set(base+v[0],0,v[1]);poseLean=anim?v[3]:fishLean;
+  // a character holds it in its hand: the grip follows the hand on the tool's side wherever its clips move it, and a
+  // code-built one (Pip, Sprig, Mochi) reaches out with that arm to carry it, raising it for the wind-up and bringing
+  // it down through the blow
+  const hb=handOf(villager.children[0]),holding=hb&&((toolHold.visible&&heldMesh[S.tool])||(fishing&&!S.sea));
+  if(hb){hb.w=lerp(hb.w,holding?1:0,Math.min(1,dt*10));
+    if(hb.arm&&hb.w>0.01){const x=fishing?-0.85:-0.5+(v[0]<0?0.95*v[0]:-0.4*v[0]);_hq.setFromEuler(_he.set(x,0,0.22+0.35*v[1]));hb.bone.quaternion.slerp(_hq,hb.w);}
+    villager.updateMatrixWorld(true);const p=villager.worldToLocal(hb.bone.localToWorld(_hv.copy(hb.off)));toolHold.position.copy(p);rod.position.copy(p);}
+  else{toolHold.position.set(0.3,0.22+v[2],0.08);rod.position.set(0.2,0.22,0.08);}
   if(camShake>0)camShake=Math.max(0,camShake-dt*0.5);}
 
 /* ---- tapping the world ---- */
@@ -10689,6 +10705,9 @@ function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
   if(tool==='terra'&&isl&&isl.home){terraTap(x,z);return;}
   {const fd=findAt(x,z);if(fd&&(fd.k==='dig'||fd.k==='bubbles')){autoTool('shovel');actAt(x,z,()=>{digStab(x,z,0.6);/* two stabs: the hole opens, then whatever's buried comes up */swingTool(()=>{digStab(x,z,1);digSpot(fd);});});return;}if(fd){actAt(x,z,()=>collectFind(fd));return;}const pl=plantAt(x,z);if(pl){actAt(x,z,()=>pickPlant(pl));return;}}
   if(isl&&!isl.home&&nearHeart(isl,x,z)){actAt(x,z,()=>heartTap(isl));return;}
+  // another island: its trees come down to the axe (a tap with anything else just walks there), and placed decor can be
+  // tapped like at home
+  if(isl&&!isl.home){const t=isl.trees&&isl.trees.get(k);if(t){if(tool==='axe')actAt(x,z,()=>chopWild(isl,t));else{if(!S.axeHint){S.axeHint=1;toast('Hold the axe to cut down trees here.');}goTo(x,z);}return;}}
   if(!isl||!isl.home){goTo(x,z);return;}
   // town trees and rocks: shake or chop a tree, break a rock with the shovel
   const res=fixedAt(x,z)==='decor'&&TOWN.res.get(k);
@@ -10717,6 +10736,11 @@ function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
     case'axe':case'net':actAt(x,z,()=>{});return;}
   goTo(x,z);}
 // chop a town tree for wood: a few logs a day per tree, and the tree stays
+// a tree on another island: three blows, then it falls; it stays felled (S.felled), and the island is rebuilt without it
+function chopWild(isl,t){walkTo(t.x,t.z);vil.hop=0.2;t.hp=(t.hp??3)-1;const y=topY(t.x,t.z)+0.45;tone(140,0.07,'triangle',0.06);noise(0.06,0.04,900);chips(t.x,t.z,y);
+  if(t.hp>0)return;const F=S.felled||(S.felled={}),k=K(t.x,t.z);(F[isl.id]||(F[isl.id]=[])).push(k);fellTree({x:t.x,z:t.z,v:Math.floor(hash(t.x,t.z)*3),sc:1,r:hash(t.z,t.x)*6.28});
+  buildIsland(isl);rebuildLandList();cullIslands();
+  const n=3+(Math.random()<0.5?1:0)+(Math.random()<0.5?1:0);gain('m:wood',n);floatText(t.x,1.6,t.z,'+'+n+' '+MATS.wood.name,'gold');save();}
 function chopTree(x,z){const k=K(x,z),sh=S.shook[k]||{d:0,n:0,c:0};if(sh.d!==S.day){sh.d=S.day;sh.n=0;sh.c=0;}sh.c=sh.c||0;S.shook[k]=sh;const y=topY(x,z);
   tone(150,0.06,'triangle',0.07);noise(0.07,0.05,900);burst(x,y+0.5,z,0x9a6a3a,8,1.2,0.06);burst(x,y+1.5,z,0x6ab84a,6,1.0,0.07,3);
   if(sh.c>=3){toast('This tree has given all the wood it can today.');return;}sh.c++;
@@ -10789,7 +10813,7 @@ function goTo(x,z,cb){routeVil(x,z);vil.idle=0;vil.cb=cb||null;}
 // is a circle the player (radius PLAYER_R) slides round; routeVil finds a way round them with a small A* when needed
 const walkable=(x,z)=>{const t=landMap.get(K(x,z));return t==='grass'||t==='sand'||t==='bridge';};
 const SOLID_R={tree:0.32,bush:0.3,rock:0.34,boulder:0.4,stump:0.3},WALK_OVER=new Set(['flowers','cattail','rug','clover']),PLAYER_R=0.2;
-function solidR(x,z){if(S.sea||inside)return 0;const k=K(x,z);if(islMap.get(k)!==0)return 0;
+function solidR(x,z){if(S.sea||inside)return 0;const k=K(x,z);if(islMap.get(k)!==0){const o=islMap.has(k)&&objAt(x,z);return o&&!WALK_OVER.has(o.k)?0.4:0;}/* (away: only the decor you've placed there) */
   const e=debMesh.get(k);if(e&&e.d&&SOLID_R[e.d.k])return SOLID_R[e.d.k];
   if(fixedAt(x,z))return 0.4;const o=objAt(x,z);if(o&&!WALK_OVER.has(o.k))return 0.4;return 0;}
 // is (px,pz) clear of every solid near it? (ignoring any solid the point (ix,iz) is already inside, so you can always walk out)
@@ -10885,7 +10909,7 @@ function afterSim(out,label){rebuildSoil();syncAllCrops();syncLife();for(const i
   if(out.length){const rare=out.filter(c=>c.v!=='normal').length;toast(`${label}: ${out.length} crop${out.length>1?'s':''} ripened${rare?` — ${rare} rare!`:''}`,rare?'rare':'',ICON.sprout);}
   toast(`Day ${S.day}${S.rain?' — rain today':''}. The market wants <b>${CROPS[S.demand].name}</b>.`,'',seedIcon(S.demand));}
 function editTap(x,z){
-  if(!onHome(x,z))return;
+  if(!onLandAny(x,z))return;
   const f=fixedAt(x,z);if(f){toast(f==='house'?'Your home stays put — upgrade it in Shop → Island.':'The shipping bin stays by your home.');return;}
   const o=objAt(x,z)||floorAt(x,z); // the piece on top first, then the floor under it
   if(o){const B=BUILD[o.k];setAction(`<b>${B.name}</b>`,[
@@ -10905,13 +10929,15 @@ let placing=null,ghost=null;
 const ghostMat=new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0.7,depthWrite:false});
 // a floor needs a tile with no floor yet (a worn dirt path is fine: it paves over it); anything else needs no other piece,
 // and happily stands on a floor
-function canPlace(x,z,kind=placing&&placing.kind){const fl=isFloor(kind);return onHome(x,z)&&isLand(x,z)&&(fl||!TOWN.path.has(K(x,z)))&&landMap.get(K(x,z))!=='bridge'&&!debrisAt(x,z)&&!S.tiles[K(x,z)]&&!(fl?floorAt(x,z):objAt(x,z))&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z);}
-function nearestValid(x0,z0,kind){let best=null,bd=1e9;for(const [x,z] of [...islands[0].grass,...islands[0].sand]){if(!canPlace(x,z,kind))continue;const d=(x-x0)**2+(z-z0)**2;if(d<bd){bd=d;best=[x,z];}}return best;}
+// decor goes on any island you're on, home or away (S.objs is kept by tile, wherever it is)
+const onLandAny=(x,z)=>islMap.has(K(x,z));
+function canPlace(x,z,kind=placing&&placing.kind){const fl=isFloor(kind);return onLandAny(x,z)&&isLand(x,z)&&!(curIsl()&&!curIsl().home&&curIsl().blocked&&curIsl().blocked.has(K(x,z)))&&(fl||!TOWN.path.has(K(x,z)))&&landMap.get(K(x,z))!=='bridge'&&!debrisAt(x,z)&&!S.tiles[K(x,z)]&&!(fl?floorAt(x,z):objAt(x,z))&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z);}
+function nearestValid(x0,z0,kind){let best=null,bd=1e9;const isl=curIsl()||islands[0];for(const [x,z] of [...isl.grass,...isl.sand]){if(!canPlace(x,z,kind))continue;const d=(x-x0)**2+(z-z0)**2;if(d<bd){bd=d;best=[x,z];}}return best;}
 function startPlace(kind,fromStore,rot=0){
   closeSheet();clearAction();
-  if(S.sea||!onHome(Math.round(vil.x),Math.round(vil.z))){toast('Decor can only be placed on your home island.');return;}
+  if(S.sea||!onLandAny(Math.round(vil.x),Math.round(vil.z))){toast('Step ashore to place decor.');return;}
   const spot=nearestValid(Math.round(vil.x),Math.round(vil.z),kind);
-  if(!spot){toast('No free space left — expand your island in Shop → Island.');return;}
+  if(!spot){toast(curIsl()&&!curIsl().home?'No free space here.':'No free space left — expand your island in Shop → Island.');return;}
   placing={kind,fromStore,rot,x:spot[0],z:spot[1]};
   ghost=objGroup(kind,S.nextId,rot);ghost.traverse(o=>{if(o.isMesh){if(o.userData.noThumb)o.visible=false;else if(isFloor(kind)){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=0.75;o.position.y+=0.02;}else{o.material=ghostMat;o.castShadow=false;}}});
   scene.add(ghost);moveGhost(spot[0],spot[1]);
@@ -14221,7 +14247,7 @@ if(/[?&]debug\b/.test(location.search)){
       const hx=Math.round(vil.x)+2,hz=Math.round(vil.z)+1;g.position.set(hx,topY(hx,hz)+0.4,hz);bugs.push({id,g,hx,hz,t:0,life:999,ph:0,out:0,isl:isl.id,crawl:false,still:true});return id;},
     bugAt:()=>{const b=bugs[bugs.length-1];const caught=Object.keys(S.alm).filter(k=>k.startsWith('b:')).length;if(!b)return{caught};const s=toScreen(b.g.position.x,b.g.position.y,b.g.position.z);return{x:s[0],y:s[1],n:bugs.length,caught,tool:S.tool};},
     camInfo:()=>({dist:cam.dist,pitch:cam.pitch,fov:camera.fov,pos:camera.position.toArray(),W,H,PX,hy:skyMat.uniforms.hy.value}),
-    critters:()=>{const o={};for(const c of critters){o[c.k]=(o[c.k]||0)+1;if(!isFinite(c.g.position.x+c.g.position.y+c.g.rotation.x+c.g.rotation.y))o.bad=(o.bad||0)+1;}return o;},spawnCritter:k=>spawnCritter(k),vilAt:()=>[vil.x,vil.z],critClear:()=>{for(let i=critters.length-1;i>=0;i--)dropCritter(i);},walkTest:()=>{const t=S.debris.filter(d=>d.k==='tree').sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];if(!t)return null;vil.x=vil.tx=t.x-2;vil.z=vil.tz=t.z;vil.path=null;goTo(t.x+2,t.z);return [t.x,t.z];},vilPos:()=>[vil.x,vil.z,vil.tx,vil.tz,vil.path&&vil.path.length],solidAt:(x,z)=>solidR(x,z),setShells:n=>{S.shells=n;updateHUD();},terraTest:(mode,x,z)=>{const t0=performance.now();const sh=S.shells;terraApply([[x,z]],mode);return{ms:Math.round(performance.now()-t0),lvl:lvlMap.get(K(x,z))||0,type:landMap.get(K(x,z)),paid:sh-S.shells,terra:S.terra&&S.terra[K(x,z)]};},
+    critters:()=>{const o={};for(const c of critters){o[c.k]=(o[c.k]||0)+1;if(!isFinite(c.g.position.x+c.g.position.y+c.g.rotation.x+c.g.rotation.y))o.bad=(o.bad||0)+1;}return o;},spawnCritter:k=>spawnCritter(k),vilAt:()=>[vil.x,vil.z],critClear:()=>{for(let i=critters.length-1;i>=0;i--)dropCritter(i);},swingPose:u=>{anim=u===null?null:{A:TOOL_ANIM[S.tool]||TOOL_ANIM.hand,t:0,t0:performance.now(),hit:null,fz:u};},swingState:()=>({anim:anim?{t:+anim.t.toFixed(2),d:anim.A.d}:null,hand:(()=>{const h=villager.children[0]&&villager.children[0].userData.hand;return h?{w:+h.w.toFixed(2),bone:h.bone.name}:null;})(),tool:S.tool,hold:[toolHold.position.x,toolHold.position.y,toolHold.position.z].map(v=>+v.toFixed(2)),rot:+toolHold.rotation.x.toFixed(2)}),wildTrees:()=>{const isl=curIsl();return isl&&isl.trees?{id:isl.id,home:!!isl.home,trees:[...isl.trees.values()].map(t=>[t.x,t.z])}:null;},felled:()=>S.felled||{},toolTapAt:(x,z)=>toolTap(x,z,islandAt(x,z)),placeAt:(k,x,z)=>{S.shells+=999;startPlace(k,false);if(!placing)return'refused';const p=[placing.x,placing.z];doPlace();clearAction&&clearAction();return{near:p,ok:S.objs.some(o=>o.k===k&&o.x===p[0]&&o.z===p[1])};},islandHere:()=>{const i=curIsl();return i?{id:i.id,home:!!i.home,fr:!!i.fr,name:i.name}:null;},walkTest:()=>{const t=S.debris.filter(d=>d.k==='tree').sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];if(!t)return null;vil.x=vil.tx=t.x-2;vil.z=vil.tz=t.z;vil.path=null;goTo(t.x+2,t.z);return [t.x,t.z];},vilPos:()=>[vil.x,vil.z,vil.tx,vil.tz,vil.path&&vil.path.length],solidAt:(x,z)=>solidR(x,z),setShells:n=>{S.shells=n;updateHUD();},terraTest:(mode,x,z)=>{const t0=performance.now();const sh=S.shells;terraApply([[x,z]],mode);return{ms:Math.round(performance.now()-t0),lvl:lvlMap.get(K(x,z))||0,type:landMap.get(K(x,z)),paid:sh-S.shells,terra:S.terra&&S.terra[K(x,z)]};},
     terraPlan:(mode,x,z)=>terraPlan(x,z,mode),coastGrass:()=>{const isl=islands[0];return isl.grass.filter(([x,z])=>!(lvlMap.get(K(x,z)))&&freeTile(x,z)&&!TOWN.path.has(K(x,z))&&[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>isSeaT(landMap.get(K(x+a,z+b))))).sort((a,b)=>Math.hypot(a[0]-vil.x,a[1]-vil.z)-Math.hypot(b[0]-vil.x,b[1]-vil.z))[0]||null;},
     freeGrass:()=>{const isl=islands[0];return isl.grass.filter(([x,z])=>freeTile(x,z)&&!S.tiles[K(x,z)]).sort((a,b)=>Math.hypot(a[0]-vil.x,a[1]-vil.z)-Math.hypot(b[0]-vil.x,b[1]-vil.z))[1]||null;},
     swimRec:on=>{if(on){swim.rec=[];return 0;}const r=swim.rec;swim.rec=null;return r;},sceneToon:()=>{const out={};for(const o of scene.children){if(!o.visible)continue;let n=0;o.traverseVisible(q=>{if(q.isMesh)n++;});if(!n)continue;const nm=o===debrisRoot?'debris':o===lifeRoot?'life':o===objRoot?'objs':o===cropRoot?'crops':(typeof cropRoot!=='undefined'&&o===cropRoot)?'crops':o===villager?'player':islands.some(i=>i.group===o)?'isl'+islands.findIndex(i=>i.group===o):npcs.some(q=>q.g===o)?'npc':'';const k=nm+(o.name||o.type)+(o.isGroup?'['+o.children.length+']':'')+':'+(o.material?o.material.type:'')+(o.geometry?'/'+(o.geometry.type):'');out[k]=(out[k]||0)+n;}return Object.entries(out).sort((a,b)=>b[1]-a[1]).slice(0,25);},plantThumbs:(size=160)=>POT_PLANTS.map(([k,n])=>[n,snapThumb(objGroup('pot_'+k,3,0),size)]),instList:()=>{const out=[];islands[0].group.traverseVisible(o=>{if(!o.isInstancedMesh)return;const g=o.geometry,n=(g.index?g.index.count:g.attributes.position.count)/3;out.push([o.material.type+(o===islands[0].gIM?'(grass)':FLORA_GEOS.includes(o.geometry)?'(flora'+FLORA_GEOS.indexOf(o.geometry)+')':FLORA_LO.includes(o.geometry)?'(floraLo)':o.geometry===CLOVER_GEO?'(clover)':o.geometry===PEBBLE_GEO?'(pebble)':''),Math.round(n),o.count,Math.round(n*o.count)]);});return out.sort((a,b)=>b[3]-a[3]).slice(0,12);},reefMs:()=>{const t=performance.now(),g=reefGen();let mx=0,n=0;for(;;){const a=performance.now(),r=g.next();mx=Math.max(mx,performance.now()-a);(window.__st=window.__st||[]).push(Math.round(performance.now()-a));n++;if(r.done)break;}const st=window.__st;window.__st=null;return{total:Math.round(performance.now()-t),longestStep:Math.round(mx),steps:n,st:st.join(" ")};},swimSpot:()=>{if(!reef||reefDirty)buildReef();const isl=islands[0];let best=null,bd=1e9;for(const [x,z] of isl.sand){if(Math.abs(x-DOCK.x)<4&&Math.abs(z-DOCK.z)<9)continue;for(const [dx,dz] of [[0,1],[1,0],[-1,0],[0,-1]]){const tx=x+dx*5,tz=z+dz*5;if(!swimmable(tx,tz)||!canDive(tx,tz)||isLand(x+dx,z+dz))continue;const sc=Math.abs(x-DOCK.x)+Math.abs(z-DOCK.z);if(sc<bd){bd=sc;best=[x,z,tx,tz];}}}return best;},
