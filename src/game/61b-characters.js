@@ -16,7 +16,7 @@
 //    tone repaints the atlas's skin texel (skin: [column,row]); CharacterAnimator plays its Idle, Walk and Run clips
 //  - static pieces with flat colours (zUp: modelled lying down): baked into two meshes, the skin (the material named in
 //    skin) and the rest coloured from their materials
-const CHARS=[{id:'sprite',name:'Sprite',skin:'paint',clips:{Walk:'Walking',Run:'Running'},emotes:{spin:'360_Power_Spin_Jump',flip:'Backflip_Sweep_Kick'},speeds:[0.95,2.2]},
+const CHARS=[{id:'sprite',name:'Sprite',skin:'paint',clips:{Walk:'Walking',Run:'Running'},emotes:{spin:'360_Power_Spin_Jump',flip:'Backflip_Sweep_Kick'},speeds:[0.95,4.8]},
   {id:'mochi',name:'Mochi',build:'mochi',colors:[0xfaf8f4,0xf3e3c8,0xf6cfd6,0xd8d0ec,0xc8dcef,0xcfe6d2,0xcac6c2,0xe8c8a8]},
 ];
 const CHAR_H=1.07;/* every character stands the player's height, whatever units its artist used */
@@ -81,14 +81,18 @@ function charModel(h){const g=new T.Group(),id=(CHARS.find(c=>c.id===h.c)||CHARS
 // (speeds: how far the walk and run clips carry it a second, in its own units; the Quaternius ones' by default). Swimming
 // keeps the idle clip; the lean
 // and bob come from swimPose (76c-swim)
-// a model with walk and run but no idle (a Mixamo export): its walk held at the moment the feet are closest together,
-// breathing through the chest and slowly looking about, so it never stands in a T-pose
-function idleFrom(walk,root){const mx=new T.AnimationMixer(root),act=mx.clipAction(walk).play(),L=root.getObjectByProperty('name','mixamorigLeftFoot'),R=root.getObjectByProperty('name','mixamorigRightFoot'),v=new T.Vector3(),w=new T.Vector3();
-  let best=0,bd=1e9;if(L&&R)for(let i=0;i<60;i++){const t=walk.duration*i/60;mx.setTime(t);root.updateMatrixWorld(true);L.getWorldPosition(v);R.getWorldPosition(w);const d=Math.abs(v.z-w.z)+2*Math.abs(v.y-w.y);if(d<bd){bd=d;best=t;}}
-  act.stop();mx.uncacheRoot(root);const D=4,N=48,TAU=Math.PI*2,q=new T.Quaternion(),r=new T.Quaternion(),e=new T.Euler();
-  const sway={Spine2:a=>[Math.sin(a)*0.025,0,0],Neck:a=>[Math.sin(a+0.6)*0.015,Math.sin(a*0.5)*0.05,0],Head:a=>[Math.sin(2*a)*0.02,Math.sin(a*0.5+0.4)*0.09,Math.sin(a*0.5)*0.03],LeftArm:a=>[0,0,Math.sin(a)*0.03],RightArm:a=>[0,0,-Math.sin(a)*0.03]};
-  const tracks=walk.tracks.map(tr=>{const v0=Array.from(tr.createInterpolant().evaluate(best)),bone=tr.name.replace(/^mixamorig/,'').split('.')[0],f=tr.name.endsWith('.quaternion')&&sway[bone];
-    if(!f)return new tr.constructor(tr.name,[0,D],[...v0,...v0]);const ts=[],vs=[];
+// a model with walk and run but no idle (a Mixamo export): stood upright in its rest pose (straight legs, level hips and
+// back) with its arms where they hang on average through the walk, then breathing and slowly looking about, so it
+// neither stands in a T-pose nor looks caught mid-stride
+function idleFrom(walk,root){const rest={};root.traverse(o=>{if(o.isBone)rest[o.name]={quaternion:o.quaternion.toArray(),position:o.position.toArray()};});
+  const arm=/Shoulder|Arm|Hand/,D=4,N=48,TAU=Math.PI*2,q=new T.Quaternion(),r=new T.Quaternion(),e=new T.Euler();
+  const sway={Spine1:a=>[Math.sin(a)*0.02,0,0],Spine2:a=>[Math.sin(a)*0.025,0,0],Neck:a=>[Math.sin(a+0.6)*0.015,Math.sin(a*0.5)*0.05,0],Head:a=>[Math.sin(2*a)*0.02,Math.sin(a*0.5+0.4)*0.09,Math.sin(a*0.5)*0.03],LeftArm:a=>[0,0,Math.sin(a)*0.03],RightArm:a=>[0,0,-Math.sin(a)*0.03]};
+  const tracks=walk.tracks.map(tr=>{const [node,prop]=tr.name.split('.'),bone=node.replace(/^mixamorig/,''),R=rest[node];let v0;
+    if(arm.test(bone)&&prop==='quaternion'){const it=tr.createInterpolant(),s=[0,0,0,0];let f;/* the swing's average: the arm hanging */
+      for(let i=0;i<60;i++){const v=it.evaluate(walk.duration*i/60);f=f||Array.from(v);const sg=v[0]*f[0]+v[1]*f[1]+v[2]*f[2]+v[3]*f[3]<0?-1:1;for(let k=0;k<4;k++)s[k]+=v[k]*sg;}
+      v0=q.fromArray(s).normalize().toArray();}
+    else v0=R&&R[prop]?R[prop]:Array.from(tr.createInterpolant().evaluate(0));
+    const f=prop==='quaternion'&&sway[bone];if(!f)return new tr.constructor(tr.name,[0,D],[...v0,...v0]);const ts=[],vs=[];
     for(let i=0;i<=N;i++){const a=i/N*TAU;ts.push(i/N*D);q.fromArray(v0).multiply(r.setFromEuler(e.set(...f(a))));vs.push(q.x,q.y,q.z,q.w);}return new T.QuaternionKeyframeTrack(tr.name,ts,vs);});
   return new T.AnimationClip('Idle',D,tracks);}
 class CharacterAnimator{
