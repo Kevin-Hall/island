@@ -1,41 +1,45 @@
 /* =========================================================
    Pip: a very simple little person, sculpted and rigged in code
    ========================================================= */
-// A peg doll: a big round head with a cap of hair, a bean of a body, stubby arms with round hands, and short legs on
-// rounded shoes, all melted into one smooth shape like Mochi (sdfRig, 61c). Each part is skin, hair, top, bottoms or
+// A kawaii chibi: a head half its height, a fluffy cap of hair with a side-swept fringe and a sprout on top, a small
+// slim body, thin arms with round hands, and tiny legs on rounded shoes, all melted into one smooth shape like Mochi (sdfRig, 61c). Each part is skin, hair, top, bottoms or
 // shoes, and the editor colours each of them (pipLook paints the body's vertices, so every look shares one mesh). The
-// face is just two dot eyes with a glint (they blink), blush and a small smile. Clips: an idle that breathes, sways
+// face sits low: big glossy eyes with two glints (they blink), blush and a tiny smile. Clips: an idle that breathes, sways
 // and looks about; a bouncy walk with swinging arms; a leaning run; and two emotes, a twirl and a cheer.
-const PIP_BONES=[['Hips',null,0,0.22,0],['Spine','Hips',0,0.32,0],['Head','Spine',0,0.5,0],
-  ['ArmL','Spine',-0.13,0.44,0],['ArmR','Spine',0.13,0.44,0],['LegL','Hips',-0.068,0.2,0],['LegR','Hips',0.068,0.2,0],['EyeL','Head',0,0,0],['EyeR','Head',0,0,0]];
-const PIP_PARTS=['skin','hair','top','bot','shoe'],PIP_OWN={skin:0xf6d2b4,hair:0x5a3a26,top:0xf08c7a,bot:0x4a6fa5,shoe:0xf6f1ea};
+const PIP_BONES=[['Hips',null,0,0.2,0],['Spine','Hips',0,0.28,0],['Head','Spine',0,0.43,0],
+  ['ArmL','Spine',-0.088,0.37,0],['ArmR','Spine',0.088,0.37,0],['LegL','Hips',-0.052,0.19,0],['LegR','Hips',0.052,0.19,0],['EyeL','Head',0,0,0],['EyeR','Head',0,0,0]];
+const PIP_PARTS=['skin','hair','top','bot','shoe','leaf'],PIP_OWN={skin:0xf8d8c0,hair:0x6a4430,top:0xf4a0a8,bot:0x5f86c4,shoe:0xfff8f0,leaf:0x7cc46a};
 function pipParts(){const V=(x,y,z)=>new T.Vector3(x,y,z),ss=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
   const ell=(c,r)=>(x,y,z)=>{const px=(x-c.x)/r.x,py=(y-c.y)/r.y,pz=(z-c.z)/r.z,k0=Math.hypot(px,py,pz),k1=Math.hypot(px/r.x,py/r.y,pz/r.z);return k1?k0*(k0-1)/k1:-Math.min(r.x,r.y,r.z);};
   const cap=(a,b,r0,r1,flat=1)=>(x,y,z)=>{const zz=a.z+(z-a.z)/flat,bx=b.x-a.x,by=b.y-a.y,bz=b.z-a.z,px=x-a.x,py=y-a.y,pz=zz-a.z,t=clamp((px*bx+py*by+pz*bz)/(bx*bx+by*by+bz*bz),0,1);
     return(Math.hypot(px-bx*t,py-by*t,pz-bz*t)-(r0+(r1-r0)*t))*Math.min(1,flat);};
   // hair: a cap a little bigger than the head, down to a hairline that sits high on the brow, scalloped into a soft
   // fringe, and falls lower over the ears and the back
-  const hd=ell(V(0,0.714,-0.014),V(0.27,0.258,0.264)),hair=(x,y,z)=>{const line=0.79-0.012*Math.abs(Math.sin(x*14))-0.2*ss(0.08,-0.16,z)-0.07*ss(0.13,0.24,Math.abs(x));return Math.max(hd(x,y,z),line-y);};
-  const P=[{d:ell(V(0,0.7,0),V(0.24,0.226,0.232)),bone:'Head',k:0,col:'skin'},{d:hair,bone:'Head',k:0.022,col:'hair'},
-    {d:ell(V(0,0.27,0),V(0.148,0.11,0.13)),bone:'Hips',k:0.045,col:'top'},{d:cap(V(0,0.3,0),V(0,0.44,0),0.135,0.105,0.88),bone:'Spine',k:0.06,col:'top'}];
+  // hair: a fluffy cap a little bigger than the head, with a fringe swept to one side in soft scallops, falling over
+  // the ears and lower at the back; and a tiny sprout of two leaves on top
+  const hd=ell(V(0,0.69,-0.016),V(0.29,0.272,0.284)),hair=(x,y,z)=>{const line=0.74+0.05*clamp(x/0.24,-1,1)-0.014*Math.abs(Math.sin(x*20+0.6))-0.2*ss(0.08,-0.17,z)-0.13*ss(0.12,0.25,Math.abs(x));const a=hd(x,y,z),b=line-y,h=Math.max(0.018-Math.abs(a-b),0)/0.018;return Math.max(a,b)+h*h*0.0045;};/* (a softly rounded edge: a hard one shades in specks) */
+  const P=[{d:ell(V(0,0.675,0),V(0.258,0.238,0.248)),bone:'Head',k:0,col:'skin'},{d:hair,bone:'Head',k:0.02,col:'hair'},
+    {d:cap(V(0,0.95,-0.01),V(0.008,1.0,-0.01),0.011,0.008),bone:'Head',k:0.012,col:'leaf'},{d:cap(V(0.004,0.995,-0.01),V(-0.062,1.035,-0.01),0.019,0.006,0.5),bone:'Head',k:0.012,col:'leaf'},{d:cap(V(0.006,0.995,-0.01),V(0.07,1.045,-0.01),0.021,0.006,0.5),bone:'Head',k:0.012,col:'leaf'},
+    {d:ell(V(0,0.235,0),V(0.112,0.085,0.098)),bone:'Hips',k:0.04,col:'top'},{d:cap(V(0,0.26,0),V(0,0.4,0),0.1,0.07,0.9),bone:'Spine',k:0.05,col:'top'}];
   for(const s of [-1,1]){const S=s<0?'L':'R';
-    P.push({d:ell(V(s*0.236,0.68,0),V(0.028,0.042,0.03)),bone:'Head',k:0.02,col:'skin'},
-      {d:cap(V(s*0.125,0.44,0),V(s*0.185,0.31,0.01),0.042,0.037),bone:'Arm'+S,k:0.03,col:'top'},{d:ell(V(s*0.195,0.275,0.016),V(0.047,0.05,0.045)),bone:'Arm'+S,k:0.02,col:'skin'},
-      {d:cap(V(s*0.068,0.21,0),V(s*0.068,0.07,0),0.054,0.05),bone:'Leg'+S,k:0.035,col:'bot'},{d:ell(V(s*0.07,0.042,0.028),V(0.06,0.045,0.088)),bone:'Leg'+S,k:0.025,col:'shoe'});}
+    P.push({d:cap(V(s*0.085,0.375,0),V(s*0.135,0.27,0.01),0.03,0.026),bone:'Arm'+S,k:0.025,col:'top'},{d:ell(V(s*0.145,0.24,0.014),V(0.036,0.038,0.034)),bone:'Arm'+S,k:0.015,col:'skin'},
+      {d:cap(V(s*0.052,0.2,0),V(s*0.052,0.065,0),0.04,0.036),bone:'Leg'+S,k:0.03,col:'bot'},{d:ell(V(s*0.054,0.036,0.022),V(0.048,0.038,0.07)),bone:'Leg'+S,k:0.02,col:'shoe'});}
   return P;}
 let _pip=null;
 function pipRig(){if(!_pip){const parts=pipParts();
-  const scene=sdfRig({bones:PIP_BONES,parts,lo:[-0.3,-0.02,-0.29],hi:[0.3,1.0,0.29],h:0.013,c:new T.Vector3(0,0.7,0),name:'Pip',
+  const scene=sdfRig({bones:PIP_BONES,parts,lo:[-0.32,-0.02,-0.32],hi:[0.32,1.08,0.3],h:0.012,c:new T.Vector3(0,0.675,0),name:'Pip',
     body:g=>{/* each vertex's share of each colour: its nearest parts, blended over a few millimetres, so the edges between colours are clean and smooth */
       const P=g.attributes.position,n=P.count,L=PIP_PARTS.length,w=new Float32Array(n*L),ds=new Array(parts.length),lab=parts.map(p=>PIP_PARTS.indexOf(p.col));
       for(let i=0;i<n;i++){const x=P.getX(i),y=P.getY(i),z=P.getZ(i);let mn=1e9;for(let p=0;p<parts.length;p++){ds[p]=parts[p].d(x,y,z);mn=Math.min(mn,ds[p]);}
         let t=0;for(let p=0;p<parts.length;p++){const v=Math.exp(-(ds[p]-mn)/0.005);w[i*L+lab[p]]+=v;t+=v;}for(let k=0;k<L;k++)w[i*L+k]/=t;}
       g.setAttribute('part',new T.BufferAttribute(w,L));g.setAttribute('color',new T.BufferAttribute(new Float32Array(n*3),3));return toon({vertexColors:true,skinning:true});},
     face:(hit,put,S)=>{const eyes={};
-      for(const s of [-1,1]){const e=hit(s*0.36,-0.06,1);eyes[s]=e.p;put(S,0x231a1c,e.p.clone().addScaledVector(e.n,0.003),e.n,0.026,0.038,0.016,0,s<0?'EyeL':'EyeR');
-        put(S,0xffffff,e.p.clone().addScaledVector(e.n,0.016).add(new T.Vector3(s*-0.007,0.013,0)),e.n,0.009,0.01,0.005,0,s<0?'EyeL':'EyeR');
-        const b=hit(s*0.6,-0.32,0.74);put(S,0xf4a6a8,b.p.clone().addScaledVector(b.n,-0.004),b.n,0.044,0.026,0.014);}
-      const m=hit(0,-0.36,1);put(new T.TorusGeometry(0.022,0.0045,6,16,Math.PI),0x5a2a2a,m.p.clone().addScaledVector(m.n,0.002).add(new T.Vector3(0,0.012,0)),m.n,1,1,1,Math.PI);
+      // big glossy eyes set low and wide, each with two glints; blush just under and outside them; a tiny smile
+      for(const s of [-1,1]){const E=s<0?'EyeL':'EyeR',e=hit(s*0.4,-0.2,1);eyes[s]=e.p;put(S,0x2a1e24,e.p.clone().addScaledVector(e.n,0.003),e.n,0.034,0.047,0.018,0,E);
+        put(S,0xffffff,e.p.clone().addScaledVector(e.n,0.019).add(new T.Vector3(s*-0.01,0.017,0)),e.n,0.012,0.013,0.006,0,E);
+        put(S,0xffffff,e.p.clone().addScaledVector(e.n,0.019).add(new T.Vector3(s*0.009,-0.016,0)),e.n,0.006,0.006,0.004,0,E);
+        const b=hit(s*0.62,-0.4,0.68);put(S,0xf6a3ac,b.p.clone().addScaledVector(b.n,-0.004),b.n,0.046,0.026,0.014);}
+      const m=hit(0,-0.4,1);put(new T.TorusGeometry(0.014,0.0042,6,16,Math.PI),0x6a3236,m.p.clone().addScaledVector(m.n,0.002).add(new T.Vector3(0,0.008,0)),m.n,1,1,1,Math.PI);
       return eyes;}});
   scene.getObjectByName('PipBody').userData.dress=true;_pip={scene,clips:pipClips()};}
   const [idle,walk,run,spin,flip]=_pip.clips;return{scene:T.SkeletonUtils.clone(_pip.scene),clips:[idle,walk,run],emotes:{spin,flip},speeds:[0.55,3.2]};}
