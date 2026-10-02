@@ -9880,7 +9880,7 @@ function setLook(ch){Object.assign(S.look,ch);if(ch.sp&&!ch.fur)S.look.fur=LOOKS
 //    skin) and the rest coloured from their materials
 const CHARS=[{id:'sprite',name:'Sprite',skin:'paint',clips:{Walk:'Walking',Run:'Running'},emotes:{spin:'360_Power_Spin_Jump',flip:'Backflip_Sweep_Kick'},speeds:[0.95,4.8]},
   {id:'willow',name:'Willow',base:'sprite',hair:'long',outfit:{top:0,bot:6,hair:-1}},/* Sprite's body with long hair and a bow */
-  {id:'pip',name:'Pip',build:'pip',dress:true},/* a very simple little person, in your colours (61d) */
+  {id:'pip',name:'Pip',build:'pip',dress:true,styles:['Tousled','Bob','Buns','Long']},/* a very simple little person, in your colours (61d) */
   {id:'mochi',name:'Mochi',build:'mochi',colors:[0xfaf8f4,0xf3e3c8,0xf6cfd6,0xd8d0ec,0xc8dcef,0xcfe6d2,0xcac6c2,0xe8c8a8]},
 ];
 // a character's whole entry: one made from another (base) shares its model, clips and texture, adding its own hair and outfit
@@ -9892,7 +9892,7 @@ const OUTFIT={hair:{name:'Hair',own:0x6b3a1f,cols:[0x2a1c14,0x161417,0xb5652a,0x
   bot:{name:'Bottoms',own:0x7a4a2c,cols:[0x3c5d8f,0x2e3440,0xcaa87e,0x6f8f5c,0xeaa2b6,0xefe9df,0x8fa9cf,0x7a62a8]},
   shoe:{name:'Shoes',own:0xf2f0ec,cols:[0xe25a4a,0xf2c14e,0x5b8fd6,0xf0a6c0,0x3a3a3a,0x6fbf8a]}};
 const dressable=C=>C.skin==='paint'||!!C.dress;
-const charLook=(C,o={})=>Object.assign({c:C.id,skin:-1},dressable(C)?{hair:-1,top:-1,bot:-1,shoe:-1}:{},C.outfit,o);
+const charLook=(C,o={})=>Object.assign({c:C.id,skin:-1},dressable(C)?{hair:-1,top:-1,bot:-1,shoe:-1}:{},C.styles?{style:0}:{},C.outfit,o);
 const CHAR_H=1.07;/* every character stands the player's height, whatever units its artist used */
 const HSKIN=[0xfde3cf,0xf6d2b4,0xeec09a,0xd9a27a,0xc08660,0xa06a48,0x7a4e34,0x5a3826];
 const charSrc={};/* id → {ok, scene, clips, atlas, scale, wait} */
@@ -9979,16 +9979,17 @@ function hairGeos(){if(_hairG)return _hairG;const V=(x,y,z)=>new T.Vector3(x,y,z
     d=smax(d,z-0.03+Math.max(0,y-1.5)*0.6,0.05);/* (open in front, for the face) */const lo=clamp((1.42-y)/0.25,0,1);return d+0.007*lo*Math.sin(Math.atan2(x,-z)*26);},
     bow=(x,y,z)=>{p.set(x,y,z);return smin(Math.min(ell(p,V(-0.075,1.47,-0.33),V(0.075,0.055,0.035)),ell(p,V(0.075,1.47,-0.33),V(0.075,0.055,0.035))),ell(p,V(0,1.47,-0.345),V(0.032,0.034,0.03)),0.02);};
   return _hairG={hair:mochiSurface(hair,[-0.45,0.78,-0.44],[0.45,1.76,0.12],0.014),bow:mochiSurface(bow,[-0.17,1.39,-0.4],[0.17,1.55,-0.27],0.008)};}
-function addHair(m,look,s){let b=null;m.traverse(o=>{if(o.isSkinnedMesh&&!b)b=o;});if(!b)return;const hi=b.skeleton.bones.findIndex(o=>o.name==='mixamorigHead');if(hi<0)return;
-  const G=hairGeos(),hc=look.hair>=0?OUTFIT.hair.cols[look.hair]:(paintSorts(s),s.hairTone);
-  for(const [g,col] of [[G.hair,hc],[G.bow,0xf27b93]]){if(!g.attributes.skinIndex){const n=g.attributes.position.count,si=new Uint16Array(n*4),sw=new Float32Array(n*4);for(let i=0;i<n;i++){si[i*4]=hi;sw[i*4]=1;}g.setAttribute('skinIndex',new T.BufferAttribute(si,4));g.setAttribute('skinWeight',new T.BufferAttribute(sw,4));}
-    const k='hair|'+col;const me=new T.SkinnedMesh(g,charMats[k]||(charMats[k]=toon({color:col,skinning:true})));me.bind(b.skeleton,b.bindMatrix);me.castShadow=true;me.frustumCulled=false;b.parent.add(me);}}
+function addHair(m,look,s){const hc=look.hair>=0?OUTFIT.hair.cols[look.hair]:(paintSorts(s),s.hairTone),G=hairGeos();headMesh(m,G.hair,hc);headMesh(m,G.bow,0xf27b93);}
+// a mesh (in the model's rest pose) worn on a character's head: skinned wholly to the head bone, so it turns and nods
+function headMesh(m,g,col){let b=null;m.traverse(o=>{if(o.isSkinnedMesh&&!b)b=o;});if(!b)return;const hi=b.skeleton.bones.findIndex(o=>o.name==='mixamorigHead'||o.name==='Head');if(hi<0)return;
+  if(!g.attributes.skinIndex){const n=g.attributes.position.count,si=new Uint16Array(n*4),sw=new Float32Array(n*4);for(let i=0;i<n;i++){si[i*4]=hi;sw[i*4]=1;}g.setAttribute('skinIndex',new T.BufferAttribute(si,4));g.setAttribute('skinWeight',new T.BufferAttribute(sw,4));}
+  const k='hair|'+col,me=new T.SkinnedMesh(g,charMats[k]||(charMats[k]=toon({color:col,skinning:true})));me.bind(b.skeleton,b.bindMatrix);me.castShadow=true;me.receiveShadow=true;me.frustumCulled=false;b.parent.add(me);}
 // a character, ready to place: a group holding a clone of the loaded model (empty until it has loaded); a rigged one is
 // already in its idle pose (never a T-pose), with its CharacterAnimator in userData.anim
 function charModel(h){const g=new T.Group(),C=charDef(h.c),id=C.id,look=charLook(C,h);g.userData.char=look;
   charLoad(id,s=>{const m=T.SkeletonUtils.clone(s.scene);m.scale.setScalar(s.scale);
     m.traverse(o=>{if(o.isMesh){if(o.userData.dress)o.geometry=pipLook(o.geometry,look);else if(s.atlas||o.userData.skin)o.material=charMat(id,look);o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;}});
-    if(C.hair)addHair(m,look,s);g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds,s.emotes);});
+    if(C.hair)addHair(m,look,s);if(C.styles)headMesh(m,pipHair(look.style|0),look.hair>=0?OUTFIT.hair.cols[look.hair]:PIP_OWN.hair);g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds,s.emotes);});
   return g;}
 // idle when standing; when moving, walk blending into run with speed, each played at the rate that keeps its feet planted
 // (speeds: how far the walk and run clips carry it a second, in its own units; the Quaternius ones' by default). Swimming
@@ -10041,10 +10042,10 @@ function closeCharEd(){if(!charEd)return;charEd=null;edCam.clearViewOffset();if(
 function setH(ch){Object.assign(curHuman(),ch);applyLook();if(charEd){edRebuild();charEd.hop=0.3;}renderCharEd();SFX.pop();}
 const rnd=n=>Math.floor(Math.random()*(n+1))-1;/* (-1: as drawn) */
 function shuffleH(){const C=charDef(CHARS[Math.floor(Math.random()*CHARS.length)].id),o={skin:rnd((C.colors||HSKIN).length)};
-  if(dressable(C))for(const k in OUTFIT)o[k]=rnd(OUTFIT[k].cols.length);setH(charLook(C,o));}
+  if(dressable(C))for(const k in OUTFIT)o[k]=rnd(OUTFIT[k].cols.length);if(C.styles)o.style=Math.floor(Math.random()*C.styles.length);setH(charLook(C,o));}
 // a character's portrait (blank until its model has loaded; the editor and the look sheet redraw when it arrives)
 const hThumbs={};
-function hThumb(ch){const h=charLook(charDef((ch&&ch.c)||curHuman().c),Object.assign({},ch&&ch.c?{}:curHuman(),ch)),k=[h.c,h.skin,h.hair,h.top,h.bot,h.shoe].join('|');if(hThumbs[k])return hThumbs[k];
+function hThumb(ch){const h=charLook(charDef((ch&&ch.c)||curHuman().c),Object.assign({},ch&&ch.c?{}:curHuman(),ch)),k=[h.c,h.skin,h.hair,h.top,h.bot,h.shoe,h.style].join('|');if(hThumbs[k])return hThumbs[k];
   if(!(charSrc[h.c]&&charSrc[h.c].ok)){charLoad(h.c,()=>{if(charEd)renderCharEd();else if(sheet)renderSheet();});return'data:image/gif;base64,R0lGODlhAQABAAAAACw=';}
   return hThumbs[k]=snapThumb(charModel(h),96);}
 function renderCharEd(){if(!charEd)return;const h=curHuman();
@@ -10054,11 +10055,11 @@ function renderCharEd(){if(!charEd)return;const h=curHuman();
     :`<div class="hsw"><button class="sw own ${cur<0?'on':''}" data-hv="-1" title="As drawn" style="--sw:${hexCss(C.dress?PIP_OWN[tab]:tab==='skin'?0xd8c0a8:OUTFIT[tab].own)}"></button>${(tab==='skin'?HSKIN:OUTFIT[tab].cols).map((c,i)=>`<button class="sw ${cur===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`;
   const head=parts.length?`<div class="htabs">${parts.map(k=>`<button class="htab ${k===tab?'on':''}" data-ht="${k}">${k==='skin'?'Skin':OUTFIT[k].name}</button>`).join('')}</div>`:`<h4>${C.colors?'Colour':'Skin'}</h4>`;
   $('charEd').innerHTML=`<div class="htop"><b>Your character</b><button class="hbtn" data-ha="shuffle">🎲 Shuffle</button>${S.look.prev&&S.look.prev!=='human'?`<button class="hbtn" data-ha="animal">Be an animal</button>`:''}<button class="pbtn go" data-ha="done">Done</button></div>
-    <div class="hbody">${tiles}${head}${sw}</div>`;
+    <div class="hbody">${tiles}${head}${tab==='hair'&&C.styles?`<div class="htabs hstyle">${C.styles.map((n,i)=>`<button class="${(h.style|0)===i?'on':''}" data-hs="${i}">${n}</button>`).join('')}</div>`:''}${sw}</div>`;
   requestAnimationFrame(()=>{if(charEd){const W=window.innerWidth,H=window.innerHeight,px=$('charEd').offsetHeight;charEd.px=px;edCam.setViewOffset(W,H,0,px*0.5,W,H);}});}
 $('charEd').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!charEd)return;const d=b.dataset;
   if(d.ha==='done'){closeCharEd();return;}if(d.ha==='shuffle'){shuffleH();return;}if(d.ha==='animal'){S.look.sp=S.look.prev||'bunny';applyLook();closeCharEd();return;}
-  if(d.ht){charEd.tab=d.ht;renderCharEd();SFX.ui();return;}
+  if(d.ht){charEd.tab=d.ht;renderCharEd();SFX.ui();return;}if(d.hs!==undefined){setH({style:+d.hs});return;}
   if(d.hc){if(d.hc!==curHuman().c){const h=curHuman();for(const k in h)if(k!=='c'&&k!=='skin')delete h[k];setH(charLook(charDef(d.hc),{skin:h.skin}));const an=edModel&&edModel.userData.anim;if(an)an.emote('spin');}return;}if(d.hv!==undefined){const t=charEd.tab&&dressable(charDef(curHuman().c))?charEd.tab:'skin';setH({[t]:+d.hv});return;}});
 // the studio camera: framed on you in the space above the tray; you idle, turn slowly, and hop when something changes
 function updateCharEd(dt,tt){if(!charEd||!edModel)return;charEd.t+=dt;const W=window.innerWidth,H=window.innerHeight,asp=W/H,f=1-(charEd.px||H*0.45)/H,tv=Math.tan(15*Math.PI/180);
@@ -10188,10 +10189,10 @@ function mochiClips(){const {rest,R,V3,bump}=rigKit(MOCHI_BONES);
 /* =========================================================
    Pip: a very simple little person, sculpted and rigged in code
    ========================================================= */
-// A kawaii chibi: a head half its height, a fluffy cap of hair with a side-swept fringe and a sprout on top, a small
-// slim body, thin arms with round hands, and tiny legs on rounded shoes, all melted into one smooth shape like Mochi (sdfRig, 61c). Each part is skin, hair, top, bottoms or
+// A kawaii chibi: a head half its height, hair in a style of your choosing (pipHair) and a sprout on top, a small
+// slim body, thin arms with round hands, and tiny legs on rounded shoes, all melted into one smooth shape like Mochi (sdfRig, 61c). Each part is skin, top, bottoms or
 // shoes, and the editor colours each of them (pipLook paints the body's vertices, so every look shares one mesh). The
-// face sits low: big glossy eyes with two glints (they blink), blush and a tiny smile. Clips: an idle that breathes, sways
+// face sits low: big eyes with whites, a brown iris and two glints under a lash line (they blink), blush and a tiny smile. Clips: an idle that breathes, sways
 // and looks about; a bouncy walk with swinging arms; a leaning run; and two emotes, a twirl and a cheer.
 const PIP_BONES=[['Hips',null,0,0.2,0],['Spine','Hips',0,0.28,0],['Head','Spine',0,0.43,0],
   ['ArmL','Spine',-0.088,0.37,0],['ArmR','Spine',0.088,0.37,0],['LegL','Hips',-0.052,0.19,0],['LegR','Hips',0.052,0.19,0],['EyeL','Head',0,0,0],['EyeR','Head',0,0,0]];
@@ -10200,13 +10201,9 @@ function pipParts(){const V=(x,y,z)=>new T.Vector3(x,y,z),ss=(a,b,x)=>{const t=c
   const ell=(c,r)=>(x,y,z)=>{const px=(x-c.x)/r.x,py=(y-c.y)/r.y,pz=(z-c.z)/r.z,k0=Math.hypot(px,py,pz),k1=Math.hypot(px/r.x,py/r.y,pz/r.z);return k1?k0*(k0-1)/k1:-Math.min(r.x,r.y,r.z);};
   const cap=(a,b,r0,r1,flat=1)=>(x,y,z)=>{const zz=a.z+(z-a.z)/flat,bx=b.x-a.x,by=b.y-a.y,bz=b.z-a.z,px=x-a.x,py=y-a.y,pz=zz-a.z,t=clamp((px*bx+py*by+pz*bz)/(bx*bx+by*by+bz*bz),0,1);
     return(Math.hypot(px-bx*t,py-by*t,pz-bz*t)-(r0+(r1-r0)*t))*Math.min(1,flat);};
-  // hair: a cap a little bigger than the head, down to a hairline that sits high on the brow, scalloped into a soft
-  // fringe, and falls lower over the ears and the back
-  // hair: a fluffy cap a little bigger than the head, with a fringe swept to one side in soft scallops, falling over
-  // the ears and lower at the back; and a tiny sprout of two leaves on top
-  const hd=ell(V(0,0.69,-0.016),V(0.29,0.272,0.284)),hair=(x,y,z)=>{const line=0.74+0.05*clamp(x/0.24,-1,1)-0.014*Math.abs(Math.sin(x*20+0.6))-0.2*ss(0.08,-0.17,z)-0.13*ss(0.12,0.25,Math.abs(x));const a=hd(x,y,z),b=line-y,h=Math.max(0.018-Math.abs(a-b),0)/0.018;return Math.max(a,b)+h*h*0.0045;};/* (a softly rounded edge: a hard one shades in specks) */
-  const P=[{d:ell(V(0,0.675,0),V(0.258,0.238,0.248)),bone:'Head',k:0,col:'skin'},{d:hair,bone:'Head',k:0.02,col:'hair'},
-    {d:cap(V(0,0.95,-0.01),V(0.008,1.0,-0.01),0.011,0.008),bone:'Head',k:0.012,col:'leaf'},{d:cap(V(0.004,0.995,-0.01),V(-0.062,1.035,-0.01),0.019,0.006,0.5),bone:'Head',k:0.012,col:'leaf'},{d:cap(V(0.006,0.995,-0.01),V(0.07,1.045,-0.01),0.021,0.006,0.5),bone:'Head',k:0.012,col:'leaf'},
+  // (the hair is its own mesh, in the style picked: pipHair) and a tiny sprout of two leaves on top
+  const P=[{d:ell(V(0,0.675,0),V(0.258,0.238,0.248)),bone:'Head',k:0,col:'skin'},
+    {d:cap(V(0,0.93,-0.03),V(0.008,1.02,-0.02),0.011,0.008),bone:'Head',k:0.012,col:'leaf'},{d:cap(V(0.004,1.015,-0.02),V(-0.062,1.055,-0.02),0.019,0.006,0.5),bone:'Head',k:0.012,col:'leaf'},{d:cap(V(0.006,1.015,-0.02),V(0.07,1.065,-0.02),0.021,0.006,0.5),bone:'Head',k:0.012,col:'leaf'},
     {d:ell(V(0,0.235,0),V(0.112,0.085,0.098)),bone:'Hips',k:0.04,col:'top'},{d:cap(V(0,0.26,0),V(0,0.4,0),0.1,0.07,0.9),bone:'Spine',k:0.05,col:'top'}];
   for(const s of [-1,1]){const S=s<0?'L':'R';
     P.push({d:cap(V(s*0.085,0.375,0),V(s*0.135,0.27,0.01),0.03,0.026),bone:'Arm'+S,k:0.025,col:'top'},{d:ell(V(s*0.145,0.24,0.014),V(0.036,0.038,0.034)),bone:'Arm'+S,k:0.015,col:'skin'},
@@ -10214,17 +10211,20 @@ function pipParts(){const V=(x,y,z)=>new T.Vector3(x,y,z),ss=(a,b,x)=>{const t=c
   return P;}
 let _pip=null;
 function pipRig(){if(!_pip){const parts=pipParts();
-  const scene=sdfRig({bones:PIP_BONES,parts,lo:[-0.32,-0.02,-0.32],hi:[0.32,1.08,0.3],h:0.012,c:new T.Vector3(0,0.675,0),name:'Pip',
+  const scene=sdfRig({bones:PIP_BONES,parts,lo:[-0.32,-0.02,-0.32],hi:[0.32,1.1,0.3],h:0.012,c:new T.Vector3(0,0.675,0),name:'Pip',
     body:g=>{/* each vertex's share of each colour: its nearest parts, blended over a few millimetres, so the edges between colours are clean and smooth */
       const P=g.attributes.position,n=P.count,L=PIP_PARTS.length,w=new Float32Array(n*L),ds=new Array(parts.length),lab=parts.map(p=>PIP_PARTS.indexOf(p.col));
       for(let i=0;i<n;i++){const x=P.getX(i),y=P.getY(i),z=P.getZ(i);let mn=1e9;for(let p=0;p<parts.length;p++){ds[p]=parts[p].d(x,y,z);mn=Math.min(mn,ds[p]);}
         let t=0;for(let p=0;p<parts.length;p++){const v=Math.exp(-(ds[p]-mn)/0.005);w[i*L+lab[p]]+=v;t+=v;}for(let k=0;k<L;k++)w[i*L+k]/=t;}
       g.setAttribute('part',new T.BufferAttribute(w,L));g.setAttribute('color',new T.BufferAttribute(new Float32Array(n*3),3));return toon({vertexColors:true,skinning:true});},
     face:(hit,put,S)=>{const eyes={};
-      // big glossy eyes set low and wide, each with two glints; blush just under and outside them; a tiny smile
-      for(const s of [-1,1]){const E=s<0?'EyeL':'EyeR',e=hit(s*0.4,-0.2,1);eyes[s]=e.p;put(S,0x2a1e24,e.p.clone().addScaledVector(e.n,0.003),e.n,0.034,0.047,0.018,0,E);
-        put(S,0xffffff,e.p.clone().addScaledVector(e.n,0.019).add(new T.Vector3(s*-0.01,0.017,0)),e.n,0.012,0.013,0.006,0,E);
-        put(S,0xffffff,e.p.clone().addScaledVector(e.n,0.019).add(new T.Vector3(s*0.009,-0.016,0)),e.n,0.006,0.006,0.004,0,E);
+      // big eyes set low and wide: a white, a warm brown iris and a dark pupil, two glints, and a dark lash line arched
+      // over the top (all on the eye's bone, so a blink closes them to a line); blush just under and outside; a tiny smile
+      const lash=new T.TorusGeometry(0.041,0.0052,6,20,Math.PI);
+      for(const s of [-1,1]){const E=s<0?'EyeL':'EyeR',e=hit(s*0.4,-0.2,1),o=(dz,dx,dy)=>e.p.clone().addScaledVector(e.n,dz).add(new T.Vector3(dx,dy,0));eyes[s]=e.p;
+        put(S,0xffffff,o(0.002,0,0),e.n,0.04,0.05,0.016,0,E);put(S,0x6b4232,o(0.009,s*-0.002,-0.006),e.n,0.029,0.037,0.012,0,E);put(S,0x1e1418,o(0.015,s*-0.002,-0.008),e.n,0.016,0.021,0.008,0,E);
+        put(S,0xffffff,o(0.021,s*-0.009,0.01),e.n,0.009,0.01,0.005,0,E);put(S,0xffffff,o(0.021,s*0.007,-0.019),e.n,0.005,0.005,0.004,0,E);
+        put(lash,0x2a1c20,o(0.008,0,-0.004),e.n,1,1.24,1,0,E);
         const b=hit(s*0.62,-0.4,0.68);put(S,0xf6a3ac,b.p.clone().addScaledVector(b.n,-0.004),b.n,0.046,0.026,0.014);}
       const m=hit(0,-0.4,1);put(new T.TorusGeometry(0.014,0.0042,6,16,Math.PI),0x6a3236,m.p.clone().addScaledVector(m.n,0.002).add(new T.Vector3(0,0.008,0)),m.n,1,1,1,Math.PI);
       return eyes;}});
@@ -10265,6 +10265,39 @@ function pipClips(){const {rest,R,V3,bump}=rigKit(PIP_BONES),H=rest('Hips'),LL=r
     R('ArmL',1.2,(a,t)=>[0,0,-(0.1+2.5*raise(t))+Math.sin(a*6)*0.25*raise(t)]),R('ArmR',1.2,(a,t)=>[0,0,0.1+2.5*raise(t)+Math.sin(a*6+1)*0.25*raise(t)]),
     ...still(1.2,['LegL','LegR']),...legsAt(1.2),...eyes(1.2,(a,t)=>[1,1-0.85*raise(t)*raise(t),1])]);
   return[idle,walk,run,spin,flip];}
+// Pip's hair, its own mesh skinned to the head (so a style is a swap, and the body is shared): a cap close over the
+// scalp with a soft hairline, and locks that grow out of it, each a curved, tapering clump ending in a point, arcing
+// up off the scalp before falling, so the hair has tufts and a silhouette rather than a smooth bowl
+const _pipHair={};/* (the styles' names: CHARS, 61b) */
+function pipHair(style){if(_pipHair[style])return _pipHair[style];const V=(x,y,z)=>new T.Vector3(x,y,z),C=V(0,0.675,0),RX=0.258,RY=0.238,RZ=0.248,D=Math.PI/180;
+  const ss=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);},smax=(a,b,k)=>-smin(-a,-b,k);
+  const ell=(c,r)=>(x,y,z)=>{const px=(x-c.x)/r.x,py=(y-c.y)/r.y,pz=(z-c.z)/r.z,k0=Math.hypot(px,py,pz),k1=Math.hypot(px/r.x,py/r.y,pz/r.z);return k1?k0*(k0-1)/k1:-Math.min(r.x,r.y,r.z);};
+  const seg=(a,b,r0,r1)=>(x,y,z)=>{const bx=b.x-a.x,by=b.y-a.y,bz=b.z-a.z,px=x-a.x,py=y-a.y,pz=z-a.z,t=clamp((px*bx+py*by+pz*bz)/(bx*bx+by*by+bz*bz),0,1);return Math.hypot(px-bx*t,py-by*t,pz-bz*t)-(r0+(r1-r0)*t);};
+  const rbox=(c,b,r)=>(x,y,z)=>{const dx=Math.abs(x-c.x)-b.x+r,dy=Math.abs(y-c.y)-b.y+r,dz=Math.abs(z-c.z)-b.z+r;return Math.hypot(Math.max(dx,0),Math.max(dy,0),Math.max(dz,0))+Math.min(Math.max(dx,dy,dz),0)-r;};
+  // a point on the scalp (az round from the front, el up from the brow line), lifted off it by `off`
+  const S=(az,el,off=0)=>{const d=V(Math.sin(az*D)*Math.cos(el*D),Math.sin(el*D),Math.cos(az*D)*Math.cos(el*D)),R=1/Math.hypot(d.x/RX,d.y/RY,d.z/RZ);return C.clone().addScaledVector(d,R+off);};
+  const lock=(a,m,b,r)=>{const f1=seg(a,m,r,r*0.78),f2=seg(m,b,r*0.78,0.004);return(x,y,z)=>smin(f1(x,y,z),f2(x,y,z),0.012);};
+  const L=(az0,el0,az1,el1,off,r,bulge=0.012)=>lock(S(az0,el0,0.004),S((az0+az1)/2,(el0+el1)/2,bulge+off*0.5),S(az1,el1,off),r);
+  // the cap, down to a hairline at `front` over the brow, lower at the sides and back, with fine combed grooves
+  const capOf=(off,front,side,back)=>{const sh=ell(C,V(RX+off,RY+off,RZ+off));return(x,y,z)=>{const line=front-(front-back)*ss(0.06,-0.2,z-C.z)-(front-side)*ss(0.14,0.25,Math.abs(x))*ss(-0.2,0.05,z-C.z),a=sh(x,y,z)+0.0015*Math.sin(Math.atan2(x,z)*22),b=line-y;return smax(a,b,0.02);};};
+  const fringe=(sweep,r=0.052)=>[-46,-23,0,23,46].map((az,i)=>L(az,52,az+sweep,10+Math.abs(az)*0.12,0.022,r*(1-Math.abs(i-2)*0.06)));
+  const temples=(drop=-18,r=0.044)=>[-1,1].map(s=>L(s*72,32,s*84,drop,0.018,r));
+  const parts=[];let k=0.035;
+  if(style===0){parts.push(capOf(0.028,0.76,0.7,0.58),...fringe(16),...temples(),/* (crown locks lie back, full and swept, rather than standing up) */
+      L(150,84,160,36,0.03,0.06),L(210,84,200,36,0.03,0.06),L(180,70,180,24,0.034,0.062),L(118,58,126,18,0.026,0.054),L(242,58,234,18,0.026,0.054),L(30,88,70,62,0.05,0.05,0.02),
+      ...[150,180,210].map(az=>L(az,-2,az+(az-180)*0.3,-34,0.022,0.05)));}
+  else if(style===1){const vol=ell(V(0,0.665,-0.012),V(0.302,0.296,0.3)),face=rbox(V(0,0.6,0.3),V(0.185,0.21,0.3),0.07);
+    parts.push((x,y,z)=>{const az=Math.atan2(x,z)/D;let d=smax(vol(x,y,z)+0.003*Math.sin(az*D*30)*ss(0.75,0.55,y),-face(x,y,z),0.03);
+        d+=0.012*Math.exp(-(((az+28)/7)**2))*ss(0.8,0.9,y)*ss(-0.05,0.08,z);/* (a side parting) */return smax(d,0.505-y,0.03);},
+      ...[-20,6,32,56].map((az,i)=>L(az,50,az+22,14+i*2,0.026,0.056,0)));}
+  else if(style===2){parts.push(capOf(0.028,0.76,0.7,0.6),...fringe(-14),...temples(-24),
+      ...[-1,1].map(s=>{const b=S(s*52,58,0.085);return(x,y,z)=>ell(b,V(0.1,0.095,0.095))(x,y,z)+0.003*Math.sin(Math.atan2(x-b.x,z-b.z)*9+y*40);}),
+      ...[160,200].map(az=>L(az,-4,az+(az-180)*0.4,-30,0.02,0.046)));}
+  else{const curtain=rbox(V(0,0.56,-0.15),V(0.22,0.17,0.11),0.09);parts.push(capOf(0.02,0.84,0.72,0.58),...fringe(16),
+      ...[-1,1].map(s=>lock(S(s*74,30,0.004),V(s*0.26,0.6,0.07),V(s*0.22,0.44,0.07),0.046)),(x,y,z)=>curtain(x,y,z)+0.003*Math.sin(x*60),
+      ...[-0.13,0,0.13].map(x0=>lock(V(x0,0.5,-0.2),V(x0*1.1,0.44,-0.22),V(x0*1.15,0.4,-0.2),0.06)));k=0.05;}
+  const f=(x,y,z)=>{let d=1e9;for(const p of parts)d=smin(d,p(x,y,z),k);return d;};
+  return _pipHair[style]=mochiSurface(f,[-0.4,0.34,-0.42],[0.4,1.0,0.38],0.009);}
 /* =========================================================
    Time of day
    ========================================================= */

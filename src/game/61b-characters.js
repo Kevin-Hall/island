@@ -18,7 +18,7 @@
 //    skin) and the rest coloured from their materials
 const CHARS=[{id:'sprite',name:'Sprite',skin:'paint',clips:{Walk:'Walking',Run:'Running'},emotes:{spin:'360_Power_Spin_Jump',flip:'Backflip_Sweep_Kick'},speeds:[0.95,4.8]},
   {id:'willow',name:'Willow',base:'sprite',hair:'long',outfit:{top:0,bot:6,hair:-1}},/* Sprite's body with long hair and a bow */
-  {id:'pip',name:'Pip',build:'pip',dress:true},/* a very simple little person, in your colours (61d) */
+  {id:'pip',name:'Pip',build:'pip',dress:true,styles:['Tousled','Bob','Buns','Long']},/* a very simple little person, in your colours (61d) */
   {id:'mochi',name:'Mochi',build:'mochi',colors:[0xfaf8f4,0xf3e3c8,0xf6cfd6,0xd8d0ec,0xc8dcef,0xcfe6d2,0xcac6c2,0xe8c8a8]},
 ];
 // a character's whole entry: one made from another (base) shares its model, clips and texture, adding its own hair and outfit
@@ -30,7 +30,7 @@ const OUTFIT={hair:{name:'Hair',own:0x6b3a1f,cols:[0x2a1c14,0x161417,0xb5652a,0x
   bot:{name:'Bottoms',own:0x7a4a2c,cols:[0x3c5d8f,0x2e3440,0xcaa87e,0x6f8f5c,0xeaa2b6,0xefe9df,0x8fa9cf,0x7a62a8]},
   shoe:{name:'Shoes',own:0xf2f0ec,cols:[0xe25a4a,0xf2c14e,0x5b8fd6,0xf0a6c0,0x3a3a3a,0x6fbf8a]}};
 const dressable=C=>C.skin==='paint'||!!C.dress;
-const charLook=(C,o={})=>Object.assign({c:C.id,skin:-1},dressable(C)?{hair:-1,top:-1,bot:-1,shoe:-1}:{},C.outfit,o);
+const charLook=(C,o={})=>Object.assign({c:C.id,skin:-1},dressable(C)?{hair:-1,top:-1,bot:-1,shoe:-1}:{},C.styles?{style:0}:{},C.outfit,o);
 const CHAR_H=1.07;/* every character stands the player's height, whatever units its artist used */
 const HSKIN=[0xfde3cf,0xf6d2b4,0xeec09a,0xd9a27a,0xc08660,0xa06a48,0x7a4e34,0x5a3826];
 const charSrc={};/* id → {ok, scene, clips, atlas, scale, wait} */
@@ -117,16 +117,17 @@ function hairGeos(){if(_hairG)return _hairG;const V=(x,y,z)=>new T.Vector3(x,y,z
     d=smax(d,z-0.03+Math.max(0,y-1.5)*0.6,0.05);/* (open in front, for the face) */const lo=clamp((1.42-y)/0.25,0,1);return d+0.007*lo*Math.sin(Math.atan2(x,-z)*26);},
     bow=(x,y,z)=>{p.set(x,y,z);return smin(Math.min(ell(p,V(-0.075,1.47,-0.33),V(0.075,0.055,0.035)),ell(p,V(0.075,1.47,-0.33),V(0.075,0.055,0.035))),ell(p,V(0,1.47,-0.345),V(0.032,0.034,0.03)),0.02);};
   return _hairG={hair:mochiSurface(hair,[-0.45,0.78,-0.44],[0.45,1.76,0.12],0.014),bow:mochiSurface(bow,[-0.17,1.39,-0.4],[0.17,1.55,-0.27],0.008)};}
-function addHair(m,look,s){let b=null;m.traverse(o=>{if(o.isSkinnedMesh&&!b)b=o;});if(!b)return;const hi=b.skeleton.bones.findIndex(o=>o.name==='mixamorigHead');if(hi<0)return;
-  const G=hairGeos(),hc=look.hair>=0?OUTFIT.hair.cols[look.hair]:(paintSorts(s),s.hairTone);
-  for(const [g,col] of [[G.hair,hc],[G.bow,0xf27b93]]){if(!g.attributes.skinIndex){const n=g.attributes.position.count,si=new Uint16Array(n*4),sw=new Float32Array(n*4);for(let i=0;i<n;i++){si[i*4]=hi;sw[i*4]=1;}g.setAttribute('skinIndex',new T.BufferAttribute(si,4));g.setAttribute('skinWeight',new T.BufferAttribute(sw,4));}
-    const k='hair|'+col;const me=new T.SkinnedMesh(g,charMats[k]||(charMats[k]=toon({color:col,skinning:true})));me.bind(b.skeleton,b.bindMatrix);me.castShadow=true;me.frustumCulled=false;b.parent.add(me);}}
+function addHair(m,look,s){const hc=look.hair>=0?OUTFIT.hair.cols[look.hair]:(paintSorts(s),s.hairTone),G=hairGeos();headMesh(m,G.hair,hc);headMesh(m,G.bow,0xf27b93);}
+// a mesh (in the model's rest pose) worn on a character's head: skinned wholly to the head bone, so it turns and nods
+function headMesh(m,g,col){let b=null;m.traverse(o=>{if(o.isSkinnedMesh&&!b)b=o;});if(!b)return;const hi=b.skeleton.bones.findIndex(o=>o.name==='mixamorigHead'||o.name==='Head');if(hi<0)return;
+  if(!g.attributes.skinIndex){const n=g.attributes.position.count,si=new Uint16Array(n*4),sw=new Float32Array(n*4);for(let i=0;i<n;i++){si[i*4]=hi;sw[i*4]=1;}g.setAttribute('skinIndex',new T.BufferAttribute(si,4));g.setAttribute('skinWeight',new T.BufferAttribute(sw,4));}
+  const k='hair|'+col,me=new T.SkinnedMesh(g,charMats[k]||(charMats[k]=toon({color:col,skinning:true})));me.bind(b.skeleton,b.bindMatrix);me.castShadow=true;me.receiveShadow=true;me.frustumCulled=false;b.parent.add(me);}
 // a character, ready to place: a group holding a clone of the loaded model (empty until it has loaded); a rigged one is
 // already in its idle pose (never a T-pose), with its CharacterAnimator in userData.anim
 function charModel(h){const g=new T.Group(),C=charDef(h.c),id=C.id,look=charLook(C,h);g.userData.char=look;
   charLoad(id,s=>{const m=T.SkeletonUtils.clone(s.scene);m.scale.setScalar(s.scale);
     m.traverse(o=>{if(o.isMesh){if(o.userData.dress)o.geometry=pipLook(o.geometry,look);else if(s.atlas||o.userData.skin)o.material=charMat(id,look);o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;}});
-    if(C.hair)addHair(m,look,s);g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds,s.emotes);});
+    if(C.hair)addHair(m,look,s);if(C.styles)headMesh(m,pipHair(look.style|0),look.hair>=0?OUTFIT.hair.cols[look.hair]:PIP_OWN.hair);g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds,s.emotes);});
   return g;}
 // idle when standing; when moving, walk blending into run with speed, each played at the rate that keeps its feet planted
 // (speeds: how far the walk and run clips carry it a second, in its own units; the Quaternius ones' by default). Swimming
@@ -179,10 +180,10 @@ function closeCharEd(){if(!charEd)return;charEd=null;edCam.clearViewOffset();if(
 function setH(ch){Object.assign(curHuman(),ch);applyLook();if(charEd){edRebuild();charEd.hop=0.3;}renderCharEd();SFX.pop();}
 const rnd=n=>Math.floor(Math.random()*(n+1))-1;/* (-1: as drawn) */
 function shuffleH(){const C=charDef(CHARS[Math.floor(Math.random()*CHARS.length)].id),o={skin:rnd((C.colors||HSKIN).length)};
-  if(dressable(C))for(const k in OUTFIT)o[k]=rnd(OUTFIT[k].cols.length);setH(charLook(C,o));}
+  if(dressable(C))for(const k in OUTFIT)o[k]=rnd(OUTFIT[k].cols.length);if(C.styles)o.style=Math.floor(Math.random()*C.styles.length);setH(charLook(C,o));}
 // a character's portrait (blank until its model has loaded; the editor and the look sheet redraw when it arrives)
 const hThumbs={};
-function hThumb(ch){const h=charLook(charDef((ch&&ch.c)||curHuman().c),Object.assign({},ch&&ch.c?{}:curHuman(),ch)),k=[h.c,h.skin,h.hair,h.top,h.bot,h.shoe].join('|');if(hThumbs[k])return hThumbs[k];
+function hThumb(ch){const h=charLook(charDef((ch&&ch.c)||curHuman().c),Object.assign({},ch&&ch.c?{}:curHuman(),ch)),k=[h.c,h.skin,h.hair,h.top,h.bot,h.shoe,h.style].join('|');if(hThumbs[k])return hThumbs[k];
   if(!(charSrc[h.c]&&charSrc[h.c].ok)){charLoad(h.c,()=>{if(charEd)renderCharEd();else if(sheet)renderSheet();});return'data:image/gif;base64,R0lGODlhAQABAAAAACw=';}
   return hThumbs[k]=snapThumb(charModel(h),96);}
 function renderCharEd(){if(!charEd)return;const h=curHuman();
@@ -192,11 +193,11 @@ function renderCharEd(){if(!charEd)return;const h=curHuman();
     :`<div class="hsw"><button class="sw own ${cur<0?'on':''}" data-hv="-1" title="As drawn" style="--sw:${hexCss(C.dress?PIP_OWN[tab]:tab==='skin'?0xd8c0a8:OUTFIT[tab].own)}"></button>${(tab==='skin'?HSKIN:OUTFIT[tab].cols).map((c,i)=>`<button class="sw ${cur===i?'on':''}" data-hv="${i}" style="--sw:${hexCss(c)}"></button>`).join('')}</div>`;
   const head=parts.length?`<div class="htabs">${parts.map(k=>`<button class="htab ${k===tab?'on':''}" data-ht="${k}">${k==='skin'?'Skin':OUTFIT[k].name}</button>`).join('')}</div>`:`<h4>${C.colors?'Colour':'Skin'}</h4>`;
   $('charEd').innerHTML=`<div class="htop"><b>Your character</b><button class="hbtn" data-ha="shuffle">🎲 Shuffle</button>${S.look.prev&&S.look.prev!=='human'?`<button class="hbtn" data-ha="animal">Be an animal</button>`:''}<button class="pbtn go" data-ha="done">Done</button></div>
-    <div class="hbody">${tiles}${head}${sw}</div>`;
+    <div class="hbody">${tiles}${head}${tab==='hair'&&C.styles?`<div class="htabs hstyle">${C.styles.map((n,i)=>`<button class="${(h.style|0)===i?'on':''}" data-hs="${i}">${n}</button>`).join('')}</div>`:''}${sw}</div>`;
   requestAnimationFrame(()=>{if(charEd){const W=window.innerWidth,H=window.innerHeight,px=$('charEd').offsetHeight;charEd.px=px;edCam.setViewOffset(W,H,0,px*0.5,W,H);}});}
 $('charEd').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!charEd)return;const d=b.dataset;
   if(d.ha==='done'){closeCharEd();return;}if(d.ha==='shuffle'){shuffleH();return;}if(d.ha==='animal'){S.look.sp=S.look.prev||'bunny';applyLook();closeCharEd();return;}
-  if(d.ht){charEd.tab=d.ht;renderCharEd();SFX.ui();return;}
+  if(d.ht){charEd.tab=d.ht;renderCharEd();SFX.ui();return;}if(d.hs!==undefined){setH({style:+d.hs});return;}
   if(d.hc){if(d.hc!==curHuman().c){const h=curHuman();for(const k in h)if(k!=='c'&&k!=='skin')delete h[k];setH(charLook(charDef(d.hc),{skin:h.skin}));const an=edModel&&edModel.userData.anim;if(an)an.emote('spin');}return;}if(d.hv!==undefined){const t=charEd.tab&&dressable(charDef(curHuman().c))?charEd.tab:'skin';setH({[t]:+d.hv});return;}});
 // the studio camera: framed on you in the space above the tray; you idle, turn slowly, and hop when something changes
 function updateCharEd(dt,tt){if(!charEd||!edModel)return;charEd.t+=dt;const W=window.innerWidth,H=window.innerHeight,asp=W/H,f=1-(charEd.px||H*0.45)/H,tv=Math.tan(15*Math.PI/180);

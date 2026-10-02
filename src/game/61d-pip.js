@@ -1,10 +1,10 @@
 /* =========================================================
    Pip: a very simple little person, sculpted and rigged in code
    ========================================================= */
-// A kawaii chibi: a head half its height, a fluffy cap of hair with a side-swept fringe and a sprout on top, a small
-// slim body, thin arms with round hands, and tiny legs on rounded shoes, all melted into one smooth shape like Mochi (sdfRig, 61c). Each part is skin, hair, top, bottoms or
+// A kawaii chibi: a head half its height, hair in a style of your choosing (pipHair) and a sprout on top, a small
+// slim body, thin arms with round hands, and tiny legs on rounded shoes, all melted into one smooth shape like Mochi (sdfRig, 61c). Each part is skin, top, bottoms or
 // shoes, and the editor colours each of them (pipLook paints the body's vertices, so every look shares one mesh). The
-// face sits low: big glossy eyes with two glints (they blink), blush and a tiny smile. Clips: an idle that breathes, sways
+// face sits low: big eyes with whites, a brown iris and two glints under a lash line (they blink), blush and a tiny smile. Clips: an idle that breathes, sways
 // and looks about; a bouncy walk with swinging arms; a leaning run; and two emotes, a twirl and a cheer.
 const PIP_BONES=[['Hips',null,0,0.2,0],['Spine','Hips',0,0.28,0],['Head','Spine',0,0.43,0],
   ['ArmL','Spine',-0.088,0.37,0],['ArmR','Spine',0.088,0.37,0],['LegL','Hips',-0.052,0.19,0],['LegR','Hips',0.052,0.19,0],['EyeL','Head',0,0,0],['EyeR','Head',0,0,0]];
@@ -13,13 +13,9 @@ function pipParts(){const V=(x,y,z)=>new T.Vector3(x,y,z),ss=(a,b,x)=>{const t=c
   const ell=(c,r)=>(x,y,z)=>{const px=(x-c.x)/r.x,py=(y-c.y)/r.y,pz=(z-c.z)/r.z,k0=Math.hypot(px,py,pz),k1=Math.hypot(px/r.x,py/r.y,pz/r.z);return k1?k0*(k0-1)/k1:-Math.min(r.x,r.y,r.z);};
   const cap=(a,b,r0,r1,flat=1)=>(x,y,z)=>{const zz=a.z+(z-a.z)/flat,bx=b.x-a.x,by=b.y-a.y,bz=b.z-a.z,px=x-a.x,py=y-a.y,pz=zz-a.z,t=clamp((px*bx+py*by+pz*bz)/(bx*bx+by*by+bz*bz),0,1);
     return(Math.hypot(px-bx*t,py-by*t,pz-bz*t)-(r0+(r1-r0)*t))*Math.min(1,flat);};
-  // hair: a cap a little bigger than the head, down to a hairline that sits high on the brow, scalloped into a soft
-  // fringe, and falls lower over the ears and the back
-  // hair: a fluffy cap a little bigger than the head, with a fringe swept to one side in soft scallops, falling over
-  // the ears and lower at the back; and a tiny sprout of two leaves on top
-  const hd=ell(V(0,0.69,-0.016),V(0.29,0.272,0.284)),hair=(x,y,z)=>{const line=0.74+0.05*clamp(x/0.24,-1,1)-0.014*Math.abs(Math.sin(x*20+0.6))-0.2*ss(0.08,-0.17,z)-0.13*ss(0.12,0.25,Math.abs(x));const a=hd(x,y,z),b=line-y,h=Math.max(0.018-Math.abs(a-b),0)/0.018;return Math.max(a,b)+h*h*0.0045;};/* (a softly rounded edge: a hard one shades in specks) */
-  const P=[{d:ell(V(0,0.675,0),V(0.258,0.238,0.248)),bone:'Head',k:0,col:'skin'},{d:hair,bone:'Head',k:0.02,col:'hair'},
-    {d:cap(V(0,0.95,-0.01),V(0.008,1.0,-0.01),0.011,0.008),bone:'Head',k:0.012,col:'leaf'},{d:cap(V(0.004,0.995,-0.01),V(-0.062,1.035,-0.01),0.019,0.006,0.5),bone:'Head',k:0.012,col:'leaf'},{d:cap(V(0.006,0.995,-0.01),V(0.07,1.045,-0.01),0.021,0.006,0.5),bone:'Head',k:0.012,col:'leaf'},
+  // (the hair is its own mesh, in the style picked: pipHair) and a tiny sprout of two leaves on top
+  const P=[{d:ell(V(0,0.675,0),V(0.258,0.238,0.248)),bone:'Head',k:0,col:'skin'},
+    {d:cap(V(0,0.93,-0.03),V(0.008,1.02,-0.02),0.011,0.008),bone:'Head',k:0.012,col:'leaf'},{d:cap(V(0.004,1.015,-0.02),V(-0.062,1.055,-0.02),0.019,0.006,0.5),bone:'Head',k:0.012,col:'leaf'},{d:cap(V(0.006,1.015,-0.02),V(0.07,1.065,-0.02),0.021,0.006,0.5),bone:'Head',k:0.012,col:'leaf'},
     {d:ell(V(0,0.235,0),V(0.112,0.085,0.098)),bone:'Hips',k:0.04,col:'top'},{d:cap(V(0,0.26,0),V(0,0.4,0),0.1,0.07,0.9),bone:'Spine',k:0.05,col:'top'}];
   for(const s of [-1,1]){const S=s<0?'L':'R';
     P.push({d:cap(V(s*0.085,0.375,0),V(s*0.135,0.27,0.01),0.03,0.026),bone:'Arm'+S,k:0.025,col:'top'},{d:ell(V(s*0.145,0.24,0.014),V(0.036,0.038,0.034)),bone:'Arm'+S,k:0.015,col:'skin'},
@@ -27,17 +23,20 @@ function pipParts(){const V=(x,y,z)=>new T.Vector3(x,y,z),ss=(a,b,x)=>{const t=c
   return P;}
 let _pip=null;
 function pipRig(){if(!_pip){const parts=pipParts();
-  const scene=sdfRig({bones:PIP_BONES,parts,lo:[-0.32,-0.02,-0.32],hi:[0.32,1.08,0.3],h:0.012,c:new T.Vector3(0,0.675,0),name:'Pip',
+  const scene=sdfRig({bones:PIP_BONES,parts,lo:[-0.32,-0.02,-0.32],hi:[0.32,1.1,0.3],h:0.012,c:new T.Vector3(0,0.675,0),name:'Pip',
     body:g=>{/* each vertex's share of each colour: its nearest parts, blended over a few millimetres, so the edges between colours are clean and smooth */
       const P=g.attributes.position,n=P.count,L=PIP_PARTS.length,w=new Float32Array(n*L),ds=new Array(parts.length),lab=parts.map(p=>PIP_PARTS.indexOf(p.col));
       for(let i=0;i<n;i++){const x=P.getX(i),y=P.getY(i),z=P.getZ(i);let mn=1e9;for(let p=0;p<parts.length;p++){ds[p]=parts[p].d(x,y,z);mn=Math.min(mn,ds[p]);}
         let t=0;for(let p=0;p<parts.length;p++){const v=Math.exp(-(ds[p]-mn)/0.005);w[i*L+lab[p]]+=v;t+=v;}for(let k=0;k<L;k++)w[i*L+k]/=t;}
       g.setAttribute('part',new T.BufferAttribute(w,L));g.setAttribute('color',new T.BufferAttribute(new Float32Array(n*3),3));return toon({vertexColors:true,skinning:true});},
     face:(hit,put,S)=>{const eyes={};
-      // big glossy eyes set low and wide, each with two glints; blush just under and outside them; a tiny smile
-      for(const s of [-1,1]){const E=s<0?'EyeL':'EyeR',e=hit(s*0.4,-0.2,1);eyes[s]=e.p;put(S,0x2a1e24,e.p.clone().addScaledVector(e.n,0.003),e.n,0.034,0.047,0.018,0,E);
-        put(S,0xffffff,e.p.clone().addScaledVector(e.n,0.019).add(new T.Vector3(s*-0.01,0.017,0)),e.n,0.012,0.013,0.006,0,E);
-        put(S,0xffffff,e.p.clone().addScaledVector(e.n,0.019).add(new T.Vector3(s*0.009,-0.016,0)),e.n,0.006,0.006,0.004,0,E);
+      // big eyes set low and wide: a white, a warm brown iris and a dark pupil, two glints, and a dark lash line arched
+      // over the top (all on the eye's bone, so a blink closes them to a line); blush just under and outside; a tiny smile
+      const lash=new T.TorusGeometry(0.041,0.0052,6,20,Math.PI);
+      for(const s of [-1,1]){const E=s<0?'EyeL':'EyeR',e=hit(s*0.4,-0.2,1),o=(dz,dx,dy)=>e.p.clone().addScaledVector(e.n,dz).add(new T.Vector3(dx,dy,0));eyes[s]=e.p;
+        put(S,0xffffff,o(0.002,0,0),e.n,0.04,0.05,0.016,0,E);put(S,0x6b4232,o(0.009,s*-0.002,-0.006),e.n,0.029,0.037,0.012,0,E);put(S,0x1e1418,o(0.015,s*-0.002,-0.008),e.n,0.016,0.021,0.008,0,E);
+        put(S,0xffffff,o(0.021,s*-0.009,0.01),e.n,0.009,0.01,0.005,0,E);put(S,0xffffff,o(0.021,s*0.007,-0.019),e.n,0.005,0.005,0.004,0,E);
+        put(lash,0x2a1c20,o(0.008,0,-0.004),e.n,1,1.24,1,0,E);
         const b=hit(s*0.62,-0.4,0.68);put(S,0xf6a3ac,b.p.clone().addScaledVector(b.n,-0.004),b.n,0.046,0.026,0.014);}
       const m=hit(0,-0.4,1);put(new T.TorusGeometry(0.014,0.0042,6,16,Math.PI),0x6a3236,m.p.clone().addScaledVector(m.n,0.002).add(new T.Vector3(0,0.008,0)),m.n,1,1,1,Math.PI);
       return eyes;}});
@@ -78,3 +77,36 @@ function pipClips(){const {rest,R,V3,bump}=rigKit(PIP_BONES),H=rest('Hips'),LL=r
     R('ArmL',1.2,(a,t)=>[0,0,-(0.1+2.5*raise(t))+Math.sin(a*6)*0.25*raise(t)]),R('ArmR',1.2,(a,t)=>[0,0,0.1+2.5*raise(t)+Math.sin(a*6+1)*0.25*raise(t)]),
     ...still(1.2,['LegL','LegR']),...legsAt(1.2),...eyes(1.2,(a,t)=>[1,1-0.85*raise(t)*raise(t),1])]);
   return[idle,walk,run,spin,flip];}
+// Pip's hair, its own mesh skinned to the head (so a style is a swap, and the body is shared): a cap close over the
+// scalp with a soft hairline, and locks that grow out of it, each a curved, tapering clump ending in a point, arcing
+// up off the scalp before falling, so the hair has tufts and a silhouette rather than a smooth bowl
+const _pipHair={};/* (the styles' names: CHARS, 61b) */
+function pipHair(style){if(_pipHair[style])return _pipHair[style];const V=(x,y,z)=>new T.Vector3(x,y,z),C=V(0,0.675,0),RX=0.258,RY=0.238,RZ=0.248,D=Math.PI/180;
+  const ss=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);},smax=(a,b,k)=>-smin(-a,-b,k);
+  const ell=(c,r)=>(x,y,z)=>{const px=(x-c.x)/r.x,py=(y-c.y)/r.y,pz=(z-c.z)/r.z,k0=Math.hypot(px,py,pz),k1=Math.hypot(px/r.x,py/r.y,pz/r.z);return k1?k0*(k0-1)/k1:-Math.min(r.x,r.y,r.z);};
+  const seg=(a,b,r0,r1)=>(x,y,z)=>{const bx=b.x-a.x,by=b.y-a.y,bz=b.z-a.z,px=x-a.x,py=y-a.y,pz=z-a.z,t=clamp((px*bx+py*by+pz*bz)/(bx*bx+by*by+bz*bz),0,1);return Math.hypot(px-bx*t,py-by*t,pz-bz*t)-(r0+(r1-r0)*t);};
+  const rbox=(c,b,r)=>(x,y,z)=>{const dx=Math.abs(x-c.x)-b.x+r,dy=Math.abs(y-c.y)-b.y+r,dz=Math.abs(z-c.z)-b.z+r;return Math.hypot(Math.max(dx,0),Math.max(dy,0),Math.max(dz,0))+Math.min(Math.max(dx,dy,dz),0)-r;};
+  // a point on the scalp (az round from the front, el up from the brow line), lifted off it by `off`
+  const S=(az,el,off=0)=>{const d=V(Math.sin(az*D)*Math.cos(el*D),Math.sin(el*D),Math.cos(az*D)*Math.cos(el*D)),R=1/Math.hypot(d.x/RX,d.y/RY,d.z/RZ);return C.clone().addScaledVector(d,R+off);};
+  const lock=(a,m,b,r)=>{const f1=seg(a,m,r,r*0.78),f2=seg(m,b,r*0.78,0.004);return(x,y,z)=>smin(f1(x,y,z),f2(x,y,z),0.012);};
+  const L=(az0,el0,az1,el1,off,r,bulge=0.012)=>lock(S(az0,el0,0.004),S((az0+az1)/2,(el0+el1)/2,bulge+off*0.5),S(az1,el1,off),r);
+  // the cap, down to a hairline at `front` over the brow, lower at the sides and back, with fine combed grooves
+  const capOf=(off,front,side,back)=>{const sh=ell(C,V(RX+off,RY+off,RZ+off));return(x,y,z)=>{const line=front-(front-back)*ss(0.06,-0.2,z-C.z)-(front-side)*ss(0.14,0.25,Math.abs(x))*ss(-0.2,0.05,z-C.z),a=sh(x,y,z)+0.0015*Math.sin(Math.atan2(x,z)*22),b=line-y;return smax(a,b,0.02);};};
+  const fringe=(sweep,r=0.052)=>[-46,-23,0,23,46].map((az,i)=>L(az,52,az+sweep,10+Math.abs(az)*0.12,0.022,r*(1-Math.abs(i-2)*0.06)));
+  const temples=(drop=-18,r=0.044)=>[-1,1].map(s=>L(s*72,32,s*84,drop,0.018,r));
+  const parts=[];let k=0.035;
+  if(style===0){parts.push(capOf(0.028,0.76,0.7,0.58),...fringe(16),...temples(),/* (crown locks lie back, full and swept, rather than standing up) */
+      L(150,84,160,36,0.03,0.06),L(210,84,200,36,0.03,0.06),L(180,70,180,24,0.034,0.062),L(118,58,126,18,0.026,0.054),L(242,58,234,18,0.026,0.054),L(30,88,70,62,0.05,0.05,0.02),
+      ...[150,180,210].map(az=>L(az,-2,az+(az-180)*0.3,-34,0.022,0.05)));}
+  else if(style===1){const vol=ell(V(0,0.665,-0.012),V(0.302,0.296,0.3)),face=rbox(V(0,0.6,0.3),V(0.185,0.21,0.3),0.07);
+    parts.push((x,y,z)=>{const az=Math.atan2(x,z)/D;let d=smax(vol(x,y,z)+0.003*Math.sin(az*D*30)*ss(0.75,0.55,y),-face(x,y,z),0.03);
+        d+=0.012*Math.exp(-(((az+28)/7)**2))*ss(0.8,0.9,y)*ss(-0.05,0.08,z);/* (a side parting) */return smax(d,0.505-y,0.03);},
+      ...[-20,6,32,56].map((az,i)=>L(az,50,az+22,14+i*2,0.026,0.056,0)));}
+  else if(style===2){parts.push(capOf(0.028,0.76,0.7,0.6),...fringe(-14),...temples(-24),
+      ...[-1,1].map(s=>{const b=S(s*52,58,0.085);return(x,y,z)=>ell(b,V(0.1,0.095,0.095))(x,y,z)+0.003*Math.sin(Math.atan2(x-b.x,z-b.z)*9+y*40);}),
+      ...[160,200].map(az=>L(az,-4,az+(az-180)*0.4,-30,0.02,0.046)));}
+  else{const curtain=rbox(V(0,0.56,-0.15),V(0.22,0.17,0.11),0.09);parts.push(capOf(0.02,0.84,0.72,0.58),...fringe(16),
+      ...[-1,1].map(s=>lock(S(s*74,30,0.004),V(s*0.26,0.6,0.07),V(s*0.22,0.44,0.07),0.046)),(x,y,z)=>curtain(x,y,z)+0.003*Math.sin(x*60),
+      ...[-0.13,0,0.13].map(x0=>lock(V(x0,0.5,-0.2),V(x0*1.1,0.44,-0.22),V(x0*1.15,0.4,-0.2),0.06)));k=0.05;}
+  const f=(x,y,z)=>{let d=1e9;for(const p of parts)d=smin(d,p(x,y,z),k);return d;};
+  return _pipHair[style]=mochiSurface(f,[-0.4,0.34,-0.42],[0.4,1.0,0.38],0.009);}

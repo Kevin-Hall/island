@@ -83,8 +83,9 @@ await ev(()=>DS.charEd());const ld=await waitFor(()=>{const l=DS.charLoad();retu
 {let cs=await waitFor(()=>DS.charState().loaded&&DS.charState());check(cs&&!cs.tpose&&cs.height>0.95&&cs.height<1.35,`you're a character, idling at about the player's height (ears and all) (${cs&&cs.height})`);
   for(const c of ['mochi','pip','willow','sprite']){await ev(c=>DS.charSet({c,skin:3}),c);cs=await ev(()=>DS.charState());check(cs.body&&cs.body.c===c&&cs.loaded,`picking ${c} swaps the model straight away`);}
   await pg.screenshot({path:join(shots,'5-character.png')});await pg.getByRole('button',{name:'Done'}).click();
-  await wait(800);await ev(()=>DS.walkTest());/* (a walk past the nearest tree) */
+  await wait(800);await ev(()=>DS.charSet({c:'pip',style:2}));cs=await ev(()=>DS.charState());check(cs.body&&cs.body.c==='pip'&&cs.body.style===2&&cs.loaded,'a hairstyle carries onto your character');await ev(()=>DS.charSet({c:'sprite',style:0}));
   await ev(()=>DS.charSet({top:2,shoe:0}));cs=await ev(()=>DS.charState());check(cs.body&&cs.body.top===2&&cs.body.shoe===0&&cs.loaded,'clothes colours carry onto your character');
+  await ev(()=>DS.walkTest());/* (a walk past the nearest tree) */
   const run=await waitFor(()=>{const s=DS.charState();return s.weights&&s.weights[0]<0.3&&s;},6000);check(!!run,`walking plays the walk/run clips (${run&&run.weights})`);
   const idle=await waitFor(()=>{const s=DS.charState();return s.weights&&s.weights[0]>0.95&&s;},12000);check(!!idle,'standing still goes back to idle');}
 check(errors.length===0,errors.length?`page errors: ${errors.join(' | ')}`:'no page errors');
