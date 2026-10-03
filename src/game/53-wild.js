@@ -17,7 +17,8 @@ function wildTreeParts(v){const s=season(),R=mulberry(hi(v,31,S.worldSeed|0)),p=
   if(treeSp(v).id==='pine')return PINE_TREE(s,R);speciesParts(v,s,R,p);return p;}
 // which kind grows where: pine and spruce stands (with the odd birch), little wild orchards, and mixed broadleaf woods
 function wildSpecies(x,z,R){const sd=(S.worldSeed|0)%1000,n1=vnoise(x*0.5+31,z*0.5-17,sd+11),n2=vnoise(x*0.45-9,z*0.45+23,sd+29),r=R();
-  const sp=n1>0.66?(r<0.5?1:r<0.82?8:7):n2>0.7?[4,4,5,6,3][Math.floor(R()*5)]:[0,0,0,0,2,2,2,7,7,9,9,3,4,5,6,1][Math.floor(r*16)];
+  const ik=isleKind();/* an island's character (85b) sets its mix: its main trees in broad stands, the others between */
+  const sp=ik?(n1>0.55?ik.mixB:ik.mixA)[Math.floor(r*(n1>0.55?ik.mixB:ik.mixA).length)]:n1>0.66?(r<0.5?1:r<0.82?8:7):n2>0.7?[4,4,5,6,3][Math.floor(R()*5)]:[0,0,0,0,2,2,2,7,7,9,9,3,4,5,6,1][Math.floor(r*16)];
   return sp+(TREE_SP[sp].shapes>1&&R()<0.4?TREE_NS:0);}
 const wildTreeKinds=()=>['wild',season()];
 
@@ -50,7 +51,7 @@ function genWild(){const isl=islands[0],R=mulberry((S.worldSeed|0)^0x3a1d),sd=(S
     if(!kd)continue;const d=newDebris(x,z,kd);d.v=kd==='tree'?wildSpecies(x,z,R):Math.floor(R()*3);d.r=R()*6.28;if(kd==='tree')d.sc=0.8+R()*0.45;S.debris.push(d);}
   // two or three grand old trees standing alone in the meadows: landmarks you can see from across the island
   {let n=0;for(const [x,z] of shuffle(isl.grass.slice(),R)){if(n>=3)break;if(keep.has(K(x,z))||farmQ(x,z)<1.3||townQ(x,z)>0.7||wet(x,z))continue;
-    if(S.debris.some(d=>Math.abs(d.x-x)<=2&&Math.abs(d.z-z)<=2))continue;const d=newDebris(x,z,'tree');d.v=[10,12,3][n%3];d.r=R()*6.28;d.sc=1.75+R()*0.3;d.grand=1;S.debris.push(d);n++;}}}
+    if(S.debris.some(d=>Math.abs(d.x-x)<=2&&Math.abs(d.z-z)<=2))continue;const d=newDebris(x,z,'tree');d.v=(isleKind()?isleKind().grand:[10,12,3])[n%3];d.r=R()*6.28;d.sc=1.75+R()*0.3;d.grand=1;S.debris.push(d);n++;}}}
 
 /* ---- paths wear in where you walk: every step onto a grass tile counts, and a well-trodden tile turns to path ---- */
 const PATH_WEAR=10;

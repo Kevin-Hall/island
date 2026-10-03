@@ -17,7 +17,7 @@ const HOME_STYLES={
   tropic: {name:'Tropical',grass:[0x58b85a,0x64c464,0x4cac52],sand:[0xe6c890,0xdcbc84],trees:['palm','palmtall','oak','palmfan','bush','bush','flowerbed','bush'],blurb:'Palms, bright sand and warm turquoise shallows.'},
   autumn: {name:'Autumn',  grass:[0x8ea440,0x9aae46,0x84983c],sand:[0xd2aa74,0xc8a06c],trees:['maple','mapleR','maple','oak','pine','bush','flowerbed','bush'],blurb:'Golden grass and maples in red and amber.'},
   blossom:{name:'Blossom', grass:[0x7ab852,0x86c25a,0x70ae4c],sand:[0xe0bc8c,0xd6b284],trees:['cherry','cherry','oak','cherry','pine','bush','flowerbed','bush'],blurb:'Cherry trees in bloom and petals on the breeze.'}};
-function applyHomeStyle(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow']||HOME_STYLES.meadow;BIOMES.home.grass=S.wild?SEASON_GRASS[season()]:st.grass;BIOMES.home.sand=st.sand;return st;}
+function applyHomeStyle(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow']||HOME_STYLES.meadow;BIOMES.home.grass=S.wild?isleTint(SEASON_GRASS[season()]):st.grass;BIOMES.home.sand=st.sand;return st;}
 /* ---- real seasons (a wild island follows the calendar: northern-hemisphere months, or S.seasonOv from the dev tools) ---- */
 function season(){if(S.seasonOv)return S.seasonOv;const m=new Date(typeof gameNow==='function'?gameNow():Date.now()).getMonth();return m===11||m<2?'winter':m<5?'spring':m<9?'summer':'autumn';} // leaves turn in October and November, as they do in the woods
 const SEASON_GRASS={spring:[0x82ca50,0x8ed25a,0x78c048],summer:[0x5c9640,0x66a048,0x528c38],autumn:[0x98b048,0xa4b850,0x8ea842],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
@@ -70,7 +70,7 @@ function tileTypeI(isl,x,z){const R=islR(isl),d=islDist(isl,x,z),b=BIOMES[isl.bi
   return t;}
 function genIslands(){farmMaxG=null;
   const R=mulberry(S.worldSeed);
-  islands=[{id:0,cx:0,cz:0,biome:'home',name:'Home',home:true,seed:S.worldSeed|0,riverN:S.home&&S.home.preset?0:1,rw:2}];
+  islands=[{id:0,cx:0,cz:0,biome:'home',name:'Home',home:true,seed:S.worldSeed|0,riverN:S.home&&S.home.preset?0:S.home&&S.home.riv!=null?S.home.riv:1,rw:2}];
   const bl=shuffle(BIOME_IDS.slice(),R);const used=new Set();
   for(let i=0;i<13;i++){
     const biome=i<bl.length?bl[i]:bl[Math.floor(R()*bl.length)],B=BIOMES[biome];

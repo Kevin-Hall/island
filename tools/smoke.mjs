@@ -24,7 +24,11 @@ await pg.goto(`http://127.0.0.1:${srv.address().port}/index.html?debug`);await w
 // a new game starts adrift: an island seen from the sea; keep drifting to another, then make landfall on it
 check(await ev(()=>!!document.querySelector('#arrive .arr h2')),'a new game starts adrift, looking at an island from the sea');
 await pg.click('#arMore');await wait(2500);check(await ev(()=>!!document.querySelector('#arrive .arr h2')),'kept drifting to another island');
-await pg.click('#arLand');await wait(3500);
+await pg.click('#arLand');await wait(1200);
+// coming ashore: a few words in the dark, then you're on the beach (a tap hurries each line on)
+check(await ev(()=>!!document.querySelector('#landfall p')),'making landfall says a few words before you step ashore');
+for(let i=0;i<4;i++){if(await ev(()=>!!document.querySelector('#landfall')))await pg.click('#landfall').catch(()=>{});await wait(600);}await wait(2500);
+{const mk=await ev(()=>DS.marks());check(mk.kind&&mk.marks&&mk.marks.length>0,`the island has a character (${mk.kind}) and landmarks (${(mk.marks||[]).map(m=>m.k).join(', ')})`);}
 check(await ev(()=>!!window.DS),'boots and exposes the debug API');
 let st=await ev(()=>DS.state());const wild=await ev(()=>DS.wild());
 check(st.npcs.length===0&&st.buildings.length===0&&(wild.tree||0)>40,`lands on a wild island: no buildings or villagers, ${wild.tree} trees, ${wild.bush} bushes, ${wild.rock||0} rocks`);
