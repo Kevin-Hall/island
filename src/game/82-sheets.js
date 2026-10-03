@@ -26,7 +26,7 @@ function makeThumbs(){const snap=g=>snapThumb(g,128);
    Sheets
    ========================================================= */
 let sheet=null;
-function openSheet(kind,tab,ctx){/* ctx: where you are ('crate', 'trader'): selling only happens there */showApps(false);if(caught){scene.remove(caught.g);if(caught.d0!==undefined)camBack=caught.d0;catchCard(null);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab,ctx};renderSheet();$('sheet').hidden=false;updateCtx();}
+function openSheet(kind,tab,ctx){if(kind==='bag'&&(tab==='craft'||tab==='store')){if(tab==='craft'){kind='craft';tab=null;}else tab='decor';}/* (crafting has its own place now; decor lives among everything else) *//* ctx: where you are ('crate', 'trader'): selling only happens there */showApps(false);if(caught){scene.remove(caught.g);if(caught.d0!==undefined)camBack=caught.d0;catchCard(null);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab,ctx};renderSheet();$('sheet').hidden=false;updateCtx();}
 function closeSheet(){$('sheet').hidden=true;sheet=null;updateCtx();}
 function tabs(list){$('sheetTabs').innerHTML=list.map(([id,l])=>`<button class="tab ${sheet.tab===id?'on':''}" data-tab="${id}">${l}</button>`).join('');const on=$('sheetTabs').querySelector('.on');if(on)requestAnimationFrame(()=>on.scrollIntoView({inline:'center',block:'nearest'}));}
 const sh=n=>`<span class="shl">${shellHTML}${fmt(n)}</span>`;
@@ -41,31 +41,46 @@ function renderSheet(){
       const sub=id==='mystery'?'Any crop, even locked ones. 3× rare chance.':`Sells ${fmt(C.price)} · ~${Math.round(C.grow/60*10)/10} min watered${C.night?' · night only':''}${C.day?' · loves sun':''}`;
       h+=`<button class="card ${S.seed===id?'sel':''} ${lock?'lock':''}" data-seed="${id}" ${lock?'disabled':''}><img class="px" src="${seedIcon(id)}" alt=""><span class="grow"><span class="nm">${C.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+C.lvl:sub}</span></span><span class="price">${S.free[id]?`<span class="done">${S.free[id]} free</span>`:sh(C.seed)}</span></button>`;}
     h+='</div>';}
-  else if(sheet.kind==='bag'){$('sheetTitle').textContent='Bag';tabs([['all','All'],['crops','Crops'],['catch','Critters'],['nature','Nature'],['store','Decor'],['craft','Craft']]);
+  // the workbench: everything you can make, what you can make right now first
+  else if(sheet.kind==='craft'){$('sheetTitle').textContent='Workbench';tabs([['all','All'],['can','Can make now'],['decor','Decor'],['handy','Handy things']]);
+    const T0=sheet.tab||'all',ok=r=>T0==='all'||T0==='can'&&canCraft(r)||T0==='decor'&&r.out[0]==='b'||T0==='handy'&&r.out[0]!=='b';
+    const list=RECIPES.map((r,i)=>[r,i]).filter(([r])=>ok(r)).sort(([a],[b])=>(canCraft(b)-canCraft(a))||((a.lvl>lv)-(b.lvl>lv)));
+    h+=`<p class="note">Wood, stone and fiber from around the island make decor and handy things. Decor you make goes in your <b>Bag</b>, ready to place.</p><div class="list">`;
+    if(!list.length)h+=`<p class="note">Nothing you can make just yet: shake trees, break rocks and pull weeds to gather more.</p>`;
+    for(const [r,i] of list){const lock=r.lvl>lv;const ing=Object.entries(r.in).map(([k,n])=>{const hv=haveOf(k);return `<span class="chip ${hv<n?'miss':''}"><img src="${iconOf(k)}" alt="">${nameOf(k).replace(/^(.{14}).+$/,'$1…')} ${Math.min(hv,99)}/${n}</span>`;}).join('');
+      h+=`<div class="recipe ${lock?'lock':''} ${canCraft(r)?'can':''}"><img src="${recipeIcon(r)}" alt=""><span class="grow"><span class="nm">${recipeName(r)}${r.out[2]>1?' ×'+r.out[2]:''}</span><div class="ing">${lock?`<span class="chip">Unlocks at Lv ${r.lvl}</span>`:ing}</div></span><button class="pbtn go" data-craft="${i}" ${canCraft(r)?'':'disabled'}>Craft</button></div>`;}
+    h+='</div>';}
+  else if(sheet.kind==='bag'){$('sheetTitle').textContent='Bag';tabs([['all','All'],['crops','Crops'],['fish','Fish'],['bugs','Bugs'],['finds','Finds'],['mats','Materials'],['decor','Decor']]);
     const T0=sheet.tab||'all';
-    if(T0==='craft'){h+=`<p class="note">Make decor and handy things from what you gather. Decor you make waits in the <b>Decor</b> tab, ready to place.</p><div class="list">`;
+    if(false){h+=`<p class="note">Make decor and handy things from what you gather. Decor you make waits in the <b>Decor</b> tab, ready to place.</p><div class="list">`;
       RECIPES.forEach((r,i)=>{const lock=r.lvl>lv;const ing=Object.entries(r.in).map(([k,n])=>{const hv=haveOf(k);return `<span class="chip ${hv<n?'miss':''}"><img src="${iconOf(k)}" alt="">${nameOf(k).replace(/^(.{14}).+$/,'$1…')} ${Math.min(hv,99)}/${n}</span>`;}).join('');
         h+=`<div class="recipe ${lock?'lock':''}"><img src="${recipeIcon(r)}" alt=""><span class="grow"><span class="nm">${recipeName(r)}${r.out[2]>1?' ×'+r.out[2]:''}</span><div class="ing">${lock?`<span class="chip">Unlocks at Lv ${r.lvl}</span>`:ing}</div></span><button class="pbtn go" data-craft="${i}" ${canCraft(r)?'':'disabled'}>Craft</button></div>`;});
       h+='</div>';}
-    else if(T0==='store'){const ks=Object.keys(S.store).filter(k=>S.store[k]>0);
+    else if(false){const ks=Object.keys(S.store).filter(k=>S.store[k]>0);
       if(!ks.length)h+=`<p class="note">Nothing here yet. Decor you craft, buy or put away waits here, ready to place.</p>`;
       else{const sel=ks.includes(sheet.sel)?sheet.sel:ks[0];const B=BUILD[sel];
         h+=`<div class="detail"><img src="${THUMB[sel]||''}" alt=""><div class="grow"><div class="nm">${B.name} ×${S.store[sel]}</div><div class="sub">${B.desc}</div><div class="acts"><button class="pbtn go" data-place="${sel}">Place it</button></div></div></div><div class="inv">`;
         for(const k of ks)h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img src="${THUMB[k]||''}" alt=""><span class="n">${S.store[k]}</span></button>`;h+='</div>';}}
-    else{const cat=k=>k.startsWith('m:')||k.startsWith('x:')?'nature':k.startsWith('f:')||k.startsWith('b:')||k.startsWith('s:')?'catch':k.startsWith('p:')||k.startsWith('g:')?'nature':'crops';
-      const ks=Object.keys(S.inv).filter(k=>S.inv[k]>0&&(T0==='all'||cat(k)===T0)).sort((a,b)=>cat(a).localeCompare(cat(b))||priceOf(b)-priceOf(a));
+    else{const CATS=['crops','fish','bugs','finds','mats','decor'],cat=k=>k.startsWith('d:')?'decor':k.startsWith('m:')||k.startsWith('x:')?'mats':k.startsWith('f:')||k.startsWith('s:')?'fish':k.startsWith('b:')?'bugs':k.startsWith('p:')||k.startsWith('g:')?'finds':'crops';
+      const cnt=k=>k.startsWith('d:')?S.store[k.slice(2)]:S.inv[k],ico=k=>k.startsWith('d:')?THUMB[k.slice(2)]||'':iconOf(k);
+      const ks=[...Object.keys(S.inv).filter(k=>S.inv[k]>0),...Object.keys(S.store).filter(k=>S.store[k]>0).map(k=>'d:'+k)].filter(k=>T0==='all'||cat(k)===T0)
+        .sort((a,b)=>CATS.indexOf(cat(a))-CATS.indexOf(cat(b))||(a.startsWith('d:')?0:priceOf(b)-priceOf(a)));
       const sellable=Object.keys(S.inv).filter(k=>!k.startsWith('m:')&&!k.startsWith('x:')),total=sellable.reduce((t,k)=>t+priceOf(k)*S.inv[k],0);
       const ctx=sheet.ctx;
       if(ctx==='trader')h+=`<div class="invtop"><span class="tot">Worth <b>${fmt(total)}</b> shells · market wants <b>${CROPS[S.demand].name}</b></span><button class="pbtn go" data-sellall="1" ${total?'':'disabled'}>Sell all</button></div>`;
       else if(ctx==='crate'){const cn=Object.values(S.crate||{}).reduce((a,b)=>a+b,0);h+=`<div class="invtop"><span class="tot">Dropped off: <b>${cn}</b> thing${cn===1?'':'s'}, worth ~<b>${fmt(crateWorth())}</b> · ${TRADER.name} sells them at dawn</span><button class="pbtn go" data-crateall="1" ${total?'':'disabled'}>Drop it all off</button></div>`;}
       else h+=`<p class="note">${S.scratch?`To sell, drop things off at the <b>outpost by the dock</b> (sold at dawn), or sell to <b>${TRADER.name}'s boat</b>${built('shop')?' or at your <b>shop</b>':''}.`:'To sell, take things to the <b>shipping bin</b> by your house.'}</p>`;
-      if(!ks.length)h+=`<p class="note">${T0==='all'?'Your pockets are empty. Harvest, fish, catch bugs, forage and gather to fill them.':'Nothing here yet.'}</p>`;
+      if(!ks.length)h+=`<p class="note">${T0==='all'?'Your pockets are empty. Harvest, fish, catch bugs, forage and gather to fill them.':T0==='decor'?'No decor yet. Make some at the <b>Workbench</b>, or buy it in the shop.':'Nothing here yet.'}</p>`;
+      else if((ks.includes(sheet.sel)?sheet.sel:ks[0]).startsWith('d:')){const sel=ks.includes(sheet.sel)?sheet.sel:ks[0],dk=sel.slice(2),B=BUILD[dk];/* a piece of decor: place it */
+        h+=`<div class="detail"><img src="${THUMB[dk]||''}" alt=""><div class="grow"><div class="nm">${B.name} ×${S.store[dk]}</div><div class="sub">${B.desc}</div><div class="acts"><button class="pbtn go" data-place="${dk}">Place it</button></div></div></div><div class="inv">`;
+        for(const k of ks)h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img src="${ico(k)}" alt=""><span class="n">${cnt(k)}</span></button>`;
+        const pad=Math.max(0,20-ks.length);for(let i=0;i<pad;i++)h+=`<div class="cell empty"></div>`;h+='</div>';}
       else{const sel=ks.includes(sheet.sel)?sheet.sel:ks[0],I=itemInfo(sel),t=sel.split('|')[0],mat=sel.startsWith('m:')||sel.startsWith('x:');
         const inOrder=S.orders.some(o=>!o.done&&(o.k===sel||o.k==='c:'+t));const wish=npcs.find(n=>{const d=S.npc[n.i];return d&&d.wish&&!d.wish.done&&d.wish.day===S.day&&invFor(d.wish.k)===sel;});
         const desc=(I&&I.desc)||(sel.includes('|')?(VAR[varOf(sel)].name?`A rare ${VAR[varOf(sel)].name.toLowerCase()} harvest!`:'Fresh from your farm.'):I&&I.bio?'Found around '+I.bio.map(b=>bioLabel(b)).join(', ')+'.':'');
         h+=`<div class="detail"><img class="v-${varOf(sel)}" src="${iconOf(sel)}" alt=""><div class="grow"><div class="nm">${nameOf(sel)} ×${S.inv[sel]}</div><div class="sub">${desc}<br><span class="pp">${shellHTML}${fmt(priceOf(sel))}</span>${S.demand===t?' <span class="pp hot">In demand</span>':''}${inOrder?' · wanted for an order':''}${wish?' · '+wish.name+' wants this!':''}</div>
           <div class="acts">${sel.startsWith('x:')?`<button class="pbtn go" data-use="${sel}">Use</button>`:''}${sheet.ctx==='trader'?`<button class="pbtn" data-sell="${sel}">Sell 1</button>${S.inv[sel]>1?`<button class="pbtn" data-sellk="${sel}">Sell all ×${S.inv[sel]}</button>`:''}`:sheet.ctx==='crate'&&!sel.startsWith('x:')?`<button class="pbtn" data-crate="${sel}">Drop off 1</button>${S.inv[sel]>1?`<button class="pbtn" data-cratek="${sel}">Drop off all ×${S.inv[sel]}</button>`:''}`:''}</div></div></div><div class="inv">`;
-        for(const k of ks){const v=varOf(k);h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img class="v-${v}" src="${iconOf(k)}" alt="">${v!=='normal'?`<span class="dot" style="background:${{giant:'#6ab84a',moonlit:'#9ab8ff',golden:'#f5c542',crystal:'#7ad8f0',rainbow:'#f39ab0'}[v]}"></span>`:''}<span class="n">${S.inv[k]}</span></button>`;}
+        for(const k of ks){if(k.startsWith('d:')){h+=`<button class="cell" data-pick="${k}"><img src="${ico(k)}" alt=""><span class="n">${cnt(k)}</span></button>`;continue;}const v=varOf(k);h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img class="v-${v}" src="${iconOf(k)}" alt="">${v!=='normal'?`<span class="dot" style="background:${{giant:'#6ab84a',moonlit:'#9ab8ff',golden:'#f5c542',crystal:'#7ad8f0',rainbow:'#f39ab0'}[v]}"></span>`:''}<span class="n">${S.inv[k]}</span></button>`;}
         const pad=Math.max(0,20-ks.length);for(let i=0;i<pad;i++)h+=`<div class="cell empty"></div>`;h+='</div>';}}}
   else if(sheet.kind==='trader'){$('sheetTitle').textContent=`${TRADER.name}'s boat`;tabs([]);
     h+=`<div class="sellall"><button class="pbtn go" data-tsell="1">Sell to ${TRADER.name}</button></div><p class="note">Today's stock. It changes every morning.</p><div class="grid">`;
@@ -238,7 +253,7 @@ $('sheetX').onclick=()=>{SFX.ui();closeSheet();};
 function wheelOpen(){return $('bar').classList.contains('open');}
 function showApps(on){$('bar').classList.toggle('open',!!on);$('bTool').setAttribute('aria-expanded',!!on);}
 $('bTool').onclick=()=>{SFX.ui();showApps(!wheelOpen());};
-$('bBag').onclick=()=>openSheet('bag');
+$('bBag').onclick=()=>openSheet('bag');$('bCraft').onclick=()=>openSheet('craft');
 $('nextUp').onclick=goalTap;$('jrChip').onclick=jrOpen;
 $('bShop').onclick=()=>openSheet('shop',sheet&&sheet.kind==='shop'?sheet.tab:'decor');
 $('bTask').onclick=()=>openSheet('orders');

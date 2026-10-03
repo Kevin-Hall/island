@@ -71,6 +71,7 @@ function checkRow(type){if(S.almR[type])return;if(VARIANTS.every(v=>S.alm[type+'
 // buildings, the bin and placed decor respond to a tap whatever tool you hold; returns true if it handled the tap
 function useFixed(x,z){
   const f=fixedAt(x,z);
+  if(f==='bench'){const b=S.bench;goTo(b.x+Math.sin(b.r)*1.1+0.001,b.z+Math.cos(b.r)*1.1,()=>{villager.rotation.y=Math.atan2(b.x-vil.x,b.z-vil.z);openSheet('craft');});return true;}
   if(f==='mark'){const m=markAt(x,z);if(m){goTo(x,z);toast(m.name+(m.found?'':' — the first time you\u2019ve stood here.'));}return true;}
   if(f==='bin'){walkTo(x,z);openSheet('bag','all',S.scratch?'crate':'trader');return true;}
   if(f==='outpost'){outpostTap();return true;}

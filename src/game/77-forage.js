@@ -172,7 +172,7 @@ function updateTapRing(dt){if(!tapRing){tapRing=new T.Mesh(new T.RingGeometry(0.
     const near=(x,z,y)=>{const d=Math.hypot(x-vil.x,z-vil.z);if(d>1.2&&d<bd){bd=d;best=[x,z,y];}};
     for(const f of S.finds)near(f.x,f.z);
     for(const d of S.debris){if(Math.abs(d.x-vil.x)>8||Math.abs(d.z-vil.z)>8)continue;if(d.k==='bush'&&d.v===2&&shakeLeft(d.x,d.z).n<2||d.k==='tree'&&fruitOn(d))near(d.x,d.z);}
-    for(const b of bugs){const p=b.g.position;near(p.x,p.z);}}
+    for(const b of bugs){const p=b.g.position;near(p.x,p.z);}if(S.bench&&craftableN())near(S.bench.x,S.bench.z);}
   const want=best?0.85:0;_tr.a+=(want-_tr.a)*Math.min(1,dt*4);
   if(best){if(_tr.a<0.05){_tr.x=best[0];_tr.z=best[1];}_tr.x+=(best[0]-_tr.x)*Math.min(1,dt*8);_tr.z+=(best[1]-_tr.z)*Math.min(1,dt*8);}
   const t=performance.now()/1000,p=0.5+0.5*Math.sin(t*3.2);tapRing.visible=_tr.a>0.02;tapRing.material.opacity=_tr.a*(0.5+0.5*p);

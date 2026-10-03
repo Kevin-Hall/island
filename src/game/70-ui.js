@@ -25,7 +25,7 @@ let shownShells=S.shells;
 function dexCount(){let got=0,tot=0;for(const [,,pre,tab] of DEX_CATS){for(const k in tab){tot++;if(S.alm[pre+k])got++;}}return[got,tot];}
 function locName(){if(inside)return inside.title;if(S.sea){const [isl,d]=nearestIsland(vil.x,vil.z);return d<9&&S.disc[isl.id]?'Near '+isl.name:d<9?'Uncharted waters':'Open sea';}
   const isl=curIsl()||nearestIsland(vil.x,vil.z)[0];return isl?(isl.home?(farmQ(vil.x,vil.z)<1.1?'Farm':TOWN.name):isl.name):'';}
-function updateHUD(){
+function updateHUD(){craftBadge();
   const lv=level();$('lvlTxt').textContent='Lv '+lv;
   const a=LV[lv-1]||0,b=LV[lv];$('xpFill').style.width=(b?clamp((S.xp-a)/(b-a),0,1)*100:100)+'%';
   {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;

@@ -664,6 +664,9 @@ body.chared .chatveil{opacity:.5}
 
 .fn-list li:has(.how){flex-wrap:wrap;padding-top:6px}.fn-list .how{flex-basis:100%;padding:0 4px 7px 56px;font:12px/1.3 var(--fn-type);opacity:.8}
 .fn-intro{margin:2px 0 6px;font-size:13px;font-weight:600;color:var(--ink2);line-height:1.3}
+
+#apps .btn{position:relative}#apps .cnt{position:absolute;top:2px;right:6px;min-width:18px;height:18px;border-radius:9px;background:#e8604a;color:#fff;font:700 11px/18px var(--font,inherit);font-style:normal;text-align:center;padding:0 4px;box-shadow:0 1px 0 rgba(0,0,0,.2)}
+.recipe.can{box-shadow:0 0 0 2px #9fd06a inset;border-radius:16px}
 </style>
 </head>
 <body>
@@ -699,6 +702,7 @@ body.chared .chatveil{opacity:.5}
 <div class="swimui" id="swimUI" hidden><div class="breath" id="breath" hidden><b></b></div><div class="dh" id="diveHint"></div><div class="row"><button class="swimb" id="bUp" aria-label="Swim up" hidden><img class="pix" id="icoUp" alt=""><span>Up</span></button><button class="swimb" id="bDive" aria-label="Dive (hold)"><img class="pix" id="icoDive" alt=""><span>Dive</span></button></div></div>
 <nav class="appcol" id="apps" aria-label="Menu">
   <button class="btn" id="bBag" style="--c:#f3d3a8"><span class="ico"><img class="pix" id="icoBag" alt=""></span><span class="lb">Bag</span></button>
+  <button class="btn" id="bCraft" style="--c:#d8e8b0"><span class="ico"><img class="pix" id="icoCraft" alt=""></span><span class="lb">Craft</span><em class="cnt" id="craftN" hidden></em></button>
   <button class="btn" id="bShop" style="--c:#a6e3d8"><span class="ico"><img class="pix" id="icoShop" alt=""></span><span class="lb">Shop</span></button>
   <button class="btn" id="bTask" style="--c:#ffc9a3"><span class="ico"><img class="pix" id="icoTask" alt=""></span><span class="lb">Orders</span></button>
   <button class="btn" id="bChart" style="--c:#b7d7f7"><span class="ico"><img class="pix" id="icoChart" alt=""></span><span class="lb">Chart</span></button>
@@ -5976,6 +5980,7 @@ function pixIcon(rows,pal,sc=2){const h=rows.length,w=16,W=w+2,H=h+2,g=[...Array
   return cv.toDataURL();}
 const PX_WOOD={W:'#e3a45f',w:'#b8743f',d:'#7a4a2a'},PX_STEEL={X:'#ffffff',M:'#dfe7f0',m:'#a6b2c4',n:'#6c7890'};
 const PIX_ART={
+  craft:[['................','...MMMMm........','..MXXMMmn.......','..MMMMMmn.......','..mmMMmnn.......','....nMWd........','.....dWd........','......dWd.......','.......dWd......','........dWd.....','.........dWd....','..........dWd...','...........dWd..','............dd..','................','................'],{...PX_STEEL,...PX_WOOD}],
   hand:[['................','....pp....pp....','...pPPp..pPPp...','...pXPp..pXPp...','....pp....pp....','.pp..........pp.','pPPp........pPPp','pXPp..pppp..pXPp','.pp..pPPPPp..pp.','....pPXPPPPp....','...pPPPPPPPPp...','...pPPPPPPPPp...','...pPPPPPPPPp...','....qPPPPPPq....','.....qqqqqq.....','................'],{P:'#ffb8cc',p:'#f07aa0',q:'#c85a82',X:'#ffe4ec'}],
   axe:[['................','........MMMm....','.......MXMMmn...','......MXMMmmn...','......MMMmmnn...','.......Mmmnn.d..','........nndWd...','.........dWd....','........dWd.....','.......dWd......','......dWd.......','.....dWd........','....dWd.........','...dWd..........','...dd...........','................'],{...PX_STEEL,...PX_WOOD}],
   shovel:[['................','.............dd.','............dWWd','............dWd.','...........dWd..','..........dWd...','.........dWd....','........dWd.....','.......nmd......','.....mMMMn......','....mXMMmn......','...mMMMmn.......','...mMMmn........','...mmmn.........','....nn..........','................'],{...PX_STEEL,...PX_WOOD}],
@@ -7135,7 +7140,7 @@ function buildIsland(isl){
   if(isl.riverN||isl.home&&S.terra&&Object.values(S.terra).some(v=>v<0))carveRivers(isl,isl.riverG);
   if(isl.home)reefDirty=true;/* the reef's seabed follows the coast (76c-swim) */
   shapeBeach(isl);
-  if(isl.home){layoutTown(isl);addMarks(isl);/* the island's landmarks (85b) */setPathMask(TOWN.path);musShow.g=null;musShow.sig='';refreshMuseumShow();}
+  if(isl.home){layoutTown(isl);addMarks(isl);addBench(isl);/* the island's landmarks (85b) */setPathMask(TOWN.path);musShow.g=null;musShow.sig='';refreshMuseumShow();}
   isl.tch=new Map();isl.tMesh=null;bakeTerrain(isl,g,null);
   if(isl.grass.length)buildGrass(isl,g);
   // shallow-water bands, with rounded outer corners so the coast doesn't step in squares
@@ -8641,7 +8646,7 @@ function roomTap(cx,cy){const I=inside;if(deco){decoTap(cx,cy);return;}if(I.who&
     roomUse(pr,I);}}
 // what tapping a piece of furniture does
 function roomUse(pr,I){{
-    if(pr.k==='workbench'){setTimeout(()=>openSheet('bag','craft'),250);}
+    if(pr.k==='workbench'){setTimeout(()=>openSheet('craft'),250);}
     else if(pr.k==='bed'&&I.kind==='home'){if(S.hour>=19||S.hour<5)setTimeout(()=>setAction('Snuggle in and sleep until morning?',[{label:'Sleep',cls:'go',fn:sleep},{label:'Not yet',fn:clearAction}],'Bed'),0);else toast('Not sleepy yet. Come back after 7 pm.');}
     else{const T0={bed:'A cosy bed with a patchwork quilt.',table:'Tea for two, and a shiny red apple.',lamp:'It glows warmly.',plant:'Lovingly watered.',tv:'It’s showing a documentary about deep-sea lanternfish.',beanbag:'Squishy. Dangerously comfy.',
       armchair:'A well-worn favourite.',shelf:'Books, books and more books.',weights:'Heavy! Very heavy.',bag:'Thwump!',counter:'Something smells delicious.',piano:'You play a little tune. ♪',stereo:'An old sea shanty crackles from the speakers.',
@@ -9619,7 +9624,7 @@ function recipeIcon(r){return r.out[0]==='b'?THUMB[r.out[1]]||'':ICON['x:'+r.out
 function canCraft(r){return r.lvl<=level()&&Object.entries(r.in).every(([k,n])=>haveOf(k)>=n);}
 function craft(i){const r=RECIPES[i];if(!canCraft(r)){SFX.no();return;}for(const [k,n] of Object.entries(r.in))takeOf(k,n);const [t,id,n]=r.out;
   if(t==='b')S.store[id]=(S.store[id]||0)+n;else S.inv['x:'+id]=(S.inv['x:'+id]||0)+n;jrNote('craft');
-  SFX.rare();addXP(3);toast(`Crafted ${n>1?n+'× ':''}<b>${recipeName(r)}</b>${t==='b'?' — find it in Storage to place it.':'.'}`,'',recipeIcon(r));}
+  SFX.rare();addXP(3);toast(`Crafted ${n>1?n+'× ':''}<b>${recipeName(r)}</b>${t==='b'?' — it\u2019s in your Bag, ready to place.':'.'}`,'',recipeIcon(r));}
 function useItem(k){if(k==='x:fert'){const ks=Object.keys(S.tiles).filter(q=>S.tiles[q].crop&&S.tiles[q].crop.p<1);if(!ks.length){toast('Nothing is growing right now.');return;}
     for(const q of ks){const c=S.tiles[q].crop,s0=stageOf(c.p);c.p=Math.min(0.995,c.p+0.15);if(stageOf(c.p)!==s0)syncCrop(q);const [x,z]=q.split(',').map(Number);sparkle(x,topY(x,z)+0.4,z,0xb8f088);}
     takeOf(k,1);SFX.rare();toast(`Fertilised ${ks.length} crop${ks.length>1?'s':''}. They perk right up!`,'',ICON['x:fert']);}
@@ -9664,6 +9669,27 @@ function objAt(x,z){objIdx();return OBJ_IDX.map.get(K(x,z))||null;}
 function floorAt(x,z){objIdx();return OBJ_IDX.fl.get(K(x,z))||null;}
 const onHome=(x,z)=>islMap.get(K(x,z))===0;
 
+
+// the workbench: a real place at your camp to make things (it stands beside your tent once it's pitched), and the Craft
+// button's count of what you could make right now
+const craftableN=()=>RECIPES.filter(r=>canCraft(r)).length;
+function craftBadge(){const el=$('craftN');if(!el)return;const n=craftableN();el.hidden=!n;el.textContent=n;}
+// where it stands: a free tile of grass a couple of steps from the tent, its working side towards you
+function pickBench(){const h=S.homeAt;if(!h||S.bench)return;let best=null,bs=-1e9;
+  for(let dx=-4;dx<=4;dx++)for(let dz=-4;dz<=4;dz++){const x=h.x+dx,z=h.z+dz,d=Math.hypot(dx-0.5,dz-0.5);if(d<2.2||d>4.2)continue;
+    if(landMap.get(K(x,z))!=='grass'||islMap.get(K(x,z))!==0||fixedAt(x,z)||objAt(x,z)||TOWN.path.has(K(x,z))||S.tiles[K(x,z)]||riverSurf.has(K(x,z)))continue;
+    if((lvlMap.get(K(x,z))||0)!==(lvlMap.get(K(h.x,h.z))||0))continue;const s=-d+(dz>0?1.5:0)+(debrisAt(x,z)?-2:0);if(s>bs){bs=s;best=[x,z];}}
+  if(!best)return;S.bench={x:best[0],z:best[1],r:Math.atan2(h.x+0.5-best[0],h.z+0.5-best[1])+Math.PI};S.debris=S.debris.filter(d=>!(d.x===best[0]&&d.z===best[1]));if(typeof syncDebris==='function')syncDebris();}
+function addBench(isl){const b=S.bench;if(!b)return;const W=0xb27a4c,Dk=0x7a5232,St=0xb8bcc8,y=topY(b.x,b.z),p=[];
+  p.push(P(BOX,W,0,0.62,0,0,0,0,1.12,0.1,0.6),P(BOX,Dk,0,0.56,0,0,0,0,1.04,0.04,0.52));
+  for(const [lx,lz] of [[-0.48,-0.22],[0.48,-0.22],[-0.48,0.22],[0.48,0.22]])p.push(P(BOX,Dk,lx,0.3,lz,0,0,0,0.09,0.6,0.09));
+  p.push(P(BOX,W,0,0.18,0,0,0,0,0.98,0.05,0.46),P(BOX,0xc8955e,-0.15,0.23,0,0,0.1,0,0.7,0.05,0.16),P(BOX,0xc8955e,-0.12,0.28,0.04,0,-0.08,0,0.66,0.05,0.15));/* a shelf with planks */
+  p.push(P(BOX,St,0.22,0.69,0.05,0,0.5,0,0.42,0.02,0.13),P(BOX,Dk,0.46,0.71,-0.07,0,0.5,0,0.12,0.06,0.06));/* a saw */
+  p.push(P(CYL6,0x9a6a3a,-0.28,0.7,0.1,0,0,1.571,0.035,0.32,0.035),P(BOX,0x6a6e78,-0.42,0.71,0.1,0,0,0,0.07,0.08,0.14));/* a hammer */
+  p.push(P(BOX,0x6a6e78,0.5,0.72,0.2,0,0,0,0.12,0.12,0.1),P(CYL8,0x8a8e98,0.5,0.78,0.2,1.571,0,0,0.04,0.16,0.04));/* a little vise */
+  p.push(P(CYL8,0x9a6a3a,0.82,0.18,0.15,0,0,0,0.36,0.36,0.36),P(CYL8,0xd8b07a,0.82,0.365,0.15,0,0,0,0.33,0.02,0.33));/* a stump to sit on */
+  const c=Math.cos(b.r),s=Math.sin(b.r);for(const q of p){const qx=q.x,qz=q.z;q.x=b.x+qx*c+qz*s;q.z=b.z-qx*s+qz*c;q.y+=y;q.ry+=b.r;}
+  const me=M(p);me.castShadow=true;me.receiveShadow=true;isl.group.add(me);TOWN.fixed.set(K(b.x,b.z),'bench');}
 /* =========================================================
    The museum: a hall you can walk around in, filled with what you've caught.
    Left wing: aquarium tanks where your fish swim (river, shore & open sea, deep sea).
@@ -10574,7 +10600,7 @@ let shownShells=S.shells;
 function dexCount(){let got=0,tot=0;for(const [,,pre,tab] of DEX_CATS){for(const k in tab){tot++;if(S.alm[pre+k])got++;}}return[got,tot];}
 function locName(){if(inside)return inside.title;if(S.sea){const [isl,d]=nearestIsland(vil.x,vil.z);return d<9&&S.disc[isl.id]?'Near '+isl.name:d<9?'Uncharted waters':'Open sea';}
   const isl=curIsl()||nearestIsland(vil.x,vil.z)[0];return isl?(isl.home?(farmQ(vil.x,vil.z)<1.1?'Farm':TOWN.name):isl.name):'';}
-function updateHUD(){
+function updateHUD(){craftBadge();
   const lv=level();$('lvlTxt').textContent='Lv '+lv;
   const a=LV[lv-1]||0,b=LV[lv];$('xpFill').style.width=(b?clamp((S.xp-a)/(b-a),0,1)*100:100)+'%';
   {const [hm,ap]=clockStr(S.hour).split(' ');$('timeTxt').innerHTML=`${hm}<small>${ap.toUpperCase()}</small>`;
@@ -10896,6 +10922,7 @@ function checkRow(type){if(S.almR[type])return;if(VARIANTS.every(v=>S.alm[type+'
 // buildings, the bin and placed decor respond to a tap whatever tool you hold; returns true if it handled the tap
 function useFixed(x,z){
   const f=fixedAt(x,z);
+  if(f==='bench'){const b=S.bench;goTo(b.x+Math.sin(b.r)*1.1+0.001,b.z+Math.cos(b.r)*1.1,()=>{villager.rotation.y=Math.atan2(b.x-vil.x,b.z-vil.z);openSheet('craft');});return true;}
   if(f==='mark'){const m=markAt(x,z);if(m){goTo(x,z);toast(m.name+(m.found?'':' — the first time you\u2019ve stood here.'));}return true;}
   if(f==='bin'){walkTo(x,z);openSheet('bag','all',S.scratch?'crate':'trader');return true;}
   if(f==='outpost'){outpostTap();return true;}
@@ -11142,7 +11169,7 @@ function updatePitch(dt){const p=pitch;if(!p)return;p.t=(performance.now()-p.t0)
   if(p.step===5&&p.t>=4.0){p.step=6;SFX.discover();nameIsland();}
   // a springy canvas: it overshoots and settles when it pops up
   for(let i=0;i<4;i++){const h=Math.min(dt,0.1)/4;p.vy+=((p.ty-p.sy)*60-p.vy*9)*h;p.sy+=p.vy*h;}if(p.tm){const k=clamp(p.sy,0.02,1.3);p.tm.scale.set(0.8+0.2*Math.min(1,k),k,0.8+0.2*Math.min(1,k));}}
-function pitchDone(){if(!pitch)return;if(S.day===1&&S.scratch&&!S.jrIntro){S.jrIntro=1;setTimeout(()=>{if(!$('jrCard')&&!caught)jrOpen();},2600);}pitch.end=0;pitch.cd=cam.dist;pitch.cp=cam.pitch;pitch.lit=false;if(pitch.tm)pitch.tm.scale.set(1,1,1);document.body.classList.remove('cine');}
+function pitchDone(){if(!pitch)return;if(!S.bench){pickBench();addBench(islands[0]);}if(S.day===1&&S.scratch&&!S.jrIntro){S.jrIntro=1;setTimeout(()=>{if(!$('jrCard')&&!caught)jrOpen();},2600);}pitch.end=0;pitch.cd=cam.dist;pitch.cp=cam.pitch;pitch.lit=false;if(pitch.tm)pitch.tm.scale.set(1,1,1);document.body.classList.remove('cine');}
 
 // the moment you settle: name the place you've chosen
 function nameIsland(){const el=document.createElement('div');el.id='heartUp';const sug=S.islandName||(S.home&&S.home.suggest)||TOWN_NAMES[0][Math.floor(Math.random()*TOWN_NAMES[0].length)]+TOWN_NAMES[1][Math.floor(Math.random()*TOWN_NAMES[1].length)];
@@ -12563,7 +12590,7 @@ function updateTapRing(dt){if(!tapRing){tapRing=new T.Mesh(new T.RingGeometry(0.
     const near=(x,z,y)=>{const d=Math.hypot(x-vil.x,z-vil.z);if(d>1.2&&d<bd){bd=d;best=[x,z,y];}};
     for(const f of S.finds)near(f.x,f.z);
     for(const d of S.debris){if(Math.abs(d.x-vil.x)>8||Math.abs(d.z-vil.z)>8)continue;if(d.k==='bush'&&d.v===2&&shakeLeft(d.x,d.z).n<2||d.k==='tree'&&fruitOn(d))near(d.x,d.z);}
-    for(const b of bugs){const p=b.g.position;near(p.x,p.z);}}
+    for(const b of bugs){const p=b.g.position;near(p.x,p.z);}if(S.bench&&craftableN())near(S.bench.x,S.bench.z);}
   const want=best?0.85:0;_tr.a+=(want-_tr.a)*Math.min(1,dt*4);
   if(best){if(_tr.a<0.05){_tr.x=best[0];_tr.z=best[1];}_tr.x+=(best[0]-_tr.x)*Math.min(1,dt*8);_tr.z+=(best[1]-_tr.z)*Math.min(1,dt*8);}
   const t=performance.now()/1000,p=0.5+0.5*Math.sin(t*3.2);tapRing.visible=_tr.a>0.02;tapRing.material.opacity=_tr.a*(0.5+0.5*p);
@@ -13161,7 +13188,7 @@ function makeThumbs(){const snap=g=>snapThumb(g,128);
    Sheets
    ========================================================= */
 let sheet=null;
-function openSheet(kind,tab,ctx){/* ctx: where you are ('crate', 'trader'): selling only happens there */showApps(false);if(caught){scene.remove(caught.g);if(caught.d0!==undefined)camBack=caught.d0;catchCard(null);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab,ctx};renderSheet();$('sheet').hidden=false;updateCtx();}
+function openSheet(kind,tab,ctx){if(kind==='bag'&&(tab==='craft'||tab==='store')){if(tab==='craft'){kind='craft';tab=null;}else tab='decor';}/* (crafting has its own place now; decor lives among everything else) *//* ctx: where you are ('crate', 'trader'): selling only happens there */showApps(false);if(caught){scene.remove(caught.g);if(caught.d0!==undefined)camBack=caught.d0;catchCard(null);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab,ctx};renderSheet();$('sheet').hidden=false;updateCtx();}
 function closeSheet(){$('sheet').hidden=true;sheet=null;updateCtx();}
 function tabs(list){$('sheetTabs').innerHTML=list.map(([id,l])=>`<button class="tab ${sheet.tab===id?'on':''}" data-tab="${id}">${l}</button>`).join('');const on=$('sheetTabs').querySelector('.on');if(on)requestAnimationFrame(()=>on.scrollIntoView({inline:'center',block:'nearest'}));}
 const sh=n=>`<span class="shl">${shellHTML}${fmt(n)}</span>`;
@@ -13176,31 +13203,46 @@ function renderSheet(){
       const sub=id==='mystery'?'Any crop, even locked ones. 3× rare chance.':`Sells ${fmt(C.price)} · ~${Math.round(C.grow/60*10)/10} min watered${C.night?' · night only':''}${C.day?' · loves sun':''}`;
       h+=`<button class="card ${S.seed===id?'sel':''} ${lock?'lock':''}" data-seed="${id}" ${lock?'disabled':''}><img class="px" src="${seedIcon(id)}" alt=""><span class="grow"><span class="nm">${C.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+C.lvl:sub}</span></span><span class="price">${S.free[id]?`<span class="done">${S.free[id]} free</span>`:sh(C.seed)}</span></button>`;}
     h+='</div>';}
-  else if(sheet.kind==='bag'){$('sheetTitle').textContent='Bag';tabs([['all','All'],['crops','Crops'],['catch','Critters'],['nature','Nature'],['store','Decor'],['craft','Craft']]);
+  // the workbench: everything you can make, what you can make right now first
+  else if(sheet.kind==='craft'){$('sheetTitle').textContent='Workbench';tabs([['all','All'],['can','Can make now'],['decor','Decor'],['handy','Handy things']]);
+    const T0=sheet.tab||'all',ok=r=>T0==='all'||T0==='can'&&canCraft(r)||T0==='decor'&&r.out[0]==='b'||T0==='handy'&&r.out[0]!=='b';
+    const list=RECIPES.map((r,i)=>[r,i]).filter(([r])=>ok(r)).sort(([a],[b])=>(canCraft(b)-canCraft(a))||((a.lvl>lv)-(b.lvl>lv)));
+    h+=`<p class="note">Wood, stone and fiber from around the island make decor and handy things. Decor you make goes in your <b>Bag</b>, ready to place.</p><div class="list">`;
+    if(!list.length)h+=`<p class="note">Nothing you can make just yet: shake trees, break rocks and pull weeds to gather more.</p>`;
+    for(const [r,i] of list){const lock=r.lvl>lv;const ing=Object.entries(r.in).map(([k,n])=>{const hv=haveOf(k);return `<span class="chip ${hv<n?'miss':''}"><img src="${iconOf(k)}" alt="">${nameOf(k).replace(/^(.{14}).+$/,'$1…')} ${Math.min(hv,99)}/${n}</span>`;}).join('');
+      h+=`<div class="recipe ${lock?'lock':''} ${canCraft(r)?'can':''}"><img src="${recipeIcon(r)}" alt=""><span class="grow"><span class="nm">${recipeName(r)}${r.out[2]>1?' ×'+r.out[2]:''}</span><div class="ing">${lock?`<span class="chip">Unlocks at Lv ${r.lvl}</span>`:ing}</div></span><button class="pbtn go" data-craft="${i}" ${canCraft(r)?'':'disabled'}>Craft</button></div>`;}
+    h+='</div>';}
+  else if(sheet.kind==='bag'){$('sheetTitle').textContent='Bag';tabs([['all','All'],['crops','Crops'],['fish','Fish'],['bugs','Bugs'],['finds','Finds'],['mats','Materials'],['decor','Decor']]);
     const T0=sheet.tab||'all';
-    if(T0==='craft'){h+=`<p class="note">Make decor and handy things from what you gather. Decor you make waits in the <b>Decor</b> tab, ready to place.</p><div class="list">`;
+    if(false){h+=`<p class="note">Make decor and handy things from what you gather. Decor you make waits in the <b>Decor</b> tab, ready to place.</p><div class="list">`;
       RECIPES.forEach((r,i)=>{const lock=r.lvl>lv;const ing=Object.entries(r.in).map(([k,n])=>{const hv=haveOf(k);return `<span class="chip ${hv<n?'miss':''}"><img src="${iconOf(k)}" alt="">${nameOf(k).replace(/^(.{14}).+$/,'$1…')} ${Math.min(hv,99)}/${n}</span>`;}).join('');
         h+=`<div class="recipe ${lock?'lock':''}"><img src="${recipeIcon(r)}" alt=""><span class="grow"><span class="nm">${recipeName(r)}${r.out[2]>1?' ×'+r.out[2]:''}</span><div class="ing">${lock?`<span class="chip">Unlocks at Lv ${r.lvl}</span>`:ing}</div></span><button class="pbtn go" data-craft="${i}" ${canCraft(r)?'':'disabled'}>Craft</button></div>`;});
       h+='</div>';}
-    else if(T0==='store'){const ks=Object.keys(S.store).filter(k=>S.store[k]>0);
+    else if(false){const ks=Object.keys(S.store).filter(k=>S.store[k]>0);
       if(!ks.length)h+=`<p class="note">Nothing here yet. Decor you craft, buy or put away waits here, ready to place.</p>`;
       else{const sel=ks.includes(sheet.sel)?sheet.sel:ks[0];const B=BUILD[sel];
         h+=`<div class="detail"><img src="${THUMB[sel]||''}" alt=""><div class="grow"><div class="nm">${B.name} ×${S.store[sel]}</div><div class="sub">${B.desc}</div><div class="acts"><button class="pbtn go" data-place="${sel}">Place it</button></div></div></div><div class="inv">`;
         for(const k of ks)h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img src="${THUMB[k]||''}" alt=""><span class="n">${S.store[k]}</span></button>`;h+='</div>';}}
-    else{const cat=k=>k.startsWith('m:')||k.startsWith('x:')?'nature':k.startsWith('f:')||k.startsWith('b:')||k.startsWith('s:')?'catch':k.startsWith('p:')||k.startsWith('g:')?'nature':'crops';
-      const ks=Object.keys(S.inv).filter(k=>S.inv[k]>0&&(T0==='all'||cat(k)===T0)).sort((a,b)=>cat(a).localeCompare(cat(b))||priceOf(b)-priceOf(a));
+    else{const CATS=['crops','fish','bugs','finds','mats','decor'],cat=k=>k.startsWith('d:')?'decor':k.startsWith('m:')||k.startsWith('x:')?'mats':k.startsWith('f:')||k.startsWith('s:')?'fish':k.startsWith('b:')?'bugs':k.startsWith('p:')||k.startsWith('g:')?'finds':'crops';
+      const cnt=k=>k.startsWith('d:')?S.store[k.slice(2)]:S.inv[k],ico=k=>k.startsWith('d:')?THUMB[k.slice(2)]||'':iconOf(k);
+      const ks=[...Object.keys(S.inv).filter(k=>S.inv[k]>0),...Object.keys(S.store).filter(k=>S.store[k]>0).map(k=>'d:'+k)].filter(k=>T0==='all'||cat(k)===T0)
+        .sort((a,b)=>CATS.indexOf(cat(a))-CATS.indexOf(cat(b))||(a.startsWith('d:')?0:priceOf(b)-priceOf(a)));
       const sellable=Object.keys(S.inv).filter(k=>!k.startsWith('m:')&&!k.startsWith('x:')),total=sellable.reduce((t,k)=>t+priceOf(k)*S.inv[k],0);
       const ctx=sheet.ctx;
       if(ctx==='trader')h+=`<div class="invtop"><span class="tot">Worth <b>${fmt(total)}</b> shells · market wants <b>${CROPS[S.demand].name}</b></span><button class="pbtn go" data-sellall="1" ${total?'':'disabled'}>Sell all</button></div>`;
       else if(ctx==='crate'){const cn=Object.values(S.crate||{}).reduce((a,b)=>a+b,0);h+=`<div class="invtop"><span class="tot">Dropped off: <b>${cn}</b> thing${cn===1?'':'s'}, worth ~<b>${fmt(crateWorth())}</b> · ${TRADER.name} sells them at dawn</span><button class="pbtn go" data-crateall="1" ${total?'':'disabled'}>Drop it all off</button></div>`;}
       else h+=`<p class="note">${S.scratch?`To sell, drop things off at the <b>outpost by the dock</b> (sold at dawn), or sell to <b>${TRADER.name}'s boat</b>${built('shop')?' or at your <b>shop</b>':''}.`:'To sell, take things to the <b>shipping bin</b> by your house.'}</p>`;
-      if(!ks.length)h+=`<p class="note">${T0==='all'?'Your pockets are empty. Harvest, fish, catch bugs, forage and gather to fill them.':'Nothing here yet.'}</p>`;
+      if(!ks.length)h+=`<p class="note">${T0==='all'?'Your pockets are empty. Harvest, fish, catch bugs, forage and gather to fill them.':T0==='decor'?'No decor yet. Make some at the <b>Workbench</b>, or buy it in the shop.':'Nothing here yet.'}</p>`;
+      else if((ks.includes(sheet.sel)?sheet.sel:ks[0]).startsWith('d:')){const sel=ks.includes(sheet.sel)?sheet.sel:ks[0],dk=sel.slice(2),B=BUILD[dk];/* a piece of decor: place it */
+        h+=`<div class="detail"><img src="${THUMB[dk]||''}" alt=""><div class="grow"><div class="nm">${B.name} ×${S.store[dk]}</div><div class="sub">${B.desc}</div><div class="acts"><button class="pbtn go" data-place="${dk}">Place it</button></div></div></div><div class="inv">`;
+        for(const k of ks)h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img src="${ico(k)}" alt=""><span class="n">${cnt(k)}</span></button>`;
+        const pad=Math.max(0,20-ks.length);for(let i=0;i<pad;i++)h+=`<div class="cell empty"></div>`;h+='</div>';}
       else{const sel=ks.includes(sheet.sel)?sheet.sel:ks[0],I=itemInfo(sel),t=sel.split('|')[0],mat=sel.startsWith('m:')||sel.startsWith('x:');
         const inOrder=S.orders.some(o=>!o.done&&(o.k===sel||o.k==='c:'+t));const wish=npcs.find(n=>{const d=S.npc[n.i];return d&&d.wish&&!d.wish.done&&d.wish.day===S.day&&invFor(d.wish.k)===sel;});
         const desc=(I&&I.desc)||(sel.includes('|')?(VAR[varOf(sel)].name?`A rare ${VAR[varOf(sel)].name.toLowerCase()} harvest!`:'Fresh from your farm.'):I&&I.bio?'Found around '+I.bio.map(b=>bioLabel(b)).join(', ')+'.':'');
         h+=`<div class="detail"><img class="v-${varOf(sel)}" src="${iconOf(sel)}" alt=""><div class="grow"><div class="nm">${nameOf(sel)} ×${S.inv[sel]}</div><div class="sub">${desc}<br><span class="pp">${shellHTML}${fmt(priceOf(sel))}</span>${S.demand===t?' <span class="pp hot">In demand</span>':''}${inOrder?' · wanted for an order':''}${wish?' · '+wish.name+' wants this!':''}</div>
           <div class="acts">${sel.startsWith('x:')?`<button class="pbtn go" data-use="${sel}">Use</button>`:''}${sheet.ctx==='trader'?`<button class="pbtn" data-sell="${sel}">Sell 1</button>${S.inv[sel]>1?`<button class="pbtn" data-sellk="${sel}">Sell all ×${S.inv[sel]}</button>`:''}`:sheet.ctx==='crate'&&!sel.startsWith('x:')?`<button class="pbtn" data-crate="${sel}">Drop off 1</button>${S.inv[sel]>1?`<button class="pbtn" data-cratek="${sel}">Drop off all ×${S.inv[sel]}</button>`:''}`:''}</div></div></div><div class="inv">`;
-        for(const k of ks){const v=varOf(k);h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img class="v-${v}" src="${iconOf(k)}" alt="">${v!=='normal'?`<span class="dot" style="background:${{giant:'#6ab84a',moonlit:'#9ab8ff',golden:'#f5c542',crystal:'#7ad8f0',rainbow:'#f39ab0'}[v]}"></span>`:''}<span class="n">${S.inv[k]}</span></button>`;}
+        for(const k of ks){if(k.startsWith('d:')){h+=`<button class="cell" data-pick="${k}"><img src="${ico(k)}" alt=""><span class="n">${cnt(k)}</span></button>`;continue;}const v=varOf(k);h+=`<button class="cell ${k===sel?'sel':''}" data-pick="${k}"><img class="v-${v}" src="${iconOf(k)}" alt="">${v!=='normal'?`<span class="dot" style="background:${{giant:'#6ab84a',moonlit:'#9ab8ff',golden:'#f5c542',crystal:'#7ad8f0',rainbow:'#f39ab0'}[v]}"></span>`:''}<span class="n">${S.inv[k]}</span></button>`;}
         const pad=Math.max(0,20-ks.length);for(let i=0;i<pad;i++)h+=`<div class="cell empty"></div>`;h+='</div>';}}}
   else if(sheet.kind==='trader'){$('sheetTitle').textContent=`${TRADER.name}'s boat`;tabs([]);
     h+=`<div class="sellall"><button class="pbtn go" data-tsell="1">Sell to ${TRADER.name}</button></div><p class="note">Today's stock. It changes every morning.</p><div class="grid">`;
@@ -13373,7 +13415,7 @@ $('sheetX').onclick=()=>{SFX.ui();closeSheet();};
 function wheelOpen(){return $('bar').classList.contains('open');}
 function showApps(on){$('bar').classList.toggle('open',!!on);$('bTool').setAttribute('aria-expanded',!!on);}
 $('bTool').onclick=()=>{SFX.ui();showApps(!wheelOpen());};
-$('bBag').onclick=()=>openSheet('bag');
+$('bBag').onclick=()=>openSheet('bag');$('bCraft').onclick=()=>openSheet('craft');
 $('nextUp').onclick=goalTap;$('jrChip').onclick=jrOpen;
 $('bShop').onclick=()=>openSheet('shop',sheet&&sheet.kind==='shop'?sheet.tab:'decor');
 $('bTask').onclick=()=>openSheet('orders');
@@ -14319,7 +14361,7 @@ function frame(now){
 /* =========================================================
    Boot
    ========================================================= */
-$('icoShell').src=PIX.shell;$('icoStar').src=PIX.star;$('icoBag').src=PIX.bag;$('icoShop').src=PIX.shop;$('icoTask').src=PIX.task;$('icoChart').src=PIX.chart;$('icoDex').src=PIX.dex;
+$('icoShell').src=PIX.shell;$('icoStar').src=PIX.star;$('icoBag').src=PIX.bag;$('icoCraft').src=PIX.craft;$('icoShop').src=PIX.shop;$('icoTask').src=PIX.task;$('icoChart').src=PIX.chart;$('icoDex').src=PIX.dex;
 // a brand-new game first chooses its island (85-islandpick), then boots; everything else boots straight away
 let introCam=null;
 function bootGame(prebuilt){applyHomeStyle();seasonCheck();
@@ -14333,6 +14375,7 @@ grantKits();const farmNew=!S.farmInit;if(farmNew){genDebris();if(S.scratch)genWi
 if(S.acornLay){delete S.acornLay;layAcornfield();}
 if(S.dreamLay){delete S.dreamLay;layDream();}
 if(!isNew&&fixCamp())rebuildHome();/* an older camp with the sprout in the fire or a tree through the tent */
+if(S.homeAt&&!S.bench&&S.scratch){pickBench();addBench(islands[0]);}
 if(S.wild&&S.finds.filter(forageOf).length<8){forageSpawn(true,28);curioTrail();} // the wild island's forage, from the first day
 if(S.wild&&!S.tidy){S.tidy=1;S.debris=S.debris.filter(d=>!((d.k==='weed'||d.k==='twig')&&Math.random()<0.7));}
 if(isNew||(!S.sea&&!walkable(Math.round(vil.x),Math.round(vil.z)))){if(S.scratch){vil.x=vil.tx=DOCK.x+0.5;vil.z=vil.tz=DOCK.z-1.2;}else{vil.x=vil.tx=TOWN.plaza[0]+0.5;vil.z=vil.tz=TOWN.plaza[1]+2.4;}}
@@ -14444,7 +14487,7 @@ if(/[?&]debug\b/.test(location.search)){
       const hx=Math.round(vil.x)+2,hz=Math.round(vil.z)+1;g.position.set(hx,topY(hx,hz)+0.4,hz);bugs.push({id,g,hx,hz,t:0,life:999,ph:0,out:0,isl:isl.id,crawl:false,still:true});return id;},
     bugAt:()=>{const b=bugs[bugs.length-1];const caught=Object.keys(S.alm).filter(k=>k.startsWith('b:')).length;if(!b)return{caught};const s=toScreen(b.g.position.x,b.g.position.y,b.g.position.z);return{x:s[0],y:s[1],n:bugs.length,caught,tool:S.tool};},
     camInfo:()=>({dist:cam.dist,pitch:cam.pitch,fov:camera.fov,pos:camera.position.toArray(),W,H,PX,hy:skyMat.uniforms.hy.value}),
-    critters:()=>{const o={};for(const c of critters){o[c.k]=(o[c.k]||0)+1;if(!isFinite(c.g.position.x+c.g.position.y+c.g.rotation.x+c.g.rotation.y))o.bad=(o.bad||0)+1;}return o;},spawnCritter:k=>spawnCritter(k),vilAt:()=>[vil.x,vil.z],critClear:()=>{for(let i=critters.length-1;i>=0;i--)dropCritter(i);},berryBush:()=>{const t=S.debris.filter(q=>q.k==='bush'&&q.v===2).sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];return t&&[t.x,t.z];},dropBerries:(x,z)=>dropBerries(x,z),bugHere:()=>{spawnBugAt(vil.x+1.2,vil.z+0.4,false);return bugs.length;},catchLast:()=>{const b=bugs[bugs.length-1];if(b){catchBug(b);return BUGS[b.id].name;}return null;},curios:()=>S.finds.filter(f=>CURIO.has(f.k)).map(f=>[f.k,f.x,f.z]),dismiss:()=>{if(caught){caught.t=9;dismissCatch();}},caughtCard:()=>caught&&caught.card?{verb:caught.card.verb,name:caught.card.name,first:caught.card.first}:null,jrTasks:()=>S.jr&&S.jr.tasks.map(t=>t.k+':'+t.have+'/'+t.n+(t.done?'✓':'')),goalName:()=>{const g=nextGoal();return g&&g.tag+' · '+g.name;},marks:()=>({kind:S.home&&S.home.kind,suggest:S.home&&S.home.suggest,marks:S.home&&S.home.marks}),swingPose:u=>{anim=u===null?null:{A:TOOL_ANIM[S.tool]||TOOL_ANIM.hand,t:0,t0:performance.now(),hit:null,fz:u};},swingState:()=>({anim:anim?{t:+anim.t.toFixed(2),d:anim.A.d}:null,hand:(()=>{const h=villager.children[0]&&villager.children[0].userData.hand;return h?{w:+h.w.toFixed(2),bone:h.bone.name}:null;})(),tool:S.tool,hold:[toolHold.position.x,toolHold.position.y,toolHold.position.z].map(v=>+v.toFixed(2)),rot:+toolHold.rotation.x.toFixed(2)}),wildTrees:()=>{const isl=curIsl();return isl&&isl.trees?{id:isl.id,home:!!isl.home,trees:[...isl.trees.values()].map(t=>[t.x,t.z])}:null;},felled:()=>S.felled||{},toolTapAt:(x,z)=>toolTap(x,z,islandAt(x,z)),placeAt:(k,x,z)=>{S.shells+=999;startPlace(k,false);if(!placing)return'refused';const p=[placing.x,placing.z];doPlace();clearAction&&clearAction();return{near:p,ok:S.objs.some(o=>o.k===k&&o.x===p[0]&&o.z===p[1])};},islandHere:()=>{const i=curIsl();return i?{id:i.id,home:!!i.home,fr:!!i.fr,name:i.name}:null;},walkTest:()=>{const t=S.debris.filter(d=>d.k==='tree').sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];if(!t)return null;vil.x=vil.tx=t.x-2;vil.z=vil.tz=t.z;vil.path=null;goTo(t.x+2,t.z);return [t.x,t.z];},vilPos:()=>[vil.x,vil.z,vil.tx,vil.tz,vil.path&&vil.path.length],solidAt:(x,z)=>solidR(x,z),setShells:n=>{S.shells=n;updateHUD();},terraTest:(mode,x,z)=>{const t0=performance.now();const sh=S.shells;terraApply([[x,z]],mode);return{ms:Math.round(performance.now()-t0),lvl:lvlMap.get(K(x,z))||0,type:landMap.get(K(x,z)),paid:sh-S.shells,terra:S.terra&&S.terra[K(x,z)]};},
+    critters:()=>{const o={};for(const c of critters){o[c.k]=(o[c.k]||0)+1;if(!isFinite(c.g.position.x+c.g.position.y+c.g.rotation.x+c.g.rotation.y))o.bad=(o.bad||0)+1;}return o;},spawnCritter:k=>spawnCritter(k),vilAt:()=>[vil.x,vil.z],critClear:()=>{for(let i=critters.length-1;i>=0;i--)dropCritter(i);},bench:()=>S.bench||null,craftN:()=>craftableN(),benchTap:()=>{const b=S.bench;if(b)useFixed(b.x,b.z);return !!b;},berryBush:()=>{const t=S.debris.filter(q=>q.k==='bush'&&q.v===2).sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];return t&&[t.x,t.z];},dropBerries:(x,z)=>dropBerries(x,z),bugHere:()=>{spawnBugAt(vil.x+1.2,vil.z+0.4,false);return bugs.length;},catchLast:()=>{const b=bugs[bugs.length-1];if(b){catchBug(b);return BUGS[b.id].name;}return null;},curios:()=>S.finds.filter(f=>CURIO.has(f.k)).map(f=>[f.k,f.x,f.z]),dismiss:()=>{if(caught){caught.t=9;dismissCatch();}},caughtCard:()=>caught&&caught.card?{verb:caught.card.verb,name:caught.card.name,first:caught.card.first}:null,jrTasks:()=>S.jr&&S.jr.tasks.map(t=>t.k+':'+t.have+'/'+t.n+(t.done?'✓':'')),goalName:()=>{const g=nextGoal();return g&&g.tag+' · '+g.name;},marks:()=>({kind:S.home&&S.home.kind,suggest:S.home&&S.home.suggest,marks:S.home&&S.home.marks}),swingPose:u=>{anim=u===null?null:{A:TOOL_ANIM[S.tool]||TOOL_ANIM.hand,t:0,t0:performance.now(),hit:null,fz:u};},swingState:()=>({anim:anim?{t:+anim.t.toFixed(2),d:anim.A.d}:null,hand:(()=>{const h=villager.children[0]&&villager.children[0].userData.hand;return h?{w:+h.w.toFixed(2),bone:h.bone.name}:null;})(),tool:S.tool,hold:[toolHold.position.x,toolHold.position.y,toolHold.position.z].map(v=>+v.toFixed(2)),rot:+toolHold.rotation.x.toFixed(2)}),wildTrees:()=>{const isl=curIsl();return isl&&isl.trees?{id:isl.id,home:!!isl.home,trees:[...isl.trees.values()].map(t=>[t.x,t.z])}:null;},felled:()=>S.felled||{},toolTapAt:(x,z)=>toolTap(x,z,islandAt(x,z)),placeAt:(k,x,z)=>{S.shells+=999;startPlace(k,false);if(!placing)return'refused';const p=[placing.x,placing.z];doPlace();clearAction&&clearAction();return{near:p,ok:S.objs.some(o=>o.k===k&&o.x===p[0]&&o.z===p[1])};},islandHere:()=>{const i=curIsl();return i?{id:i.id,home:!!i.home,fr:!!i.fr,name:i.name}:null;},walkTest:()=>{const t=S.debris.filter(d=>d.k==='tree').sort((a,b)=>Math.hypot(a.x-vil.x,a.z-vil.z)-Math.hypot(b.x-vil.x,b.z-vil.z))[0];if(!t)return null;vil.x=vil.tx=t.x-2;vil.z=vil.tz=t.z;vil.path=null;goTo(t.x+2,t.z);return [t.x,t.z];},vilPos:()=>[vil.x,vil.z,vil.tx,vil.tz,vil.path&&vil.path.length],solidAt:(x,z)=>solidR(x,z),setShells:n=>{S.shells=n;updateHUD();},terraTest:(mode,x,z)=>{const t0=performance.now();const sh=S.shells;terraApply([[x,z]],mode);return{ms:Math.round(performance.now()-t0),lvl:lvlMap.get(K(x,z))||0,type:landMap.get(K(x,z)),paid:sh-S.shells,terra:S.terra&&S.terra[K(x,z)]};},
     terraPlan:(mode,x,z)=>terraPlan(x,z,mode),coastGrass:()=>{const isl=islands[0];return isl.grass.filter(([x,z])=>!(lvlMap.get(K(x,z)))&&freeTile(x,z)&&!TOWN.path.has(K(x,z))&&[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>isSeaT(landMap.get(K(x+a,z+b))))).sort((a,b)=>Math.hypot(a[0]-vil.x,a[1]-vil.z)-Math.hypot(b[0]-vil.x,b[1]-vil.z))[0]||null;},
     freeGrass:()=>{const isl=islands[0];return isl.grass.filter(([x,z])=>freeTile(x,z)&&!S.tiles[K(x,z)]).sort((a,b)=>Math.hypot(a[0]-vil.x,a[1]-vil.z)-Math.hypot(b[0]-vil.x,b[1]-vil.z))[1]||null;},
     swimRec:on=>{if(on){swim.rec=[];return 0;}const r=swim.rec;swim.rec=null;return r;},sceneToon:()=>{const out={};for(const o of scene.children){if(!o.visible)continue;let n=0;o.traverseVisible(q=>{if(q.isMesh)n++;});if(!n)continue;const nm=o===debrisRoot?'debris':o===lifeRoot?'life':o===objRoot?'objs':o===cropRoot?'crops':(typeof cropRoot!=='undefined'&&o===cropRoot)?'crops':o===villager?'player':islands.some(i=>i.group===o)?'isl'+islands.findIndex(i=>i.group===o):npcs.some(q=>q.g===o)?'npc':'';const k=nm+(o.name||o.type)+(o.isGroup?'['+o.children.length+']':'')+':'+(o.material?o.material.type:'')+(o.geometry?'/'+(o.geometry.type):'');out[k]=(out[k]||0)+n;}return Object.entries(out).sort((a,b)=>b[1]-a[1]).slice(0,25);},plantThumbs:(size=160)=>POT_PLANTS.map(([k,n])=>[n,snapThumb(objGroup('pot_'+k,3,0),size)]),instList:()=>{const out=[];islands[0].group.traverseVisible(o=>{if(!o.isInstancedMesh)return;const g=o.geometry,n=(g.index?g.index.count:g.attributes.position.count)/3;out.push([o.material.type+(o===islands[0].gIM?'(grass)':FLORA_GEOS.includes(o.geometry)?'(flora'+FLORA_GEOS.indexOf(o.geometry)+')':FLORA_LO.includes(o.geometry)?'(floraLo)':o.geometry===CLOVER_GEO?'(clover)':o.geometry===PEBBLE_GEO?'(pebble)':''),Math.round(n),o.count,Math.round(n*o.count)]);});return out.sort((a,b)=>b[3]-a[3]).slice(0,12);},reefMs:()=>{const t=performance.now(),g=reefGen();let mx=0,n=0;for(;;){const a=performance.now(),r=g.next();mx=Math.max(mx,performance.now()-a);(window.__st=window.__st||[]).push(Math.round(performance.now()-a));n++;if(r.done)break;}const st=window.__st;window.__st=null;return{total:Math.round(performance.now()-t),longestStep:Math.round(mx),steps:n,st:st.join(" ")};},swimSpot:()=>{if(!reef||reefDirty)buildReef();const isl=islands[0];let best=null,bd=1e9;for(const [x,z] of isl.sand){if(Math.abs(x-DOCK.x)<4&&Math.abs(z-DOCK.z)<9)continue;for(const [dx,dz] of [[0,1],[1,0],[-1,0],[0,-1]]){const tx=x+dx*5,tz=z+dz*5;if(!swimmable(tx,tz)||!canDive(tx,tz)||isLand(x+dx,z+dz))continue;const sc=Math.abs(x-DOCK.x)+Math.abs(z-DOCK.z);if(sc<bd){bd=sc;best=[x,z,tx,tz];}}}return best;},

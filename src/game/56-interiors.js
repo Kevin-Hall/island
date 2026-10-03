@@ -81,7 +81,7 @@ function roomTap(cx,cy){const I=inside;if(deco){decoTap(cx,cy);return;}if(I.who&
     roomUse(pr,I);}}
 // what tapping a piece of furniture does
 function roomUse(pr,I){{
-    if(pr.k==='workbench'){setTimeout(()=>openSheet('bag','craft'),250);}
+    if(pr.k==='workbench'){setTimeout(()=>openSheet('craft'),250);}
     else if(pr.k==='bed'&&I.kind==='home'){if(S.hour>=19||S.hour<5)setTimeout(()=>setAction('Snuggle in and sleep until morning?',[{label:'Sleep',cls:'go',fn:sleep},{label:'Not yet',fn:clearAction}],'Bed'),0);else toast('Not sleepy yet. Come back after 7 pm.');}
     else{const T0={bed:'A cosy bed with a patchwork quilt.',table:'Tea for two, and a shiny red apple.',lamp:'It glows warmly.',plant:'Lovingly watered.',tv:'It’s showing a documentary about deep-sea lanternfish.',beanbag:'Squishy. Dangerously comfy.',
       armchair:'A well-worn favourite.',shelf:'Books, books and more books.',weights:'Heavy! Very heavy.',bag:'Thwump!',counter:'Something smells delicious.',piano:'You play a little tune. ♪',stereo:'An old sea shanty crackles from the speakers.',

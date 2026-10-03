@@ -18,7 +18,7 @@ function recipeIcon(r){return r.out[0]==='b'?THUMB[r.out[1]]||'':ICON['x:'+r.out
 function canCraft(r){return r.lvl<=level()&&Object.entries(r.in).every(([k,n])=>haveOf(k)>=n);}
 function craft(i){const r=RECIPES[i];if(!canCraft(r)){SFX.no();return;}for(const [k,n] of Object.entries(r.in))takeOf(k,n);const [t,id,n]=r.out;
   if(t==='b')S.store[id]=(S.store[id]||0)+n;else S.inv['x:'+id]=(S.inv['x:'+id]||0)+n;jrNote('craft');
-  SFX.rare();addXP(3);toast(`Crafted ${n>1?n+'× ':''}<b>${recipeName(r)}</b>${t==='b'?' — find it in Storage to place it.':'.'}`,'',recipeIcon(r));}
+  SFX.rare();addXP(3);toast(`Crafted ${n>1?n+'× ':''}<b>${recipeName(r)}</b>${t==='b'?' — it\u2019s in your Bag, ready to place.':'.'}`,'',recipeIcon(r));}
 function useItem(k){if(k==='x:fert'){const ks=Object.keys(S.tiles).filter(q=>S.tiles[q].crop&&S.tiles[q].crop.p<1);if(!ks.length){toast('Nothing is growing right now.');return;}
     for(const q of ks){const c=S.tiles[q].crop,s0=stageOf(c.p);c.p=Math.min(0.995,c.p+0.15);if(stageOf(c.p)!==s0)syncCrop(q);const [x,z]=q.split(',').map(Number);sparkle(x,topY(x,z)+0.4,z,0xb8f088);}
     takeOf(k,1);SFX.rare();toast(`Fertilised ${ks.length} crop${ks.length>1?'s':''}. They perk right up!`,'',ICON['x:fert']);}
@@ -63,3 +63,24 @@ function objAt(x,z){objIdx();return OBJ_IDX.map.get(K(x,z))||null;}
 function floorAt(x,z){objIdx();return OBJ_IDX.fl.get(K(x,z))||null;}
 const onHome=(x,z)=>islMap.get(K(x,z))===0;
 
+
+// the workbench: a real place at your camp to make things (it stands beside your tent once it's pitched), and the Craft
+// button's count of what you could make right now
+const craftableN=()=>RECIPES.filter(r=>canCraft(r)).length;
+function craftBadge(){const el=$('craftN');if(!el)return;const n=craftableN();el.hidden=!n;el.textContent=n;}
+// where it stands: a free tile of grass a couple of steps from the tent, its working side towards you
+function pickBench(){const h=S.homeAt;if(!h||S.bench)return;let best=null,bs=-1e9;
+  for(let dx=-4;dx<=4;dx++)for(let dz=-4;dz<=4;dz++){const x=h.x+dx,z=h.z+dz,d=Math.hypot(dx-0.5,dz-0.5);if(d<2.2||d>4.2)continue;
+    if(landMap.get(K(x,z))!=='grass'||islMap.get(K(x,z))!==0||fixedAt(x,z)||objAt(x,z)||TOWN.path.has(K(x,z))||S.tiles[K(x,z)]||riverSurf.has(K(x,z)))continue;
+    if((lvlMap.get(K(x,z))||0)!==(lvlMap.get(K(h.x,h.z))||0))continue;const s=-d+(dz>0?1.5:0)+(debrisAt(x,z)?-2:0);if(s>bs){bs=s;best=[x,z];}}
+  if(!best)return;S.bench={x:best[0],z:best[1],r:Math.atan2(h.x+0.5-best[0],h.z+0.5-best[1])+Math.PI};S.debris=S.debris.filter(d=>!(d.x===best[0]&&d.z===best[1]));if(typeof syncDebris==='function')syncDebris();}
+function addBench(isl){const b=S.bench;if(!b)return;const W=0xb27a4c,Dk=0x7a5232,St=0xb8bcc8,y=topY(b.x,b.z),p=[];
+  p.push(P(BOX,W,0,0.62,0,0,0,0,1.12,0.1,0.6),P(BOX,Dk,0,0.56,0,0,0,0,1.04,0.04,0.52));
+  for(const [lx,lz] of [[-0.48,-0.22],[0.48,-0.22],[-0.48,0.22],[0.48,0.22]])p.push(P(BOX,Dk,lx,0.3,lz,0,0,0,0.09,0.6,0.09));
+  p.push(P(BOX,W,0,0.18,0,0,0,0,0.98,0.05,0.46),P(BOX,0xc8955e,-0.15,0.23,0,0,0.1,0,0.7,0.05,0.16),P(BOX,0xc8955e,-0.12,0.28,0.04,0,-0.08,0,0.66,0.05,0.15));/* a shelf with planks */
+  p.push(P(BOX,St,0.22,0.69,0.05,0,0.5,0,0.42,0.02,0.13),P(BOX,Dk,0.46,0.71,-0.07,0,0.5,0,0.12,0.06,0.06));/* a saw */
+  p.push(P(CYL6,0x9a6a3a,-0.28,0.7,0.1,0,0,1.571,0.035,0.32,0.035),P(BOX,0x6a6e78,-0.42,0.71,0.1,0,0,0,0.07,0.08,0.14));/* a hammer */
+  p.push(P(BOX,0x6a6e78,0.5,0.72,0.2,0,0,0,0.12,0.12,0.1),P(CYL8,0x8a8e98,0.5,0.78,0.2,1.571,0,0,0.04,0.16,0.04));/* a little vise */
+  p.push(P(CYL8,0x9a6a3a,0.82,0.18,0.15,0,0,0,0.36,0.36,0.36),P(CYL8,0xd8b07a,0.82,0.365,0.15,0,0,0,0.33,0.02,0.33));/* a stump to sit on */
+  const c=Math.cos(b.r),s=Math.sin(b.r);for(const q of p){const qx=q.x,qz=q.z;q.x=b.x+qx*c+qz*s;q.z=b.z-qx*s+qz*c;q.y+=y;q.ry+=b.r;}
+  const me=M(p);me.castShadow=true;me.receiveShadow=true;isl.group.add(me);TOWN.fixed.set(K(b.x,b.z),'bench');}

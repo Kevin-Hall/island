@@ -72,7 +72,7 @@ function updatePitch(dt){const p=pitch;if(!p)return;p.t=(performance.now()-p.t0)
   if(p.step===5&&p.t>=4.0){p.step=6;SFX.discover();nameIsland();}
   // a springy canvas: it overshoots and settles when it pops up
   for(let i=0;i<4;i++){const h=Math.min(dt,0.1)/4;p.vy+=((p.ty-p.sy)*60-p.vy*9)*h;p.sy+=p.vy*h;}if(p.tm){const k=clamp(p.sy,0.02,1.3);p.tm.scale.set(0.8+0.2*Math.min(1,k),k,0.8+0.2*Math.min(1,k));}}
-function pitchDone(){if(!pitch)return;if(S.day===1&&S.scratch&&!S.jrIntro){S.jrIntro=1;setTimeout(()=>{if(!$('jrCard')&&!caught)jrOpen();},2600);}pitch.end=0;pitch.cd=cam.dist;pitch.cp=cam.pitch;pitch.lit=false;if(pitch.tm)pitch.tm.scale.set(1,1,1);document.body.classList.remove('cine');}
+function pitchDone(){if(!pitch)return;if(!S.bench){pickBench();addBench(islands[0]);}if(S.day===1&&S.scratch&&!S.jrIntro){S.jrIntro=1;setTimeout(()=>{if(!$('jrCard')&&!caught)jrOpen();},2600);}pitch.end=0;pitch.cd=cam.dist;pitch.cp=cam.pitch;pitch.lit=false;if(pitch.tm)pitch.tm.scale.set(1,1,1);document.body.classList.remove('cine');}
 
 // the moment you settle: name the place you've chosen
 function nameIsland(){const el=document.createElement('div');el.id='heartUp';const sug=S.islandName||(S.home&&S.home.suggest)||TOWN_NAMES[0][Math.floor(Math.random()*TOWN_NAMES[0].length)]+TOWN_NAMES[1][Math.floor(Math.random()*TOWN_NAMES[1].length)];

@@ -652,3 +652,6 @@ body.chared .chatveil{opacity:.5}
 
 .fn-list li:has(.how){flex-wrap:wrap;padding-top:6px}.fn-list .how{flex-basis:100%;padding:0 4px 7px 56px;font:12px/1.3 var(--fn-type);opacity:.8}
 .fn-intro{margin:2px 0 6px;font-size:13px;font-weight:600;color:var(--ink2);line-height:1.3}
+
+#apps .btn{position:relative}#apps .cnt{position:absolute;top:2px;right:6px;min-width:18px;height:18px;border-radius:9px;background:#e8604a;color:#fff;font:700 11px/18px var(--font,inherit);font-style:normal;text-align:center;padding:0 4px;box-shadow:0 1px 0 rgba(0,0,0,.2)}
+.recipe.can{box-shadow:0 0 0 2px #9fd06a inset;border-radius:16px}
