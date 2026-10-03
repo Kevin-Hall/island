@@ -131,9 +131,8 @@ function digSpot(f){S.finds=S.finds.filter(q=>q!==f);syncLife();jrNote('dig');co
   else k=r<0.26?'fossil':r<0.46?'geode':r<0.58?'oldcoin':r<0.66?'truffle':r<0.82?'clay':'seeds';
   if(k==='seeds'){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+2;floatText(x,y+0.9,z,'+2 '+CROPS[id].name+' seeds','gold');SFX.pop();return;}
   if(k==='clay'){gain('m:stone');floatText(x,y+0.9,z,'+1 Stone');SFX.pop();return;}
-  const I=FINDS[k],key='g:'+k,big=bigMoment(key,I.price>=200?1:I.w),fresh=!S.alm[key];if(big)revSkip=key;const first=gain(key);
-  if(big)holdUp(key,findGroup(k,x*7+z),x,y-0.12,z,1.9,'You dug up',fresh);else popHold(findGroup(k,x*7+z),x,z,1.4,y-0.12);/* up out of the hole */floatText(x,y+0.9,z,'+ '+I.name,I.price>=200?'gold':'');
-  if(I.price>=200)SFX.rare();else SFX.harvest();}
+  const I=FINDS[k],key='g:'+k,first=gain(key);popHold(findGroup(k,x*7+z),x,z,1.4,y-0.12);/* up out of the hole */floatText(x,y+0.9,z,'+ '+I.name,I.price>=200?'gold':'');
+  if(I.price>=200){SFX.rare();if(!first)toast(`You dug up ${/^[aeiou]/i.test(I.name)?'an':'a'} <b>${I.name}</b>!`,'rare',ICON[key]);}else SFX.harvest();}
 let leafT=0;
 function driftLeaves(dt){leafT-=dt;if(leafT>0)return;leafT=0.35+Math.random()*0.5;const s=season();if(s==='winter')return;
   const near=S.debris.filter(d=>d.k==='tree'&&Math.abs(d.x-vil.x)<11&&Math.abs(d.z-vil.z)<9);if(!near.length)return;const t=pickR(near),y=topY(t.x,t.z)+1.3*(t.sc||1);

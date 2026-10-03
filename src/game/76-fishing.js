@@ -116,8 +116,8 @@ function catchCard(d){let el=$('catchCard');if(!el){el=document.createElement('d
   el.classList.toggle('rare',!!d.rare);
   el.innerHTML=`<small>${d.verb||'You caught'}</small><b>${d.art} ${d.name}</b>${tags.length?`<span>${tags.map(t=>`<em>${t}</em>`).join('')}</span>`:''}<p>${d.quip}</p>${d.first?'<i class="new">New to your Islandex!</i>':''}<i>Tap anywhere to put it away</i>`;
   el.classList.remove('on');void el.offsetWidth;el.classList.add('on');}
-// the same moment for a bug, a find, a plant or something dug up, whenever it's new to you, rare or shiny (a common one
-// you've had before just pops up and away): held up overhead, turning slowly, with a card that says what it is
+// the same moment for a bug, whenever it's new to you or rare (a common one you've had before just pops up and away; finds
+// and plants never stop you: they pop up, with the Islandex's own card when new): held up overhead, turning slowly, with a card
 let revSkip=null;/* (its card says it's new, so the Islandex's own discovery card stands aside) */
 const bigMoment=(key,w,shiny)=>!S.alm[key]||w<5||!!shiny;
 function holdUp(key,g,x,y,z,sc,verb,first,shiny){if(caught){popHold(g,x,z,sc*0.7,y);return;}
