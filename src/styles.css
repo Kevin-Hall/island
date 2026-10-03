@@ -472,6 +472,7 @@ body.titling .say,body.cine .say{display:none}
 .catchcard{position:fixed;z-index:7;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);transform:translate(-50%,20px) scale(.92);opacity:0;pointer-events:none;
   width:min(330px,calc(100vw - 32px));box-sizing:border-box;background:var(--paper);border-radius:28px;box-shadow:var(--shadow);padding:14px 18px 12px;text-align:center;transition:transform .35s cubic-bezier(.3,1.5,.5,1),opacity .2s}
 .catchcard.on{transform:translate(-50%,0) scale(1);opacity:1}
+.catchcard.rare{box-shadow:0 0 0 3px #f2c14e,var(--shadow);background:linear-gradient(#fffbea,var(--paper))}.catchcard p small{color:var(--ink2);font-size:12px}
 .catchcard small{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
 .catchcard b{display:block;font-size:24px;font-weight:700;color:var(--ink);margin:2px 0 6px}
 .catchcard span{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.catchcard em{font-style:normal;font-size:13px;font-weight:700;background:var(--cream);border-radius:99px;padding:3px 10px;box-shadow:0 2px 0 var(--line)}
@@ -648,3 +649,6 @@ body.chatting .hud,body.chatting .clockb,body.chatting #bar,body.chatting #apps,
 .chared .htog button.on{background:var(--teal);color:#fff}
 .chared .hnote{font-size:12.5px;color:var(--ink2);margin:8px 0 0}
 body.chared .chatveil{opacity:.5}
+
+.fn-list li:has(.how){flex-wrap:wrap;padding-top:6px}.fn-list .how{flex-basis:100%;padding:0 4px 7px 56px;font:12px/1.3 var(--fn-type);opacity:.8}
+.fn-intro{margin:2px 0 6px;font-size:13px;font-weight:600;color:var(--ink2);line-height:1.3}

@@ -3,22 +3,25 @@
    ========================================================= */
 // --- today's tasks: four small things to do each day, ticked off as you play, each paying a few shells ---
 const JR_TASKS={
-  bug:{t:n=>`Catch ${n} bug${n>1?'s':''}`,n:[2,3],pay:90,ico:'net'},
-  find:{t:n=>`Forage ${n} treasures`,n:[3,5],pay:80,ico:'bag'},
-  shake:{t:n=>`Shake ${n} trees`,n:[2,4],pay:60,ico:'axe',ok:()=>S.debris.some(d=>d.k==='tree')},
+  bug:{t:n=>`Catch ${n} bug${n>1?'s':''}`,n:[2,3],pay:90,ico:'net',how:'Tap a butterfly or beetle: your net comes out by itself. Rustling a bush can shake one loose.'},
+  find:{t:n=>`Forage ${n} treasures`,n:[3,5],pay:80,ico:'bag',how:'Tap anything lying on the ground: mushrooms, shells, berries, things that glint in the grass.'},
+  plant:{t:n=>`Start a farm: plant ${n} seeds`,n:[3,3],pay:120,ico:'sprout',how:'Hold the hoe and tap open grass to till it, then pick seeds from your tools and tap the soil.'},
+  craft:{t:()=>'Craft something',n:[1,1],pay:120,ico:'bag',how:'Open your pack and the Craft tab: wood, stone and fiber from around the island make tools and decor.'},
+  shake:{t:n=>`Shake ${n} trees`,n:[2,4],pay:60,ico:'axe',how:'Tap a tree (without the axe). Fruit, acorns, a bug or a bird might fall out.',ok:()=>S.debris.some(d=>d.k==='tree')},
   rustle:{t:n=>`Rustle ${n} bushes`,n:[2,3],pay:60,ico:'sprout',ok:()=>S.debris.some(d=>d.k==='bush')},
   dig:{t:()=>'Dig up something buried',n:[1,1],pay:110,ico:'shovel'},
-  fish:{t:n=>`Catch ${n} fish`,n:[1,2],pay:120,ico:'rod'},
+  fish:{t:n=>`Catch ${n} fish`,n:[1,2],pay:120,ico:'rod',how:'Tap the sea or a river: you cast your rod. When the float dips, tap again.'},
   wood:{t:n=>`Gather ${n} wood`,n:[3,5],pay:70,ico:'m:wood'},
   water:{t:n=>`Water ${n} crops`,n:[3,5],pay:60,ico:'can',ok:()=>Object.values(S.tiles).some(t=>t.crop)},
   harvest:{t:n=>`Harvest ${n} crops`,n:[2,4],pay:90,ico:'sprout',ok:()=>Object.values(S.tiles).some(t=>t.crop)},
   talk:{t:n=>`Chat with ${n} neighbour${n>1?'s':''}`,n:[1,2],pay:70,ico:'star',ok:()=>npcs.length>0,cap:()=>npcs.length},
   fire:{t:()=>'Warm up by the campfire',n:[1,1],pay:50,ico:'star',ok:()=>!!campfire()},
   fresh:{t:()=>'Discover something new',n:[1,1],pay:150,ico:'dex'},
-  tent:{t:()=>'Pitch your tent',n:[1,1],pay:100,ico:'star',chk:()=>!!S.homeAt},
+  tent:{t:()=>'Pitch your tent',n:[1,1],pay:100,ico:'star',chk:()=>!!S.homeAt,how:'Tap the goal at the top of the screen, then choose a spot.'},
 };
 function jrMake(){const R=mulberry(S.worldSeed+S.day*977),pick=k=>{const T=JR_TASKS[k];let n=T.n[0]+Math.floor(R()*(T.n[1]-T.n[0]+1));if(T.cap)n=Math.min(n,T.cap());return{k,n,have:0,done:0};};
-  let keys;if(S.day===1&&S.scratch)keys=[S.homeAt?'shake':'tent','bug','find','fire'];/* a gentle first day */
+  // your first day: a little of everything the island holds, each with how to do it
+  let keys;if(S.day===1&&S.scratch)keys=[S.homeAt?'shake':'tent','find','bug','fish','plant','craft'];
   else{const pool=Object.keys(JR_TASKS).filter(k=>k!=='tent'&&(!JR_TASKS[k].ok||JR_TASKS[k].ok()));keys=[];while(keys.length<4&&pool.length)keys.push(pool.splice(Math.floor(R()*pool.length),1)[0]);}
   S.jr={day:S.day,tasks:keys.map(pick),all:0};}
 function jrNote(k,n=1){if(!S.jr||S.jr.day!==S.day)return;const t=S.jr.tasks.find(q=>q.k===k&&!q.done);if(!t)return;t.have=Math.min(t.n,t.have+n);if(t.have>=t.n)jrDone(t);else jrChip(true);}
@@ -47,9 +50,9 @@ function jrRender(){const c=$('jrCard');if(!c||!S.jr)return;const s=season();
   <div class="fn-top"><span>Field Notes</span><span>No. ${no}</span></div>
   <div class="fn-grid"><div><label>Date sighted</label><b>${s[0].toUpperCase()+s.slice(1)} · Day ${S.day}</b></div><div><label>Station</label><b>${TOWN.name||'The island'}</b></div></div>
   ${(()=>{const g=nextGoal();return g?`<div class="fn-next"><label>Next up</label><b>${g.name}</b></div>`:'';})()}
-  <div class="fn-subj"><label>Subject</label><h3>Today's Tasks</h3></div>
-  <ol class="fn-list">${S.jr.tasks.map((q,i)=>{const T=JR_TASKS[q.k],ic=ICON[T.ico]||ICON.star;return`<li class="${q.done?'done':''}"><span class="n">${['I','II','III','IV','V'][i]}.</span><img class="px" src="${ic}" alt=""><span class="t">${T.t(q.n)}</span><span class="c">${q.done?'':q.n>1?`${q.have}/${q.n}`:''}</span><span class="r">+${T.pay+q.n*10}</span>${q.done?'<u>Done</u>':''}</li>`;}).join('')}</ol>
-  <div class="fn-foot"><span>${S.jr.all?'A perfect day. Filed with pride.':`${done} of ${S.jr.tasks.length} complete · all four earn a bonus`}</span><span>Form ${no}-${S.jr.tasks.length} · Rev. ${s}</span></div>`;}
+  <div class="fn-subj"><label>Subject</label><h3>${S.day===1&&S.scratch?'Your First Day':'Today\u2019s Tasks'}</h3></div>${S.day===1&&S.scratch?'<p class="fn-intro">Tap anything that looks interesting: almost everything on the island does something. A good start:</p>':''}
+  <ol class="fn-list">${S.jr.tasks.map((q,i)=>{const T=JR_TASKS[q.k],ic=ICON[T.ico]||ICON.star;return`<li class="${q.done?'done':''}"><span class="n">${['I','II','III','IV','V','VI'][i]}.</span><img class="px" src="${ic}" alt=""><span class="t">${T.t(q.n)}</span><span class="c">${q.done?'':q.n>1?`${q.have}/${q.n}`:''}</span><span class="r">+${T.pay+q.n*10}</span>${q.done?'<u>Done</u>':''}${T.how&&!q.done&&S.day<=3?`<small class="how">${T.how}</small>`:''}</li>`;}).join('')}</ol>
+  <div class="fn-foot"><span>${S.jr.all?'A perfect day. Filed with pride.':`${done} of ${S.jr.tasks.length} complete · all ${S.jr.tasks.length} earn a bonus`}</span><span>Form ${no}-${S.jr.tasks.length} · Rev. ${s}</span></div>`;}
 // a big stamp across the top when a task is done
 function stamp(title,sub,big){const el=document.createElement('div');el.className='stamp'+(big?' big':'');el.innerHTML=`<i>✓</i><span><b>${title}</b><small>${sub}</small></span>`;document.body.appendChild(el);
   setTimeout(()=>el.classList.add('out'),big?3200:2400);setTimeout(()=>el.remove(),big?3700:2900);}
@@ -66,7 +69,7 @@ const REVEAL_LINES={
   p:['It smells wonderful.','Picked with care.','Such a pretty little thing.','The meadow gave me this.'],
 };
 const revQ=[];let revOn=false;
-function reveal(key){if(!/^[bgp]:/.test(key))return;const I=itemInfo(key);if(I&&I.w>=5){const [dg,dt]=dexCount();say(`<b>New!</b> ${I.name} <small>· Islandex ${Math.floor(dg/dt*100)}%</small>`,ICON[key]);pluck(1318.5,0.025,0.6);setTimeout(()=>pluck(1568,0.025,0.8),110);return;}/* everyday firsts: a caption; the card is for rare ones */revQ.push(key);if(!revOn)revNext();}
+function reveal(key){if(!/^[bgp]:/.test(key))return;if(key===revSkip){revSkip=null;return;}const I=itemInfo(key);if(I&&I.w>=5){const [dg,dt]=dexCount();say(`<b>New!</b> ${I.name} <small>· Islandex ${Math.floor(dg/dt*100)}%</small>`,ICON[key]);pluck(1318.5,0.025,0.6);setTimeout(()=>pluck(1568,0.025,0.8),110);return;}/* everyday firsts: a caption; the card is for rare ones */revQ.push(key);if(!revOn)revNext();}
 function revNext(){const key=revQ.shift();if(!key){revOn=false;return;}revOn=true;const I=itemInfo(key);if(!I){revNext();return;}
   const L=REVEAL_LINES[key[0]],line=L[(hash(key.length*7,key.charCodeAt(2)+key.charCodeAt(key.length-1)*13)*L.length|0)%L.length];
   const cat={b:'Bug',g:'Treasure',p:'Wild plant'}[key[0]],el=document.createElement('div');el.className='reveal'+(I.w<5?' rare':'');

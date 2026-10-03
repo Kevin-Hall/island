@@ -35,6 +35,8 @@ check(st.npcs.length===0&&st.buildings.length===0&&(wild.tree||0)>40,`lands on a
 check(await ev(()=>DS.goal())==='Plant your driftseed','the first goal is to plant the driftseed');
 await ev(()=>DS.bp('seed'));await wait(500);await pg.getByText('Plant here').click();await pg.waitForSelector('#pkName',{timeout:90000});/* planting it pitches the tent beside the sprout, then you name the island */await pg.fill('#pkName','Testhaven');await pg.click('#huOk');await wait(600);
 st=await ev(()=>DS.state());check(st.town==='Testhaven'&&st.buildings.includes('home')&&(await ev(()=>DS.heartAt())).length===2,'planted the driftseed, the tent went up beside it, and named the island');
+// your first-day notes open by themselves once the tent is up: they list what to try, each with how
+{const nt=await waitFor(()=>!!document.querySelector('#jrCard .fn-intro'),6000);check(nt,'your first-day notes open, with things to try and how');if(nt){await pg.click('#jrCard .x');await wait(500);}}
 check(await ev(()=>DS.goal()!=='Plant your driftseed'&&DS.heartAt().length===2),'the Island Heart is growing where you planted it');await ev(()=>document.querySelectorAll('#heartUp').forEach(e=>e.remove()));
 await ev(()=>DS.setLevel(3));check(/^Place/.test(await ev(()=>DS.goal())),'a level-up hands you a building kit to place');
 await ev(()=>DS.setLevel(11));await ev(()=>DS.buildAll());

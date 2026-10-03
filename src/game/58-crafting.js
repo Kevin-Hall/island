@@ -17,7 +17,7 @@ function recipeName(r){return r.out[0]==='b'?BUILD[r.out[1]].name:CONSUM[r.out[1
 function recipeIcon(r){return r.out[0]==='b'?THUMB[r.out[1]]||'':ICON['x:'+r.out[1]];}
 function canCraft(r){return r.lvl<=level()&&Object.entries(r.in).every(([k,n])=>haveOf(k)>=n);}
 function craft(i){const r=RECIPES[i];if(!canCraft(r)){SFX.no();return;}for(const [k,n] of Object.entries(r.in))takeOf(k,n);const [t,id,n]=r.out;
-  if(t==='b')S.store[id]=(S.store[id]||0)+n;else S.inv['x:'+id]=(S.inv['x:'+id]||0)+n;
+  if(t==='b')S.store[id]=(S.store[id]||0)+n;else S.inv['x:'+id]=(S.inv['x:'+id]||0)+n;jrNote('craft');
   SFX.rare();addXP(3);toast(`Crafted ${n>1?n+'× ':''}<b>${recipeName(r)}</b>${t==='b'?' — find it in Storage to place it.':'.'}`,'',recipeIcon(r));}
 function useItem(k){if(k==='x:fert'){const ks=Object.keys(S.tiles).filter(q=>S.tiles[q].crop&&S.tiles[q].crop.p<1);if(!ks.length){toast('Nothing is growing right now.');return;}
     for(const q of ks){const c=S.tiles[q].crop,s0=stageOf(c.p);c.p=Math.min(0.995,c.p+0.15);if(stageOf(c.p)!==s0)syncCrop(q);const [x,z]=q.split(',').map(Number);sparkle(x,topY(x,z)+0.4,z,0xb8f088);}

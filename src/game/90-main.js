@@ -96,7 +96,7 @@ grantKits();const farmNew=!S.farmInit;if(farmNew){genDebris();if(S.scratch)genWi
 if(S.acornLay){delete S.acornLay;layAcornfield();}
 if(S.dreamLay){delete S.dreamLay;layDream();}
 if(!isNew&&fixCamp())rebuildHome();/* an older camp with the sprout in the fire or a tree through the tent */
-if(S.wild&&S.finds.filter(forageOf).length<8)forageSpawn(true,18); // the wild island's forage, from the first day
+if(S.wild&&S.finds.filter(forageOf).length<8){forageSpawn(true,28);curioTrail();} // the wild island's forage, from the first day
 if(S.wild&&!S.tidy){S.tidy=1;S.debris=S.debris.filter(d=>!((d.k==='weed'||d.k==='twig')&&Math.random()<0.7));}
 if(isNew||(!S.sea&&!walkable(Math.round(vil.x),Math.round(vil.z)))){if(S.scratch){vil.x=vil.tx=DOCK.x+0.5;vil.z=vil.tz=DOCK.z-1.2;}else{vil.x=vil.tx=TOWN.plaza[0]+0.5;vil.z=vil.tz=TOWN.plaza[1]+2.4;}}
 if(S.sea){vil.x=vil.tx=S.boat.x;vil.z=vil.tz=S.boat.z;}

@@ -40,7 +40,7 @@ function plant(k,x,z){
   else if(S.shells<info.seed){toast(`You need ${info.seed} shells for ${info.name}. Sell something or go exploring.`);SFX.no();return;}
   else S.shells-=info.seed;
   const type=id==='mystery'?pickR(CROP_IDS):id;
-  S.tiles[k].crop={t:type,p:0,v:null,m:id==='mystery'?1:0};syncCrop(k);SFX.plant();burst(x,0.6,z,0x6a4a30,6,0.8,0.06);walkTo(x,z);
+  S.tiles[k].crop={t:type,p:0,v:null,m:id==='mystery'?1:0};syncCrop(k);jrNote('plant');SFX.plant();burst(x,0.6,z,0x6a4a30,6,0.8,0.06);walkTo(x,z);
   if(id==='mystery')floatText(x,1.2,z,'? '+CROPS[type].name);
   if(S.tut===0){S.tut=1;setTimeout(()=>toast(`Seeds only grow on days they're watered — switch to the <b>watering can</b> and tap the soil.`,'',ICON.sprout),600);}
 }

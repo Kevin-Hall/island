@@ -136,11 +136,12 @@ function spawnWeed(quiet){if(S.weeds.length>=7)return;const c=islands[0].grass.f
 function pullWeed(w){S.weeds=S.weeds.filter(q=>q!==w);syncLife();walkTo(w.x,w.z);vil.hop=0.25;SFX.till();burst(w.x,0.6,w.z,0x4f8a34,10,1.3,0.07);addXP(1);
   if(Math.random()<0.3){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+1;floatText(w.x,1.1,w.z,'+1 '+CROPS[id].name+' seed','gold');SFX.pop();}
   else floatText(w.x,1,w.z,'pulled!');}
-function collectFind(f){S.finds=S.finds.filter(q=>q!==f);syncLife();walkTo(f.x,f.z);vil.hop=0.25;popHold(findGroup(f.k,f.x*31+f.z),f.x,f.z,1.3);
+function collectFind(f){S.finds=S.finds.filter(q=>q!==f);syncLife();walkTo(f.x,f.z);vil.hop=0.25;const big=f.k!=='bottle'&&FINDS[f.k]&&bigMoment('g:'+f.k,FINDS[f.k].w,f.shiny),fresh=!S.alm['g:'+f.k];
+  if(big){revSkip='g:'+f.k;holdUp('g:'+f.k,findGroup(f.k,f.x*31+f.z),f.x,topY(f.x,f.z)+0.1,f.z,2.3,'You found',fresh,f.shiny);}else popHold(findGroup(f.k,f.x*31+f.z),f.x,f.z,1.3);
   if(f.k==='bottle'){const first=!S.alm['g:bottle'];S.alm['g:bottle']=(S.alm['g:bottle']||0)+1;if(first)setTimeout(()=>checkDex('g:bottle'),600);openBottle();return;}
   const I=FINDS[f.k],first=gain('g:'+f.k);buzz(10);
   if(f.shiny){gain('g:'+f.k);const b=I.price;S.shells+=b;SFX.rare();floatText(f.x,1.3,f.z,`Shiny! ×2 +${b}`,'gold');flyShells(5);for(let i=0;i<14;i++)sparkle(f.x,0.6,f.z,0xfff0a0);}if(f.k==='driftseed')driftseedFound(first);burst(f.x,0.5,f.z,0xfff6e2,8,1,0.06);floatText(f.x,0.9,f.z,'+ '+I.name,I.w<5?'gold':'');
-  if(I.w<5){SFX.rare();if(!first)toast(`You found a <b>${I.name}</b>!`,'rare',ICON['g:'+f.k]);}else SFX.harvest();addXP(2);}
+  if(I.w<5)SFX.rare();else SFX.harvest();addXP(2);}
 function openBottle(){SFX.rare();const lv=level(),r=Math.random();let msg;
   const un=CROP_IDS.filter(i=>CROPS[i].lvl<=lv);
   if(r<0.3){const n=60+lv*60+Math.floor(Math.random()*100);S.shells+=n;msg=`“Whoever finds this — buy yourself something nice.” Tucked inside: <b>${fmt(n)} shells</b>.`;}
@@ -193,8 +194,9 @@ function syncPlants(isl){
   isl.pgroup=g;isl.pEpoch=plantEpoch();scene.add(g);}
 function plantAt(x,z){const isl=islandAt(x,z);if(!isl||!isl.pgroup)return null;for(const m of isl.pgroup.children){const t=m.userData.tile;if(t.x===x&&t.z===z)return m.userData.plant;}return null;}
 function pickPlant(pl){const isl=islands[pl.isl],[x,z]=isl.spots[pl.i],Pd=PLANTS[pl.id];S.picked[pl.isl+':'+pl.i]=plantEpoch();syncPlants(isl);walkTo(x,z);vil.hop=0.3;
-  const first=gain('p:'+pl.id);burst(x,0.6,z,parseInt(Pd.col.slice(1),16),10,1.2,0.07);floatText(x,1.1,z,'+ '+Pd.name,Pd.w<5?'gold':'');addXP(Math.round(Pd.price/15)+2);
-  if(Pd.w<5){SFX.rare();for(let i=0;i<10;i++)sparkle(x,0.6,z,0xfff0a0);toast(`You found a <b>${Pd.name}</b>! (${rarity(Pd.w)})${first?' <b>New!</b>':''}`,'rare',ICON['p:'+pl.id]);}
+  const key='p:'+pl.id,fresh=!S.alm[key];if(bigMoment(key,Pd.w)&&typeof plantGroup==='function'){revSkip=key;holdUp(key,plantGroup(pl.id,x*13+z),x,topY(x,z)+0.1,z,1.8,'You picked',fresh);}
+  const first=gain(key);burst(x,0.6,z,parseInt(Pd.col.slice(1),16),10,1.2,0.07);floatText(x,1.1,z,'+ '+Pd.name,Pd.w<5?'gold':'');addXP(Math.round(Pd.price/15)+2);
+  if(Pd.w<5){SFX.rare();for(let i=0;i<10;i++)sparkle(x,0.6,z,0xfff0a0);}
   else SFX.harvest();}
 
 /* =========================================================
@@ -239,9 +241,9 @@ function updateBugs(dt,tt){for(let i=bugs.length-1;i>=0;i--){const b=bugs[i];b.t
     if(b.out){b.out+=dt;y+=b.out*b.out*2;if(b.out>3){scene.remove(b.g);bugs.splice(i,1);continue;}}
     const px=b.g.position.x,pz=b.g.position.z;b.g.position.set(x,y,z);if(Math.hypot(x-px,z-pz)>1e-4)b.g.rotation.y=Math.atan2(x-px,z-pz);
     const f=Math.sin(tt*(b.g.userData.drag?30:16)+b.ph)*(b.g.userData.drag?0.4:0.9);b.g.userData.wl.rotation.z=f;b.g.userData.wr.rotation.z=-f;}}
-function catchBug(b){const B=BUGS[b.id];scene.remove(b.g);{const hg=bugGroup(B);popHold(hg,b.g.position.x,b.g.position.z,0.9,b.g.position.y);}bugs.splice(bugs.indexOf(b),1);walkTo(b.g.position.x,b.g.position.z);vil.hop=0.3;
+function catchBug(b){const B=BUGS[b.id],key='b:'+b.id,fresh=!S.alm[key];scene.remove(b.g);{const hg=bugGroup(B),p=b.g.position;if(bigMoment(key,B.w)){revSkip=key;holdUp(key,hg,p.x,p.y,p.z,2.5,'You caught',fresh);}else popHold(hg,p.x,p.z,0.9,p.y);}bugs.splice(bugs.indexOf(b),1);walkTo(b.g.position.x,b.g.position.z);vil.hop=0.3;
   const first=gain('b:'+b.id);burst(b.g.position.x,b.g.position.y,b.g.position.z,0xfff6e2,10,1.2,0.06,1);floatText(b.g.position.x,b.g.position.y+0.4,b.g.position.z,'+ '+B.name,B.w<5?'gold':'');
-  addXP(Math.round(B.price/15)+1);if(B.w<5){SFX.rare();if(!first)toast(`You caught a <b>${B.name}</b>! (${rarity(B.w)})`,'rare',ICON['b:'+b.id]);}else SFX.catch();}
+  addXP(Math.round(B.price/15)+1);if(B.w<5)SFX.rare();else SFX.catch();}
 
 /* =========================================================
    Crows (home only)

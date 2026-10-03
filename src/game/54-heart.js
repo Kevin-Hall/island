@@ -34,8 +34,10 @@ function nextGoal(){if(!S.scratch)return null;const h=S.heart||{};
   if(!S.heartAt)return{tag:'Glowing in your pack',name:'Plant your driftseed',act:'seed'};
   if(!S.homeAt)return{tag:'Home',name:'Pitch your tent',act:'tent'};
   const k=Object.keys(S.kits||{}).find(q=>S.kits[q]);if(k){const u=HEART_UNLOCKS.find(q=>q.k===k);return{tag:'Build',name:'Place: '+u.name.replace(/^A |^The /,'').toLowerCase(),act:'kit:'+k};}
+  if(S.day<=2&&S.jr&&S.jr.day===S.day){const t=S.jr.tasks.find(q=>!q.done&&JR_TASKS[q.k].how);if(t)return{tag:S.day===1?'Your first day':'Today',name:JR_TASKS[t.k].t(t.n),act:'task:'+t.k};}/* (the first days: what to try next, and how) */
   const u=nextUnlock();return u?{tag:'Heart Lv '+u.lv,name:u.name,act:'info'}:null;}
 function goalTap(){const g=nextGoal();if(!g)return;SFX.ui();
+  if(g.act.startsWith('task:')){toast(JR_TASKS[g.act.slice(5)].how,'',ICON.star);return;}
   if(g.act==='tent')startBlueprint('tent');
   else if(g.act==='seed')startBlueprint('seed');
   else if(g.act.startsWith('kit:'))startBlueprint(g.act.slice(4));

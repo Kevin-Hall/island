@@ -104,17 +104,27 @@ let camBack=null;
 function updateCaught(dt,tt){if(camBack!==null&&!caught){cam.dist=lerp(cam.dist,camBack,Math.min(1,dt*3));if(Math.abs(cam.dist-camBack)<0.05){cam.dist=camBack;camBack=null;}}
   if(!caught)return;caught.t+=dt;const c=caught,u=Math.min(1,c.t/0.55);
   const hx=vil.x,hz=vil.z,hy=(S.sea?0.14:vil.y)+1.6;c.g.rotation.order='YXZ';
-  if(c.t<0.55){c.g.position.set(lerp(c.fx,hx,u),lerp(0.1,hy,u)+Math.sin(u*Math.PI)*1.4,lerp(c.fz,hz,u));c.g.rotation.x+=dt*12;c.g.scale.setScalar(lerp(0.6,c.sc,u));}
+  if(c.t<0.55){c.g.position.set(lerp(c.fx,hx,u),lerp(c.fy??0.1,hy,u)+Math.sin(u*Math.PI)*1.4,lerp(c.fz,hz,u));if(c.spin)c.g.rotation.y+=dt*14;else c.g.rotation.x+=dt*12;c.g.scale.setScalar(lerp(0.6,c.sc,u));}
   else{const k=c.t-0.55,flap=Math.sin(tt*14)*Math.max(0,Math.sin(k*1.7))**8*0.22; // a flap every few seconds
     const pop=1+Math.sin(Math.min(1,k*4)*Math.PI)*0.12;c.g.scale.setScalar(c.sc*pop);
-    c.g.position.set(hx,hy+Math.sin(tt*2.2)*0.04,hz);c.g.rotation.set(0,cam.yaw+Math.PI/2+flap*0.6,c.roll+flap);villager.rotation.y+=angDiff(villager.rotation.y,cam.yaw)*Math.min(1,dt*6);
+    c.g.position.set(hx,hy+Math.sin(tt*2.2)*0.04,hz);if(c.spin)c.g.rotation.set(0.12,cam.yaw+Math.sin(tt*1.4)*0.6,0);/* (a bug or a find turns slowly, shown off) */else c.g.rotation.set(0,cam.yaw+Math.PI/2+flap*0.6,c.roll+flap);villager.rotation.y+=angDiff(villager.rotation.y,cam.yaw)*Math.min(1,dt*6);
     if(c.d0===undefined){c.d0=cam.dist;}cam.dist=lerp(cam.dist,Math.min(c.d0,14),Math.min(1,dt*2.5));
     if(!c.shown){c.shown=true;catchCard(c.card);}}}
 function catchCard(d){let el=$('catchCard');if(!el){el=document.createElement('div');el.id='catchCard';el.className='catchcard';document.body.appendChild(el);}
   if(!d){el.classList.remove('on');return;}
-  const tags=[d.junk||d.sea?'':`${d.kg} kg`,d.junk?'':d.rar,d.rec?'Record!':'',d.gold?'Golden!':''].filter(Boolean);
-  el.innerHTML=`<small>You caught</small><b>${d.art} ${d.name}</b>${tags.length?`<span>${tags.map(t=>`<em>${t}</em>`).join('')}</span>`:''}<p>${d.quip}</p>${d.first?'<i class="new">New to your Islandex!</i>':''}<i>Tap anywhere to put it away</i>`;
+  const tags=[d.item?d.cat:'',d.junk||d.sea||d.item?'':`${d.kg} kg`,d.junk?'':d.rar,d.rec?'Record!':'',d.gold?'Golden!':'',d.shiny?'Shiny!':''].filter(Boolean);
+  el.classList.toggle('rare',!!d.rare);
+  el.innerHTML=`<small>${d.verb||'You caught'}</small><b>${d.art} ${d.name}</b>${tags.length?`<span>${tags.map(t=>`<em>${t}</em>`).join('')}</span>`:''}<p>${d.quip}</p>${d.first?'<i class="new">New to your Islandex!</i>':''}<i>Tap anywhere to put it away</i>`;
   el.classList.remove('on');void el.offsetWidth;el.classList.add('on');}
+// the same moment for a bug, a find, a plant or something dug up, whenever it's new to you, rare or shiny (a common one
+// you've had before just pops up and away): held up overhead, turning slowly, with a card that says what it is
+let revSkip=null;/* (its card says it's new, so the Islandex's own discovery card stands aside) */
+const bigMoment=(key,w,shiny)=>!S.alm[key]||w<5||!!shiny;
+function holdUp(key,g,x,y,z,sc,verb,first,shiny){if(caught){popHold(g,x,z,sc*0.7,y);return;}
+  g.traverse(o=>{if(o.isMesh)o.castShadow=false;});g.position.set(x,y,z);scene.add(g);const I=itemInfo(key)||{name:'?',w:20},L=REVEAL_LINES[key[0]]||REVEAL_LINES.g;
+  const [dg,dt]=dexCount();caught={g,t:0,fx:x,fy:y,fz:z,sc,roll:0,spin:1,card:{item:1,art:'',name:I.name,verb,cat:{b:'Bug',g:'Find',p:'Wild plant'}[key[0]],rar:I.w?rarity(I.w):'',rare:I.w<5,shiny,
+    quip:L[Math.floor(Math.random()*L.length)]+(first?`<br><small>${dg+1===1?'The first':`No. ${dg+1} of ${dt}`} in your Islandex</small>`:''),first}};
+  if(first||I.w<5){SFX.discover&&SFX.discover();for(let i=0;i<14;i++)sparkle(x,y+0.4,z,I.w<5?0xffe070:0xfff6e2);}}
 function dismissCatch(){if(!caught||caught.t<0.6)return;scene.remove(caught.g);if(caught.d0!==undefined)camBack=caught.d0;catchCard(null);caught=null;}
 
 // no menu while you fish: a tap anywhere reels in (onTap), with one hint the first time

@@ -14,7 +14,8 @@ Object.assign(FINDS,{
   truffle:{name:'Truffle',price:600,w:0,bio:['wild']}});
 // dig spots and clam bubbles live among the finds (so they're saved and drawn the same way) but aren't items themselves:
 // they're kept out of the Islandex and item lists by being non-enumerable
-for(const [k,v] of [['dig',{name:'Dig Spot',price:0,w:0,bio:[]}],['bubbles',{name:'Bubbles',price:0,w:0,bio:[]}]])Object.defineProperty(FINDS,k,{value:v,enumerable:false});
+// (and so are the island's little curiosities: something glinting in the grass, a tuft of long grass rustling on its own)
+for(const [k,v] of [['dig',{name:'Dig Spot',price:0,w:0,bio:[]}],['bubbles',{name:'Bubbles',price:0,w:0,bio:[]}],['glint',{name:'Something glinting',price:0,w:0,bio:[]}],['tuft',{name:'Rustling grass',price:0,w:0,bio:[]}]])Object.defineProperty(FINDS,k,{value:v,enumerable:false});
 Object.assign(FIND_SPR,{
   'g:mushroom':['...rrrr...','..rwrrwr..','.rrrrrrwr.','.rwrrrrrr.','..RRRRRR..','....ww....','....ww....','...wwww...'],
   'g:acorn':['...BBBB...','..BbbbbB..','..BBBBBB..','...nnnn...','..nnnnnn..','..nnnnbn..','...nnbb...','....bb....'],
@@ -43,12 +44,15 @@ function forageParts(k,p){switch(k){
   case'oldcoin':p.push(P(CYL8,0xe0b040,0,0.02,0,0,0,0,0.16,0.02,0.16),P(CYL8,0xc8952a,0,0.035,0,0,0,0,0.1,0.01,0.1));break;
   case'truffle':p.push(PG(SPH_LO,0x6a4a38,0x3a2a22,0,0.06,0,0,0,0,0.16,0.12,0.15));break;
   case'dig':for(let i=0;i<4;i++){const a=i*1.571+0.3;p.push(P(BOX,0x5a3a26,Math.cos(a)*0.08,0.012,Math.sin(a)*0.08,0,-a,0,0.16,0.012,0.035));}p.push(P(SPH_XS,0x6a4a30,0,0.012,0,0,0,0,0.1,0.02,0.1));break;
+  case'glint':p.push(P(OCT,0xfff4c0,0,0.1,0,0,0.4,0,0.05,0.16,0.05),P(OCT,0xfff4c0,0,0.1,0,0,0.4,1.571,0.05,0.16,0.05),P(ICO2,0xfffbe8,0,0.1,0,0,0,0,0.07,0.07,0.07));break;
+  case'tuft':for(let i=0;i<9;i++){const a=i*0.7,r=0.04+(i%3)*0.05;p.push(P(CONE5,i%2?0x7fbf4a:0x5f9f3a,Math.cos(a)*r,0.2+(i%3)*0.04,Math.sin(a)*r,Math.cos(a)*0.3,0,Math.sin(a)*0.3,0.07,0.42+(i%3)*0.08,0.07));}break;
   case'bubbles':for(const [x,z,s] of [[0,0,1],[0.1,0.06,0.6],[-0.07,0.09,0.5]])p.push(P(CYL8,0xf4f8fa,x,0.01,z,0,0,0,0.1*s,0.01,0.1*s),P(CYL8,0xc8a878,x,0.012,z,0,0,0,0.06*s,0.01,0.06*s));break;
   default:if(FINDS[k]&&FINDS[k].tpl)tplParts(FINDS[k],p);/* the Islandex extras (11-dex, 22b-dexart) */}}
 
 // ---- where forage turns up ----
-const forageOf=f=>f&&!FINDS[f.k]?.bio.includes('any')&&FINDS[f.k]?.bio.includes('wild')||f&&(f.k==='dig'||f.k==='bubbles');
-function forageSpawn(quiet,n=1){const isl=islands[0];if(!isl||!S.wild)return;const home=S.finds.filter(f=>forageOf(f));if(home.length>=26)return;
+const CURIO=new Set(['dig','bubbles','glint','tuft']);
+const forageOf=f=>f&&!FINDS[f.k]?.bio.includes('any')&&FINDS[f.k]?.bio.includes('wild')||f&&CURIO.has(f.k);
+function forageSpawn(quiet,n=1){const isl=islands[0];if(!isl||!S.wild)return;const home=S.finds.filter(f=>forageOf(f));if(home.length>=36)return;
   const s=season(),R=Math.random,trees=S.debris.filter(d=>d.k==='tree'),bushes=S.debris.filter(d=>d.k==='bush');
   const openBy=(x,z)=>{for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]){const a=x+dx,b=z+dz;if(landMap.get(K(a,b))==='grass'&&freeTile(a,b))return[a,b];}return null;};
   for(let i=0;i<n;i++){const r=R();let k=null,at=null;
@@ -57,9 +61,9 @@ function forageSpawn(quiet,n=1){const isl=islands[0];if(!isl||!S.wild)return;con
     if(r<0.24&&trees.length&&s!=='winter'){const t=pickR(trees);at=openBy(t.x,t.z);k=R()<(s==='autumn'?0.5:0.8)?'mushroom':null;}
     else if(r<0.42&&trees.length){const t=pickR(trees);at=openBy(t.x,t.z);k=treeSp(t.v).con?'pinecone':'acorn';}
     else if(r<0.54&&bushes.length&&s!=='winter'){const b=pickR(bushes);at=openBy(b.x,b.z);k='berries';}
-    else if(r<0.74){const c=pickR(isl.grass);if(c&&freeTile(...c)&&!TOWN.path.has(K(...c)))at=c;k=R()<0.06?'clover4':'dig';}
+    else if(r<0.74){const c=pickR(isl.grass);if(c&&freeTile(...c)&&!TOWN.path.has(K(...c)))at=c;{const q=R();k=q<0.05?'clover4':q<0.4?'dig':q<0.7?'tuft':'glint';}}
     else{const c=pickR(isl.sand);if(c&&freeTile(...c))at=c;k='bubbles';}
-    if(!k||!at||findAt(...at))continue;S.finds.push({k,x:at[0],z:at[1],shiny:k!=='dig'&&k!=='bubbles'&&R()<0.07?1:undefined});}
+    if(!k||!at||findAt(...at))continue;S.finds.push({k,x:at[0],z:at[1],shiny:!CURIO.has(k)&&R()<0.07?1:undefined});}
   if(S.finds.length>60)S.finds.splice(0,S.finds.length-60);
   if(!quiet)syncLife();}
 
@@ -93,19 +97,29 @@ function dropTreeFruit(d,e){const sp=treeSp(d.v),k=sp.fruit,x=d.x,z=d.z,sc=e.sc,
     fallers.push({g,k,batch,x:wx,y:wy,z:wz,vx:0,vy:0,vz:0,tx,tz,keep:!!t,wait:0.05+n*0.12+Math.random()*0.1,st:0,t:0,spin:(Math.random()-0.5)*8});n++;}
   const nf=batch.finds.length;floatText(x,topY(x,z)+1.6,z,nf?(nf>1?nf+' '+FINDS[k].name.toLowerCase()+(k==='cherries'?'':'s')+'!':'A '+FINDS[k].name.toLowerCase()+'!'):'The fruit rolled away…',nf?'gold':'');}
 function updateFallers(dt){for(let i=fallers.length-1;i>=0;i--){const f=fallers[i],g=f.g;
-  if(f.wait>0){f.wait-=dt;g.rotation.z=Math.sin(f.wait*40)*0.2;continue;}// a wobble on its stem, then it lets go
-  f.t+=dt;const gy=topY(Math.round(f.x),Math.round(f.z))+0.14;/* where the stem end sits with the fruit resting on the grass */f.vy-=9.8*dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.z+=f.vz*dt;g.rotation.x+=f.spin*dt*(f.st?0.5:1);
+  if(f.wait>0){f.wait-=dt;if(!f.berry)g.rotation.z=Math.sin(f.wait*40)*0.2;else g.visible=false;continue;}g.visible=true;// a wobble on its stem, then it lets go
+  f.t+=dt;const gy=topY(Math.round(f.x),Math.round(f.z))+(f.berry?0.07:0.14);/* where the stem end sits with the fruit resting on the grass */f.vy-=9.8*dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.z+=f.vz*dt;g.rotation.x+=f.spin*dt*(f.st?0.5:1);
   if(f.y<=gy){f.y=gy;if(f.st===0){f.st=1;tone(420+Math.random()*120,0.05,'sine',0.05);burst(f.x,gy-0.1,f.z,0x7aa84a,3,0.6,0.04);
       // bounce once, aimed so it comes down again on its tile
-      const tb=0.34;f.vy=9.8*tb/2;f.vx=(f.tx-f.x)/tb;f.vz=(f.tz-f.z)/tb;}
+      const tb=f.berry?0.26:0.34;f.vy=9.8*tb/2;f.vx=(f.tx-f.x)/tb;f.vz=(f.tz-f.z)/tb;}
     else if(f.st===1){f.st=2;f.vx=f.vy=f.vz=0;f.x=f.tx;f.z=f.tz;f.spin=0;g.rotation.set(0,g.rotation.y,0);tone(360,0.04,'sine',0.03);}}
   g.position.set(f.x,f.y,f.z);
   if(f.st===2){f.t2=(f.t2||0)+dt;if(!f.keep)g.scale.setScalar(Math.max(0.01,1-f.t2*2));
     if(f.t2>(f.keep?0.15:0.5)){scene.remove(g);fallers.splice(i,1);const b=f.batch;if(--b.left===0&&b.finds.length){for(const q of b.finds)if(!findAt(q.x,q.z))S.finds.push(q);syncLife();}}}}}
+// berries shaken loose: a little spray of them pops up out of the bush, falls, bounces once and gathers into one or two
+// piles on the ground beside it (finds to pick up), the rest of the spray rolling in to join them
+const BERRY_GEO=[0x8a1e3a,0xb02a48,0x5a2a6a];
+function dropBerries(x,z){const y=topY(x,z),tiles=shuffle([[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]].map(([a,b])=>[x+a,z+b]).filter(([a,b])=>isLand(a,b)&&freeTile(a,b)&&!findAt(a,b)&&!debrisAt(a,b)),Math.random).slice(0,Math.random()<0.45?2:1);
+  if(!tiles.length)return 0;const batch={left:0,finds:tiles.map(([a,b])=>({k:'berries',x:a,z:b}))},n=5+Math.floor(Math.random()*3);
+  for(let i=0;i<n;i++){const t=tiles[i%tiles.length],col=BERRY_GEO[i%3],g=new T.Group();g.add(M([P(ICO2,col,0,0,0,0,0,0,0.13,0.13,0.13),P(ICO2,col,0.06,0.03,0.02,0,0,0,0.1,0.1,0.1),P(BOX,0x4a8a3a,0,0.08,0,0.5,0.3,0,0.08,0.015,0.04)]));
+    const a=Math.random()*6.283,sx=x+Math.cos(a)*0.25,sz=z+Math.sin(a)*0.25;g.position.set(sx,y+0.55,sz);g.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(g);batch.left++;
+    const tx=t[0]+(Math.random()-0.5)*0.35,tz=t[1]+(Math.random()-0.5)*0.35;
+    fallers.push({g,k:'berries',batch,x:sx,y:y+0.55,z:sz,vx:(tx-sx)*0.9+(Math.random()-0.5)*0.6,vy:2.6+Math.random()*1.4,vz:(tz-sz)*0.9+(Math.random()-0.5)*0.6,tx,tz,keep:i<tiles.length,wait:i*0.06,st:0,t:0,spin:(Math.random()-0.5)*12,berry:1});}
+  pluck(880,0.03,0.5);setTimeout(()=>pluck(1175,0.03,0.6),90);return tiles.length;}
 function rustleBush(d){const x=d.x,z=d.z,y=topY(x,z),m=debMesh.get(K(x,z));if(m)m.shake=0.5;noise(0.2,0.05,1800);
   for(let i=0;i<6;i++)emit(x+(Math.random()-0.5)*0.6,y+0.5,z+(Math.random()-0.5)*0.6,{vx:(Math.random()-0.5)*0.8,vy:0.6,vz:(Math.random()-0.5)*0.8,life:0.8,max:0.8,size:0.05,color:0x5aa84a,g:2});
   const sh=shakeLeft(x,z);if(sh.n>=2){floatText(x,y+0.9,z,'rustle…');return;}sh.n++;jrNote('rustle');const s=season(),r=Math.random();
-  if(d.v===2&&s!=='winter'&&r<0.65){dropFind('berries',x,z);floatText(x,y+0.9,z,'Berries!','gold');}
+  if(d.v===2&&s!=='winter'&&r<0.85){const n=dropBerries(x,z);floatText(x,y+0.9,z,n?'Berries!':'The berries rolled away…',n?'gold':'');}
   else if(r<0.45){spawnBugAt(x,z,false);floatText(x,y+0.9,z,'A butterfly!');}
   else if(r<0.65&&s!=='winter'){critterAt(Math.random()<0.5?'frog':'rabbit',x,z,true);floatText(x,y+0.9,z,'Hop!');}
   else floatText(x,y+0.9,z,'rustle…');}
@@ -117,8 +131,9 @@ function digSpot(f){S.finds=S.finds.filter(q=>q!==f);syncLife();jrNote('dig');co
   else k=r<0.26?'fossil':r<0.46?'geode':r<0.58?'oldcoin':r<0.66?'truffle':r<0.82?'clay':'seeds';
   if(k==='seeds'){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+2;floatText(x,y+0.9,z,'+2 '+CROPS[id].name+' seeds','gold');SFX.pop();return;}
   if(k==='clay'){gain('m:stone');floatText(x,y+0.9,z,'+1 Stone');SFX.pop();return;}
-  const I=FINDS[k],first=gain('g:'+k);popHold(findGroup(k,x*7+z),x,z,1.4,y-0.12);/* up out of the hole */floatText(x,y+0.9,z,'+ '+I.name,I.price>=200?'gold':'');
-  if(I.price>=200){SFX.rare();if(!first)toast(`You dug up ${/^[aeiou]/i.test(I.name)?'an':'a'} <b>${I.name}</b>!`,'rare',ICON['g:'+k]);}else SFX.harvest();}
+  const I=FINDS[k],key='g:'+k,big=bigMoment(key,I.price>=200?1:I.w),fresh=!S.alm[key];if(big)revSkip=key;const first=gain(key);
+  if(big)holdUp(key,findGroup(k,x*7+z),x,y-0.12,z,1.9,'You dug up',fresh);else popHold(findGroup(k,x*7+z),x,z,1.4,y-0.12);/* up out of the hole */floatText(x,y+0.9,z,'+ '+I.name,I.price>=200?'gold':'');
+  if(I.price>=200)SFX.rare();else SFX.harvest();}
 let leafT=0;
 function driftLeaves(dt){leafT-=dt;if(leafT>0)return;leafT=0.35+Math.random()*0.5;const s=season();if(s==='winter')return;
   const near=S.debris.filter(d=>d.k==='tree'&&Math.abs(d.x-vil.x)<11&&Math.abs(d.z-vil.z)<9);if(!near.length)return;const t=pickR(near),y=topY(t.x,t.z)+1.3*(t.sc||1);
@@ -126,8 +141,40 @@ function driftLeaves(dt){leafT-=dt;if(leafT>0)return;leafT=0.35+Math.random()*0.
   emit(t.x+(Math.random()-0.5)*0.9,y,t.z+(Math.random()-0.5)*0.9,{vx:0.15,vy:-0.28,vz:0.05,life:5,max:5,size:0.055,color:col,g:0,sw:0.9,ph:Math.random()*6.28,spin:1});}
 let forageT=5;
 let forageOff=false; // (tests switch it off so nothing appears under their taps)
-function updateForage(dt){if(!S.wild||S.sea||forageOff)return;driftLeaves(dt);forageT-=dt;if(forageT<=0){forageT=9+Math.random()*9;forageSpawn(false,1);}
+function updateForage(dt){updateTapRing(dt);if(!S.wild||S.sea||forageOff)return;driftLeaves(dt);forageT-=dt;if(forageT<=0){forageT=9+Math.random()*9;forageSpawn(false,1);}
   // bubbles fizz and dig spots glint now and then, so you notice them
-  for(const f of S.finds){if(f.k!=='bubbles'&&f.k!=='dig')continue;if(Math.abs(f.x-vil.x)>18||Math.abs(f.z-vil.z)>18)continue;
+  for(const f of S.finds){if(!CURIO.has(f.k))continue;if(Math.abs(f.x-vil.x)>18||Math.abs(f.z-vil.z)>18)continue;
     if(f.k==='bubbles'&&Math.random()<dt*1.5)emit(f.x+(Math.random()-0.5)*0.2,topY(f.x,f.z)+0.05,f.z+(Math.random()-0.5)*0.2,{vx:0,vy:0.5,vz:0,life:0.4,max:0.4,size:0.04,color:0xffffff,g:0});
-    if(f.k==='dig'&&Math.random()<dt*0.25)sparkle(f.x,topY(f.x,f.z)+0.1,f.z,0xfff0c0);}}
+    if(f.k==='dig'&&Math.random()<dt*0.25)sparkle(f.x,topY(f.x,f.z)+0.1,f.z,0xfff0c0);
+    if(f.k==='glint'&&Math.random()<dt*0.9)sparkle(f.x+(Math.random()-0.5)*0.2,topY(f.x,f.z)+0.12+Math.random()*0.1,f.z+(Math.random()-0.5)*0.2,0xfff6c8);/* it catches the light */
+    if(f.k==='tuft'&&Math.random()<dt*0.7)emit(f.x+(Math.random()-0.5)*0.3,topY(f.x,f.z)+0.35,f.z+(Math.random()-0.5)*0.3,{vx:(Math.random()-0.5)*0.6,vy:0.5,vz:(Math.random()-0.5)*0.6,life:0.6,max:0.6,size:0.04,color:0x7fbf4a,g:1.5});}}/* something's moving in there */
+// tapping a curiosity: a glint turns out to be a little treasure; a rustling tuft hides a bug, a creature or a find
+const GLINT_POOL=[['feather',22],['glass',16],['acorn',10],['oldcoin',10],['geode',9],['amber',8],['clover4',7],['starfrag',5],['pearl',3]];
+function openGlint(f){S.finds=S.finds.filter(q=>q!==f);syncLife();let r=Math.random()*GLINT_POOL.reduce((a,q)=>a+q[1],0),k='feather';for(const [q,w] of GLINT_POOL){if(FINDS[q]&&(r-=w)<=0){k=q;break;}}
+  pluck(1568,0.03,0.5);collectFind({k,x:f.x,z:f.z});}
+function rustleTuft(f){S.finds=S.finds.filter(q=>q!==f);syncLife();const x=f.x,z=f.z,y=topY(x,z),r=Math.random();noise(0.25,0.05,2200);walkTo(x,z);
+  for(let i=0;i<10;i++)emit(x+(Math.random()-0.5)*0.5,y+0.3,z+(Math.random()-0.5)*0.5,{vx:(Math.random()-0.5)*1.4,vy:1.2,vz:(Math.random()-0.5)*1.4,life:0.9,max:0.9,size:0.05,color:i%2?0x7fbf4a:0x5f9f3a,g:2.2});
+  if(r<0.38&&season()!=='winter'){spawnBugAt(x,z,Math.random()<0.5);floatText(x,y+0.9,z,'Something was hiding!','gold');}
+  else if(r<0.58&&season()!=='winter'){critterAt(pickR(['rabbit','frog','squirrel']),x,z,true);floatText(x,y+0.9,z,'Hop!');}
+  else if(r<0.9){const k=pickR(['feather','clover4','mushroom','acorn','berries','glass']);if(FINDS[k])collectFind({k,x,z});}
+  else floatText(x,y+0.9,z,'Just the wind…');}
+
+// your first steps ashore: a glint, a rustling tuft and a dig spot a few paces from the landing beach, so there's
+// something to wonder about straight away
+function curioTrail(){if(S.trail||!S.wild)return;S.trail=1;const isl=islands[0],c=isl.grass.filter(([x,z])=>{const d=Math.hypot(x-DOCK.x,z-(DOCK.z-3));return d>2.5&&d<9&&freeTile(x,z)&&!findAt(x,z)&&!TOWN.path.has(K(x,z));});
+  for(const k of ['glint','tuft','dig','glint']){if(!c.length)break;const [x,z]=c.splice(Math.floor(Math.random()*c.length),1)[0];S.finds.push({k,x,z});}}
+
+// your first days: a soft ring pulses on the ground under the nearest thing you could tap (a find, a curiosity, a bush
+// with berries, a tree with fruit, a bug), whenever you stand still, so it's clear the island is full of them
+let tapRing=null;const _tr={x:0,z:0,a:0};
+function updateTapRing(dt){if(!tapRing){tapRing=new T.Mesh(new T.RingGeometry(0.3,0.5,40).rotateX(-Math.PI/2),new T.MeshBasicMaterial({color:0xfffbe6,transparent:true,opacity:0,depthWrite:false,fog:false,blending:T.AdditiveBlending}));tapRing.renderOrder=4;scene.add(tapRing);}
+  let best=null,bd=7.5;const idle=(vil.spd||0)<0.25&&!vil.path;
+  if(S.day<=2&&S.wild&&!S.sea&&!inside&&!caught&&!S.sea&&idle&&!document.body.classList.contains('chatting')){
+    const near=(x,z,y)=>{const d=Math.hypot(x-vil.x,z-vil.z);if(d>1.2&&d<bd){bd=d;best=[x,z,y];}};
+    for(const f of S.finds)near(f.x,f.z);
+    for(const d of S.debris){if(Math.abs(d.x-vil.x)>8||Math.abs(d.z-vil.z)>8)continue;if(d.k==='bush'&&d.v===2&&shakeLeft(d.x,d.z).n<2||d.k==='tree'&&fruitOn(d))near(d.x,d.z);}
+    for(const b of bugs){const p=b.g.position;near(p.x,p.z);}}
+  const want=best?0.85:0;_tr.a+=(want-_tr.a)*Math.min(1,dt*4);
+  if(best){if(_tr.a<0.05){_tr.x=best[0];_tr.z=best[1];}_tr.x+=(best[0]-_tr.x)*Math.min(1,dt*8);_tr.z+=(best[1]-_tr.z)*Math.min(1,dt*8);}
+  const t=performance.now()/1000,p=0.5+0.5*Math.sin(t*3.2);tapRing.visible=_tr.a>0.02;tapRing.material.opacity=_tr.a*(0.5+0.5*p);
+  tapRing.scale.setScalar(0.9+p*0.25);tapRing.position.set(_tr.x,topY(Math.round(_tr.x),Math.round(_tr.z))+0.04,_tr.z);}
