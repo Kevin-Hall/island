@@ -19,7 +19,7 @@
 const COVE={seed:9137,scale:1.5,shape:[0.05,0.03,0.02,1,2,3,3.4],coves:[[0.4,0.22,0.3],[3.4,0.16,0.22]],cliff:[0.4,0],wild:0.35,dockX:-6,
   home:[-9,-9],heart:[11,2],fire:[16,23],
   civic:[['hall',3,-8],['shop',8,-8],['cafe',13,-8],['museum',18,-8]],
-  cottages:[[1,10,0x4a6ad0],[5,10,0xd87a9a],[9,10,0x4f9a4a],[13,10,0xe0913a],[17,10,0x8a6ad0],[21,10,0x3aa8a0]]};
+  cottages:[[1,12,0x4a6ad0],[8,16,0xd87a9a],[17,13,0x4f9a4a],[24,-2,0xe0913a],[-11,14,0x8a6ad0],[-22,-9,0x3aa8a0]]};
 function loadCove(){
   try{if(!S.showcase)localStorage.setItem(REAL_KEY,JSON.stringify(S));}catch(e){toast('Could not back up your save, so Hollyhock Cove was not loaded.');return;}
   const D=COVE;S.showcase=1;S.worldSeed=D.seed;
@@ -60,7 +60,7 @@ function layCove(){dreamProgress();coveBag();const D=COVE,R=mulberry(D.seed^0x5c
     for(const [x,z] of gates)obj('gate',x,z,x===x0||x===x1?Math.PI/2:0);};
   const lane=(a,b)=>{const p=landPath(a[0],a[1],b[0],b[1],{four:true,max:20000,block:(x,z)=>inBld(x,z)||occ.has(k2(x,z))&&!S.paths[k2(x,z)]&&!(x===b[0]&&z===b[1]),cost:(x,z)=>S.paths[k2(x,z)]?0.4:1});
     if(p)for(const [x,z] of p)dirt(x,z);};
-  const tree=(x,z,v)=>{if(!grass(x,z)||occ.has(k2(x,z)))return;const d={x,z,k:'tree',v,r:R()*6.28,hp:DEBRIS.tree.hp};S.debris.push(d);myDeb.add(d);occ.add(k2(x,z));};
+  const tree=(x,z,v)=>{if(!grass(x,z)||occ.has(k2(x,z))||focc.has(k2(x,z))||inBld(x,z))return;const d={x,z,k:'tree',v,r:R()*6.28,hp:DEBRIS.tree.hp};S.debris.push(d);myDeb.add(d);occ.add(k2(x,z));};
   const bush=(x,z,v=2)=>{if(!grass(x,z)||occ.has(k2(x,z)))return;const d={x,z,k:'bush',v,r:R()*6.28,hp:DEBRIS.bush.hp};S.debris.push(d);myDeb.add(d);occ.add(k2(x,z));};
   const myDeb=new Set(),[cx,cz]=D.heart,[hx,hz]=D.home,win=season()==='winter';
 
@@ -94,17 +94,17 @@ function layCove(){dreamProgress();coveBag();const D=COVE,R=mulberry(D.seed^0x5c
     swap('parasol',tx0+1,tz0);swap('parasol',tx0+4,tz0);swap('bunting',tx0+2,tz0-1+1,0);
     swap('deckchair',tx0+1,tz1,Math.PI);swap('deckchair',tx0+2,tz1,Math.PI);swap('stonelantern',tx0,tz1);swap('stonelantern',tx1,tz1);
     swap('rug',tx0+4,tz1-1);swap('pot_olive',tx1,tz0);swap('pot_fern',tx0,tz0);
-    obj('koipond',tx1+2,tz0+2);obj('stonelantern',tx1+3,tz0+1);obj('toadstool',tx1+2,tz0+4);obj('cattail',tx1+3,tz0+3);obj('hedge',tx1+1,tz1+1);obj('hedge',tx1+2,tz1+1);}
-  // ---- Cottage Row: a stepping-stone lane in front, a picket-fenced garden and a yard piece apiece
-  {const YARD=[['clothesline','feeder'],['bike','birdbath'],['boatplanter','vane'],['barrow','pumpkins'],['toadstool','stonelantern'],['logbench','firepit']];
+    obj('koipond',tx1-1,tz1+3);obj('stonelantern',tx1+1,tz1+2);obj('toadstool',tx1+1,tz1+4);obj('cattail',tx1-2,tz1+4);obj('hedge',tx1+1,tz1);obj('hedge',tx1+1,tz1-1);}
+  // ---- the neighbours: six houses in their own nooks round the island, each with a front garden, a yard piece,
+  // a tree or two and a stepping-stone trail home (laid below, once everything else is down)
+  const doors=[];
+  {const YD=[['clothesline','feeder'],['bike','birdbath'],['boatplanter','vane'],['barrow','pumpkins'],['toadstool','stonelantern'],['logbench','chime']];
     const fl=[['tulip','lavender'],['sunflower','tulip'],['lavender','moonflower'],['sunflower','lavender'],['tulip','moonflower'],['moonflower','sunflower']];
-    for(let x=0;x<=24;x++)obj('stonepath',x,8);
-    D.cottages.forEach(([x,z],i)=>{const [a,b]=YARD[i],[f1,f2]=fl[i];
-      obj('stonepath',x,z-1);obj('mailbox',x+1,z-1);obj(i%2?'topiary':'lamppost',x+2,z-1);
-      obj(a,x+2,z+1,a==='bike'||a==='boatplanter'?Math.PI/2:0);obj(win&&i===4?'snowman':b,x+3,z,0);
-      // the front garden: two beds of flowers and a path to the picket gate
-      for(let gz=z+2;gz<=z+4;gz++){obj('stonepath',x,gz);crop(f1,x-1,gz,gz===z+3?EX[i%5]:'normal');crop(f2,x+1,gz,gz===z+2?EX[(i+2)%5]:'normal');}
-      obj('picket',x-1,z+5);obj('gate',x,z+5,0);obj('picket',x+1,z+5);obj('flowerpot',x+2,z+4);});}
+    D.cottages.forEach(([x,z],i)=>{const [a,b]=YD[i],[f1,f2]=fl[i];
+      obj(a,x+2,z+1,a==='bike'||a==='boatplanter'?Math.PI/2:0);obj(win&&i===4?'snowman':b,x-1,z,0);obj(i%2?'topiary':'lamppost',x+2,z+3);obj('gnome',x-1,z+3,0.4);
+      for(let gz=z+2;gz<=z+3;gz++){obj('stonepath',x,gz);crop(f1,x-1,gz,gz===z+2?EX[i%5]:'normal');crop(f2,x+1,gz,gz===z+3?EX[(i+2)%5]:'normal');}
+      obj('mailbox',x+1,z+4);obj('flowerpot',x-1,z+4);obj('stonepath',x,z+4);doors.push([x,z+5]);
+      tree(x+3,z-1,[2,3,7,9,2,0][i]);tree(x-2,z-1,[7,0,3,2,9,3][i]+TREE_NS);});}
   // ---- the beach: deck chairs and parasols round the bonfire, logs to sit on, a little boat planter washed up
   {const [fx,fz]=D.fire;for(const [dx,dz,r] of [[-2,0,Math.PI/2],[2,0,-Math.PI/2],[0,-2,0]])obj('logbench',fx+dx,fz+dz,r,true);
     // along the top of the sand, facing the sea: a parasol between each pair of deck chairs
@@ -134,14 +134,42 @@ function layCove(){dreamProgress();coveBag();const D=COVE,R=mulberry(D.seed^0x5c
   {const sp=[4,5,6,3];let n=0;for(let z=9;z<=17;z+=3)for(let x=-28;x<=-19;x+=3){if(x===-22)continue;tree(x,z,sp[n++%4]);}
     for(let z=9;z<=17;z++)obj('mossy',-22,z);obj('logbench',-21,13,-Math.PI/2);obj('feeder',-23,11);obj('birdhouse',-21,10);}
   // the berry walk along the pond: bushes of every kind (each patch of five tiles bears its own)
-  for(const [x0,z0] of [[-17,15],[-12,15],[-9,13],[-12,-11],[-7,15],[-17,-4+0]]){for(let i=0;i<3;i++)bush(x0+i,z0);bush(x0+1,z0+1);}
+  for(const [x0,z0] of [[-18,15],[-16,18],[-5,16],[-26,-9],[20,19],[-3,-9]]){for(let i=0;i<3;i++)bush(x0+i,z0);bush(x0+1,z0+1);}
   // ---- the villa by the pond: a terracotta patio, then a fire pit ring of log benches and toadstools
   pave('terracotta',hx-2,hz+2,hx+3,hz+3);swap('picnic',hx-1,hz+3,0);swap('parasol',hx-2,hz+2);swap('pot_monstera',hx+3,hz+2);swap('deckchair',hx+2,hz+3,Math.PI);swap('deckchair',hx+3,hz+3,Math.PI);
   obj('clothesline',hx+3,hz,0);obj('feeder',hx-2,hz);obj('pumpkins',hx-1,hz+4);obj('lamppost',hx+4,hz+4);
   {const px=hx+1,pz=hz+7;obj('firepit',px,pz);for(const [dx,dz,r,k] of [[-1,0,Math.PI/2,'logbench'],[1,0,-Math.PI/2,'logbench'],[0,-1,0,'toadstool'],[0,1,Math.PI,'toadstool']])obj(k,px+dx,pz+dz,r);
     obj('stonelantern',px-2,pz-1);obj('stonelantern',px+2,pz+1);}
-  // ---- lanes: the street to the plaza and market, the villa down to the farm, the farm to the bridge, the dock up
-  lane([cx,-4],[cx,cz-5]);lane([hx+1,hz+4],[FM,FZ1+2]);lane([FM,FZ1+2],[-6,8]);lane([FX1+2,2],[-10,4]);lane([-4,22],[3,9]);lane([hx+1,hz+4],[hx+1,hz+6]);
+  // ---- the fairy ring in the birch copse: a wishing well in a ring of toadstools, lanterns, birches all round
+  {const [rx,rz]=[20,9];obj('well',rx,rz);for(let i=0;i<8;i++){const a=i/8*6.283;obj('toadstool',rx+Math.round(Math.cos(a)*2),rz+Math.round(Math.sin(a)*2),a+Math.PI/2);}
+    obj('stonelantern',rx-3,rz);obj('stonelantern',rx+3,rz);for(let i=0;i<12;i++){const a=i/12*6.283+0.2,r=3.6+R()*1.2;tree(Math.round(rx+Math.cos(a)*r),Math.round(rz+Math.sin(a)*r),7+(R()<0.4?TREE_NS:0));}}
+  // ---- trails of stepping stones: the plaza to every door, the market over the bridge to the farm and the west
+  // houses, the villa to its neighbours, the dock up into town; lanterns now and then, wildflowers along the verges
+  const walk=(a,b,k='stonepath')=>{const p=landPath(a[0],a[1],b[0],b[1],{four:true,max:40000,block:(x,z)=>inBld(x,z)||occ.has(k2(x,z)),cost:(x,z)=>focc.has(k2(x,z))?0.3:1+hash(x*0.37+3,z*0.53)*0.9});
+    if(!p)return[];for(const [x,z] of p)if(!focc.has(k2(x,z)))obj(k,x,z,R()*6.28);return p;};
+  const trails=[[[cx,cz+5],doors[0]],[[cx,cz+5],doors[1]],[[cx,cz+5],doors[2]],[[cx+4,cz],doors[3]],[doors[2],[D.fire[0],D.fire[1]-3]],
+    [[3,cz+4],[-9,8]],[[-9,8],doors[4]],[[-9,8],[FM,FZ1+2]],[[hx+1,hz+4],doors[5]],[[hx+1,hz+4],[cx-4,cz]],[[DOCK.x,DOCK.z-2],doors[0]],[doors[1],[DOCK.x+3,DOCK.z-3]]];
+  const all=[];for(const [a,b] of trails)all.push(...walk(a,b));
+  lane([23,-5],[26,-4]);lane([FX1+2,2],[-10,4]);
+  // the cherry avenue down from the plaza: blossom either side of the first trail
+  {const p=walk([cx,cz+5],doors[1]);p.forEach(([x,z],i)=>{if(i%2===0&&i>1&&i<p.length-2){tree(x-1,z,3);tree(x+1,z,3);}});}
+  all.forEach(([x,z],i)=>{const sd=i%2?1:-1;if(i%9===4)obj('stonelantern',x+sd,z)||obj('stonelantern',x,z+sd);else if(R()<0.35)obj('flowers',x+(R()<0.5?1:-1),z)||obj('flowers',x,z+(R()<0.5?1:-1));});
+  // ---- trees: pines and spruces along the foot of the cliff, a maple wood round the west house, oaks in the
+  // meadows with a swing under one, poplars by the shore, blossom round the plaza
+  for(let x=-27;x<=25;x+=2)if(R()<0.6)tree(x,-10+(R()<0.5?1:0),R()<0.5?1:8);
+  for(let i=0;i<14;i++){const a=R()*6.283,r=2.5+R()*3;tree(Math.round(-11+Math.cos(a)*r),Math.round(18+Math.sin(a)*r*0.7),R()<0.7?2:2+TREE_NS);}
+  for(const [x,z] of [[6,9],[14,9],[-3,13],[4,19],[13,19],[22,15],[-14,8],[-24,-5],[-5,-4],[25,5],[0,-3]]){tree(x,z,R()<0.5?0:TREE_NS);}
+  obj('swing',7,10,0)||obj('swing',5,9,0);obj('hammock',13,10,0);
+  for(const [x,z] of [[23,13],[24,11],[21,17],[-27,4],[-28,1]])tree(x,z,9);
+  for(const [x,z] of [[cx-4,cz-3],[cx+4,cz-3],[cx-4,cz+4],[cx+4,cz+5]])tree(x,z,3+(R()<0.5?TREE_NS:0));
+  // little mixed groves in whatever meadow is still open (kept a step clear of paths and pieces)
+  {const clear=(x,z)=>{if(occ.has(k2(x,z))||!grass(x,z))return false;for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const k=k2(x+a,z+b);if(focc.has(k)||inBld(x+a,z+b)||S.paths[k]||S.tiles[k])return false;}return true;};
+    const mixes=[[0,2,7],[3,7,9],[1,8,0],[2,2,3],[0,0,9],[7,7,2]];
+    for(let g=0;g<70;g++){const x=Math.round(-27+R()*52),z=Math.round(-9+R()*28);if(!clear(x,z))continue;const mix=mixes[g%mixes.length],n=3+Math.floor(R()*4);
+      for(let i=0;i<n;i++){const a=R()*6.283,r=i?1.5+R()*1.8:0,tx=Math.round(x+Math.cos(a)*r),tz=Math.round(z+Math.sin(a)*r);if(clear(tx,tz))tree(tx,tz,mix[i%3]+(R()<0.4?TREE_NS:0));}
+      if(R()<0.5){const a=R()*6.283;obj(R()<0.5?'toadstool':'birdhouse',Math.round(x+Math.cos(a)*1.2),Math.round(z+Math.sin(a)*1.2),a);}}}
+  // meadow flowers and clover in the open grass that's left
+  for(let x=-28;x<=26;x++)for(let z=-9;z<=21;z++){if(!grass(x,z)||occ.has(k2(x,z))||focc.has(k2(x,z))||inBld(x,z))continue;const h=hash(x*0.21+7,z*0.19);if(h>0.9)obj('flowers',x,z);else if(h<0.04)obj('clover',x,z);}
   S.nextId=id;
   // ---- clear the wild off the lowland; keep the woods on the cliff and along the far west and east edges
   const kept=(x,z)=>(lvlMap.get(k2(x,z))||0)>0||x>=26||x<=-29;
