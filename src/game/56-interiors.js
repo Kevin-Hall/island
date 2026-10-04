@@ -1,6 +1,7 @@
 /* ---- interiors: a separate little scene, entered with a fade; furnished to suit whoever lives there ---- */
 const roomScene=new T.Scene();roomScene.background=new T.Color(0x2e2430);
 roomScene.add(new T.HemisphereLight(0xfff4e0,0x6a5a7a,0.55));{const d=new T.DirectionalLight(0xfff0d8,0.42);d.position.set(2,6,4);roomScene.add(d);}
+const ROOM_HEMI=roomScene.children.find(o=>o.isHemisphereLight),ROOM_DIR=roomScene.children.find(o=>o.isDirectionalLight);
 const roomLamp=new T.PointLight(0xffd8a0,0.5,14);roomLamp.position.set(0,2.3,0.4);roomScene.add(roomLamp);
 const roomCam=new T.PerspectiveCamera(40,1,NEAR,FAR);const roomWinMat=new T.MeshBasicMaterial({color:0x9fd4ff});
 let inside=null;
@@ -103,7 +104,10 @@ function updateRoom(dt,tt){const I=inside;if(!I)return;let walking=false,climb=f
   {const an=I.me.children[0]&&I.me.children[0].userData.anim;if(an)an.update(dt,walking?(climb?1.7:2.6):0,false);/* a character walks on its own clip */
   I.me.position.set(I.x,(I.y||0)+(walking&&!an?Math.abs(Math.sin(tt*(climb?9:14)))*0.06:0),I.z);}I.me.rotation.y+=angDiff(I.me.rotation.y,I.face)*Math.min(1,dt*8);
   if(I.who){I.who.rotation.y+=angDiff(I.who.rotation.y,Math.atan2(I.x-I.who.position.x,I.z-I.who.position.z))*Math.min(1,dt*3);I.who.position.y=Math.sin(tt*2)*0.01;}
-  roomCam.aspect=camera.aspect;if(I.room.follow){/* big rooms: the camera follows you, staying close so the world curve stays gentle */const cx=clamp(I.x,-I.room.RW/2+3,I.room.RW/2-3),cz=clamp(I.z,-I.room.RD/2+2.2,I.room.RD/2-2.2);I.cx=I.cx===undefined?cx:lerp(I.cx,cx,Math.min(1,dt*3));I.cz=I.cz===undefined?cz:lerp(I.cz,cz,Math.min(1,dt*3));const k=camera.aspect<0.8?1.55:1;/* stand further back on a tall phone */roomCam.position.set(I.cx,7.2*k,I.cz+6.8*k);roomCam.lookAt(I.cx,0.4,I.cz-0.9);}
+  roomCam.aspect=camera.aspect;roomCam.fov=I.room.fov||40;
+  // a room's own light (cosy rooms are lit low and warm, mostly by their lamps) and, if it has one, its own camera
+  {const L=I.room.light;ROOM_HEMI.intensity=L?L[0]:0.55;ROOM_DIR.intensity=L?L[1]:0.42;ROOM_HEMI.color.setHex(L&&L[2]||0xfff4e0);ROOM_HEMI.groundColor.setHex(L&&L[3]||0x6a5a7a);}
+  if(I.room.cam)I.room.cam(I,dt);else if(I.room.follow){/* big rooms: the camera follows you, staying close so the world curve stays gentle */const cx=clamp(I.x,-I.room.RW/2+3,I.room.RW/2-3),cz=clamp(I.z,-I.room.RD/2+2.2,I.room.RD/2-2.2);I.cx=I.cx===undefined?cx:lerp(I.cx,cx,Math.min(1,dt*3));I.cz=I.cz===undefined?cz:lerp(I.cz,cz,Math.min(1,dt*3));const k=camera.aspect<0.8?1.55:1;/* stand further back on a tall phone */roomCam.position.set(I.cx,7.2*k,I.cz+6.8*k);roomCam.lookAt(I.cx,0.4,I.cz-0.9);}
   else if(I.room.dio){fitRoomCam(I.room.dio);roomScene.background.copy(skyZen).lerp(skyHz,0.45).lerp(_c.set(0x1a1830),nightF*0.55);}
   else{roomCam.position.set(0,6.2,I.room.RD/2+4.6);roomCam.lookAt(0,0.4,-0.2);}roomCam.updateProjectionMatrix();if(I.room.tick)I.room.tick(dt,tt);if(I.kind==='home')decoTick(dt,tt);
   roomWinMat.color.setHex(nightF>0.5?0x2a3a6a:S.rain?0x9aa8b8:S.hour<7||S.hour>18?0xf4b890:0x9fd4ff);roomLamp.intensity=0.25+nightF*0.5;}
