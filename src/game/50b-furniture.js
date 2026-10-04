@@ -7,7 +7,7 @@
 const PAINT=[0x7ac0d8,0xf2c35a,0xe88a8a,0xf4f0e6,0x8ac48a,0xb8a0e0];
 const FW=0xb88452,FW_D=0x7a5230,FWHITE=0xf4efe6,FST=0xb4b0a6,FST_D=0x96928a,FIRON=0x2e3838;
 // one tile's worth of parts for a furniture piece; returns false for a kind it doesn't know
-function furnParts(kind,g,R,seed){let p=[];const paint=PAINT[seed%PAINT.length];
+function furnParts(kind,g,R,seed,rot=0){let p=[];const paint=PAINT[seed%PAINT.length];
   switch(kind){
     case'picnic':{// a trestle table with benches either side, a gingham cloth and a little lunch
       p.push(P(BOX,FW,0,0.44,0,0,0,0,0.92,0.06,0.5));
