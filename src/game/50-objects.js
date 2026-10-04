@@ -57,7 +57,7 @@ function objGroup(kind,seed=1,rot=0){
       const bl=[P(BOX,0x6a4a30,0,0,0,0,0,0,0.16,0.16,0.12)];for(let k=0;k<4;k++){const a=k*Math.PI/2;bl.push(P(BOX,0xe8dcc0,-Math.sin(a)*0.58,Math.cos(a)*0.58,0,0,0,a,0.2,0.95,0.03),P(BOX,0x7a5a3a,-Math.sin(a)*0.5,Math.cos(a)*0.5,0.02,0,0,a,0.04,1.05,0.03));}
       const blades=M(bl);blades.position.set(0,1.95,0.5);g.add(blades);g.userData.anim=(t,dt)=>{blades.rotation.z-=dt*1.1;};break;}
     case'pcrate':case'pbasket':case'psack':produceDisplay(g,kind,R);break;/* (58c) */
-    default:furnParts(kind,g,R,seed,rot);
+    default:if(!moreDecor(kind,g,R,seed))furnParts(kind,g,R,seed,rot);/* (the newer pieces: 50e) */
   }
   g.rotation.y=rot;return g;
 }

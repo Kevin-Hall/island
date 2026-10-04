@@ -38,6 +38,9 @@ RECIPES.push(
   {out:['b','sundial',1],in:{'m:stone':8,'g:oldcoin':1},lvl:4},{out:['b','hammock',1],in:{'m:wood':4,'m:fiber':10},lvl:4},{out:['b','arbor',1],in:{'m:wood':8,'m:fiber':6},lvl:4},
   {out:['b','stall',1],in:{'m:wood':12,'m:fiber':6},lvl:4},{out:['b','swing',1],in:{'m:wood':8,'m:fiber':6},lvl:5},{out:['b','fountain',1],in:{'m:stone':20,'g:glass':2},lvl:5},
   {out:['b','clover',1],in:{'g:clover4':3,'m:stone':4},lvl:5},{out:['b','windmill',1],in:{'m:wood':30,'m:stone':20,'m:fiber':10},lvl:6},
+  // garden pieces you can make by hand
+  {out:['b','logbench',1],in:{'m:wood':6},lvl:1},{out:['b','toadstool',1],in:{'g:mushroom':3,'m:fiber':2},lvl:1},{out:['b','bunting',2],in:{'m:wood':2,'m:fiber':6},lvl:1},
+  {out:['b','firepit',1],in:{'m:stone':10,'m:wood':4},lvl:2},{out:['b','snowman',1],in:{'m:stone':2,'m:wood':2,'m:fiber':2},lvl:1},{out:['b','stonelantern',1],in:{'m:stone':12,'b:firefly':1},lvl:2},
   // treats
   {out:['x','jam',1],in:{'any:berry':3},lvl:1},{out:['x','pie',1],in:{'any:fruit':3,'c:wheat':1},lvl:2},{out:['x','stew',1],in:{'g:mushroom':2,'g:acorn':2},lvl:1},
   // handy and fun

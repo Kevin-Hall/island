@@ -162,8 +162,8 @@ function townBuilding(b,R){const p=[],gl=[];let lit=true;
     p.push(P(BOX,0xf1e3c6,0,1.95,0.1,0,0,0,0.6,0.7,0.6),P(CONE4,0x5a6ab0,0,2.5,0.1,0,0.785,0,0.9,0.44,0.9),P(CYL12,0xf6f0e0,0,2.0,0.41,1.57,0,0,0.36,0.03,0.36),P(BOX,0x3a2a2a,0.04,2.03,0.43,0,0,0.6,0.02,0.16,0.01),P(BOX,0x3a2a2a,0,2.0,0.43,0,0,0,0.12,0.02,0.01));
     p.push(P(BOX,0x6a4a3a,0,0.42,0.76,0,0,0,0.5,0.8,0.04),P(CYL8,0x8a8e98,0.95,0.9,0.95,0,0,0,0.04,1.8,0.04),P(BOX,0x5fae44,1.08,1.66,0.95,0,0,0,0.26,0.18,0.02),P(ICO2,0xf6d04a,1.08,1.66,0.965,0,0,0,0.08,0.08,0.01));
     for(const x of [-0.62,0.62])gl.push(P(BOX,0x404a60,x,0.72,0.76,0,0,0,0.3,0.36,0.03));}
-  else if(b.roof!==undefined)cottage(p,gl,b.roof);
-  else homeStyle(planVillagers()[b.n%6].pers,b.n,p,gl);
+  else if(b.roof!==undefined){const s0=p.length;cottage(p,gl,b.roof);if(b.t==='vh')houseVariance('cottage',b.n|0,p,gl,s0);}
+  else{const s0=p.length,pers=planVillagers()[b.n%6].pers;homeStyle(pers,b.n,p,gl);houseVariance(pers,b.n|0,p,gl,s0);}/* every house a little different (55b) */
   return{p,gl,lit};}
 // a storybook cottage: cream walls, a coloured roof with a chimney, a wooden door, shuttered windows and a flower box.
 // roof -1 is a flat-roofed sandstone house instead
