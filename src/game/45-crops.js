@@ -5,6 +5,11 @@
 // space, so a bed reads as one field of furrows: rounded ridges catching the light, shaded troughs, speckled earth and
 // the odd pebble. The instance colour tints it (dry: warm tan, watered: dark and rich).
 const SOIL_GEO=new T.BoxGeometry(0.9,0.06,0.9);
+// crops in fuller colour: each part's hue kept, its saturation lifted (vivid), like produce at a market
+const _vc=new T.Color(),_vh={h:0,s:0,l:0},_vivid=new Map();
+function vivid(c){if(typeof c!=='number')return c;let v=_vivid.get(c);if(v===undefined){_vc.setHex(c).getHSL(_vh);_vc.setHSL(_vh.h,Math.min(1,_vh.s*1.32+0.04),clamp(_vh.l*(_vh.l>0.7?0.96:1),0,1));v=_vc.getHex();_vivid.set(c,v);}return v;}
+// the lip round a bed: a low ridge of dark earth along each edge that has no tilled neighbour
+const EDGE_GEO=(()=>{const g=new T.BoxGeometry(1,1,1).translate(0,0.5,0),n=g.attributes.position.count,c=new Float32Array(n*3);for(let i=0;i<n;i++){const top=g.attributes.normal.getY(i)>0.5;c.set(top?[1,1,1]:[0.78,0.74,0.72],i*3);}g.setAttribute('color',new T.BufferAttribute(c,3));return g;})();/* (white vertex colours: vcMat multiplies by them; its sides a shade darker) */let edgeIM=null;
 const SOIL_TEX=(()=>{const N=64,c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d'),R=mulberry(4242),img=g.createImageData(N,N),d=img.data;
   const ridge=y=>{const t=((y+0.5)/N*3)%1;/* three furrows a tile: 0 at a trough, up the lit face, over the crest, down the shaded face */
     return t<0.12?0.62+t*1.5:t<0.55?0.8+Math.sin((t-0.12)/0.43*Math.PI/2)*0.28:t<0.7?1.08-(t-0.55)*1.6:0.84-(t-0.7)*0.7;};
@@ -25,15 +30,18 @@ soilMat.onBeforeCompile=sh=>{sh.vertexShader=sh.vertexShader.replace('#include <
   sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vSoil;').replace('#include <map_fragment>','vec4 texelColor=mapTexelToLinear(texture2D(map,vSoil));diffuseColor*=texelColor;');};
 let soilIM=null;
 function rebuildSoil(){
-  if(soilIM){scene.remove(soilIM);soilIM.dispose();}
-  const keys=Object.keys(S.tiles);
+  if(soilIM){scene.remove(soilIM);soilIM.dispose();}if(edgeIM){scene.remove(edgeIM);edgeIM.dispose();edgeIM=null;}
+  const keys=Object.keys(S.tiles),edges=[];
   soilIM=new T.InstancedMesh(SOIL_GEO,soilMat,Math.max(1,keys.length));soilIM.count=keys.length;soilIM.receiveShadow=true;soilIM.frustumCulled=false;
   // each slab reaches out to meet tilled neighbours, so a plot reads as one bed of soil, not separate squares
   // (fruit trees keep just a small ring of dirt, so an orchard stays on grass)
   const tree=q=>{const c=S.tiles[q]&&S.tiles[q].crop;return !!c&&CROPS[c.t]&&CROPS[c.t].kind==='tree';};
   keys.forEach((k,i)=>{const [x,z]=k.split(',').map(Number),y=topY(x,z),tr=tree(k),n=(a,b)=>{const q=K(x+a,z+b);return !tr&&!!S.tiles[q]&&!tree(q)&&Math.abs(topY(x+a,z+b)-y)<0.05;};
     const e=tr?0.17:0.45,l=n(-1,0)?0.5:e,r=n(1,0)?0.5:e,f=n(0,-1)?0.5:e,b=n(0,1)?0.5:e;
-    _m.makeScale((l+r)/0.9,1,(f+b)/0.9);_m.setPosition(x+(r-l)/2,y+0.03,z+(b-f)/2);soilIM.setMatrixAt(i,_m);soilIM.setColorAt(i,_c.set(S.tiles[k].w?0x5e4a3e:0x9c8670));});
+    _m.makeScale((l+r)/0.9,1,(f+b)/0.9);_m.setPosition(x+(r-l)/2,y+0.03,z+(b-f)/2);soilIM.setMatrixAt(i,_m);soilIM.setColorAt(i,_c.set(S.tiles[k].w?0x5a3c2a:0x94704e));
+    if(!tr)for(const [a,b] of [[-1,0],[1,0],[0,-1],[0,1]])if(!n(a,b))edges.push([x,z,a,b,y,S.tiles[k].w]);});
+  if(edges.length){edgeIM=new T.InstancedMesh(EDGE_GEO,vcMat,edges.length);edgeIM.receiveShadow=edgeIM.castShadow=true;edgeIM.frustumCulled=false;
+    edges.forEach(([x,z,a,b,y,w],i)=>{const along=a===0;_m.makeScale(along?0.98:0.1,0.085,along?0.1:0.98);_m.setPosition(x+a*0.47,y,z+b*0.47);edgeIM.setMatrixAt(i,_m);edgeIM.setColorAt(i,_c.set(w?0x3e281c:0x6a4a32));});scene.add(edgeIM);}
   if(!keys.length)soilIM.setColorAt(0,_c.set(0));
   scene.add(soilIM);refreshHomeGrass();
 }
@@ -57,7 +65,8 @@ function wildflowers(p,R,cols,n,spread=0.32){for(let s=0;s<n;s++){const x=(R()-0
   stemP(p,0x4f8a34,x,z,h);lf(p,GREENS[s%4],x,h*0.35,z,R()*6.28,0.35,0.12,0.07);lf(p,GREENS[(s+1)%4],x,h*0.6,z,R()*6.28,0.4,0.1,0.06);
   if(R()<0.3)spike(p,c,0xffffff,x,h,z,0.04);else bloom(p,c,R()<0.5?0xf6d04a:0xffffff,x,h,z,0.085);}}
 
-function cropParts(type,stage,seed=1){
+function cropParts(type,stage,seed=1){const q=cropParts0(type,stage,seed);for(const a of [q.leaf,q.fruit])for(const o of a){o.color=vivid(o.color);if(o.c2!==undefined)o.c2=vivid(o.c2);}return q;}
+function cropParts0(type,stage,seed=1){
   /* Crops are drawn to fill their tile the way Stardew's do: a full mound of gradient leaf cards (dark at the base,
      light at the tip), with big, glossy produce that reads from across the farm. Stage 2 is the same plant at 65%
      size without produce. Produce uses PG gradients (light on top, dark underneath) plus a white specular dab. */
@@ -184,7 +193,7 @@ function syncCrop(k){
   const {leaf,fruit}=cropParts(c.t,st,x*73856093^z*19349663);const g=new T.Group();
   if(leaf.length)g.add(M(leaf));
   if(fruit.length){const v=c.v&&c.v!=='normal'&&c.v!=='giant'?c.v:null;g.add(M(fruit,v?VMAT[v]:vcMat));}
-  g.scale.setScalar(st===3&&c.v==='giant'?1.3:0.95);
+  g.scale.setScalar(st===3&&c.v==='giant'?1.2:0.84);/* (a touch smaller than the tile, so the beds show between them) */
   g.position.set(x,topY(x,z)+0.06,z);g.rotation.y=CROPS[c.t].kind==='flower'?cam.yaw:hash(x,z)*6.28;
   g.userData.tile={x,z};g.userData.ph=hash(z,x)*6;
   cropRoot.add(g);const e={g,s:st,v:c.v};cropMeshes.set(k,e);bakeCrop(e);cropDirty=true;
