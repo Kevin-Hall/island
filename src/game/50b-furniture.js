@@ -75,7 +75,8 @@ function furnParts(kind,g,R,seed){let p=[];const paint=PAINT[seed%PAINT.length];
     case'urn':{// a stone urn spilling over with flowers
       p.push(P(CYL12,FST_D,0,0.05,0,0,0,0,0.3,0.1,0.3),P(TOWER,FST,0,0.18,0,Math.PI,0,0,0.22,0.18,0.22),P(TOWER,FST,0,0.36,0,0,0,0,0.44,0.22,0.44),P(CYL12,FST_D,0,0.48,0,0,0,0,0.48,0.04,0.48));
       const fl=[];wildflowers(fl,R,[0xf28aa8,0xffffff,0xb8a8f2,0xf6d04a,0xe86a5a],8,0.16);p.push(...shift(fl,0,0.48,0));for(let i=0;i<8;i++){const a=i/8*6.283;lf(p,GREENS[i%4],Math.cos(a)*0.2,0.46,Math.sin(a)*0.2,a+Math.PI/2,-0.5,0.2,0.08);}break;}
-    case'picket':{// a white picket fence panel
+    case'picket':{// a white picket fence panel (joined to its neighbours, like a fence)
+      if(fenceParts(p,objCtx,rot,'p'))break;
       for(let i=0;i<5;i++){const x=-0.4+i*0.2;p.push(P(BOX,FWHITE,x,0.27,0,0,0,0,0.1,0.54,0.035),P(CONE4,FWHITE,x,0.58,0,0,Math.PI/4,0,0.1,0.08,0.05));}
       p.push(P(BOX,0xe8e2d6,0,0.4,-0.03,0,0,0,1.0,0.06,0.03),P(BOX,0xe8e2d6,0,0.16,-0.03,0,0,0,1.0,0.06,0.03));break;}
     case'sundial':{// a sundial on a carved pedestal

@@ -7,7 +7,7 @@ function goTo(x,z,cb){routeVil(x,z);vil.idle=0;vil.cb=cb||null;}
 // rocks and stumps, buildings and fixed decor, and placed furniture (not rugs, flower patches or floors). Each solid tile
 // is a circle the player (radius PLAYER_R) slides round; routeVil finds a way round them with a small A* when needed
 const walkable=(x,z)=>{const t=landMap.get(K(x,z));return t==='grass'||t==='sand'||t==='bridge';};
-const SOLID_R={tree:0.32,bush:0.3,rock:0.34,boulder:0.4,stump:0.3},WALK_OVER=new Set(['flowers','cattail','rug','clover']),PLAYER_R=0.2;
+const SOLID_R={tree:0.32,bush:0.3,rock:0.34,boulder:0.4,stump:0.3},WALK_OVER=new Set(['flowers','cattail','rug','clover','gate']),PLAYER_R=0.2;
 function solidR(x,z){if(S.sea||inside)return 0;const k=K(x,z);if(islMap.get(k)!==0){const o=islMap.has(k)&&objAt(x,z);return o&&!WALK_OVER.has(o.k)?0.4:0;}/* (away: only the decor you've placed there) */
   const e=debMesh.get(k);if(e&&e.d&&SOLID_R[e.d.k])return SOLID_R[e.d.k];
   if(fixedAt(x,z))return 0.4;const o=objAt(x,z);if(o&&!WALK_OVER.has(o.k))return 0.4;return 0;}

@@ -14,7 +14,8 @@ function objGroup(kind,seed=1,rot=0){
       g.add(M(p));break;
     case'rock':p.push(P(ICO,0x8e929c,0,0.16,0,0,R()*3,0,0.72,0.46,0.62),P(ICO,0x7a7e88,0.24,0.1,0.16,0,R()*3,0,0.4,0.3,0.4),P(ICO,0x6a9a4a,-0.05,0.33,-0.03,0,R()*3,0,0.46,0.12,0.4));
       g.add(M(p));break;
-    case'fence':p.push(P(CYL12,0xa8845a,-0.42,0.3,0,0,0,0,0.11,0.6,0.11),P(CYL12,0xa8845a,0.42,0.3,0,0,0,0,0.11,0.6,0.11),P(CONE12,0x94704a,-0.42,0.64,0,0,0,0,0.12,0.08,0.12),P(CONE12,0x94704a,0.42,0.64,0,0,0,0,0.12,0.08,0.12),P(BOX,0xc49a66,0,0.44,0,0,0,0,1.0,0.07,0.05),P(BOX,0xc49a66,0,0.22,0,0,0,0,1.0,0.07,0.05));
+    case'gate':gateGroup(g,objCtx,rot,seed);break;
+    case'fence':if(fenceParts(p,objCtx,rot,'w')){g.add(M(p));break;}/* (joined to its neighbours) */p.push(P(CYL12,0xa8845a,-0.42,0.3,0,0,0,0,0.11,0.6,0.11),P(CYL12,0xa8845a,0.42,0.3,0,0,0,0,0.11,0.6,0.11),P(CONE12,0x94704a,-0.42,0.64,0,0,0,0,0.12,0.08,0.12),P(CONE12,0x94704a,0.42,0.64,0,0,0,0,0.12,0.08,0.12),P(BOX,0xc49a66,0,0.44,0,0,0,0,1.0,0.07,0.05),P(BOX,0xc49a66,0,0.22,0,0,0,0,1.0,0.07,0.05));
       g.add(M(p));break;
     case'lantern':p.push(P(BOX,0x3e3444,0,0.04,0,0,0,0,0.24,0.08,0.24),P(BOX,0x3e3444,0,0.45,0,0,0,0,0.08,0.9,0.08),P(BOX,0x3e3444,0,1.1,0,0,0,0,0.3,0.05,0.3),P(CONE4,0x3e3444,0,1.2,0,0,Math.PI/4,0,0.36,0.16,0.36));
       g.add(M(p));{const lamp=M([P(BOX,0xfff0b8,0,0.97,0,0,0,0,0.2,0.22,0.2)],glowMat);lamp.castShadow=false;g.add(lamp);}
@@ -61,6 +62,32 @@ function objGroup(kind,seed=1,rot=0){
 }
 // where the piece being built stands (set by syncObjs), so a hedge can reach out and join the hedges beside it
 let objCtx=null;
+// fences that join up: a piece beside other fences (or a gate) stands a post at its middle and runs its rails out to
+// each neighbour, meeting theirs at the tile's edge, so straight runs, corners, T's and crosses all connect. A piece on
+// its own is the plain panel. The neighbours are found in world directions and turned into the piece's own frame (rot)
+const FENCEY=new Set(['fence','picket','gate']);
+function fenceDirs(at,rot){const dirs=[];if(!at)return dirs;const c=Math.cos(rot),s=Math.sin(rot);
+  for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const o=objAt(at.x+dx,at.z+dz);if(o&&FENCEY.has(o.k))dirs.push([Math.round(dx*c-dz*s),Math.round(dx*s+dz*c)]);}return dirs;}
+function fenceParts(p,at,rot,kind){const dirs=fenceDirs(at,rot);if(!dirs.length)return false;
+  if(kind==='w'){p.push(P(CYL12,0xa8845a,0,0.31,0,0,0,0,0.12,0.62,0.12),P(CONE12,0x94704a,0,0.66,0,0,0,0,0.13,0.08,0.13));
+    for(const [x,z] of dirs){const ry=Math.atan2(-z,x);for(const y of [0.44,0.22])p.push(P(BOX,0xc49a66,x*0.27,y,z*0.27,0,ry,0,0.54,0.07,0.05));}}
+  else{p.push(P(BOX,FWHITE,0,0.3,0,0,0,0,0.12,0.6,0.12),P(CONE4,FWHITE,0,0.64,0,0,Math.PI/4,0,0.13,0.08,0.13));
+    for(const [x,z] of dirs){const ry=Math.atan2(-z,x);for(const y of [0.4,0.16])p.push(P(BOX,0xe8e2d6,x*0.27,y,z*0.27,0,ry,0,0.54,0.06,0.03));
+      for(const d of [0.2,0.4]){p.push(P(BOX,FWHITE,x*d,0.27,z*d,0,ry,0,0.1,0.54,0.035),P(CONE4,FWHITE,x*d,0.58,z*d,0,ry+Math.PI/4,0,0.1,0.08,0.05));}}}
+  return true;}
+// a gate: two posts across the gap and a planked door on a hinge, lined up with the fence either side of it. You walk
+// through it (WALK_OVER), and it swings open as you come near and closes behind you
+function gateGroup(g,at,rot,seed){const dirs=fenceDirs(at,rot),alongZ=dirs.length&&dirs.every(([x,z])=>x===0),ax=alongZ?Math.PI/2:0,W=0xc49a66,Dk=0x8a6440,p=[];
+  for(const s of [-1,1])p.push(P(CYL12,0x9a7650,s*0.45,0.38,0,0,0,0,0.13,0.76,0.13),P(CONE12,0x84603e,s*0.45,0.8,0,0,0,0,0.15,0.09,0.15));
+  const posts=M(p);posts.rotation.y=ax;g.add(posts);
+  const hinge=new T.Group();hinge.position.set(-0.4*Math.cos(ax),0,0.4*Math.sin(ax));hinge.rotation.y=ax;g.add(hinge);const d=[];
+  for(let i=0;i<4;i++)d.push(P(BOX,i%2?W:0xb88c5c,0.1+i*0.2,0.36,0,0,0,0,0.17,0.56,0.05));
+  d.push(P(BOX,Dk,0.4,0.56,0.03,0,0,0,0.8,0.07,0.04),P(BOX,Dk,0.4,0.18,0.03,0,0,0,0.8,0.07,0.04),P(BOX,Dk,0.4,0.37,0.035,0,0,0.47,0.84,0.06,0.035),P(CYL8,0x5a5e68,0.74,0.4,0.06,1.571,0,0,0.03,0.06,0.03));
+  const door=M(d);hinge.add(door);let open=0;const wx=at?at.x:0,wz=at?at.z:0;
+  g.userData.anim=(t,dt)=>{const near=at&&Math.hypot(vil.x-wx,vil.z-wz)<1.5&&!S.sea;const want=near?1:0;const o0=open;open+=(want-open)*Math.min(1,dt*6);
+    // it swings away from you as you come through
+    if(near&&o0<0.05){const side=Math.sign(((vil.z-wz)*Math.cos(ax+rot))-((vil.x-wx)*Math.sin(ax+rot)))||1;door.userData.side=side;}
+    door.rotation.y=-(door.userData.side||1)*open*1.55;if(Math.abs(open-o0)>0.002&&o0<0.02&&want)tone(320,0.06,'triangle',0.03,240);};}
 // a clipped hedge: soft round lumps of leaves, lighter on top and shadowed below, shingled with leaf blades, a few tiny
 // flowers; it grows a lump towards every neighbouring hedge so a row of them reads as one long hedge (corners too)
 function hedgeParts(R,at,rot){const p=[],L=0x76b452,Mc=0x55923e,D=0x2c5a28,sh=0x1c3a1e;

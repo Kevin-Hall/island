@@ -1,6 +1,6 @@
 /* ---- crafting: turn materials and finds into decor and useful items ---- */
 const RECIPES=[
-  {out:['b','fence',4],in:{'m:wood':2},lvl:1},{out:['b','stonepath',4],in:{'m:stone':3},lvl:1},{out:['b','flowerpot',1],in:{'m:stone':2,'m:fiber':1},lvl:1},
+  {out:['b','fence',4],in:{'m:wood':2},lvl:1},{out:['b','gate',1],in:{'m:wood':3},lvl:1},{out:['b','stonepath',4],in:{'m:stone':3},lvl:1},{out:['b','flowerpot',1],in:{'m:stone':2,'m:fiber':1},lvl:1},
   {out:['b','signpost',1],in:{'m:wood':3},lvl:1},{out:['b','haybale',1],in:{'m:fiber':6},lvl:1},{out:['x','fert',3],in:{'m:fiber':3,'f:sardine':1},lvl:1},
   {out:['x','bait',3],in:{'g:shell':2,'m:fiber':1},lvl:1},{out:['b','bench',1],in:{'m:wood':5},lvl:2},{out:['b','birdhouse',1],in:{'m:wood':4,'m:fiber':1},lvl:2},
   {out:['b','hedge',2],in:{'m:fiber':4,'m:wood':1},lvl:2},{out:['b','chime',1],in:{'g:shell':3,'m:fiber':2,'m:wood':1},lvl:2},{out:['b','scarecrow',1],in:{'m:wood':3,'m:fiber':4},lvl:2},
