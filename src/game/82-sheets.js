@@ -166,6 +166,7 @@ function renderSheet(){
     h+=`<div class="setrow"><span>Chart</span><span class="seg"><button data-dev="chartall">Reveal all islands</button><button data-dev="chart">Open chart</button></span></div>`;
     h+=`<div class="setrow"><span>Skip ahead</span><span class="seg"><button data-dev="morning">Next morning</button><button data-dev="shells">+1,000 shells</button></span></div>`;
     h+=`<div class="setrow"><span>Dream island (max level)</span><span class="seg"><button data-dev="dream">Load</button></span></div>`;
+    h+=`<div class="setrow"><span>Lookbook (pick the graphics)</span><span class="seg"><button data-dev="lookbook">Load</button></span></div>`;
     h+=`<div class="setrow"><span>Hollyhock Cove (test island)</span><span class="seg"><button data-dev="cove">Load</button></span></div>`;
     h+=`<div class="setrow"><span>Acornfield island</span><span class="seg"><button data-dev="acorn">Load</button></span></div>`;
     h+=`<div class="setrow"><span>Showcase farm</span><span class="seg"><button data-dev="showcase">${S.showcase?'Rebuild':'Load'}</button>${hasRealSave()?'<button data-dev="realsave">Restore my save</button>':''}</span></div>`;
@@ -245,6 +246,7 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.dev==='chartall'){for(const isl of islands)S.disc[isl.id]=1;SFX.discover();say('Every island is on your chart.');renderSheet();return;}
   if(d.dev==='chart'){openSheet('chart');return;}
   if(d.dev==='morning'){closeSheet();sleep();return;}
+  if(d.dev==='lookbook'){if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Tap again to load';return;}loadLookbook();return;}
   if(d.dev==='cove'){if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Tap again to load';return;}loadCove();return;}
   if(d.dev==='dream'){if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Tap again to load';return;}loadDream();return;}
   if(d.dev==='acorn'){if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Tap again to load';return;}loadAcornfield();return;}
