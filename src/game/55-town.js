@@ -274,10 +274,20 @@ function homeStyle(pers,n,p,gl){const R=mulberry(hi(n,7,11)),flowers=(xs,z,y=0.1
       flowers([-0.8,-0.6],0.82);}}}
 
 
-/* ---- the lighthouse beam: two soft cones turning slowly from the lantern once dusk falls ---- */
-const beamMat=new T.MeshBasicMaterial({color:0xffe6a0,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending,fog:false,side:T.DoubleSide});
-let beam=null;
+/* ---- the lighthouse beam: two long shafts of light turning slowly from the lantern once dusk falls. Each is a wide
+   soft cone reaching far out over the sea and a narrower bright core inside it, both fading smoothly to nothing along
+   their length (brightness in the vertex colours, drawn additively, so dark is see-through), with a glow at the lamp ---- */
+const beamMat=new T.MeshBasicMaterial({color:0xffe6a0,vertexColors:true,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending,fog:false,side:T.DoubleSide});
+// a cone with its tip at the origin, opening along +x to radius 1 at x=1; brightness falls off with distance (and is
+// softened right at the tip so the lamp doesn't flare)
+function beamGeo(fall){const g=new T.ConeGeometry(1,1,24,16,true).translate(0,-0.5,0).rotateZ(Math.PI/2),p=g.attributes.position,c=new Float32Array(p.count*3);
+  for(let i=0;i<p.count;i++){const t=clamp(p.getX(i),0,1),v=Math.pow(1-t,fall)*smooth(0,0.04,t);c[i*3]=c[i*3+1]=c[i*3+2]=v;}
+  g.setAttribute('color',new T.BufferAttribute(c,3));return g;}
+let beam=null,beamGlow=null;
 function updateLighthouse(dt,tt){const L=TOWN.light,isl=islands[0];if(!L||!isl||!isl.group){return;}
-  if(!beam||beam.parent!==isl.group){beam=new T.Group();for(const s of [1,-1]){const c=new T.Mesh(new T.ConeGeometry(0.5,1,10,1,true),beamMat);c.scale.set(1.0,9,1.9);c.rotation.z=s*Math.PI/2;c.position.x=s*4.5;beam.add(c);}
+  if(!beam||beam.parent!==isl.group){beam=new T.Group();const wide=beamGeo(1.6),core=beamGeo(2.4);
+    for(const s of [0,Math.PI]){const arm=new T.Group();arm.rotation.y=s;arm.rotation.z=-0.035;/* (dipping a touch, to sweep the water) */
+      const w=new T.Mesh(wide,beamMat);w.scale.set(46,3.6,3.6);const c=new T.Mesh(core,beamMat);c.scale.set(34,1.1,1.1);arm.add(w,c);beam.add(arm);}
+    beamGlow=new T.Sprite(new T.SpriteMaterial({map:glowTex,color:0xffe0a0,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending,fog:false}));beamGlow.scale.set(2.6,2.6,1);beam.add(beamGlow);
     beam.position.set(L.x,L.y,L.z);beam.renderOrder=3;isl.group.add(beam);}
-  const on=clamp((nightF-0.25)*2.5,0,1);beamMat.opacity=on*0.5;beam.visible=on>0.01;if(beam.visible)beam.rotation.y=tt*0.6;}
+  const on=clamp((nightF-0.25)*2.5,0,1);beamMat.opacity=on*0.55;beamGlow.material.opacity=on*0.9;beam.visible=on>0.01;if(beam.visible){beam.rotation.y=tt*0.5;beamGlow.rotation.y=0;}}
