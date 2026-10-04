@@ -203,25 +203,7 @@ function pickPlant(pl){const isl=islands[pl.isl],[x,z]=isl.spots[pl.i],Pd=PLANTS
 const bugs=[];
 // bugs in the world are drawn at real-ish size next to the villager; the models themselves stay chunky for the catch close-up
 const BUG_SCALE=0.55;
-function bugGroup(B){const g=new T.Group(),kind=B.kind||'fly',wm=B.glow?lumMat:vcMat;
-  if(kind==='crawl'){const s=0.9,p=[P(ICO,B.col,0,0.07*s,0,0,0,0,0.2*s,0.12*s,0.26*s),P(BOX,B.dk,0,0.125*s,0,0,0,0,0.012,0.012,0.24*s),P(ICO,B.dk,0,0.06*s,0.15*s,0,0,0,0.11*s,0.08*s,0.09*s),
-      P(LEAF0,0xffffff,0.05*s,0.12*s,0.04*s,0,0,0,0.05*s,0.02,0.07*s)];
-    for(let i=0;i<3;i++)for(const sd of [-1,1])p.push(P(BOX,0x2b1e2e,sd*0.13*s,0.03,(i-1)*0.07*s,0,0,sd*0.5,0.12*s,0.012,0.012));
-    if(B.name.includes('Rhino'))p.push(P(CONE6,B.dk,0,0.12*s,0.2*s,0.8,0,0,0.04,0.12*s,0.04));
-    if(B.name.includes('Stag'))for(const sd of [-1,1])p.push(P(BOX,B.dk,sd*0.04*s,0.07*s,0.24*s,0,sd*0.4,0,0.02,0.02,0.1*s));
-    if(B.name==='Ladybug')for(const [x,z] of [[0.05,0.03],[-0.05,0.03],[0.06,-0.07],[-0.06,-0.07]])p.push(P(ICO,0x2b1e2e,x*s,0.125*s,z*s,0,0,0,0.04*s,0.02,0.04*s));
-    g.add(M(p,wm));g.userData={crawl:true};return g;}
-  if(kind==='drag'){const body=[P(ICO,B.col,0,0,0.11,0,0,0,0.07,0.06,0.07),P(ICO,B.dk,0,0,0.04,0,0,0,0.05,0.05,0.08)];for(let k=0;k<5;k++)body.push(P(ICO,k%2?B.dk:B.col,0,0,-0.03-k*0.05,0,0,0,0.03,0.03,0.055));g.add(M(body));
-    const wing=sd=>M([P(LEAF0,0xe8f4ff,sd*0.13,0.005,0.05,0,sd*0.12,0,0.24,0.01,0.05),P(LEAF0,0xe8f4ff,sd*0.12,0,-0.01,0,-sd*0.1,0,0.22,0.01,0.05),P(ICO,B.col,sd*0.24,0.008,0.055,0,0,0,0.02,0.01,0.015)],wm);
-    const wl=wing(-1),wr=wing(1);g.add(wl,wr);g.userData={wl,wr,drag:true};return g;}
-  const s=B.small?0.55:0.8;
-  const body=[P(ICO,B.dk,0,0,0.05*s,0,0,0,0.05*s,0.05*s,0.05*s),P(ICO,B.dk,0,0,0,0,0,0,0.055*s,0.05*s,0.08*s),P(ICO,B.dk,0,-0.005,-0.09*s,0,0,0,0.045*s,0.04*s,0.13*s)];
-  for(const sd of [-1,1])body.push(P(BOX,B.dk,sd*0.025*s,0.03*s,0.12*s,-0.6,sd*0.35,0,0.008,0.008,0.12*s),P(ICO,B.dk,sd*0.045*s,0.065*s,0.17*s,0,0,0,0.018*s,0.018*s,0.018*s));
-  g.add(M(body,B.glow?lumMat:vcMat));
-  const wing=sd=>M([P(ICO,B.col,sd*0.13*s,0,0.04*s,0,sd*0.35,0,0.22*s,0.012,0.16*s),P(ICO,B.col,sd*0.1*s,-0.002,-0.07*s,0,-sd*0.3,0,0.16*s,0.012,0.13*s),
-    P(ICO,B.dk,sd*0.21*s,0.004,0.08*s,0,sd*0.35,0,0.08*s,0.012,0.07*s),P(ICO,B.dk,sd*0.15*s,0.004,-0.11*s,0,0,0,0.05*s,0.012,0.05*s),
-    P(ICO,0xffffff,sd*0.22*s,0.007,0.1*s,0,0,0,0.02*s,0.01,0.02*s),P(ICO,0xffffff,sd*0.19*s,0.007,0.06*s,0,0,0,0.015*s,0.01,0.015*s)],wm);
-  const wl=wing(-1),wr=wing(1);g.add(wl,wr);g.userData={wl,wr};return g;}
+/* (bugGroup, the bug models: 74b-bugs) */
 function spawnBug(){const isl=curIsl();if(!isl||!isl.grass.length)return;const night=isNight();if(S.rain&&!night)return;
   const near=bugs.filter(b=>b.isl===isl.id);if(near.length>=(night?4:7))return;
   const flowers=isl.home?S.objs.filter(o=>o.k==='flowers'):[];
@@ -239,7 +221,7 @@ function updateBugs(dt,tt){for(let i=bugs.length-1;i>=0;i--){const b=bugs[i];b.t
     if(b.out){b.out+=dt;y+=b.out*b.out*2;if(b.out>3){scene.remove(b.g);bugs.splice(i,1);continue;}}
     const px=b.g.position.x,pz=b.g.position.z;b.g.position.set(x,y,z);if(Math.hypot(x-px,z-pz)>1e-4)b.g.rotation.y=Math.atan2(x-px,z-pz);
     const f=Math.sin(tt*(b.g.userData.drag?30:16)+b.ph)*(b.g.userData.drag?0.4:0.9);b.g.userData.wl.rotation.z=f;b.g.userData.wr.rotation.z=-f;}}
-function catchBug(b){const B=BUGS[b.id],key='b:'+b.id,fresh=!S.alm[key];scene.remove(b.g);{const hg=bugGroup(B),p=b.g.position;if(bigMoment(key,B.w)){revSkip=key;holdUp(key,hg,p.x,p.y,p.z,2.5,'You caught',fresh);}else popHold(hg,p.x,p.z,0.9,p.y);}bugs.splice(bugs.indexOf(b),1);walkTo(b.g.position.x,b.g.position.z);vil.hop=0.3;
+function catchBug(b){const B=BUGS[b.id],key='b:'+b.id,fresh=!S.alm[key];scene.remove(b.g);{const hg=bugGroup(B),p=b.g.position;if(bigMoment(key,B.w)){revSkip=key;holdUp(key,hg,p.x,p.y,p.z,hg.userData.wl&&!hg.userData.drag?1.6:2.2,'You caught',fresh);}else popHold(hg,p.x,p.z,0.9,p.y);}bugs.splice(bugs.indexOf(b),1);walkTo(b.g.position.x,b.g.position.z);vil.hop=0.3;
   const first=gain('b:'+b.id);burst(b.g.position.x,b.g.position.y,b.g.position.z,0xfff6e2,10,1.2,0.06,1);floatText(b.g.position.x,b.g.position.y+0.4,b.g.position.z,'+ '+B.name,B.w<5?'gold':'');
   addXP(Math.round(B.price/15)+1);if(B.w<5)SFX.rare();else SFX.catch();}
 
