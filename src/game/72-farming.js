@@ -85,7 +85,8 @@ function useFixed(x,z){
   if(isFire(x,z)){restByFire();return true;}
   if(isTent(x,z)){walkTo(x+0.5,z+2);tentTap();return true;}
   if(f&&townTap(f,x,z))return true;
-  const o=objAt(x,z);if(o){const B=BUILD[o.k];walkTo(x,z);toast(`<b>${B.name}</b> — ${B.desc}`);return true;}
+  const o=objAt(x,z);if(o&&DISPLAYS.has(o.k)){walkTo(x,z);displayTap(o);return true;}/* a produce display: fill it (58c) */
+  if(o){const B=BUILD[o.k];walkTo(x,z);toast(`<b>${B.name}</b> — ${B.desc}`);return true;}
   return false;}
 // the farming actions tools perform (71-tools decides which one a tap means)
 function canTill(x,z){const k=K(x,z);return !S.tiles[k]&&landMap.get(k)==='grass'&&!TOWN.path.has(k)&&freeTile(x,z)&&!fixedAt(x,z)&&!objAt(x,z)&&!debrisAt(x,z);}
