@@ -4,7 +4,7 @@
 const lifeRoot=new T.Group();scene.add(lifeRoot);
 // each kind of find is built once and shared (a beach of shells is one model many times over, not a rebuild per pickup)
 const FIND_GEO=new Map();
-function findGroup(k,seed){const ck=k==='weed'?'weed'+((seed|0)%5):k,c=FIND_GEO.get(ck),g=new T.Group();
+function findGroup(k,seed,fv){const ck=k==='weed'?'weed'+((seed|0)%5):fv!=null?k+':'+fv:k,c=FIND_GEO.get(ck),g=new T.Group();
   if(c){const m=new T.Mesh(c[0],c[1]);m.castShadow=m.receiveShadow=true;m.frustumCulled=false;g.add(m);return g;}
   const p=[];
   switch(k){
@@ -28,7 +28,7 @@ function findGroup(k,seed){const ck=k==='weed'?'weed'+((seed|0)%5):k,c=FIND_GEO.
     case'starfrag':for(let i=0;i<5;i++){const a=i/5*6.28;p.push(P(OCT,0xffe070,Math.sin(a)*0.1,0.08,Math.cos(a)*0.1,0,a,Math.PI/2,0.1,0.18,0.1));}p.push(P(ICO,0xfff4b0,0,0.08,0,0,0,0,0.14,0.14,0.14));break;
     case'crate':p.push(P(BOX,0xa27a50,0,0.1,0,0,0,0,0.5,0.4,0.5),P(BOX,0x6a4a30,0,0.1,0,0,0,0,0.52,0.06,0.52),P(BOX,0x6a4a30,0,0.1,0,0,0,0,0.06,0.42,0.52));break;
     case'weed':p.push(...debrisParts('weed',mulberry(seed),seed%3));break;
-    default:forageParts(k,p);
+    default:forageParts(k,p,fv);
   }
   const m=M(p,k==='starfrag'||k==='mushroom'?lumMat:vcMat);/* mushrooms glow softly at night */m.geometry.userData.keep=1;FIND_GEO.set(ck,[m.geometry,m.material]);g.add(m);return g;}
 function findAt(x,z){return S.finds.find(f=>f.x===x&&f.z===z)||null;}
@@ -43,13 +43,13 @@ function addBlobs(list,r){if(!list.length)return;const sb=new T.InstancedMesh(BL
   list.forEach((d,i)=>{const s=(d.sc||1)*r;_e.set(0,0,0);_q.setFromEuler(_e);_m.compose(_v.set(d.x+0.12,topY(d.x,d.z)+0.015,d.z+0.1),_q,_s.set(s*2.2,1,s*1.7));sb.setMatrixAt(i,_m);});
   sb.instanceMatrix.needsUpdate=true;debrisRoot.add(sb);}
 function debrisAt(x,z){return S.debris.find(d=>d.x===x&&d.z===z)||null;}
-function debrisParts(k,R,v){const p=[];switch(k){
+function debrisParts(k,R,v,sub){const p=[];switch(k){
   case'tree':return wildTreeParts(v);
   // a weed: a low, soft clump of round leaves, sometimes with a dandelion or daisy poking out
   case'weed':for(let i=0;i<5;i++){const a=i*1.257+R()*0.4,r=i?0.1+R()*0.06:0,s=0.16+R()*0.06;p.push(PG(SPH_LO,[0x78b448,0x68a43e,0x5a9636][i%3],0x3e7428,Math.cos(a)*r,0.05+(i?0:0.04),Math.sin(a)*r,0,a,0,s*1.2,s*0.8,s));}
     if(v!==1){const x=(R()-0.5)*0.12,z=(R()-0.5)*0.12;p.push(P(CYL6,0x5a9a3a,x,0.13,z,0,0,0,0.015,0.2,0.015));dots(p,R,1,x,0.23,z,0,0,[v?0xffffff:0xf6d04a],v?0xf6d04a:undefined,0.05);}break;
   case'twig':for(let i=0;i<3;i++)p.push(P(CYL6,i%2?0x7a5230:0x6a4428,(R()-0.5)*0.3,0.03,(R()-0.5)*0.3,1.57,R()*3,0,0.04,0.4+R()*0.2,0.04));lf(p,0x6a9a3a,0.05,0.04,0,R()*6,0.2,0.12,0.07);break;
-  case'bush':return bushParts(v);
+  case'bush':return bushParts(v,sub);
   case'rock':rockP(p,R,0x9a9ea8,0.7);break;
   case'boulder':rockP(p,R,0x8e929c,1.2);break;
   case'stump':p.push(P(CYL12,0x7a5230,0,0.16,0,0,0,0,0.44,0.32,0.44),P(CYL12,0xd8b078,0,0.325,0,0,0,0,0.38,0.02,0.38),P(CYL12,0xb08a58,0,0.33,0,0,0,0,0.22,0.02,0.22),P(CYL12,0xd8b078,0,0.335,0,0,0,0,0.1,0.02,0.1));
@@ -59,16 +59,16 @@ function debrisParts(k,R,v){const p=[];switch(k){
 // wild bushes change with the seasons too: v0 a plain round bush, v1 a flowering one (azalea pink in spring, hydrangea blue
 // in summer), v2 a berry bush; autumn turns them rust and gold, winter tucks them under a cap of snow
 const BUSH_COLS={spring:[0xa0dc6c,0x58a846,0x2c6630],summer:[0x86c85a,0x48943c,0x245a2a],autumn:[0xe8a848,0xc8742e,0x8a4a22],winter:[0x6a9a6a,0x4a7a52,0x2c4e3a]};
-function bushParts(v){const s=season(),R=mulberry(hi(v,57,S.worldSeed|0)),p=[],c=(s==='autumn'&&v===0)?[0xa8c860,0x6a9a3e,0x3a6a2a]:BUSH_COLS[s],sc=0.62;
+function bushParts(v,bk){const s=season(),R=mulberry(hi(v,57,S.worldSeed|0)),p=[],c=(s==='autumn'&&v===0)?[0xa8c860,0x6a9a3e,0x3a6a2a]:BUSH_COLS[s],sc=0.62;
   bushClump(p,R,c,sc);
   if(v===1&&s==='spring')dots(p,R,10,0,0.3*sc,0,0.5*sc,0.38*sc,[0xf8a8c8,0xf490b8,0xffffff],0xf6d04a,0.075);
   if(v===1&&s==='summer')for(let i=0;i<6;i++){const a=i*1.05+R()*0.4,up=i%2,x=Math.cos(a)*(up?0.22:0.42)*sc,z=Math.sin(a)*(up?0.22:0.42)*sc,y=(up?0.58:0.4)*sc,col=[0x7a9af0,0xa47ae0,0x6ab0f0][i%3];
     p.push(PG(SPH_LO,lerpHex(col,0xffffff,0.3),col,x,y,z,0,0,0,0.2,0.17,0.2));}
-  if(v===2&&s!=='winter')for(let i=0;i<7;i++){const a=R()*6.283,t=0.3+R()*0.6,x=Math.cos(a)*0.46*sc*Math.sin(t*1.3),z=Math.sin(a)*0.46*sc*Math.sin(t*1.3),y=0.3*sc+0.34*sc*Math.cos(t*1.3);
-    p.push(P(SPH_XS,s==='autumn'?0x6a3a8a:0xd83848,x,y,z,0,0,0,0.08,0.08,0.08));}
+  if(v===2&&s!=='winter')for(let i=0;i<8;i++){const a=R()*6.283,t=0.3+R()*0.6,x=Math.cos(a)*0.48*sc*Math.sin(t*1.3),z=Math.sin(a)*0.48*sc*Math.sin(t*1.3),y=0.3*sc+0.36*sc*Math.cos(t*1.3);
+    berryOne(bk||'berries',p,x,y,z,0.75,a);}/* each patch of berry bushes bears its own kind (berryKindAt, 77-forage) */
   if(s==='winter')p.push(PG(SPH_LO,0xffffff,0xdce8f2,0,0.52*sc,0,0,0,0,0.78*sc,0.3*sc,0.78*sc));
   return p;}
-function debrisGeo(k,v,lo){const id=k+v+(k==='bush'?season():'')+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo'+lo:''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v);debGeo[id]=merge(lo==='far'?farParts(parts):lo?lowParts(parts):parts);}return debGeo[id];}
+function debrisGeo(k,v,lo,sub){const id=k+v+(k==='bush'?season()+(sub||''):'')+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo'+lo:''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v,sub);debGeo[id]=merge(lo==='far'?farParts(parts):lo?lowParts(parts):parts);}return debGeo[id];}
 // debris is drawn instanced: one batch per model variant (a handful of draw calls for the whole field); debMesh maps a tile to its slot
 // debris is drawn instanced, one batch per model variant; debMesh maps a tile to its slot. Only what's in range of the camera
 // is drawn (the range widens as you zoom out), and wild trees come in two builds: full detail near you, lighter further off.
@@ -81,9 +81,9 @@ function debLOD(gr){const R2=lodR(!!gr.lo)**2;let a=0,b=0,c=0,f=0;for(const e of
 function fruitOn(d){if(!d||d.k!=='tree'||!fruitSeason(d.v)||hash(d.x*2.1+1,d.z*1.7-2)>0.85)return false;const t=S.fruitT&&S.fruitT[K(d.x,d.z)];return t===undefined||S.day-t>=3;}
 function fruitGeo(v){const id='fruit'+v+season()+(S.worldSeed|0);return debGeo[id]||(debGeo[id]=merge(fruitParts(v)));}
 function syncDebris(){const blobT=[],blobB=[];while(debrisRoot.children.length){const c=debrisRoot.children[0];debrisRoot.remove(c);c.dispose();}debMesh.clear();debGroups.length=0;lodAt=null;
-  const groups=new Map();for(const d of S.debris){const id=d.k+d.v;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(d);}
+  const groups=new Map();for(const d of S.debris){const id=d.k+d.v+(d.k==='bush'&&d.v===2?berryKindAt(d.x,d.z):'');if(!groups.has(id))groups.set(id,[]);groups.get(id).push(d);}
   for(const [,list] of groups){const k=list[0].k,tree=k==='tree';
-    const mk=lo=>{const im=new T.InstancedMesh(debrisGeo(k,list[0].v,lo),tree?leafMat:k==='bush'?bushMat:vcMat,list.length);
+    const mk=lo=>{const im=new T.InstancedMesh(debrisGeo(k,list[0].v,lo,k==='bush'&&list[0].v===2?berryKindAt(list[0].x,list[0].z):''),tree?leafMat:k==='bush'?bushMat:vcMat,list.length);
       /* trees cast real shadows near you; bushes rely on their soft blob shadow */im.castShadow=tree?!lo:k!=='bush';im.receiveShadow=true;im.frustumCulled=false;
       /* white instance colours: vcMat's cached program may expect them (r128 shares one program per material) */for(let i=0;i<list.length;i++)im.setColorAt(i,_c.setHex(0xffffff));debrisRoot.add(im);return im;};
     const gr={hi:mk(false),lo:tree?mk(true):null,fa:tree?mk('far'):null,es:list.map(d=>{const e={im:null,i:-1,fi:-1,d,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,vr:tree?treeVar(d):null,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};
@@ -120,7 +120,7 @@ function updateDebris(dt,tt){updateFallers(dt);if(!lifeLodAt||Math.hypot(cam.tx-
 function syncLife(){syncDebris();
   while(lifeRoot.children.length){const c=lifeRoot.children[0];lifeRoot.remove(c);c.traverse(o=>{if(o.geometry&&!o.geometry.userData.keep)o.geometry.dispose();});}lifeLodAt=null;
   S.finds=S.finds.filter(f=>isLand(f.x,f.z)&&FINDS[f.k]);S.weeds=S.weeds.filter(w=>isLand(w.x,w.z)&&!S.tiles[K(w.x,w.z)]);
-  for(const f of S.finds){const g=findGroup(f.k);g.position.set(f.x+(hash(f.x,f.z)-0.5)*0.3,topY(f.x,f.z),f.z+(hash(f.z,f.x)-0.5)*0.3);g.rotation.y=hash(f.x,f.z)*6.28;lifeRoot.add(g);}
+  for(const f of S.finds){const g=findGroup(f.k,0,f.fv);g.position.set(f.x+(hash(f.x,f.z)-0.5)*0.3,topY(f.x,f.z),f.z+(hash(f.z,f.x)-0.5)*0.3);g.rotation.y=hash(f.x,f.z)*6.28;lifeRoot.add(g);}
   weedSlow=new Set();
   for(const w of S.weeds){const g=findGroup('weed',w.x*31+w.z*7+99);g.position.set(w.x,topY(w.x,w.z),w.z);lifeRoot.add(g);
     for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)weedSlow.add(K(w.x+dx,w.z+dz));}

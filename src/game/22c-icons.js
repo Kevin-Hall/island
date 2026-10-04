@@ -253,7 +253,12 @@ function icFind(x,key,F){const col=icHex(F&&F.col||'#d8c8a8'),dk=icHex(F&&F.dk||
     case'acorn':icFill(x,q=>{q.beginPath();q.moveTo(50,90);q.bezierCurveTo(22,80,26,46,50,46);q.bezierCurveTo(74,46,78,80,50,90);},'#c89a5a',{gloss:[40,60,6,10]});
       icFill(x,q=>{q.beginPath();q.moveTo(24,50);q.bezierCurveTo(24,26,76,26,76,50);q.quadraticCurveTo(50,56,24,50);},'#7a5230');x.strokeStyle='#5a3a20';x.lineWidth=1.2;for(let i=0;i<5;i++){x.beginPath();x.moveTo(28+i*11,34);x.lineTo(24+i*11,50);x.stroke();}icLine(x,'#5a3a20',3.4,[50,30,54,18]);return;
     case'pinecone':for(let r=0;r<7;r++){const w=10+Math.sin((r+1)/8*Math.PI)*16;for(let c=-1;c<=1;c+=2)icFill(x,icEll(50+c*w*0.45,22+r*10,w*0.5,6,c*0.3),r%2?'#8a5a30':'#a06a3a',{lw:1.4});}icLine(x,'#5a3a20',3,[50,14,50,6]);return;
-    case'berries':return icPlant(x,{kind:'berry',col:'#6a4ab0'},'berries');
+    case'berries':return icPlant(x,{kind:'berry',col:'#e03a5a'},'raspberries');
+    case'blackberries':return icPlant(x,{kind:'berry',col:'#3a1e44'},'blackberries');
+    case'cloudberries':return icPlant(x,{kind:'berry',col:'#f4a03a'},'cloud-bramble');
+    case'huckleberries':return icPlant(x,{kind:'berry',col:'#5a64b8'},'huckleberries');
+    case'redcurrants':return icPlant(x,{kind:'berry',col:'#e8202e'},'redcurrants');
+    case'gooseberries':return icPlant(x,{kind:'berry',col:'#b8d86a'},'gooseberries');
     case'clover4':return icPlant(x,{kind:'clover',col:'#5aae44'},'clover4');
     case'apple':return icPlant(x,{kind:'fruit',col:'#d8403a'},'apple');
     case'pear':icFill(x,q=>{q.beginPath();q.moveTo(50,26);q.bezierCurveTo(38,26,40,46,32,58);q.bezierCurveTo(22,74,32,92,50,92);q.bezierCurveTo(68,92,78,74,68,58);q.bezierCurveTo(60,46,62,26,50,26);},'#c8cc4a',{gloss:[40,62,7,11,-0.3]});
@@ -367,6 +372,6 @@ function paintItemIcon(key){const [c,x]=(()=>{const c=document.createElement('ca
     else icMisc(x,key);}catch(e){console.warn('icon',key,e);return null;}
   const o=document.createElement('canvas');o.width=o.height=IC;const g=o.getContext('2d');g.shadowColor='rgba(80,52,24,0.3)';g.shadowBlur=IC*0.04;g.shadowOffsetY=IC*0.03;g.drawImage(c,0,0);return o.toDataURL();}
 // swap the pixel icons for painted ones, lazily
-{const keys=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),'g:mushroom','g:truffle','g:acorn','g:pinecone','g:berries','g:clover4','g:apple','g:pear','g:peach','g:cherries','g:clam','g:geode','g:oldcoin',...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','shell','star','heart','sprout','boat','rod','hammer','chart','can','shop','mystery','dex','bag','fish','fly','crawl'];
+{const keys=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),'g:mushroom','g:truffle','g:acorn','g:pinecone','g:berries','g:blackberries','g:cloudberries','g:huckleberries','g:redcurrants','g:gooseberries','g:clover4','g:apple','g:pear','g:peach','g:cherries','g:clam','g:geode','g:oldcoin',...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','shell','star','heart','sprout','boat','rod','hammer','chart','can','shop','mystery','dex','bag','fish','fly','crawl'];
   for(const k of [...new Set(keys)]){const old=ICON[k];Object.defineProperty(ICON,k,{configurable:true,enumerable:true,get(){const v=paintItemIcon(k)||old;Object.defineProperty(ICON,k,{value:v,writable:true,configurable:true,enumerable:true});return v;},set(v){/* a later pixel sprite for the same thing: keep the painted one */}});}}
 shellHTML=`<img class="px" src="${ICON.shell}" alt="">`;

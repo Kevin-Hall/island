@@ -9,7 +9,7 @@
    ========================================================= */
 Object.assign(FINDS,{
   mushroom:{name:'Forest Mushroom',price:40,w:0,bio:['wild']},acorn:{name:'Acorn',price:8,w:0,bio:['wild']},pinecone:{name:'Pinecone',price:10,w:0,bio:['wild']},
-  berries:{name:'Wild Berries',price:30,w:0,bio:['wild']},clover4:{name:'Four-leaf Clover',price:250,w:0,bio:['wild']},apple:{name:'Apple',price:35,w:0,bio:['wild']},pear:{name:'Pear',price:40,w:0,bio:['wild']},peach:{name:'Peach',price:45,w:0,bio:['wild']},cherries:{name:'Cherries',price:30,w:0,bio:['wild']},
+  berries:{name:'Raspberries',price:30,w:0,bio:['wild']},blackberries:{name:'Blackberries',price:35,w:0,bio:['wild']},huckleberries:{name:'Huckleberries',price:30,w:0,bio:['wild']},redcurrants:{name:'Red Currants',price:40,w:0,bio:['wild']},gooseberries:{name:'Gooseberries',price:35,w:0,bio:['wild']},cloudberries:{name:'Cloudberries',price:90,w:0,bio:['wild']},clover4:{name:'Four-leaf Clover',price:250,w:0,bio:['wild']},apple:{name:'Apple',price:35,w:0,bio:['wild']},pear:{name:'Pear',price:40,w:0,bio:['wild']},peach:{name:'Peach',price:45,w:0,bio:['wild']},cherries:{name:'Cherries',price:30,w:0,bio:['wild']},
   clam:{name:'Clam',price:45,w:0,bio:['wild']},geode:{name:'Geode',price:220,w:0,bio:['wild']},oldcoin:{name:'Old Coin',price:400,w:0,bio:['wild']},
   truffle:{name:'Truffle',price:600,w:0,bio:['wild']}});
 // dig spots and clam bubbles live among the finds (so they're saved and drawn the same way) but aren't items themselves:
@@ -29,13 +29,35 @@ Object.assign(FIND_SPR,{
   'g:truffle':['...BBBB...','..BbBbbB..','.BbbbBbbB.','.BbBbbbBB.','.BBbbBbB..','..BBBBB...']});
 for(const k of ['mushroom','acorn','pinecone','berries','clover4','apple','clam','geode','oldcoin','truffle'])ICON['g:'+k]=sprite(FIND_SPR['g:'+k]);
 
+// ---- berries: six kinds, each bush patch bearing its own (berryKindAt); a shaken bush sprays them out and they settle
+// into a little heap on the grass, the heap being the find you pick up (BERRY_PILE: the same berries, where they land)
+const BERRY_KINDS={berries:{col:0xe03a5a,dk:0xa81c3c,lit:0xf27a8e,dr:1},blackberries:{col:0x3a1e44,dk:0x1a0e22,lit:0x6a4a80,dr:1},cloudberries:{col:0xf4a03a,dk:0xd06a1e,lit:0xffd078,dr:1},
+  huckleberries:{col:0x5a64b8,dk:0x2a2c6a,lit:0x9aa2e0},redcurrants:{col:0xe8202e,dk:0x9a0e1e,lit:0xff8a8a,cur:1},gooseberries:{col:0xb8d86a,dk:0x7a9a3a,lit:0xe8f4b0,goose:1}};
+const BERRY_ORDER=[['berries',0.24],['blackberries',0.22],['huckleberries',0.2],['redcurrants',0.14],['gooseberries',0.12],['cloudberries',0.08]];
+// bushes grow in patches of one kind (the patch: a few tiles across)
+function berryKindAt(x,z){let h=hash(Math.floor(x/5)+((S.worldSeed|0)%977),Math.floor(z/5)-((S.worldSeed|0)%613));for(const [k,w] of BERRY_ORDER){if(h<w)return k;h-=w;}return'berries';}
+// one berry, centred on (x,y,z), turned by a about its stem, scaled s: drupelet berries (raspberry, blackberry,
+// cloudberry) a soft core studded with little beads, a tiny star of sepals on top; blueberry-like ones smooth with a
+// crown; currants a glossy trio on a thread of stem; gooseberries big, pale and veined
+function berryOne(k,p,x,y,z,s=1,a=0){const B=BERRY_KINDS[k]||BERRY_KINDS.berries,c=Math.cos(a),n=Math.sin(a),at=(dx,dy,dz)=>[x+(dx*c+dz*n)*s,y+dy*s,z+(-dx*n+dz*c)*s];
+  if(B.dr){p.push(PG(SPH_LO,B.col,B.dk,...at(0,0,0),0,0,0,0.1*s,0.115*s,0.1*s));
+    for(let i=0;i<14;i++){const t=Math.acos(1-2*(i+0.5)/14),f=i*2.4,r=0.052;if(t<0.5)continue;p.push(P(SPH_XS,i%3?B.col:B.lit,...at(Math.sin(t)*Math.cos(f)*r,Math.cos(t)*r*1.1,Math.sin(t)*Math.sin(f)*r),0,0,0,0.04*s,0.04*s,0.04*s));}
+    for(let i=0;i<5;i++){const q=i*1.257;p.push(P(BOX,0x5a8a34,...at(Math.cos(q)*0.025,0.058,Math.sin(q)*0.025),0,-q-a,0.35,0.045*s,0.008*s,0.016*s));}return;}
+  if(B.cur){p.push(P(CYL5,0x5a7a2a,...at(0,0.045,0),0,0,1.3,0.008*s,0.13*s,0.008*s));
+    for(const [dx,dy,dz,r] of [[-0.04,0,0,0.05],[0.035,0.005,0.02,0.046],[0.005,0.01,-0.04,0.042]])p.push(PG(SPH_LO,B.lit,B.col,...at(dx,dy-0.01,dz),0,0,0,r*s,r*s,r*s),P(SPH_XS,0xffffff,...at(dx-0.012,dy+0.008,dz+0.012),0,0,0,0.014*s,0.014*s,0.014*s));return;}
+  if(B.goose){p.push(PG(SPH_LO,B.lit,B.col,...at(0,0,0),0,a,0,0.12*s,0.11*s,0.105*s));for(let i=0;i<4;i++)p.push(P(BOX,B.dk,...at(0,0,0),0,a+i*0.785,0,0.122*s,0.112*s,0.004*s));
+    p.push(P(CYL5,0x6a4a2a,...at(0,0.06,0),0,0,0,0.008*s,0.02*s,0.008*s));return;}
+  p.push(PG(SPH_LO,B.lit,B.dk,...at(0,0,0),0,0,0,0.11*s,0.1*s,0.11*s),P(SPH_XS,0x2a2c4a,...at(0,0.046,0),0,0,0,0.035*s,0.014*s,0.035*s),P(SPH_XS,lerpHex(B.lit,0xffffff,0.5),...at(-0.025,0.03,0.02),0,0,0,0.03*s,0.02*s,0.03*s));}
+// a heap of berries: five round the bottom, two resting on top ([x, centre height, z, turn])
+const BERRY_PILE=[[0.075,0.05,0,0.3],[0.023,0.05,0.071,1.9],[-0.061,0.05,0.044,3.1],[-0.061,0.05,-0.044,4.2],[0.023,0.05,-0.071,5.4],[0.012,0.125,0.025,0.8],[-0.02,0.12,-0.03,2.6]];
+
 // the 3D models for the new finds (findGroup, 74-life, falls back to these)
 function forageParts(k,p){switch(k){
   case'mushroom':for(const [x,z,s] of [[0,0,1],[0.14,0.08,0.7],[-0.1,0.12,0.55]]){p.push(P(CYL6,0xf4ecd8,x,0.06*s,z,0,0,0,0.07*s,0.12*s,0.07*s),PG(SPH_LO,0xe84a3a,0xb02a24,x,0.14*s,z,0,0,0,0.26*s,0.14*s,0.26*s));
       for(let i=0;i<3;i++){const a=i*2.1+x*9;p.push(P(SPH_XS,0xffffff,x+Math.cos(a)*0.06*s,0.19*s,z+Math.sin(a)*0.06*s,0,0,0,0.05*s,0.03*s,0.05*s));}}break;
   case'acorn':for(const [x,z] of [[0,0],[0.12,0.07]]){p.push(PG(SPH_LO,0xc88a4a,0x8a5a2a,x,0.07,z,0,0,0,0.12,0.14,0.12),PG(SPH_LO,0x7a5230,0x5a3a22,x,0.13,z,0,0,0,0.13,0.06,0.13),P(CYL5,0x5a3a22,x,0.17,z,0,0,0,0.015,0.04,0.015));}break;
   case'pinecone':p.push(PG(SPH_LO,0xa87444,0x6a4428,0,0.08,0,1.3,0.4,0,0.14,0.24,0.14));for(let i=0;i<5;i++)p.push(P(CONE5,0x8a5a30,-0.06+i*0.03,0.1,0,1.3,0.4,0,0.1-i*0.01,0.05,0.1-i*0.01));break;
-  case'berries':bushClump(p,mulberry(7),[0x86c858,0x4a8a38,0x285a26],0.34);for(let i=0;i<7;i++){const a=i*0.9;p.push(P(SPH_XS,i%2?0x6a3a9a:0xd83848,Math.cos(a)*0.1,0.16+(i%3)*0.03,Math.sin(a)*0.1,0,0,0,0.06,0.06,0.06));}break;
+  case'berries':case'blackberries':case'huckleberries':case'redcurrants':case'gooseberries':case'cloudberries':for(const [x,y,z,a] of BERRY_PILE)berryOne(k,p,x,y,z,1,a);break;
   case'clover4':for(let i=0;i<4;i++){const a=i*1.571+0.4;p.push(P(SPH_LO,0x4fa84a,Math.cos(a)*0.06,0.08,Math.sin(a)*0.06,0,a,0,0.1,0.02,0.07));}p.push(P(CYL5,0x3d7a2c,0,0.04,0,0,0,0,0.012,0.08,0.012));
     p.push(P(SPH_XS,0xfff6c0,0,0.09,0,0,0,0,0.03,0.03,0.03));break;
   case'apple':case'pear':case'peach':case'cherries':{const q=fruitModel(k,null);for(const o of q)o.y+=k==='pear'?0.19:0.145;/* lying on the grass */p.push(...q);break;}
@@ -60,7 +82,7 @@ function forageSpawn(quiet,n=1){const isl=islands[0];if(!isl||!S.wild)return;con
       if(k&&at&&!findAt(...at))S.finds.push({k,x:at[0],z:at[1],shiny:R()<0.05?1:undefined});continue;}}
     if(r<0.24&&trees.length&&s!=='winter'){const t=pickR(trees);at=openBy(t.x,t.z);k=R()<(s==='autumn'?0.5:0.8)?'mushroom':null;}
     else if(r<0.42&&trees.length){const t=pickR(trees);at=openBy(t.x,t.z);k=treeSp(t.v).con?'pinecone':'acorn';}
-    else if(r<0.54&&bushes.length&&s!=='winter'){const b=pickR(bushes);at=openBy(b.x,b.z);k='berries';}
+    else if(r<0.54&&bushes.length&&s!=='winter'){const b=pickR(bushes.filter(q=>q.v===2).length?bushes.filter(q=>q.v===2):bushes);at=openBy(b.x,b.z);k=berryKindAt(b.x,b.z);}
     else if(r<0.74){const c=pickR(isl.grass);if(c&&freeTile(...c)&&!TOWN.path.has(K(...c)))at=c;{const q=R();k=q<0.05?'clover4':q<0.4?'dig':q<0.7?'tuft':'glint';}}
     else{const c=pickR(isl.sand);if(c&&freeTile(...c))at=c;k='bubbles';}
     if(!k||!at||findAt(...at))continue;S.finds.push({k,x:at[0],z:at[1],shiny:!CURIO.has(k)&&R()<0.07?1:undefined});}
@@ -87,34 +109,53 @@ function shakeTree(d){const x=d.x,z=d.z,y=topY(x,z),m=debMesh.get(K(x,z));if(m)m
 // fruit shaken loose: each one drops from where it hung, bounces once and rolls out onto a free tile round the tree,
 // where it lies as a find to pick up. The tree grows new fruit a few days later (fruitOn, 74-life)
 const fallers=[];
+// where a find on (x,z) is drawn (syncLife, 74-life): nudged off the tile centre and turned, by the tile
+const findPose=(x,z)=>[x+(hash(x,z)-0.5)*0.3,z+(hash(z,x)-0.5)*0.3,hash(x,z)*6.28];
+// a falling piece: its mesh sits inside a pivot at its own centre (so it tumbles about itself) and lands exactly where,
+// and as, the find it becomes is drawn; when every piece of a find has settled, the find takes its place in the same
+// frame, so what fell is what you pick up. Pieces with nowhere to land roll a little way and fade.
+function addFaller(o){const g=new T.Group(),m=M(o.parts);m.position.y=-o.cy;g.add(m);g.position.set(o.x,o.y,o.z);scene.add(g);
+  const f=Object.assign({g,m,vx:0,vy:0,vz:0,st:0,t:0},o);delete f.parts;fallers.push(f);return f;}
 function dropTreeFruit(d,e){const sp=treeSp(d.v),k=sp.fruit,x=d.x,z=d.z,sc=e.sc,w=e.vr?e.vr.w:1,h=e.vr?e.vr.h:1,c=Math.cos(e.r),s=Math.sin(e.r);
   (S.fruitT||(S.fruitT={}))[K(x,z)]=S.day;debLOD(e.gr);
   const tiles=shuffle([[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]].map(([a,b])=>[x+a,z+b]).filter(([a,b])=>isLand(a,b)&&freeTile(a,b)&&!findAt(a,b)&&!debrisAt(a,b)),Math.random);
-  const slots=fruitSlots(d.v),R=mulberry(hi(d.v,93,S.worldSeed|0)),batch={left:slots.length,finds:[]};let n=0;
+  const slots=fruitSlots(d.v),R=mulberry(hi(d.v,93,S.worldSeed|0)),lift=k==='pear'?0.19:0.145,cy=k==='pear'?0.11:0.075;let n=0,nf=0;
   for(const [lx,ly,lz] of slots){const px=lx*sc*w,pz=lz*sc*w,wx=e.x+px*c+pz*s,wz=e.z-px*s+pz*c,wy=e.y+(ly+0.05)*sc*h;
-    const g=new T.Group();g.add(M(fruitModel(k,R)));g.position.set(wx,wy,wz);scene.add(g);
-    const t=tiles.length?tiles.shift():null;let tx,tz;if(t){tx=t[0]+(hash(t[0],t[1])-0.5)*0.3;tz=t[1]+(hash(t[1],t[0])-0.5)*0.3;batch.finds.push({k,x:t[0],z:t[1]});}else{const a=Math.random()*6.283;tx=wx+Math.cos(a)*0.3;tz=wz+Math.sin(a)*0.3;}
-    fallers.push({g,k,batch,x:wx,y:wy,z:wz,vx:0,vy:0,vz:0,tx,tz,keep:!!t,wait:0.05+n*0.12+Math.random()*0.1,st:0,t:0,spin:(Math.random()-0.5)*8});n++;}
-  const nf=batch.finds.length;floatText(x,topY(x,z)+1.6,z,nf?(nf>1?nf+' '+FINDS[k].name.toLowerCase()+(k==='cherries'?'':'s')+'!':'A '+FINDS[k].name.toLowerCase()+'!'):'The fruit rolled away…',nf?'gold':'');}
+    // the very fruit that hung there (its colour too), modelled as it will lie on the grass
+    const r0=R(),fv=r0<0.35&&r0>=0.345?0.34:r0>=0.35&&r0<0.355?0.36:Math.round(r0*100)/100,parts=fruitModel(k,()=>fv);for(const o of parts)o.y+=lift;
+    const t=tiles.length?tiles.shift():null,fp=t?findPose(t[0],t[1]):null;let tx,tz;if(fp){tx=fp[0];tz=fp[1];nf++;}else{const a=Math.random()*6.283;tx=wx+Math.cos(a)*0.4;tz=wz+Math.sin(a)*0.4;}
+    addFaller({parts,cy:lift-cy,x:wx,y:wy-cy,z:wz,tx,tz,ty:lift-cy,ry:fp?fp[2]:Math.random()*6.28,find:t?{k,x:t[0],z:t[1],fv}:null,
+      wait:0.05+n*0.12+Math.random()*0.1,spin:(Math.random()-0.5)*8,tb:0.34});n++;}
+  floatText(x,topY(x,z)+1.6,z,nf?(nf>1?nf+' '+FINDS[k].name.toLowerCase()+(k==='cherries'?'':'s')+'!':'A '+FINDS[k].name.toLowerCase()+'!'):'The fruit rolled away…',nf?'gold':'');}
 function updateFallers(dt){for(let i=fallers.length-1;i>=0;i--){const f=fallers[i],g=f.g;
   if(f.wait>0){f.wait-=dt;if(!f.berry)g.rotation.z=Math.sin(f.wait*40)*0.2;else g.visible=false;continue;}g.visible=true;// a wobble on its stem, then it lets go
-  f.t+=dt;const gy=topY(Math.round(f.x),Math.round(f.z))+(f.berry?0.07:0.14);/* where the stem end sits with the fruit resting on the grass */f.vy-=9.8*dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.z+=f.vz*dt;g.rotation.x+=f.spin*dt*(f.st?0.5:1);
-  if(f.y<=gy){f.y=gy;if(f.st===0){f.st=1;tone(420+Math.random()*120,0.05,'sine',0.05);burst(f.x,gy-0.1,f.z,0x7aa84a,3,0.6,0.04);
-      // bounce once, aimed so it comes down again on its tile
-      const tb=f.berry?0.26:0.34;f.vy=9.8*tb/2;f.vx=(f.tx-f.x)/tb;f.vz=(f.tz-f.z)/tb;}
-    else if(f.st===1){f.st=2;f.vx=f.vy=f.vz=0;f.x=f.tx;f.z=f.tz;f.spin=0;g.rotation.set(0,g.rotation.y,0);tone(360,0.04,'sine',0.03);}}
-  g.position.set(f.x,f.y,f.z);
-  if(f.st===2){f.t2=(f.t2||0)+dt;if(!f.keep)g.scale.setScalar(Math.max(0.01,1-f.t2*2));
-    if(f.t2>(f.keep?0.15:0.5)){scene.remove(g);fallers.splice(i,1);const b=f.batch;if(--b.left===0&&b.finds.length){for(const q of b.finds)if(!findAt(q.x,q.z))S.finds.push(q);syncLife();}}}}}
-// berries shaken loose: a little spray of them pops up out of the bush, falls, bounces once and gathers into one or two
-// piles on the ground beside it (finds to pick up), the rest of the spray rolling in to join them
-const BERRY_GEO=[0x8a1e3a,0xb02a48,0x5a2a6a];
-function dropBerries(x,z){const y=topY(x,z),tiles=shuffle([[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]].map(([a,b])=>[x+a,z+b]).filter(([a,b])=>isLand(a,b)&&freeTile(a,b)&&!findAt(a,b)&&!debrisAt(a,b)),Math.random).slice(0,Math.random()<0.45?2:1);
-  if(!tiles.length)return 0;const batch={left:0,finds:tiles.map(([a,b])=>({k:'berries',x:a,z:b}))},n=5+Math.floor(Math.random()*3);
-  for(let i=0;i<n;i++){const t=tiles[i%tiles.length],col=BERRY_GEO[i%3],g=new T.Group();g.add(M([P(ICO2,col,0,0,0,0,0,0,0.13,0.13,0.13),P(ICO2,col,0.06,0.03,0.02,0,0,0,0.1,0.1,0.1),P(BOX,0x4a8a3a,0,0.08,0,0.5,0.3,0,0.08,0.015,0.04)]));
-    const a=Math.random()*6.283,sx=x+Math.cos(a)*0.25,sz=z+Math.sin(a)*0.25;g.position.set(sx,y+0.55,sz);g.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(g);batch.left++;
-    const tx=t[0]+(Math.random()-0.5)*0.35,tz=t[1]+(Math.random()-0.5)*0.35;
-    fallers.push({g,k:'berries',batch,x:sx,y:y+0.55,z:sz,vx:(tx-sx)*0.9+(Math.random()-0.5)*0.6,vy:2.6+Math.random()*1.4,vz:(tz-sz)*0.9+(Math.random()-0.5)*0.6,tx,tz,keep:i<tiles.length,wait:i*0.06,st:0,t:0,spin:(Math.random()-0.5)*12,berry:1});}
+  if(f.st<2){f.t+=dt;
+    // the ground under it, plus how high its centre sits when it's lying where it'll stay
+    const gy=topY(Math.round(f.x),Math.round(f.z))+f.ty;f.vy-=9.8*dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.z+=f.vz*dt;
+    if(f.st===0)g.rotation.x+=f.spin*dt;
+    else{/* the bounce: turning to rest as it comes down */const q=Math.min(1,(f.t-f.t1)/f.tb);g.rotation.x=f.rx0*(1-q);g.rotation.z=f.rz0*(1-q);g.rotation.y=f.ry0+(f.ry-f.ry0)*q;}
+    if(f.y<=gy){f.y=gy;
+      if(f.st===0){f.st=1;f.t1=f.t;tone(420+Math.random()*120,0.05,'sine',0.05);burst(f.x,gy-f.ty,f.z,0x7aa84a,3,0.6,0.04);
+        // bounce once, aimed so it comes down again just where it'll lie
+        const tb=f.tb,ty=topY(Math.round(f.tx),Math.round(f.tz))+f.ty;f.vy=(ty-f.y)/tb+9.8*tb/2;f.vx=(f.tx-f.x)/tb;f.vz=(f.tz-f.z)/tb;
+        const wrap=v=>Math.atan2(Math.sin(v),Math.cos(v));f.rx0=wrap(g.rotation.x);f.rz0=wrap(g.rotation.z);f.ry0=g.rotation.y;f.ry=f.ry0+wrap(f.ry-f.ry0);}
+      else if(f.st===1&&f.t-f.t1>f.tb*0.5){f.st=2;f.vx=f.vy=f.vz=0;f.x=f.tx;f.z=f.tz;g.rotation.set(0,f.ry,0);tone(360,0.04,'sine',0.03);}}
+    g.position.set(f.x,f.y,f.z);}
+  if(f.st===2){
+    if(!f.find){f.t2=(f.t2||0)+dt;g.scale.setScalar(Math.max(0.01,1-f.t2*2));if(f.t2>0.5){scene.remove(g);fallers.splice(i,1);}continue;}
+    // the find appears the moment its last piece settles, and the pieces go in the same frame
+    const q=f.find;if(fallers.some(o=>o.find===q&&o.st<2))continue;
+    if(!findAt(q.x,q.z)){S.finds.push(q);syncLife();}
+    for(let j=fallers.length-1;j>=0;j--)if(fallers[j].find===q){scene.remove(fallers[j].g);fallers.splice(j,1);}i=Math.min(i,fallers.length);}}}
+// berries shaken loose: a little spray of them pops up out of the bush, falls, bounces once and settles into one or
+// two heaps beside it (BERRY_PILE), each berry landing in its own place in the heap you then pick up
+function dropBerries(x,z,k=berryKindAt(x,z)){const y=topY(x,z),tiles=shuffle([[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]].map(([a,b])=>[x+a,z+b]).filter(([a,b])=>isLand(a,b)&&freeTile(a,b)&&!findAt(a,b)&&!debrisAt(a,b)),Math.random).slice(0,Math.random()<0.45?2:1);
+  if(!tiles.length)return 0;let i=0;
+  for(const [a,b] of tiles){const find={k,x:a,z:b},[px,pz,pr]=findPose(a,b),c=Math.cos(pr),s=Math.sin(pr);
+    for(const [bx,by,bz,ba] of BERRY_PILE){const parts=[];berryOne(k,parts,0,0,0,1,ba);
+      const tx=px+bx*c+bz*s,tz=pz-bx*s+bz*c,an=Math.random()*6.283,sx=x+Math.cos(an)*0.25,sz=z+Math.sin(an)*0.25;
+      const f=addFaller({parts,cy:0,x:sx,y:y+0.55,z:sz,tx,tz,ty:by,ry:pr,find,wait:i*0.05,spin:(Math.random()-0.5)*12,tb:0.26,berry:1});
+      f.vx=(tx-sx)*0.9+(Math.random()-0.5)*0.6;f.vy=2.6+Math.random()*1.4;f.vz=(tz-sz)*0.9+(Math.random()-0.5)*0.6;i++;}}
   pluck(880,0.03,0.5);setTimeout(()=>pluck(1175,0.03,0.6),90);return tiles.length;}
 function rustleBush(d){const x=d.x,z=d.z,y=topY(x,z),m=debMesh.get(K(x,z));if(m)m.shake=0.5;noise(0.2,0.05,1800);
   for(let i=0;i<6;i++)emit(x+(Math.random()-0.5)*0.6,y+0.5,z+(Math.random()-0.5)*0.6,{vx:(Math.random()-0.5)*0.8,vy:0.6,vz:(Math.random()-0.5)*0.8,life:0.8,max:0.8,size:0.05,color:0x5aa84a,g:2});
