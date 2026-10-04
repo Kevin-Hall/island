@@ -338,6 +338,28 @@ function icMisc(x,k){switch(k){
       icLeaf(x,40,64,20,8,-0.6,'#5aa844');icLeaf(x,50,66,18,7,-1.2,'#6ab84a');return;
     case'x:bait':icFill(x,q=>{q.beginPath();q.rect(26,40,48,48);},'#a8b0bc',{gloss:[36,56,4,14]});icFill(x,icEll(50,40,24,7),'#6a4a30',{lw:1.8});
       x.lineCap='round';for(const [w,c] of [[9,'#c86a7a'],[6,'#f08a9a']]){x.strokeStyle=c;x.lineWidth=w;x.beginPath();x.moveTo(40,40);x.bezierCurveTo(30,20,56,18,54,30);x.bezierCurveTo(52,40,70,34,64,22);x.stroke();}return;
+    // the newer crafted things (58b)
+    case'x:jam':icFill(x,q=>{q.beginPath();q.roundRect?q.roundRect(26,36,48,52,10):q.rect(26,36,48,52);},'#8a2a5a',{gloss:[36,52,5,14]});icFill(x,q=>{q.beginPath();q.rect(24,28,52,12);},'#f4ead8',{lw:1.6});
+      x.fillStyle='#d8505a';for(let i=0;i<4;i++)x.fillRect(26+i*13,28,6,12);icFill(x,q=>{q.beginPath();q.rect(34,58,32,16);},'#fff6e8',{lw:1.2});return;
+    case'x:pie':icFill(x,icEll(50,62,38,20),'#d8a060',{gloss:[36,54,10,4]});icFill(x,icEll(50,56,32,15),'#b8402e',{flat:true});x.strokeStyle='#e8b878';x.lineWidth=5;
+      for(let i=-2;i<=2;i++){x.beginPath();x.moveTo(50+i*12-10,44);x.lineTo(50+i*12+10,68);x.stroke();x.beginPath();x.moveTo(22,56+i*5);x.lineTo(78,56+i*5);x.stroke();}return;
+    case'x:stew':icFill(x,q=>{q.beginPath();q.moveTo(16,50);q.quadraticCurveTo(50,104,84,50);q.closePath();},'#c8784a',{gloss:[30,60,6,10]});icFill(x,icEll(50,50,34,8),'#8a5a30',{flat:true});
+      icFill(x,icEll(40,47,8,4),'#e84a3a');icFill(x,icEll(60,48,6,3),'#f0c060');icCurve(x,'#ffffff',2,[40,36,44,26,40,16]);icCurve(x,'#ffffff',2,[58,36,62,26,58,16]);return;
+    case'x:buglure':icFill(x,q=>{q.beginPath();q.moveTo(34,40);q.lineTo(66,40);q.quadraticCurveTo(80,70,64,88);q.lineTo(36,88);q.quadraticCurveTo(20,70,34,40);},'#f0a830',{gloss:[38,56,5,12]});
+      icFill(x,icEll(50,40,18,6),'#8a5a30');icLeaf(x,64,24,18,8,-0.3,'#f6c8e0');icLeaf(x,64,24,18,8,-1.4,'#f6c8e0');return;
+    case'x:fishlure':icFill(x,q=>{q.beginPath();q.moveTo(50,14);q.quadraticCurveTo(76,40,56,78);q.quadraticCurveTo(50,84,44,78);q.quadraticCurveTo(24,40,50,14);},'#9ae0f0',{gloss:[42,34,5,12]});
+      icFill(x,icCirc(50,40,6),'#f0f8ff');icLine(x,'#8a8a9a',3,[50,80,50,90]);icCurve(x,'#8a8a9a',3,[50,90,40,94,40,84]);return;
+    case'x:rainstick':icLine(x,'#a8784a',10,[24,84,76,20]);for(let i=0;i<5;i++){const t=0.15+i*0.17;icLine(x,'#e8c070',3,[24+52*t-5,84-64*t-4,24+52*t+5,84-64*t+4]);}
+      for(const [a,b] of [[70,60],[82,74],[62,80]])icFill(x,q=>{q.beginPath();q.moveTo(a,b-8);q.quadraticCurveTo(a+5,b,a,b+4);q.quadraticCurveTo(a-5,b,a,b-8);},'#6ab4f0');return;
+    case'x:suncharm':for(let i=0;i<12;i++){const a=i*0.5236;icLine(x,'#f0b030',4,[50+Math.cos(a)*24,56+Math.sin(a)*24,50+Math.cos(a)*36,56+Math.sin(a)*36]);}icFill(x,icCirc(50,56,20),'#ffd84a',{gloss:[44,50,5,4]});icLine(x,'#8a6a4a',2,[50,8,50,34]);return;
+    case'x:tonic':icFill(x,q=>{q.beginPath();q.rect(42,16,16,22);},'#a8d8a0',{lw:1.6});icFill(x,q=>{q.beginPath();q.moveTo(42,36);q.lineTo(58,36);q.quadraticCurveTo(82,56,72,84);q.lineTo(28,84);q.quadraticCurveTo(18,56,42,36);},'#58c870',{gloss:[36,56,5,12]});
+      icFill(x,q=>{q.beginPath();q.rect(40,10,20,8);},'#a8784a');icLeaf(x,50,66,16,7,-0.8,'#e8ffd0');return;
+    case'x:map':icFill(x,q=>{q.beginPath();q.moveTo(16,24);q.lineTo(84,20);q.lineTo(88,80);q.lineTo(20,86);q.closePath();},'#f0dcae',{gloss:[30,32,10,4]});
+      icCurve(x,'#b89a6a',2,[26,70,46,40,62,58]);x.setLineDash&&x.setLineDash([4,4]);icCurve(x,'#8a5a3a',2,[28,72,50,54,64,44]);x.setLineDash&&x.setLineDash([]);icLine(x,'#d8402e',5,[58,36,70,48]);icLine(x,'#d8402e',5,[70,36,58,48]);return;
+    case'x:firework':icFill(x,q=>{q.beginPath();q.rect(40,36,20,40);},'#e8503a',{gloss:[44,44,3,12]});icFill(x,q=>{q.beginPath();q.moveTo(36,38);q.lineTo(50,14);q.lineTo(64,38);q.closePath();},'#f6c84a');
+      icLine(x,'#a8784a',3,[50,76,50,94]);for(let i=0;i<5;i++){const a=-1.2+i*0.6;icLine(x,'#ffd84a',2,[72+Math.cos(a)*4,22+Math.sin(a)*4,72+Math.cos(a)*12,22+Math.sin(a)*12]);}return;
+    case'x:skylantern':icFill(x,q=>{q.beginPath();q.moveTo(30,22);q.lineTo(70,22);q.lineTo(64,80);q.lineTo(36,80);q.closePath();},'#ffb860',{gloss:[40,36,5,14]});
+      icFill(x,icEll(50,62,12,10),'#fff0b0',{flat:true,line:false,a:0.7});icLine(x,'#a8784a',2,[36,80,64,80]);return;
     case'shell':return icShellFan(x,'#f7b8c4','#e088a0');
     case'star':icFill(x,q=>{q.beginPath();for(let i=0;i<10;i++){const a=-1.5708+i*0.6283,r=i%2?19:42;q.lineTo(50+Math.cos(a)*r,54+Math.sin(a)*r);}q.closePath();},'#ffcc2e',{gloss:[42,40,10,7,-0.4],lw:3});return;
     case'heart':icFill(x,q=>{q.beginPath();q.moveTo(50,86);q.bezierCurveTo(10,60,14,20,40,24);q.quadraticCurveTo(48,26,50,34);q.quadraticCurveTo(52,26,60,24);q.bezierCurveTo(86,20,90,60,50,86);},'#ff5a6e',{gloss:[36,38,8,6,-0.5]});return;
@@ -372,6 +394,6 @@ function paintItemIcon(key){const [c,x]=(()=>{const c=document.createElement('ca
     else icMisc(x,key);}catch(e){console.warn('icon',key,e);return null;}
   const o=document.createElement('canvas');o.width=o.height=IC;const g=o.getContext('2d');g.shadowColor='rgba(80,52,24,0.3)';g.shadowBlur=IC*0.04;g.shadowOffsetY=IC*0.03;g.drawImage(c,0,0);return o.toDataURL();}
 // swap the pixel icons for painted ones, lazily
-{const keys=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),'g:mushroom','g:truffle','g:acorn','g:pinecone','g:berries','g:blackberries','g:cloudberries','g:huckleberries','g:redcurrants','g:gooseberries','g:clover4','g:apple','g:pear','g:peach','g:cherries','g:clam','g:geode','g:oldcoin',...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','shell','star','heart','sprout','boat','rod','hammer','chart','can','shop','mystery','dex','bag','fish','fly','crawl'];
+{const keys=[...Object.keys(FISH).map(k=>'f:'+k),...Object.keys(BUGS).map(k=>'b:'+k),...Object.keys(PLANTS).map(k=>'p:'+k),...Object.keys(FINDS).map(k=>'g:'+k),'g:mushroom','g:truffle','g:acorn','g:pinecone','g:berries','g:blackberries','g:cloudberries','g:huckleberries','g:redcurrants','g:gooseberries','g:clover4','g:apple','g:pear','g:peach','g:cherries','g:clam','g:geode','g:oldcoin',...CROP_IDS,'m:wood','m:stone','m:fiber','x:fert','x:bait','x:jam','x:pie','x:stew','x:buglure','x:fishlure','x:rainstick','x:suncharm','x:tonic','x:map','x:firework','x:skylantern','shell','star','heart','sprout','boat','rod','hammer','chart','can','shop','mystery','dex','bag','fish','fly','crawl'];
   for(const k of [...new Set(keys)]){const old=ICON[k];Object.defineProperty(ICON,k,{configurable:true,enumerable:true,get(){const v=paintItemIcon(k)||old;Object.defineProperty(ICON,k,{value:v,writable:true,configurable:true,enumerable:true});return v;},set(v){/* a later pixel sprite for the same thing: keep the painted one */}});}}
 shellHTML=`<img class="px" src="${ICON.shell}" alt="">`;

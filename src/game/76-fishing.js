@@ -197,7 +197,7 @@ function updateFishing(dt,tt){updateShadows(dt);updateRings(dt);updateCaught(dt,
     if(u<REL){bobber.position.copy(TIP);bobber.position.y-=0.18;drawLine(TIP.x,TIP.y-0.02,TIP.z,1,-9);}
     else{const q=(u-REL)/(1-REL),bx=lerp(TIP.x,f.px,q),bz=lerp(TIP.z,f.pz,q),by=lerp(TIP.y,f.wy||tideY,q)+Math.sin(q*Math.PI)*1.3;bobber.position.set(bx,by,bz);drawLine(bx,by+0.18,bz,0.75,-9);}
     if(u>=1){SFX.plop();ripple(f.px,f.pz);burst(f.px,0.05,f.pz,0xe8f4ff,6,0.8,0.05,4);f.t=0;
-      let s=nearestShadow(f.px,f.pz,3.6);
+      let s=lureCast(f)||nearestShadow(f.px,f.pz,3.6);/* a Shimmer Lure draws its own fish (58b) */
       if(!s&&S.inv['x:bait']>0){const riv=f.wy>0,fish=riv?chooseFish((curIsl()||{}).biome,false,true):chooseFish(S.sea?regionAt(f.px,f.pz):regionAt(f.px,f.pz),landDist(f.px,f.pz)>2.8);
         if(fish){const a=Math.random()*6.28;spawnShadowAt(f.px+Math.cos(a)*(riv?0.5:1.6),f.pz+Math.sin(a)*(riv?0.5:1.6),fish,f.wy||0);s=shadows[shadows.length-1];takeOf('x:bait',1);floatText(f.px,0.8+(f.wy||0),f.pz,'bait!');}}
       if(s){s.hooked=true;f.target=s;f.state='approach';f.win=fishWindow(FISH[s.fish])*(s.gold?0.55:1);}/* golden ones bite and let go fast */else f.state='empty';}}

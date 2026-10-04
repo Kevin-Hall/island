@@ -10,8 +10,8 @@ const RECIPES=[
   {out:['b','picket',4],in:{'m:wood':2,'m:fiber':1},lvl:1},{out:['b','deck',4],in:{'m:wood':4},lvl:2},{out:['b','brick',4],in:{'m:stone':4},lvl:2},
   {out:['b','cobble',4],in:{'m:stone':3},lvl:1},{out:['b','gravel',6],in:{'m:stone':2},lvl:1},{out:['b','flagstone',4],in:{'m:stone':5},lvl:2},{out:['b','terracotta',4],in:{'m:stone':3,'m:fiber':1},lvl:3},{out:['b','mossy',4],in:{'m:stone':3,'m:fiber':2},lvl:3},
   {out:['b','chair',1],in:{'m:wood':4},lvl:2},{out:['b','topiary',1],in:{'m:fiber':4,'m:wood':1,'m:stone':2},lvl:3},{out:['b','urn',1],in:{'m:stone':5,'m:fiber':2},lvl:3}];
-function haveOf(k){if(k.startsWith('c:')){const id=k.slice(2);let n=0;for(const q in S.inv)if(q.split('|')[0]===id)n+=S.inv[q];return n;}return S.inv[k]||0;}
-function takeOf(k,n){if(k.startsWith('c:')){const id=k.slice(2);const ks=Object.keys(S.inv).filter(q=>q.split('|')[0]===id).sort((a,b)=>priceOf(a)-priceOf(b));for(const q of ks){const t=Math.min(n,S.inv[q]);S.inv[q]-=t;n-=t;if(!S.inv[q])delete S.inv[q];if(!n)break;}return;}
+function haveOf(k){{const A=anyOf(k);if(A)return A.keys().reduce((t,q)=>t+haveOf(q),0);}if(k.startsWith('c:')){const id=k.slice(2);let n=0;for(const q in S.inv)if(q.split('|')[0]===id)n+=S.inv[q];return n;}return S.inv[k]||0;}
+function takeOf(k,n){{const A=anyOf(k);if(A){for(const q of A.keys()){const t=Math.min(n,haveOf(q));if(t)takeOf(q,t);n-=t;if(!n)break;}return;}}if(k.startsWith('c:')){const id=k.slice(2);const ks=Object.keys(S.inv).filter(q=>q.split('|')[0]===id).sort((a,b)=>priceOf(a)-priceOf(b));for(const q of ks){const t=Math.min(n,S.inv[q]);S.inv[q]-=t;n-=t;if(!S.inv[q])delete S.inv[q];if(!n)break;}return;}
   S.inv[k]-=n;if(!S.inv[k])delete S.inv[k];}
 function recipeName(r){return r.out[0]==='b'?BUILD[r.out[1]].name:CONSUM[r.out[1]].name;}
 function recipeIcon(r){return r.out[0]==='b'?THUMB[r.out[1]]||'':ICON['x:'+r.out[1]];}
@@ -22,7 +22,8 @@ function craft(i){const r=RECIPES[i];if(!canCraft(r)){SFX.no();return;}for(const
 function useItem(k){if(k==='x:fert'){const ks=Object.keys(S.tiles).filter(q=>S.tiles[q].crop&&S.tiles[q].crop.p<1);if(!ks.length){toast('Nothing is growing right now.');return;}
     for(const q of ks){const c=S.tiles[q].crop,s0=stageOf(c.p);c.p=Math.min(0.995,c.p+0.15);if(stageOf(c.p)!==s0)syncCrop(q);const [x,z]=q.split(',').map(Number);sparkle(x,topY(x,z)+0.4,z,0xb8f088);}
     takeOf(k,1);SFX.rare();toast(`Fertilised ${ks.length} crop${ks.length>1?'s':''}. They perk right up!`,'',ICON['x:fert']);}
-  else if(k==='x:bait')toast('Bait is used automatically when you cast and no fish is close by.','',ICON['x:bait']);}
+  else if(k==='x:bait')toast('Bait is used automatically when you cast and no fish is close by.','',ICON['x:bait']);
+  else useMore(k);/* the newer things (58b) */}
 
 const objRoot=new T.Group();scene.add(objRoot);
 const anims=[];let houseMesh=null,binMesh=null;
