@@ -33,6 +33,7 @@ function onTap(cx,cy){buzz(6);if(charEd)return;/* the character editor: taps go 
     return;}
   if(swim.on&&swim.uw>0.5){clearAction();swimTap(cx,cy);return;}/* under water: swim, or catch what you tapped */
   if(tapLife(cx,cy)){clearAction();updateHUD();return;}
+  if(S.mode!=='edit'&&playTap(cx,cy)){clearAction();return;}/* the beach ball, or yourself (77b) */
   if(hit&&hit.river){clearAction();const ri=islandAt(hit.x,hit.z),here0=curIsl();if(!ri||!here0||ri.id!==here0.id)return;
     autoTool('rod');
     if(ri.lava){toast('That lava is far too hot to fish in!');return;}startFishing(hit.x,hit.z);return;}
