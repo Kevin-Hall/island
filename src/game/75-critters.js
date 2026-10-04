@@ -62,10 +62,10 @@ function critModel(k,v){const g=new T.Group(),p=[],e=(x,y,z,s=0.035)=>p.push(P(S
     case'bee':{p.push(P(SPH_LO,0xf6c83a,0,0,0,0,0,0,0.07,0.07,0.1),P(SCYL,0x2a2230,0,0,-0.012,1.57,0,0,0.072,0.02,0.072),P(SCYL,0x2a2230,0,0,-0.04,1.57,0,0,0.06,0.016,0.06),P(SPH_XS,0x2a2230,0,0.005,0.05,0,0,0,0.045,0.045,0.04));
       const w=sd=>{const m=M([P(SPH_XS,0xf4f8ff,sd*0.04,0,0,0,0,0,0.08,0.012,0.05)]);m.position.set(sd*0.01,0.035,0);return m;};wings=[w(-1),w(1)];break;}
     case'deer':{const c=0xb07a4a,dk=0x7a5030,lg=0x8a5a36;// a rig: body › neck (shoulder pivot) › head › ears; four legs from hips and shoulders; a tail
-      const body=rpiv(g,0,0.5,0,[PG(SPH,c,dk,0,0.5,0,0,0,0,0.3,0.28,0.58),P(SPH_LO,0xf4ead8,0,0.46,0.02,0,0,0,0.22,0.18,0.4),...[...Array(6)].map((_,i)=>P(SPH_XS,0xf4ead8,(i%2?0.08:-0.08)+(i%3)*0.02,0.6,-0.18+i*0.07,0,0,0,0.035,0.02,0.035))]);
+      const body=rpiv(g,0,0.5,0,[PG(SPH,c,dk,0,0.5,0,0,0,0,0.3,0.28,0.58),PG(SPH_LO,c,dk,0,0.56,0.17,0,0,0,0.24,0.2,0.24),P(SPH_LO,0xf4ead8,0,0.46,0.02,0,0,0,0.22,0.18,0.4),...[...Array(6)].map((_,i)=>P(SPH_XS,0xf4ead8,(i%2?0.08:-0.08)+(i%3)*0.02,0.6,-0.18+i*0.07,0,0,0,0.035,0.02,0.035))]);
       e(0.065,0.83,0.4,0.028);e(-0.065,0.83,0.4,0.028);
-      const neck=rpiv(body,0,0.6,0.2,[PG(SCYL,c,dk,0,0.66,0.24,-0.5,0,0,0.1,0.28,0.1),PG(SPH_LO,c,dk,0,0.8,0.33,0,0,0,0.16,0.16,0.2),PG(SPH_LO,c,dk,0,0.76,0.43,0,0,0,0.1,0.09,0.12),P(SPH_XS,0x2a2230,0,0.77,0.49,0,0,0,0.04,0.03,0.03),...p.splice(0)],[0,0.5,0]);
-      const ears=[-1,1].map(sd=>rpiv(neck,sd*0.07,0.86,0.3,[P(SPH_LO,c,sd*0.09,0.9,0.3,0,0,sd*0.7,0.05,0.13,0.03)],[0,0.6,0.2]));
+      const neck=rpiv(body,0,0.6,0.2,[/* the neck rises up and forward from the shoulders into the head, with a rounded base that stays sunk in the shoulders as it bends down to graze */PG(SPH_LO,c,dk,0,0.6,0.2,0,0,0,0.17,0.17,0.17),PG(SCYL,c,dk,0,0.7,0.265,0.5,0,0,0.12,0.32,0.11),PG(SPH_LO,c,dk,0,0.8,0.33,0,0,0,0.16,0.16,0.2),PG(SPH_LO,c,dk,0,0.76,0.43,0,0,0,0.1,0.09,0.12),P(SPH_XS,0x2a2230,0,0.77,0.49,0,0,0,0.04,0.03,0.03),...p.splice(0)],[0,0.5,0]);
+      const ears=[-1,1].map(sd=>rpiv(neck,sd*0.055,0.84,0.31,[P(SPH_LO,c,sd*0.1,0.865,0.3,0,0,sd*1.0,0.055,0.14,0.035),P(SPH_XS,0xf3d0c0,sd*0.1,0.865,0.31,0,0,sd*1.0,0.03,0.09,0.02)],[0,0.6,0.2]));
       const tail=rpiv(body,0,0.64,-0.25,[P(SPH_LO,0xffffff,0,0.56,-0.29,0,0,0,0.08,0.1,0.06),P(SPH_XS,c,0,0.6,-0.29,0,0,0,0.06,0.05,0.05)],[0,0.5,0]);
       const legs=[[0.08,0.18],[-0.08,0.18],[0.08,-0.18],[-0.08,-0.18]].map(([x,z])=>rpiv(g,x,0.42,z,[P(SCYL,lg,x,0.22,z,0,0,0,0.075,0.42,0.075),P(SPH_XS,0x4a3020,x,0.02,z,0,0,0,0.08,0.05,0.09)]));
       g.userData={rig:1,body,neck,ears,tail,legs};return rigDone(g);}
