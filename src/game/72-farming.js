@@ -22,15 +22,21 @@ function collideStep(ox,oz,nx,nz){const rx=Math.round(nx),rz=Math.round(nz);for(
 // a tiny binary min-heap keyed on element[3]
 function heapPush(h,n){h.push(n);let i=h.length-1;while(i>0){const p=(i-1)>>1;if(h[p][3]<=h[i][3])break;[h[p],h[i]]=[h[i],h[p]];i=p;}}
 function heapPop(h){const top=h[0],last=h.pop();if(h.length){h[0]=last;let i=0;for(;;){const l=i*2+1,r=l+1;let m=i;if(l<h.length&&h[l][3]<h[m][3])m=l;if(r<h.length&&h[r][3]<h[m][3])m=r;if(m===i)break;[h[m],h[i]]=[h[i],h[m]];i=m;}}return top;}
-function landPath(sx,sz,tx,tz,opt={}){const W=(x,z)=>walkable(x,z)&&!(opt.block&&opt.block(x,z)&&!(x===tx&&z===tz)&&!(x===sx&&z===sz));if(!W(tx,tz))return null;const open=[[sx,sz,0,0]],g=new Map([[K(sx,sz),0]]),from=new Map();let it=0;
+// (opt.limit caps how long a way round it will take; opt.near then settles for the reachable tile nearest the goal, so a
+// tap into a thick wood walks you to its edge rather than all the way round the island. A diagonal step squeezes between
+// two solids: the gap between them is wide enough; only a river or the sea at a corner blocks it)
+function landPath(sx,sz,tx,tz,opt={}){const W=(x,z)=>walkable(x,z)&&!(opt.block&&opt.block(x,z)&&!(x===tx&&z===tz)&&!(x===sx&&z===sz));if(!W(tx,tz)&&!opt.near)return null;const open=[[sx,sz,0,0]],g=new Map([[K(sx,sz),0]]),from=new Map();let it=0,best=[sx,sz],bh=Math.hypot(tx-sx,tz-sz);
+  const back=(x,z)=>{const p=[[x,z]];let k=K(x,z);while(from.has(k)){const q=from.get(k);p.unshift(q);k=K(q[0],q[1]);}return p;};
   while(open.length&&it++<(opt.max||5000)){const [x,z,gc]=heapPop(open);if(gc>g.get(K(x,z)))continue;
-    if(x===tx&&z===tz){const p=[[x,z]];let k=K(x,z);while(from.has(k)){const q=from.get(k);p.unshift(q);k=K(q[0],q[1]);}return p;}
-    for(const [dx,dz] of opt.four?[[1,0],[-1,0],[0,1],[0,-1]]:[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){const nx=x+dx,nz=z+dz;if(!W(nx,nz))continue;if(dx&&dz&&(!W(x+dx,z)||!W(x,z+dz)))continue;
-      const ng=gc+(dx&&dz?1.414:1)*(opt.cost?opt.cost(nx,nz,x,z):1),k=K(nx,nz);if(g.has(k)&&g.get(k)<=ng)continue;g.set(k,ng);from.set(k,[x,z]);heapPush(open,[nx,nz,ng,ng+Math.hypot(tx-nx,tz-nz)]);}}
+    if(x===tx&&z===tz)return back(x,z);{const h=Math.hypot(tx-x,tz-z);if(h<bh-1e-6){bh=h;best=[x,z];}}
+    for(const [dx,dz] of opt.four?[[1,0],[-1,0],[0,1],[0,-1]]:[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){const nx=x+dx,nz=z+dz;if(!W(nx,nz))continue;if(dx&&dz&&(!walkable(x+dx,z)||!walkable(x,z+dz)))continue;
+      const ng=gc+(dx&&dz?1.414:1)*(opt.cost?opt.cost(nx,nz,x,z):1),k=K(nx,nz);if(opt.limit&&ng>opt.limit)continue;if(g.has(k)&&g.get(k)<=ng)continue;g.set(k,ng);from.set(k,[x,z]);heapPush(open,[nx,nz,ng,ng+Math.hypot(tx-nx,tz-nz)]);}}
+  if(opt.near&&(best[0]!==sx||best[1]!==sz)){const p=back(...best);p.near=1;return p;}
   return null;}
-function routeVil(tx,tz){vil.path=null;const sx=Math.round(vil.x),sz=Math.round(vil.z);
-  if(!S.sea&&walkable(sx,sz)&&!lineClear(vil.x,vil.z,tx,tz)){const p=landPath(sx,sz,Math.round(tx),Math.round(tz),{block:(x,z)=>solidR(x,z)>0});
-    if(p){const all=[...p.slice(1,-1),[tx,tz]],pts=[];let cx=vil.x,cz=vil.z,i=0;
+function routeVil(tx,tz){vil.path=null;vil.noReach=false;const sx=Math.round(vil.x),sz=Math.round(vil.z);
+  if(!S.sea&&walkable(sx,sz)&&!lineClear(vil.x,vil.z,tx,tz)){const st=Math.hypot(tx-vil.x,tz-vil.z),p=landPath(sx,sz,Math.round(tx),Math.round(tz),{block:(x,z)=>solidR(x,z)>0,limit:Math.max(12,st*1.8+6),near:true});
+    if(p){const e=p[p.length-1];if(p.near)vil.noReach=Math.hypot(e[0]-tx,e[1]-tz)>1.6;/* (as near as a short way gets you) */
+      const all=p.near?p.slice(1):[...p.slice(1,-1),[tx,tz]],pts=[];if(!all.length){vil.tx=vil.x;vil.tz=vil.z;return;}let cx=vil.x,cz=vil.z,i=0;
       while(i<all.length){let j=all.length-1;while(j>i&&!lineClear(cx,cz,all[j][0],all[j][1]))j--;pts.push(all[j]);cx=all[j][0];cz=all[j][1];i=j+1;}
       const f=pts.shift();vil.tx=f[0];vil.tz=f[1];vil.path=pts;return;}}
   vil.tx=tx;vil.tz=tz;}

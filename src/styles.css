@@ -655,3 +655,9 @@ body.chared .chatveil{opacity:.5}
 
 #apps .btn{position:relative}#apps .cnt{position:absolute;top:2px;right:6px;min-width:18px;height:18px;border-radius:9px;background:#e8604a;color:#fff;font:700 11px/18px var(--font,inherit);font-style:normal;text-align:center;padding:0 4px;box-shadow:0 1px 0 rgba(0,0,0,.2)}
 .recipe.can{box-shadow:0 0 0 2px #9fd06a inset;border-radius:16px}
+#joy{position:fixed;left:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 112px);width:116px;height:116px;border-radius:50%;z-index:6;touch-action:none;
+  background:radial-gradient(circle,rgba(255,252,242,.28) 0 55%,rgba(255,252,242,.42) 56% 100%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.55),0 3px 10px rgba(40,30,20,.18);display:flex;align-items:center;justify-content:center}
+#joy i{width:50px;height:50px;border-radius:50%;background:var(--paper,#fffaf0);box-shadow:0 3px 0 var(--line,#d8cbb4),0 4px 10px rgba(40,30,20,.25);transition:transform .12s}
+#joy.on i{transition:none}
+body.chatting #joy,body.chared #joy,body.arriving #joy,body.cine #joy{display:none}
+#actionBar:not([hidden])~#joy{display:none}

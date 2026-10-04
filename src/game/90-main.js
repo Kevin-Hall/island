@@ -10,9 +10,9 @@ function frame(now){
   {const gT=wxGrey();rainMix=clamp(rainMix+Math.sign(gT-rainMix)*Math.min(Math.abs(gT-rainMix),dt*0.5),0,1);rainFall=clamp(rainFall+(S.rain?dt:-dt)*0.5,0,1);updateWeather(dt);}
   grassU.uTime.value=tt;leafU.uT.value=tt;leafU.uWind.value=S.rain?1.8:1;riverU.uTime.value=tt;waterU.uT.value=tt;waterU.uCam.value.copy(camera.position);depthFollow();if(depthDirty)buildDepthTex();
   {const ci=S.sea?null:curIsl();if(ci&&ci.falls)for(const [x,y,z] of ci.falls){if(Math.random()<dt*3&&Math.abs(x-cam.tx)<16&&Math.abs(z-cam.tz)<16)emit(x+(Math.random()-0.5)*0.8,y+0.05,z+(Math.random()-0.5)*0.3,{vy:0.5+Math.random()*0.5,life:0.6,max:0.6,size:0.07,color:ci.lava?0xffc070:0xf4fbff,g:2});}}grassU.uWind.value=1+rainMix*1.3;grassU.uPl.value.set(vil.x,S.sea?-99:vil.y,vil.z);
-  if(!S.sea){
+  if(!S.sea){joyStep(dt);/* the joystick, if you use one (84b) */
     const dx=vil.tx-vil.x,dz=vil.tz-vil.z,d=Math.hypot(dx,dz);
-    if(d>0.04){const sp=Math.min(d,dt*4.3*(buffOn('tail')?1.3:1)*swimK()),nx=vil.x+dx/d*sp,nz=vil.z+dz/d*sp;
+    if(d>0.04){const sp=Math.min(d,dt*4.3*(buffOn('tail')?1.3:1)*swimK()*(joy.on?joy.mag:1)),nx=vil.x+dx/d*sp,nz=vil.z+dz/d*sp;
       if(landMap.get(K(Math.round(nx),Math.round(nz)))==='river'&&landMap.get(K(Math.round(vil.x),Math.round(vil.z)))!=='river'){vil.tx=vil.x;vil.tz=vil.z;vil.path=null;}
       else{const [cx,cz]=collideStep(vil.x,vil.z,nx,nz),moved=Math.hypot(cx-vil.x,cz-vil.z);
         // walking into something solid: slide along it; if that gets nowhere for a moment, stop (and only do what you came
@@ -20,7 +20,7 @@ function frame(now){
         vil.stuck=moved<sp*0.3?(vil.stuck||0)+dt:0;vil.x=cx;vil.z=cz;villager.rotation.y=Math.atan2(dx,dz);
         if(vil.stuck>0.3){vil.stuck=0;const far=vil.path&&vil.path.length?9:Math.hypot(vil.tx-vil.x,vil.tz-vil.z);vil.path=null;if(far>0.9)vil.cb=null;vil.tx=vil.x;vil.tz=vil.z;}}}
     else if(vil.path&&vil.path.length){const p=vil.path.shift();vil.tx=p[0];vil.tz=p[1];}
-    else{if(vil.cb){const cb=vil.cb;vil.cb=null;cb();}
+    else{if(vil.cb){const cb=vil.cb;vil.cb=null;if(vil.noReach){vil.noReach=false;say('Can\u2019t quite reach that from here.');}else cb();}
       else if(!fishing&&!swim.on){vil.idle+=dt;if(vil.idle>7+Math.random()*4){vil.idle=0;const isl=curIsl();if(isl){const tx=Math.round(vil.x+(Math.random()-0.5)*5),tz=Math.round(vil.z+(Math.random()-0.5)*5);
         if(islMap.get(K(tx,tz))===isl.id&&isLand(tx,tz)&&!solidR(tx,tz)&&!objAt(tx,tz)&&!fixedAt(tx,tz)&&lineClear(vil.x,vil.z,tx,tz)){vil.tx=tx+(Math.random()-0.5)*0.4;vil.tz=tz+(Math.random()-0.5)*0.4;}}}}}
     if(!S.sea){const ty=swim.on?swimY(tt):(surfY(vil.x,vil.z)||0.15);if(ty-vil.y>0.3&&vil.hop<=0&&!swim.on)vil.hop=0.4;vil.y=lerp(vil.y,ty,Math.min(1,dt*10));vil.hop=Math.max(0,vil.hop-dt);
@@ -108,7 +108,7 @@ if(isNew&&S.scratch){introCam={t:0,d:cam.dist,p:cam.pitch,y:cam.yaw};cam.dist=10
   const el=document.createElement('div');el.id='introTitle';el.innerHTML='<div>Day 1</div><b>A strange seed washed up at your door.</b><small>It pointed here.</small>';document.body.appendChild(el);
   setTimeout(()=>el.classList.add('on'),600);setTimeout(()=>el.classList.remove('on'),5200);setTimeout(()=>el.remove(),7000);}
 try{makeThumbs();}catch(e){console.warn(e);}
-applyLook();renderTools();showHeld();if(!S.tipTools){S.tipTools=1;setTimeout(()=>say(S.scratch?'Tap anything that looks interesting.':'Tap anywhere to walk, and tap things to use them.'),S.scratch&&isNew?17000:5000);}/* one line, not a manual: the rest is found by tapping */shownShells=S.shells;$('shellTxt').textContent=fmt(S.shells);applyTime();updateHUD();
+applyLook();renderTools();showHeld();joyShow();if(!S.tipTools){S.tipTools=1;setTimeout(()=>say(S.scratch?'Tap anything that looks interesting.':'Tap anywhere to walk, and tap things to use them.'),S.scratch&&isNew?17000:5000);}/* one line, not a manual: the rest is found by tapping */shownShells=S.shells;$('shellTxt').textContent=fmt(S.shells);applyTime();updateHUD();
 window.addEventListener('resize',()=>{resize();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save();else{const el=clamp((Date.now()-S.t)/1000,0,21*86400);if(el>5){const out=simulate(el);afterSim(out,'While you were away');}last=performance.now();}});
 window.addEventListener('pagehide',save);
