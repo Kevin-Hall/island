@@ -82,5 +82,6 @@ function checkDex(key){const cat=DEX_CATS.find(c=>key.startsWith(c[2]));if(!cat)
   if(!S.dexR[id]&&Object.keys(tab).every(k=>S.alm[pre+k])){S.dexR[id]=1;const r=5000;S.shells+=r;SFX.discover();toast(`Islandex: every ${label.toLowerCase()} recorded! +${fmt(r)} shells`,'rare',ICON.dex);}
   const [g,t]=dexCount();if(g===t&&!S.dexR.all){S.dexR.all=1;setTimeout(()=>{SFX.discover();toast('You completed the Islandex! Every creature, plant and treasure of the archipelago is yours.','rare',ICON.star);for(let i=0;i<40;i++)sparkle(vil.x+(Math.random()-0.5)*4,1,vil.z+(Math.random()-0.5)*4,0xfff0a0);},1500);}}
 function priceOf(key){const I=itemInfo(key);if(I)return I.price;const [t,v]=key.split('|');return Math.round(CROPS[t].price*VAR[v].mult*(S.demand===t?1.5:1));}
-function sell(key,n){const have=S.inv[key]||0;n=Math.min(n,have);if(!n)return 0;const g=priceOf(key)*n;S.inv[key]=have-n;if(!S.inv[key])delete S.inv[key];S.shells+=g;S.earned+=g;return g;}
+function sell(key,n){const have=S.inv[key]||0;n=Math.min(n,have);if(!n)return 0;let g=priceOf(key)*n;
+  if(typeof inStore==='function'&&inStore()&&(key.includes('|')||/^(g|p):/.test(key)))g=Math.round(g*1.1);/* Hazel pays more for local produce and forage (82b) */S.inv[key]=have-n;if(!S.inv[key])delete S.inv[key];S.shells+=g;S.earned+=g;return g;}
 

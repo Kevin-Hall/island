@@ -26,7 +26,7 @@ function makeThumbs(){const snap=g=>snapThumb(g,128);
    Sheets
    ========================================================= */
 let sheet=null;
-function openSheet(kind,tab,ctx){if(kind==='bag'&&(tab==='craft'||tab==='store')){if(tab==='craft'){kind='craft';tab=null;}else tab='decor';}/* (crafting has its own place now; decor lives among everything else) *//* ctx: where you are ('crate', 'trader'): selling only happens there */showApps(false);if(caught){scene.remove(caught.g);if(caught.d0!==undefined)camBack=caught.d0;catchCard(null);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab,ctx};renderSheet();$('sheet').hidden=false;updateCtx();}
+function openSheet(kind,tab,ctx){if(kind==='bag'&&(tab==='craft'||tab==='store')){if(tab==='craft'){kind='craft';tab=null;}else tab='decor';}/* (crafting has its own place now; decor lives among everything else) *//* ctx: where you are ('crate', 'trader'): selling only happens there */showApps(false);if(caught){scene.remove(caught.g);if(caught.d0!==undefined)camBack=caught.d0;catchCard(null);caught=null;}SFX.ui();if(fishing)endFishing();clearAction();if(placing)endPlace();sheet={kind,tab,ctx};$('sheet').dataset.kind=kind;renderSheet();$('sheet').hidden=false;updateCtx();}
 function closeSheet(){$('sheet').hidden=true;sheet=null;updateCtx();}
 function tabs(list){$('sheetTabs').innerHTML=list.map(([id,l])=>`<button class="tab ${sheet.tab===id?'on':''}" data-tab="${id}">${l}</button>`).join('');const on=$('sheetTabs').querySelector('.on');if(on)requestAnimationFrame(()=>on.scrollIntoView({inline:'center',block:'nearest'}));}
 const sh=n=>`<span class="shl">${shellHTML}${fmt(n)}</span>`;
@@ -70,7 +70,7 @@ function renderSheet(){
       const msel=sheet.msel||(sheet.msel=new Set());for(const k of [...msel])if(!S.inv[k])msel.delete(k);
       if((ctx==='trader'||ctx==='crate')&&sheet.multi){const mv=[...msel].reduce((t,k)=>t+priceOf(k)*S.inv[k],0),mn=[...msel].reduce((t,k)=>t+S.inv[k],0);
         h+=`<div class="invtop multi"><span class="tot"><b>${mn}</b> selected · <b>${fmt(mv)}</b> shells</span><button class="pbtn" data-mall="1">All here</button><button class="pbtn" data-mdone="1">Done</button><button class="pbtn go" data-msell="1" ${mn?'':'disabled'}>${ctx==='crate'?'Drop off':'Sell'} ${mn||''}</button></div><p class="note">Tap things to pick them, then ${ctx==='crate'?'drop them off':'sell them'} together.</p>`;}
-      else if(ctx==='trader')h+=`<div class="invtop"><span class="tot">Worth <b>${fmt(total)}</b> shells · market wants <b>${CROPS[S.demand].name}</b></span><button class="pbtn" data-multi="1" ${total?'':'disabled'}>Select</button><button class="pbtn go" data-sellall="1" ${total?'':'disabled'}>Sell all</button></div>`;
+      else if(ctx==='trader')h+=`<div class="invtop"><span class="tot">Worth <b>${fmt(total)}</b> shells · market wants <b>${CROPS[S.demand].name}</b>${inStore()?' · Hazel pays <b>+10%</b> for produce and forage':''}</span><button class="pbtn" data-multi="1" ${total?'':'disabled'}>Select</button><button class="pbtn go" data-sellall="1" ${total?'':'disabled'}>Sell all</button></div>`;
       else if(ctx==='crate'){const cn=Object.values(S.crate||{}).reduce((a,b)=>a+b,0);h+=`<div class="invtop"><span class="tot">Dropped off: <b>${cn}</b> thing${cn===1?'':'s'}, worth ~<b>${fmt(crateWorth())}</b> · ${TRADER.name} sells them at dawn</span><button class="pbtn" data-multi="1" ${total?'':'disabled'}>Select</button><button class="pbtn go" data-crateall="1" ${total?'':'disabled'}>Drop it all off</button></div>`;}
       else h+=`<p class="note">${S.scratch?`To sell, drop things off at the <b>outpost by the dock</b> (sold at dawn), or sell to <b>${TRADER.name}'s boat</b>${built('shop')?' or at your <b>shop</b>':''}.`:'To sell, take things to the <b>shipping bin</b> by your house.'}</p>`;
       if(!ks.length)h+=`<p class="note">${T0==='all'?'Your pockets are empty. Harvest, fish, catch bugs, forage and gather to fill them.':T0==='decor'?'No decor yet. Make some at the <b>Workbench</b>, or buy it in the shop.':'Nothing here yet.'}</p>`;
@@ -86,15 +86,14 @@ function renderSheet(){
         for(const k of ks){if(k.startsWith('d:')){h+=`<button class="cell" data-pick="${k}"><img src="${ico(k)}" alt=""><span class="n">${cnt(k)}</span></button>`;continue;}const v=varOf(k);h+=`<button class="cell ${k===sel&&!sheet.multi?'sel':''} ${sheet.multi&&msel.has(k)?'msel':''}" data-pick="${k}"><img class="v-${v}" src="${iconOf(k)}" alt="">${sheet.multi&&msel.has(k)?'<span class="tick">✓</span>':''}${v!=='normal'?`<span class="dot" style="background:${{giant:'#6ab84a',moonlit:'#9ab8ff',golden:'#f5c542',crystal:'#7ad8f0',rainbow:'#f39ab0'}[v]}"></span>`:''}<span class="n">${S.inv[k]}</span></button>`;}
         const pad=Math.max(0,20-ks.length);for(let i=0;i<pad;i++)h+=`<div class="cell empty"></div>`;h+='</div>';}}}
   else if(sheet.kind==='trader'){$('sheetTitle').textContent=`${TRADER.name}'s boat`;tabs([]);
-    h+=`<div class="sellall"><button class="pbtn go" data-tsell="1">Sell to ${TRADER.name}</button></div><p class="note">Today's stock. It changes every morning.</p><div class="grid">`;
-    for(const q of traderStock()){const I=stockInfo(q);h+=`<button class="card ${q.sold?'lock':''}" data-tbuy="${q.i}" ${q.sold?'disabled':''}><img class="px" src="${I.icon}" alt=""><span class="grow"><span class="nm">${I.name}</span><br><span class="sub">${q.sold?'Sold out today':I.desc}</span></span><span class="price">${q.sold?'':sh(q.price)}</span></button>`;}
+    h+=`<div class="sellall"><button class="pbtn go" data-tsell="1">Sell to ${TRADER.name}</button></div><p class="note">Today's stock. It changes every morning. Tap something to buy it.</p><div class="tiles">`;
+    for(const q of traderStock()){const I=stockInfo(q);h+=`<button class="tile ${q.sold?'lock':''}" data-tbuy="${q.i}" ${q.sold?'disabled':''}><img class="px" src="${I.icon}" alt=""><span class="nm">${I.name}</span><span class="sub">${q.sold?'Sold out today':I.desc}</span><span class="pr">${q.sold?'Sold out':fmt(q.price)}</span></button>`;}
     h+='</div>';}
-  else if(sheet.kind==='shop'){$('sheetTitle').textContent='Shop';tabs([['decor','Decor'],['plants','Plants'],['island','Island']]);
+  else if(sheet.kind==='shop'){$('sheetTitle').textContent=inStore()?'Hazel’s Store':'Shop';
+    tabs(inStore()?[['deals','Deals'],['seeds','Seeds'],['decor','Decor'],['plants','Plants'],['island','Island']]:[['decor','Decor'],['plants','Plants'],['island','Island']]);
+    if(!inStore()&&(sheet.tab==='deals'||sheet.tab==='seeds'))sheet.tab='decor';
     if(!built('shop'))h+=`<p class="note">${S.scratch?'You don\'t have a store yet. It comes as a kit when your Island Heart reaches <b>level 3</b>, and you choose where to build it.':'The general store opens when your Island Heart reaches <b>level 3</b>.'} Until then, drop things off at the <b>outpost by the dock</b> to sell them, and buy seeds from the Seeds tool.</p>`;
-    else if(sheet.tab==='decor'||sheet.tab==='plants'){const pl=sheet.tab==='plants';h+=`<p class="note">${pl?'Potted plants for your porch, garden and paths. Buy one, then tap where it should go.':'Buy something, then tap where it should go on your home island.'}</p><div class="sellall"><button class="pbtn go" data-sellshop="1">Sell things</button><button class="pbtn" data-edit="1">Move or store decor</button></div><div class="grid">`;
-      for(const k in BUILD){const B=BUILD[k],lock=B.lvl>lv,n=S.store[k]||0;if(B.craft||!!B.plant!==pl)continue;
-        h+=`<button class="card ${lock?'lock':''}" data-buy="${k}" ${lock?'disabled':''}><img class="px" src="${THUMB[k]||''}" alt=""><span class="grow"><span class="nm">${B.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+B.lvl:(n?`${n} in storage — tap to place`:B.desc)}</span></span><span class="price">${n?'':sh(B.cost)}</span></button>`;}
-      h+='</div>';}
+    else if(sheet.tab!=='island')h+=shopHTML(lv);/* the catalogue (82b) */
     else{const L=null,HU=HOUSE_UP[S.house];
       h+=`<p class="note">Grow your island from a tent on a sandbar to a hilltop villa.</p><div class="grid">`;
       h+=L?`<div class="card wide"><img class="px" src="${THUMB.land}" alt=""><span class="grow"><span class="nm">Expand the farm field</span><br><span class="sub">Stage ${S.land+1} → ${S.land+2}. The field grows wider and taller (new ground comes up wild).${L.lvl>lv?' Needs Lv '+L.lvl+'.':''}</span></span><button class="pbtn go" data-land="1" ${L.lvl>lv||S.shells<L.cost?'disabled':''}>${fmt(L.cost)}</button></div>`
@@ -224,6 +223,8 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.sellall){let g=0;for(const k of Object.keys(S.inv))if(!isMat(k))g+=sell(k,S.inv[k]);if(g){SFX.coin();setTimeout(SFX.coin,120);toast(`Sold everything for ${fmt(g)} shells.`,'',ICON.shell);}renderSheet();return;}
   if(d.buy){const k=d.buy;if(S.store[k]){startPlace(k,true);return;}if(S.shells<BUILD[k].cost){toast(`${BUILD[k].name} costs ${fmt(BUILD[k].cost)} shells.`);SFX.no();return;}startPlace(k,false);return;}
   if(d.sellshop){openSheet('bag','all','trader');return;}
+  if(d.ssel){sheet.ssel=d.ssel;SFX.ui();renderSheet();const p=document.querySelector('#sheetBody .detail.pin');if(p)p.scrollIntoView({block:'nearest',behavior:'smooth'});return;}
+  if(d.sbuy){shopBuy(d.sbuy,Number(d.n)||1);renderSheet();return;}
   if(d.edit){S.mode='edit';closeSheet();toast('Edit mode: tap decor to move or store it, tap empty soil to clear it.','',ICON.hammer);return;}
   if(d.isle){chartGo(islands[Number(d.isle)]);return;}
   if(d.rumour){if(!unlocked('boat')){say('You need your boat for that (Island Heart level 4).');return;}closeSheet();sailToIsland(islands[Number(d.rumour)]);return;}

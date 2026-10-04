@@ -53,10 +53,10 @@ function buildShop(){const RW=6.4,RD=4.8,p=[],gl=[],props=[{x:0,z:RD/2-0.35,w:1.
   for(const [k,x,z,s] of [['lantern',-2.35,0.85,0.45],['flowerpot',-1.95,0.95,0.55],['gnome',-1.6,0.8,0.55]]){const o=objGroup(k,3,0.3);o.scale.setScalar(s);o.position.set(x,0.6,z);g.add(o);}
   {let i=0;for(const [k,f] of [['pcrate','g:apple'],['pbasket','g:berries'],['psack','potato|normal'],['pcrate','pumpkin|normal']]){const o=new T.Group();produceDisplay(o,k,mulberry(5+i),f);o.scale.setScalar(0.85);o.position.set(1.1+i*0.62,0,1.15-(i%2)*0.25);g.add(o);i++;}}
   p.push(P(CYL12,0xc8704a,RW/2-0.4,0.18,RD/2-0.9,0,0,0,0.36,0.36,0.36));{const q=[];for(let i=0;i<9;i++)lf(q,GREENS[i%4],0,0.36,0,i*0.7,0.8+(i%3)*0.2,0.4,0.16);p.push(...shift(q,RW/2-0.4,0,RD/2-0.9,0));}
-  const counterUse=()=>setAction(`<b>Hazel</b>: “Welcome in! Anything catch your eye?”`,[{label:'Buy decor',cls:'go',fn:()=>{clearAction();openSheet('shop','decor');}},{label:'Buy plants',cls:'go',fn:()=>{clearAction();openSheet('shop','plants');}},
+  const counterUse=()=>setAction(`<b>Hazel</b>: “Welcome in! Anything catch your eye?”`,[{label:'Today’s deals',cls:'go',fn:()=>{clearAction();openSheet('shop','deals');}},{label:'Seeds',cls:'go',fn:()=>{clearAction();openSheet('shop','seeds');}},{label:'Decor',cls:'go',fn:()=>{clearAction();openSheet('shop','decor');}},
     {label:'Sell',cls:'go',fn:()=>{clearAction();openSheet('bag','all','trader');}},{label:'Bye!',fn:clearAction}],'General Store');
   props.push({x:0.3,z:-0.9,w:2.3,d:0.8,label:'counter',info:()=>{tone(1568,0.12,'sine',0.03);counterUse();}},
-    {x:RW/2-0.35,z:-0.6,w:0.5,d:1.0,label:'seeds',info:()=>openSheet('shop','plants')},{x:-2.0,z:0.9,w:1.3,d:0.8,label:'decor',info:()=>openSheet('shop','decor')},
+    {x:RW/2-0.35,z:-0.6,w:0.5,d:1.0,label:'seeds',info:()=>openSheet('shop','seeds')},{x:-2.0,z:0.9,w:1.3,d:0.8,label:'decor',info:()=>openSheet('shop','decor')},
     {x:-1.1,z:-RD/2+0.3,w:3.2,d:0.5,label:'shelves',info:()=>toast(pickR(['Jars of honey, pickled radish and sea salt.','Tins of everything. One just says “Mystery”.','Seed packets in every colour.']))},
     {x:2.0,z:1.0,w:2.6,d:0.8,label:'produce',info:()=>toast('Fresh from around the island.')});
   g.add(M(p));if(gl.length){const m=M(gl,glowMat);m.castShadow=false;g.add(m);}g.add(win);
