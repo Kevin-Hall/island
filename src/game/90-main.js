@@ -65,9 +65,7 @@ function frame(now){
   glints.instanceMatrix.needsUpdate=true;
   if(nightF>0.05&&ffData.length){const pa=ffGeo.attributes.position.array;ffData.forEach((f,i)=>{pa[i*3]=f.x+Math.sin(tt*0.6+f.ph)*0.7;pa[i*3+1]=0.9+Math.sin(tt*1.3+f.ph*2)*0.4;pa[i*3+2]=f.z+Math.cos(tt*0.5+f.ph)*0.7;});ffGeo.attributes.position.needsUpdate=true;}
   fireflies.visible=nightF>0.05&&ffData.length>0;
-  rain.visible=rainFall>0.02;rain.material.opacity=0.6*rainFall*(wxNow()==='storm'?1.3:1);
-  if(rain.visible){const pa=rainGeo.attributes.position.array;for(let i=0;i<RAIN;i++){const r=rainData[i];r.y-=dt*16;r.x+=dt*2;if(r.y<0){r.y=12+Math.random()*2;r.x=cam.tx+(Math.random()-0.5)*30;r.z=cam.tz+(Math.random()-0.5)*30;}
-    pa[i*6]=r.x;pa[i*6+1]=r.y;pa[i*6+2]=r.z;pa[i*6+3]=r.x-0.08;pa[i*6+4]=r.y+0.5;pa[i*6+5]=r.z;}rainGeo.attributes.position.needsUpdate=true;}
+  rain.visible=false;updateWeatherFx(dt,tt);/* rain, splashes, puddles, snow and settling (87c) */
   if(cursorT>0){cursorT-=dt;cursor.visible=cursorT>0;cursor.position.y=(topY(Math.round(cursor.position.x),Math.round(cursor.position.z))||0.3)+0.1+Math.abs(Math.sin(tt*5))*0.04;}
   PL('ambient');updateParticles(dt);PL('particles');
   hudT-=dt;if(hudT<=0){hudT=0.5;updateHUD();}

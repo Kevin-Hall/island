@@ -22,15 +22,17 @@ function updateFoam(tt){let n=0;_s.set(1,1,1);
 
 // --- footprints in the sand, dust and footsteps ---
 const FPN=70;const fpIM=new T.InstancedMesh(new T.PlaneGeometry(0.1,0.15).rotateX(-Math.PI/2),new T.MeshBasicMaterial({color:0xb89a6a,transparent:true,opacity:0.55,depthWrite:false}),FPN);
-fpIM.frustumCulled=false;fpIM.count=0;scene.add(fpIM);const prints=[];let stepAcc=0,stepSide=1,lastVX=null,lastVZ=null;
+fpIM.frustumCulled=false;fpIM.count=0;scene.add(fpIM);fpIM.material.color.set(0xffffff);for(let i=0;i<FPN;i++)fpIM.setColorAt(i,_c.set(0xb89a6a));const prints=[];let stepAcc=0,stepSide=1,lastVX=null,lastVZ=null;
 function footstep(){const x=vil.x,z=vil.z,k=K(Math.round(x),Math.round(z)),t=landMap.get(k);if(!isLandT(t))return;stepSide=-stepSide;
   const r=villager.rotation.y,ox=Math.cos(r)*0.07*stepSide,oz=-Math.sin(r)*0.07*stepSide;
-  if(t==='sand'){prints.push({x:x+ox,z:z+oz,r,age:0});if(prints.length>FPN)prints.shift();emit(x,0.33,z,{vx:(Math.random()-0.5)*0.6,vy:0.5,vz:(Math.random()-0.5)*0.6,life:0.4,max:0.4,size:0.05,color:0xe8d4a8,g:2});}
+  const snowy=t==='grass'&&WXU.cov.value>0.35&&Math.hypot(x-WXU.ctr.value.x,z-WXU.ctr.value.y)<WXU.ctr.value.z;
+  if(snowy){prints.push({x:x+ox,z:z+oz,r,age:0,snow:1});if(prints.length>FPN)prints.shift();emit(x,topY(Math.round(x),Math.round(z))+0.05,z,{vx:(Math.random()-0.5)*0.5,vy:0.5,vz:(Math.random()-0.5)*0.5,life:0.4,max:0.4,size:0.045,color:0xffffff,g:3});}
+  else if(t==='sand'){prints.push({x:x+ox,z:z+oz,r,age:0});if(prints.length>FPN)prints.shift();emit(x,0.33,z,{vx:(Math.random()-0.5)*0.6,vy:0.5,vz:(Math.random()-0.5)*0.6,life:0.4,max:0.4,size:0.05,color:0xe8d4a8,g:2});}
   else if(Math.random()<0.3)emit(x,topY(Math.round(x),Math.round(z))+0.05,z,{vx:(Math.random()-0.5)*0.5,vy:0.6,vz:(Math.random()-0.5)*0.5,life:0.45,max:0.45,size:0.04,color:0x6aa843,g:3});
   if(S.sound&&AC)noise(0.05,t==='sand'?0.025:0.018,t==='sand'?1600:800,1.2);}
 function updatePrints(dt){let n=0;for(const p of prints){p.age+=dt;const s=p.age<6?1:Math.max(0,1-(p.age-6)/3);if(s<=0)continue;
-  _e.set(0,p.r,0);_q.setFromEuler(_e);_m.compose(_v.set(p.x,surfY(p.x,p.z)+0.012,p.z),_q,_s.set(s,1,s));fpIM.setMatrixAt(n++,_m);}
-  fpIM.count=n;fpIM.instanceMatrix.needsUpdate=true;}
+  _e.set(0,p.r,0);_q.setFromEuler(_e);_m.compose(_v.set(p.x,surfY(p.x,p.z)+0.012,p.z),_q,_s.set(s,1,s));fpIM.setColorAt(n,_c.set(p.snow?0x8a9ab8:0xb89a6a));fpIM.setMatrixAt(n++,_m);}
+  fpIM.count=n;fpIM.instanceMatrix.needsUpdate=true;if(fpIM.instanceColor)fpIM.instanceColor.needsUpdate=true;}
 
 // --- sky: drifting clouds, the moon, shooting stars, rainbows ---
 // sky things are placed by angle (skyPos) and drawn unbent by the curved world
@@ -90,7 +92,7 @@ const MOTE_KINDS={petals:{n:40,size:3,cols:[0xf7c3d3,0xfbe3ea,0xffffff],vy:-0.35
   snow:{n:150,size:2,cols:[0xffffff,0xe8f0ff],vy:-0.6,sway:0.4},embers:{n:60,size:2,cols:[0xff9a3a,0xffcf6a,0xff6a2a],vy:0.7,sway:0.5},
   pollen:{n:45,size:2,cols:[0xfff4b0,0xffffff],vy:-0.05,sway:0.25},spores:{n:55,size:2,cols:[0xc8f0a8,0xe0ffc8],vy:0.12,sway:0.3}};
 let moteKind='',moteSt=[];
-function wantMotes(){if(S.rain)return'';const isl=S.sea?null:curIsl(),b=isl?isl.biome:(S.sea?regionAt(vil.x,vil.z):'open');const night=nightF>0.6;
+function wantMotes(){if(S.rain||snowingHere())return'';/* (snow has its own flakes: 87c) */const isl=S.sea?null:curIsl(),b=isl?isl.biome:(S.sea?regionAt(vil.x,vil.z):'open');const night=nightF>0.6;
   if(wxNow()==='snow'&&(!isl||isl.home))return'snow';if(wxNow()==='windy'&&!night&&isl&&isl.home)return season()==='autumn'?'leaves':'petals';
   if(b==='snow')return'snow';if(b==='autumn')return'leaves';if(b==='volcano')return'embers';if(b==='swamp')return'spores';
   if(night)return'';if(b==='home'||b==='meadow')return'petals';if(b==='tropic'||b==='pine')return'pollen';return'';}
