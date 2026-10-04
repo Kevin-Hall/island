@@ -14,7 +14,7 @@ const camD=()=>cam.dist*LENS; // how far the camera really is from what it looks
 let W=1,H=1,PX=2,rt=null;
 const post={scene:new T.Scene(),cam:new T.OrthographicCamera(-1,1,1,-1,0,1)};
 const postMat=new T.ShaderMaterial({
-  uniforms:{tC:{value:null},tD:{value:null},tB:{value:null},bloomC:{value:new T.Vector3(.3,.26,.2)},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},atmo:{value:new T.Vector4(.28,.7,40,.16)},hzC:{value:new T.Color(0xbfe0ff)},tm:{value:0},
+  uniforms:{tC:{value:null},tD:{value:null},tB:{value:null},bloomC:{value:new T.Vector3(.3,.26,.2)},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},atmo:{value:new T.Vector4(.06,.5,60,.1)},hzC:{value:new T.Color(0xbfe0ff)},tm:{value:0},
     // the visual style (applyFx): colour grade, outlines, glow, film texture and palette
     fxA:{value:new T.Vector4(1,1,1,0)}/* saturation, contrast, brightness, faded blacks */,tS:{value:new T.Vector3(1,1,1)},tH:{value:new T.Vector3(1,1,1)},
     edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},uw:{value:0},rip:{value:0},uwC:{value:new T.Color(0x2a8cc0)},uwL:{value:1}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},

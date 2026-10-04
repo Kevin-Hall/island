@@ -40,7 +40,7 @@ function frame(now){
   const k=paint?0:Math.min(1,dt*5);updateChat(dt,tt);updateCharEd(dt,tt);const [fx,fz]=charEd?charEdFocus():chatFocus();cam.tx+=(fx-cam.tx)*k;cam.tz+=(fz-cam.tz)*k;PL('boat');applyCam();cullIslands();PL('cull');updateNearGrass(dt);PL('near'); // hold the view still while drag-farming so tiles stay under the finger
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
-  postMat.uniforms.atmo.value.z=camD()*0.85;postMat.uniforms.hzC.value.copy(scene.fog.color);
+  postMat.uniforms.atmo.value.z=Math.max(48,camD()*1.9);postMat.uniforms.hzC.value.copy(scene.fog.color);
   fogW=lerp(fogW,wxNow()==='fog'&&!S.sea?1:0,Math.min(1,dt*0.6));scene.fog.near=Math.max(4,camD()+45-fogBoost*30-fogW*50);scene.fog.far=camD()+300-fogBoost*200-fogW*245;/* foggy days close the world in *//* a light haze: neighbouring islands stay green on the horizon */
   PL('timeTide');updateSwim(dt,tt);updateReefLife(dt,tt);updateTerra(dt);PL('swim');/* after the fog, which it tints under water */
   flushCrops();for(const {g} of cropMeshes.values())if(g.children.length)g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;

@@ -8,8 +8,8 @@
 const FX_BASE={sat:1,con:1,br:1,fade:0,tS:[1,1,1],tH:[1,1,1],edge:1,edgeC:[.36,.32,.46],dith:1,levels:22,grain:0,vig:.14,bloom:1,grade:1,pal:0,tilt:0,scan:0,paper:0,px:0,ramp:[88,160,222,255],leaf:[72,140,208,255],soft:0,warm:0,cool:0,rim:1};
 let fxRim=1;
 const FXS={
-  island:   {name:'Driftseed',  desc:'The island as it is',sat:1.04,tS:[.97,.98,1.04],tH:[1.04,1.01,.95],soft:.07,warm:1,cool:1},
-  wildworld:{name:'Wild World', desc:'Chunky handheld pixels, soft flat colour',sat:1.1,con:.98,br:1.05,fade:.04,tS:[1.02,1.02,1.06],tH:[1.04,1.02,.94],edge:.35,edgeC:[.5,.44,.52],dith:0,levels:14,vig:.12,bloom:.2,grade:.5,px:2,ramp:[140,200,245,255],soft:.02,rim:.6},
+  island:   {name:'Driftseed',  desc:'The island as it is',sat:1.1,con:1.04,br:1.02,tS:[.97,.98,1.04],tH:[1.04,1.01,.95],soft:.07,warm:1,cool:1},
+  wildworld:{name:'Wild World', desc:'Chunky handheld pixels, soft flat colour',sat:1.16,con:1.02,br:1.04,fade:.02,tS:[1.02,1.02,1.06],tH:[1.04,1.02,.94],edge:.35,edgeC:[.5,.44,.52],dith:0,levels:14,vig:.12,bloom:.2,grade:.5,px:2,ramp:[140,200,245,255],soft:.02,rim:.6},
   wildsoft: {name:'Wild World Soft',desc:'A gentler Wild World: softer pixels and colour',sat:1.08,con:.98,br:1.04,fade:.03,tS:[1.01,1.01,1.03],tH:[1.02,1.01,.97],edge:.6,edgeC:[.44,.39,.49],dith:0,levels:18,vig:.06,bloom:.55,grade:.75,px:1,ramp:[112,178,232,255],soft:.05,warm:.6,cool:.5},
   windwaker:{name:'Wind Waker', desc:'Bold two-tone cel shading and bright sea colours',sat:1.45,con:1.1,br:1.14,tS:[.9,.95,1.14],tH:[1.05,1.02,.95],edge:2.4,edgeC:[.1,.1,.2],dith:0,levels:64,vig:.05,bloom:2.4,px:-1,ramp:[120,120,255,255],rim:1.3},
   storybook:{name:'Storybook',  desc:'Soft watercolour on paper',sat:.8,con:.86,br:1.1,fade:.1,tS:[1.04,1,.94],tH:[1.05,1.02,.92],edge:.7,edgeC:[.58,.46,.4],dith:0,levels:48,grain:.015,vig:.1,bloom:1.4,grade:.7,paper:1,px:-.5,ramp:[140,185,225,250],soft:.12,warm:.5,cool:.3},

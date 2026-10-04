@@ -6080,7 +6080,7 @@ const camD=()=>cam.dist*LENS; // how far the camera really is from what it looks
 let W=1,H=1,PX=2,rt=null;
 const post={scene:new T.Scene(),cam:new T.OrthographicCamera(-1,1,1,-1,0,1)};
 const postMat=new T.ShaderMaterial({
-  uniforms:{tC:{value:null},tD:{value:null},tB:{value:null},bloomC:{value:new T.Vector3(.3,.26,.2)},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},atmo:{value:new T.Vector4(.28,.7,40,.16)},hzC:{value:new T.Color(0xbfe0ff)},tm:{value:0},
+  uniforms:{tC:{value:null},tD:{value:null},tB:{value:null},bloomC:{value:new T.Vector3(.3,.26,.2)},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},atmo:{value:new T.Vector4(.06,.5,60,.1)},hzC:{value:new T.Color(0xbfe0ff)},tm:{value:0},
     // the visual style (applyFx): colour grade, outlines, glow, film texture and palette
     fxA:{value:new T.Vector4(1,1,1,0)}/* saturation, contrast, brightness, faded blacks */,tS:{value:new T.Vector3(1,1,1)},tH:{value:new T.Vector3(1,1,1)},
     edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},uw:{value:0},rip:{value:0},uwC:{value:new T.Color(0x2a8cc0)},uwL:{value:1}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},
@@ -6423,8 +6423,8 @@ const stars=new T.Points(starGeo,starMat);stars.frustumCulled=false;scene.add(st
 const FX_BASE={sat:1,con:1,br:1,fade:0,tS:[1,1,1],tH:[1,1,1],edge:1,edgeC:[.36,.32,.46],dith:1,levels:22,grain:0,vig:.14,bloom:1,grade:1,pal:0,tilt:0,scan:0,paper:0,px:0,ramp:[88,160,222,255],leaf:[72,140,208,255],soft:0,warm:0,cool:0,rim:1};
 let fxRim=1;
 const FXS={
-  island:   {name:'Driftseed',  desc:'The island as it is',sat:1.04,tS:[.97,.98,1.04],tH:[1.04,1.01,.95],soft:.07,warm:1,cool:1},
-  wildworld:{name:'Wild World', desc:'Chunky handheld pixels, soft flat colour',sat:1.1,con:.98,br:1.05,fade:.04,tS:[1.02,1.02,1.06],tH:[1.04,1.02,.94],edge:.35,edgeC:[.5,.44,.52],dith:0,levels:14,vig:.12,bloom:.2,grade:.5,px:2,ramp:[140,200,245,255],soft:.02,rim:.6},
+  island:   {name:'Driftseed',  desc:'The island as it is',sat:1.1,con:1.04,br:1.02,tS:[.97,.98,1.04],tH:[1.04,1.01,.95],soft:.07,warm:1,cool:1},
+  wildworld:{name:'Wild World', desc:'Chunky handheld pixels, soft flat colour',sat:1.16,con:1.02,br:1.04,fade:.02,tS:[1.02,1.02,1.06],tH:[1.04,1.02,.94],edge:.35,edgeC:[.5,.44,.52],dith:0,levels:14,vig:.12,bloom:.2,grade:.5,px:2,ramp:[140,200,245,255],soft:.02,rim:.6},
   wildsoft: {name:'Wild World Soft',desc:'A gentler Wild World: softer pixels and colour',sat:1.08,con:.98,br:1.04,fade:.03,tS:[1.01,1.01,1.03],tH:[1.02,1.01,.97],edge:.6,edgeC:[.44,.39,.49],dith:0,levels:18,vig:.06,bloom:.55,grade:.75,px:1,ramp:[112,178,232,255],soft:.05,warm:.6,cool:.5},
   windwaker:{name:'Wind Waker', desc:'Bold two-tone cel shading and bright sea colours',sat:1.45,con:1.1,br:1.14,tS:[.9,.95,1.14],tH:[1.05,1.02,.95],edge:2.4,edgeC:[.1,.1,.2],dith:0,levels:64,vig:.05,bloom:2.4,px:-1,ramp:[120,120,255,255],rim:1.3},
   storybook:{name:'Storybook',  desc:'Soft watercolour on paper',sat:.8,con:.86,br:1.1,fade:.1,tS:[1.04,1,.94],tH:[1.05,1.02,.92],edge:.7,edgeC:[.58,.46,.4],dith:0,levels:48,grain:.015,vig:.1,bloom:1.4,grade:.7,paper:1,px:-.5,ramp:[140,185,225,250],soft:.12,warm:.5,cool:.3},
@@ -6581,7 +6581,7 @@ const HOME_STYLES={
 function applyHomeStyle(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow']||HOME_STYLES.meadow;BIOMES.home.grass=S.wild?isleTint(SEASON_GRASS[season()]):st.grass;BIOMES.home.sand=st.sand;return st;}
 /* ---- real seasons (a wild island follows the calendar: northern-hemisphere months, or S.seasonOv from the dev tools) ---- */
 function season(){if(S.seasonOv)return S.seasonOv;const m=new Date(typeof gameNow==='function'?gameNow():Date.now()).getMonth();return m===11||m<2?'winter':m<5?'spring':m<9?'summer':'autumn';} // leaves turn in October and November, as they do in the woods
-const SEASON_GRASS={spring:[0x7cbf56,0x88c660,0x72b44e],summer:[0x5c9640,0x66a048,0x528c38],autumn:[0x84a650,0x8eae58,0x7c9e4a],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
+const SEASON_GRASS={spring:[0x6cbc4e,0x78c458,0x62b046],summer:[0x5c9640,0x66a048,0x528c38],autumn:[0x62a044,0x6caa4c,0x5a963e],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
 let seasonNow=null;
 // when the season turns (checked each morning), the island's trees and grass change with it
 function seasonCheck(force){const s=season();if(s===seasonNow&&!force)return;const first=seasonNow===null;seasonNow=s;if(!S.wild||first&&!force)return;
@@ -6816,7 +6816,7 @@ const SP_COLS={
   peach:{spring:[0xffc0cc,0xf08aa4,0xc05a7a],summer:[0x86c054,0x5a9a3e,0x346a2e],autumn:[0xe8b848,0xc88a30,0x8a5a22]},
   birch:{spring:[0xc0e88a,0x8ecc5e,0x5a9a40],summer:[0x9ad464,0x6cb048,0x3e7a34],autumn:[0xfae070,0xf0c040,0xc08a20]},
   poplar:{spring:[0x9ad46a,0x68aa48,0x3c7434],summer:[0x6aac4a,0x46883a,0x265a2c],autumn:[0xf6d25a,0xe0aa38,0xa87a24]}};
-{const c=new T.Color(),h={};for(const k in SP_COLS)SP_COLS[k].autumn=SP_COLS[k].autumn.map(v=>{c.setHex(v).getHSL(h);return c.setHSL(h.h,h.s*0.84,h.l*0.97).getHex();});}/* autumn, muted to sit together */
+{const c=new T.Color(),h={};for(const k in SP_COLS)SP_COLS[k].autumn=SP_COLS[k].autumn.map(v=>{c.setHex(v).getHSL(h);return c.setHSL(h.h,h.s*0.94,h.l).getHex();});}/* autumn, muted to sit together */
 // scale a set of parts about a point (for stretching a crown taller or wider)
 function stretchParts(p,from,sx,sy,sz,cx,cy,cz){for(let i=from;i<p.length;i++){const q=p[i];q.x=cx+(q.x-cx)*sx;q.y=cy+(q.y-cy)*sy;q.z=cz+(q.z-cz)*sz;q.sx*=sx;q.sy*=sy;q.sz*=sz;}}
 function blossom(p,R,n,cx,cy,cz,rad,cols){dots(p,R,n,cx,cy+rad*0.2,cz,rad*1.7,rad*1.5,cols,0xf6d04a,0.075);}
@@ -15850,7 +15850,7 @@ function frame(now){
   const k=paint?0:Math.min(1,dt*5);updateChat(dt,tt);updateCharEd(dt,tt);const [fx,fz]=charEd?charEdFocus():chatFocus();cam.tx+=(fx-cam.tx)*k;cam.tz+=(fz-cam.tz)*k;PL('boat');applyCam();cullIslands();PL('cull');updateNearGrass(dt);PL('near'); // hold the view still while drag-farming so tiles stay under the finger
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
-  postMat.uniforms.atmo.value.z=camD()*0.85;postMat.uniforms.hzC.value.copy(scene.fog.color);
+  postMat.uniforms.atmo.value.z=Math.max(48,camD()*1.9);postMat.uniforms.hzC.value.copy(scene.fog.color);
   fogW=lerp(fogW,wxNow()==='fog'&&!S.sea?1:0,Math.min(1,dt*0.6));scene.fog.near=Math.max(4,camD()+45-fogBoost*30-fogW*50);scene.fog.far=camD()+300-fogBoost*200-fogW*245;/* foggy days close the world in *//* a light haze: neighbouring islands stay green on the horizon */
   PL('timeTide');updateSwim(dt,tt);updateReefLife(dt,tt);updateTerra(dt);PL('swim');/* after the fog, which it tints under water */
   flushCrops();for(const {g} of cropMeshes.values())if(g.children.length)g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;

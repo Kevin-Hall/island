@@ -20,7 +20,7 @@ const HOME_STYLES={
 function applyHomeStyle(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow']||HOME_STYLES.meadow;BIOMES.home.grass=S.wild?isleTint(SEASON_GRASS[season()]):st.grass;BIOMES.home.sand=st.sand;return st;}
 /* ---- real seasons (a wild island follows the calendar: northern-hemisphere months, or S.seasonOv from the dev tools) ---- */
 function season(){if(S.seasonOv)return S.seasonOv;const m=new Date(typeof gameNow==='function'?gameNow():Date.now()).getMonth();return m===11||m<2?'winter':m<5?'spring':m<9?'summer':'autumn';} // leaves turn in October and November, as they do in the woods
-const SEASON_GRASS={spring:[0x7cbf56,0x88c660,0x72b44e],summer:[0x5c9640,0x66a048,0x528c38],autumn:[0x84a650,0x8eae58,0x7c9e4a],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
+const SEASON_GRASS={spring:[0x6cbc4e,0x78c458,0x62b046],summer:[0x5c9640,0x66a048,0x528c38],autumn:[0x62a044,0x6caa4c,0x5a963e],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
 let seasonNow=null;
 // when the season turns (checked each morning), the island's trees and grass change with it
 function seasonCheck(force){const s=season();if(s===seasonNow&&!force)return;const first=seasonNow===null;seasonNow=s;if(!S.wild||first&&!force)return;
