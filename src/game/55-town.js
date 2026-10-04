@@ -162,18 +162,8 @@ function townBuilding(b,R){const p=[],gl=[];let lit=true;
     p.push(P(BOX,0xf1e3c6,0,1.95,0.1,0,0,0,0.6,0.7,0.6),P(CONE4,0x5a6ab0,0,2.5,0.1,0,0.785,0,0.9,0.44,0.9),P(CYL12,0xf6f0e0,0,2.0,0.41,1.57,0,0,0.36,0.03,0.36),P(BOX,0x3a2a2a,0.04,2.03,0.43,0,0,0.6,0.02,0.16,0.01),P(BOX,0x3a2a2a,0,2.0,0.43,0,0,0,0.12,0.02,0.01));
     p.push(P(BOX,0x6a4a3a,0,0.42,0.76,0,0,0,0.5,0.8,0.04),P(CYL8,0x8a8e98,0.95,0.9,0.95,0,0,0,0.04,1.8,0.04),P(BOX,0x5fae44,1.08,1.66,0.95,0,0,0,0.26,0.18,0.02),P(ICO2,0xf6d04a,1.08,1.66,0.965,0,0,0,0.08,0.08,0.01));
     for(const x of [-0.62,0.62])gl.push(P(BOX,0x404a60,x,0.72,0.76,0,0,0,0.3,0.36,0.03));}
-  else if(b.roof!==undefined){const s0=p.length;cottage(p,gl,b.roof);if(b.t==='vh')houseVariance('cottage',b.n|0,p,gl,s0);}
-  else{const s0=p.length,pers=planVillagers()[b.n%6].pers;homeStyle(pers,b.n,p,gl);houseVariance(pers,b.n|0,p,gl,s0);}/* every house a little different (55b) */
+  else archHouse(b.n|0,p,gl);/* every neighbour's house in a real architectural style (55c) */
   return{p,gl,lit};}
-// a storybook cottage: cream walls, a coloured roof with a chimney, a wooden door, shuttered windows and a flower box.
-// roof -1 is a flat-roofed sandstone house instead
-function cottage(p,gl,roofCol){const wall=0xf3e6cc,base=0xb8ae9a;
-  if(roofCol<0){p.push(P(BOX,0xe2cda4,0,0.62,0,0,0,0,1.6,1.24,1.5),P(BOX,base,0,0.06,0,0,0,0,1.66,0.12,1.56),P(BOX,0xd2bc92,0,1.28,0,0,0,0,1.72,0.1,1.62),P(BOX,0xc8b088,0,1.36,0,0,0,0,1.5,0.06,1.4));
-    doorAt(p,gl,0x7a5234,-0.3,0,0.76);win(p,gl,0.38,0.66,0.76);win(p,gl,0.81,0.66,0,0.3,0.28,0xfbf8f0,'x');return;}
-  p.push(P(BOX,wall,0,0.5,0,0,0,0,1.5,1.0,1.3),P(BOX,base,0,0.06,0,0,0,0,1.56,0.12,1.36));roof(p,roofCol,wall,1.6,0.78,1.3,1.0);
-  p.push(P(BOX,0xb0a490,0.42,1.55,-0.25,0,0,0,0.2,0.5,0.2),P(BOX,0x8a8070,0.42,1.82,-0.25,0,0,0,0.24,0.05,0.24));
-  doorAt(p,gl,0x8a5a3a,-0.3,0,0.66);win(p,gl,0.38,0.58,0.66);
-  p.push(P(BOX,0x8a5a3a,0.38,0.38,0.72,0,0,0,0.42,0.08,0.1));for(let i=0;i<4;i++)p.push(P(SPH_XS,[0xf2a6c8,0xf6d04a,0xffffff,0xe86a5a][i],0.26+i*0.08,0.45,0.73,0,0,0,0.08,0.07,0.08));}
 // a campfire in a ring of stones, crossed logs and a flame
 function campfireParts(s=1){const p=[],gl=[];
   // a ring of chunky stones, a bed of ash and glowing embers, and a teepee of logs leaning in over it
@@ -219,61 +209,6 @@ function updateFires(dt,tt){flameU.uT.value=tt;let best=null,bd=26*26,bl=0;
   const fk=0.85+Math.sin(tt*13)*0.08+Math.sin(tt*29)*0.05+Math.sin(tt*5.3)*0.05;
   if(best){fireLight.position.set(best.x,best.y+0.9,best.z);fireLight.intensity=Math.max(0,nightF*0.9+0.08)*Math.min(bl,1.1)*1.15*fk;/* a warm pool round the fire, fading out over a few steps */}else fireLight.intensity=0;
   firePoolMat.opacity=clamp(nightF*1.1+0.05,0,1)*clamp(bl,0,1)*fk*0.7;}
-/* ---- villager homes in coastal styles, one per personality (footprint ±1, door at the front centre, +z) ---- */
-function planks(p,c,x,y,z,w,h,d,axis='x'){const n=Math.max(2,Math.round((axis==='x'?w:d)/0.14));for(let i=0;i<n;i++){const t=(i+0.5)/n-0.5,sh=i%2?0.94:1.04;
-  p.push(axis==='x'?P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x+t*w,y,z,0,0,0,w/n*0.96,h,d):P(BOX,new T.Color(c).multiplyScalar(sh).getHex(),x,y,z+t*d,0,0,0,w,h,d/n*0.96));}}
-function doorAt(p,gl,col,x,y,z,round=false){p.push(P(BOX,0xfbf8f0,x,y+0.34,z,0,0,0,0.44,0.72,0.03),P(BOX,col,x,y+0.32,z+0.015,0,0,0,0.34,0.62,0.03),P(ICO2,0xf6d04a,x+0.1,y+0.32,z+0.04,0,0,0,0.045,0.045,0.03));
-  if(round)p.push(P(CYL12,col,x,y+0.63,z+0.015,1.57,0,0,0.34,0.03,0.34));gl.push(P(BOX,0xfff0b8,x+0.3,y+0.62,z+0.05,0,0,0,0.08,0.1,0.08));}
-function win(p,gl,x,y,z,w=0.3,h=0.28,frame=0xfbf8f0,axis='z'){if(axis==='z'){gl.push(P(BOX,0x404a60,x,y,z,0,0,0,w,h,0.02));p.push(P(BOX,frame,x,y,z-0.01,0,0,0,w+0.08,h+0.08,0.02),P(BOX,frame,x,y,z+0.012,0,0,0,0.025,h,0.01));}
-  else{gl.push(P(BOX,0x404a60,x,y,z,0,0,0,0.02,h,w));p.push(P(BOX,frame,x-0.01*Math.sign(x),y,z,0,0,0,0.02,h+0.08,w+0.08));}}
-function homeStyle(pers,n,p,gl){const R=mulberry(hi(n,7,11)),flowers=(xs,z,y=0.1)=>{for(let i=0;i<xs.length;i++)bloom(p,[0xf2a6c8,0xffffff,0xf6d04a,0xb8a8f2][(i+n)%4],0xf6d04a,xs[i],y,z,0.06);};
-  switch(pers){
-    case'sailor':{// a boathouse on stilts: weathered planks, a rope railing, a lifebuoy, buoys and a pennant
-      const WD=0x7a98b0,Y=0.46;for(const [x,z] of [[-0.72,-0.62],[0.72,-0.62],[-0.72,0.62],[0.72,0.62],[0,-0.62],[0,0.62]])p.push(P(CYL8,0x5a4030,x,Y/2,z,0,0,0,0.12,Y,0.12));
-      planks(p,0xa88a64,0,Y,0,1.7,0.07,1.5,'x');planks(p,WD,0,Y+0.46,-0.18,1.3,0.86,1.0,'x');roof(p,0x3e5064,WD,1.46,0.62,1.16,Y+0.88,0,-0.18);
-      doorAt(p,gl,0x2f4f7a,0,Y+0.04,0.33);win(p,gl,0.42,Y+0.52,0.33,0.24,0.24);p.push(P(CYL12,0xfbf8f0,-0.42,Y+0.52,0.33,1.57,0,0,0.26,0.02,0.26));gl.push(P(CYL12,0x404a60,-0.42,Y+0.52,0.345,1.57,0,0,0.18,0.02,0.18));
-      for(let i=0;i<3;i++)p.push(P(BOX,0xb8986a,0,0.07+i*0.14,0.78+0.1-i*0.1,0,0,0,0.44,0.05,0.14));
-      for(const x of [-0.8,-0.5,0.5,0.8])p.push(P(CYL6,0x5a4030,x,Y+0.2,0.72,0,0,0,0.04,0.36,0.04));p.push(P(CYL6,0xd8c090,-0.65,Y+0.32,0.72,0,0,1.57,0.025,0.3,0.025),P(CYL6,0xd8c090,0.65,Y+0.32,0.72,0,0,1.57,0.025,0.3,0.025));
-      p.push(P(CYL12,0xe8453a,0.66,Y+0.36,0.34,1.57,0,0,0.26,0.06,0.26),P(CYL12,0xfbf8f0,0.66,Y+0.36,0.345,1.57,0,0,0.18,0.07,0.18),P(CYL12,WD,0.66,Y+0.36,0.35,1.57,0,0,0.12,0.08,0.12));
-      for(const [x,c] of [[-0.86,0xe8453a],[0.86,0xf6d04a]])p.push(P(ICO2,c,x,Y-0.1,0.66,0,0,0,0.14,0.18,0.14),P(ICO2,0xfbf8f0,x,Y-0.06,0.66,0,0,0,0.145,0.05,0.145));
-      p.push(P(CYL6,0x5a4030,0.62,Y+1.35,-0.5,0,0,0,0.03,0.7,0.03),P(PRISM,0xe8453a,0.72,Y+1.62,-0.5,0,0,1.57,0.08,0.02,0.12));break;}
-    case'dreamer':{// a round thatched cottage with a star window and a wind chime
-      p.push(P(CYL12,0xf4ecdc,0,0.42,-0.1,0,0,0,1.5,0.84,1.4),P(CYL12,0xc8c0b0,0,0.05,-0.1,0,0,0,1.56,0.1,1.46));
-      for(let i=0;i<3;i++)p.push(P(CONE12,[0xd8b870,0xc8a860,0xe0c080][i],0,1.05+i*0.24,-0.1,0,i*0.3,0,1.9-i*0.5,0.5,1.8-i*0.5));
-      doorAt(p,gl,0x8a7ac8,0,0,0.6,true);win(p,gl,0.5,0.5,0.46,0.22,0.22,0xfbf8f0);
-      gl.push(P(CYL6,0xfff0b8,-0.48,0.55,0.48,1.57,0,0,0.22,0.02,0.22));p.push(P(CYL6,0x8a7ac8,-0.48,0.55,0.47,1.57,0,0,0.3,0.02,0.3));
-      for(let i=0;i<4;i++)p.push(P(CYL6,0xc8d0e0,-0.72+i*0.04,0.72-i%2*0.05,0.5,0,0,0,0.015,0.12,0.015));flowers([-0.8,-0.6,0.6,0.8],0.85);break;}
-    case'tinkerer':{// a brick workshop with a tin roof, a gear sign, a stovepipe, crates and a pinwheel
-      p.push(P(BOX,0xb86a4a,0,0.5,-0.1,0,0,0,1.6,1.0,1.3),P(BOX,0x8a8078,0,0.05,-0.1,0,0,0,1.66,0.1,1.36));for(let r=0;r<5;r++)p.push(P(BOX,0xa05a3e,0,0.14+r*0.18,0.556,0,0,0,1.6,0.012,0.01));
-      roof(p,0x8aa0a8,0xb86a4a,1.7,0.7,1.34,1.0,0,-0.1);p.push(P(CYL8,0x7a8088,0.5,1.6,-0.4,0,0,0,0.12,0.7,0.12),P(CYL8,0x5a6068,0.5,1.97,-0.4,0,0,0,0.18,0.05,0.18));
-      p.push(P(BOX,0x5a4a3a,0,0.38,0.56,0,0,0,0.7,0.76,0.03),P(BOX,0x8a6a44,-0.17,0.37,0.575,0,0,0,0.3,0.68,0.02),P(BOX,0x8a6a44,0.17,0.37,0.575,0,0,0,0.3,0.68,0.02));gl.push(P(BOX,0xfff0b8,0.45,0.82,0.62,0,0,0,0.08,0.1,0.08));
-      p.push(P(CYL12,0xd8a040,0,0.98,0.6,1.57,0,0,0.3,0.03,0.3));for(let i=0;i<8;i++){const a=i/8*6.283;p.push(P(BOX,0xd8a040,Math.cos(a)*0.17,0.98+Math.sin(a)*0.17,0.6,0,0,a,0.06,0.06,0.03));}
-      win(p,gl,-0.55,0.6,0.56,0.26,0.26,0x6a5040);
-      for(const [x,z,s] of [[0.78,0.82,0.3],[0.62,0.9,0.22],[-0.8,0.85,0.26]])p.push(P(BOX,0xa87a4a,x,s/2,z,0,R()*0.5,0,s,s,s),P(BOX,0x7a5230,x,s/2,z,0,0,0,s*1.02,0.03,s*1.02));
-      p.push(P(CYL6,0x7a8088,-0.6,1.35,-0.1,0,0,0,0.03,0.6,0.03));for(let i=0;i<4;i++)p.push(P(PRISM,[0xe8453a,0xf6d04a,0x5a8ae0,0x6ab85a][i],-0.6,1.66,-0.07,0,0,i*1.57,0.1,0.02,0.12));break;}
-    case'homebody':{// a grassy hill burrow: round door, round windows, a stone chimney and a garden
-      p.push(P(ICO2,0x5a9244,0,0.1,-0.15,0,0,0,1.9,1.35,1.7),P(ICO2,0x6aa24e,0,0.28,-0.2,0,0,0,1.5,0.9,1.3),P(CYL12,0x9a8a70,0,0.3,0.55,1.57,0,0,0.76,0.14,0.76));for(let i=0;i<7;i++){const a=i/7*6.283;bloom(p,[0xf2a6c8,0xffffff,0xf6d04a][i%3],0xf6d04a,Math.cos(a)*0.5,0.78+Math.sin(a)*0.05,-0.25+Math.sin(a)*0.45,0.06);}
-      p.push(P(CYL12,0xd8604a,0,0.32,0.62,1.57,0,0,0.54,0.04,0.54),P(ICO2,0xf6d04a,0.16,0.3,0.65,0,0,0,0.05,0.05,0.03));for(let i=0;i<4;i++)p.push(P(BOX,0xa84a3a,-0.12+i*0.08,0.32,0.645,0,0,0,0.01,0.5,0.01));
-      for(const x of [-0.6,0.6]){gl.push(P(CYL12,0x404a60,x,0.42,0.4,1.4,0,0,0.26,0.02,0.26));p.push(P(CYL12,0xfbf8f0,x,0.42,0.39,1.4,0,0,0.34,0.02,0.34));}
-      p.push(P(BOX,0x9a8a80,0.35,1.0,-0.5,0,0,0,0.22,0.5,0.22),P(CYL8,0xc8704a,0.35,1.3,-0.5,0,0,0,0.12,0.12,0.12));gl.push(P(BOX,0xfff0b8,-0.4,0.6,0.62,0,0,0,0.08,0.1,0.08));
-      flowers([-0.9,-0.75,0.75,0.9],0.8);for(let i=0;i<3;i++)p.push(P(CYL12,0xb8b0a0,0,0.02,0.85+i*0.2,0,0,0,0.3,0.03,0.18));break;}
-    case'explorer':{// a raised lookout: log posts, a ladder, a sailcloth awning, a compass flag and a spyglass
-      const Y=0.62;for(const [x,z] of [[-0.62,-0.55],[0.62,-0.55],[-0.62,0.5],[0.62,0.5]])p.push(P(CYL8,0x7a5230,x,Y/2,z,0,0,0,0.16,Y,0.16));
-      planks(p,0x9a7a4a,0,Y,0,1.5,0.08,1.4,'z');planks(p,0xa8845a,0,Y+0.4,-0.2,1.2,0.72,0.9,'x');roof(p,0x6a8a5a,0xa8845a,1.34,0.55,1.04,Y+0.76,0,-0.2);
-      doorAt(p,gl,0x6a4428,0,Y+0.04,0.26);win(p,gl,0.4,Y+0.44,0.26,0.22,0.2,0x6a4428);
-      for(let i=0;i<5;i++)p.push(P(BOX,0x8a6a3a,0.2,0.1+i*0.13,0.82-i*0.05,0,0,0,0.3,0.03,0.05));p.push(P(BOX,0x7a5230,0.06,0.36,0.72,0.35,0,0,0.03,0.8,0.03),P(BOX,0x7a5230,0.34,0.36,0.72,0.35,0,0,0.03,0.8,0.03));
-      for(let i=0;i<6;i++)p.push(P(BOX,i%2?0xf8f4ea:0xd86a3a,-0.62+i*0.16,Y+0.86,0.52,0.45,0,0,0.16,0.02,0.4));
-      p.push(P(CYL6,0x5a4030,-0.6,Y+1.3,-0.45,0,0,0,0.03,0.9,0.03),P(BOX,0x2f6a8a,-0.47,Y+1.62,-0.45,0,0,0,0.24,0.16,0.01),P(ICO2,0xf6d04a,-0.47,Y+1.62,-0.44,0,0,0,0.07,0.07,0.02));
-      p.push(P(CYL8,0xd8a040,0.6,Y+0.3,0.48,0.3,0.6,1.3,0.04,0.3,0.04));break;}
-    default:{// scholar: a stone keeper's cottage with a little striped tower and a bay window
-      p.push(P(BOX,0xc8ccd0,-0.2,0.5,-0.1,0,0,0,1.2,1.0,1.3),P(BOX,0x9a9ea8,-0.2,0.05,-0.1,0,0,0,1.26,0.1,1.36));for(let r=0;r<5;r++)for(let c=0;c<4;c++)p.push(P(BOX,r%2^c%2?0xb8bcc4:0xd8dce0,-0.66+c*0.3,0.15+r*0.18,0.556,0,0,0,0.28,0.16,0.01));
-      roof(p,0x3a4a6a,0xc8ccd0,1.3,0.7,1.34,1.0,-0.2,-0.1);doorAt(p,gl,0x6a3a3a,-0.35,0,0.57);
-      p.push(P(CYL12,0xf4f0ea,0.62,0.9,-0.2,0,0,0,0.5,1.8,0.5));for(const y of [0.5,1.1,1.6])p.push(P(CYL12,0xd8453a,0.62,y,-0.2,0,0,0,0.52,0.16,0.52));
-      gl.push(P(CYL12,0xfff0b8,0.62,1.92,-0.2,0,0,0,0.36,0.26,0.36));p.push(P(CONE12,0x3a4a6a,0.62,2.18,-0.2,0,0,0,0.46,0.26,0.46),P(CYL12,0x3a3a44,0.62,1.8,-0.2,0,0,0,0.5,0.04,0.5));
-      p.push(P(BOX,0xd8dce0,0.12,0.52,0.62,0,0,0,0.42,0.5,0.14));gl.push(P(BOX,0x404a60,0.12,0.52,0.7,0,0,0,0.34,0.38,0.02));for(let i=0;i<5;i++)p.push(P(BOX,[0x8a3a4a,0x2f4f7a,0x6a8a4a,0xd8a040,0x6a3a3a][i],0.0+i*0.06,0.36,0.66,0,0,0,0.05,0.12,0.06));
-      flowers([-0.8,-0.6],0.82);}}}
-
-
 /* ---- the lighthouse beam: two long shafts of light turning slowly from the lantern once dusk falls. Each is a wide
    soft cone reaching far out over the sea and a narrower bright core inside it, both fading smoothly to nothing along
    their length (brightness in the vertex colours, drawn additively, so dark is see-through), with a glow at the lamp ---- */
