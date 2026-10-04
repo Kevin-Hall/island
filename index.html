@@ -6080,13 +6080,13 @@ const camD=()=>cam.dist*LENS; // how far the camera really is from what it looks
 let W=1,H=1,PX=2,rt=null;
 const post={scene:new T.Scene(),cam:new T.OrthographicCamera(-1,1,1,-1,0,1)};
 const postMat=new T.ShaderMaterial({
-  uniforms:{tC:{value:null},tD:{value:null},tB:{value:null},bloomC:{value:new T.Vector3(.3,.26,.2)},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},tm:{value:0},
+  uniforms:{tC:{value:null},tD:{value:null},tB:{value:null},bloomC:{value:new T.Vector3(.3,.26,.2)},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},atmo:{value:new T.Vector4(.28,.7,40,.16)},hzC:{value:new T.Color(0xbfe0ff)},tm:{value:0},
     // the visual style (applyFx): colour grade, outlines, glow, film texture and palette
     fxA:{value:new T.Vector4(1,1,1,0)}/* saturation, contrast, brightness, faded blacks */,tS:{value:new T.Vector3(1,1,1)},tH:{value:new T.Vector3(1,1,1)},
     edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},uw:{value:0},rip:{value:0},uwC:{value:new T.Color(0x2a8cc0)},uwL:{value:1}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
   fragmentShader:`
-    uniform sampler2D tC;uniform sampler2D tD;uniform sampler2D tB;uniform vec3 bloomC;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;uniform float tm;varying vec2 vUv;
+    uniform sampler2D tC;uniform sampler2D tD;uniform sampler2D tB;uniform vec3 bloomC;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;uniform vec4 atmo;uniform vec3 hzC;uniform float tm;varying vec2 vUv;
     uniform vec4 fxA;uniform vec3 tS;uniform vec3 tH;uniform float edgeK;uniform vec3 edgeC;uniform float dith;uniform float grain;uniform float vig;uniform float bloomK;uniform float gradeK;uniform float pal;uniform float tilt;uniform float scan;uniform float paper;uniform float uw;uniform float rip;uniform vec3 uwC;uniform float uwL;
     float b2(vec2 a){a=floor(a);return fract(a.x*.5+a.y*a.y*.75);}
     float bayer(vec2 a){return b2(.5*a)*.25+b2(a);}
@@ -6116,6 +6116,12 @@ const postMat=new T.ShaderMaterial({
       float g=gw*gradeK;float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.+.04*g);c=mix(c,(c-.5)*1.08+.48,g);
       c*=mix(vec3(1.),mix(vec3(.96,.98,1.05),vec3(1.04,1.,.95),smoothstep(.25,.85,l)),g);
       c=mix(c,c*vec3(1.04,1.,.95)+vec3(.03,.02,.0),smoothstep(110.,300.,d)*step(d,cf*.6)*.45*g);
+      // atmosphere: the loudest colours roll off softly (limes and yellows most), and the land melts into a soft
+      // sky-coloured haze with distance, so the near things read and the far ones settle back
+      if(pal<0.5){float mx=max(c.r,max(c.g,c.b)),mn=min(c.r,min(c.g,c.b)),ch=mx-mn,lm=dot(c,vec3(.299,.587,.114));
+        float yl=smoothstep(.0,.25,min(c.r,c.g)-c.b)*smoothstep(.35,.0,abs(c.r-c.g));
+        c=mix(vec3(lm),c,1./(1.+ch*atmo.x+yl*ch*atmo.y));
+        float hz=smoothstep(atmo.z,atmo.z*2.6,d)*step(d,cf*.6)*atmo.w*(1.-uw);c=mix(c,hzC*vec3(1.02,1.,.98),hz);}
       // the style's grade: saturation, contrast, brightness, lifted blacks and split-toning
       l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,fxA.x);c=(c-.5)*fxA.y+.5;c*=fxA.z;c=fxA.w+c*(1.-fxA.w);
       c*=mix(tS,tH,smoothstep(.15,.85,l));
@@ -6418,7 +6424,7 @@ const FX_BASE={sat:1,con:1,br:1,fade:0,tS:[1,1,1],tH:[1,1,1],edge:1,edgeC:[.36,.
 let fxRim=1;
 const FXS={
   island:   {name:'Driftseed',  desc:'The island as it is',sat:1.04,tS:[.97,.98,1.04],tH:[1.04,1.01,.95],soft:.07,warm:1,cool:1},
-  wildworld:{name:'Wild World', desc:'Chunky handheld pixels, soft flat colour',sat:1.18,con:.96,br:1.08,fade:.05,tS:[1.02,1.02,1.06],tH:[1.04,1.02,.94],edge:.35,edgeC:[.5,.44,.52],dith:0,levels:14,vig:0,bloom:.2,grade:.5,px:2,ramp:[140,200,245,255],soft:.02,rim:.6},
+  wildworld:{name:'Wild World', desc:'Chunky handheld pixels, soft flat colour',sat:1.1,con:.98,br:1.05,fade:.04,tS:[1.02,1.02,1.06],tH:[1.04,1.02,.94],edge:.35,edgeC:[.5,.44,.52],dith:0,levels:14,vig:.12,bloom:.2,grade:.5,px:2,ramp:[140,200,245,255],soft:.02,rim:.6},
   wildsoft: {name:'Wild World Soft',desc:'A gentler Wild World: softer pixels and colour',sat:1.08,con:.98,br:1.04,fade:.03,tS:[1.01,1.01,1.03],tH:[1.02,1.01,.97],edge:.6,edgeC:[.44,.39,.49],dith:0,levels:18,vig:.06,bloom:.55,grade:.75,px:1,ramp:[112,178,232,255],soft:.05,warm:.6,cool:.5},
   windwaker:{name:'Wind Waker', desc:'Bold two-tone cel shading and bright sea colours',sat:1.45,con:1.1,br:1.14,tS:[.9,.95,1.14],tH:[1.05,1.02,.95],edge:2.4,edgeC:[.1,.1,.2],dith:0,levels:64,vig:.05,bloom:2.4,px:-1,ramp:[120,120,255,255],rim:1.3},
   storybook:{name:'Storybook',  desc:'Soft watercolour on paper',sat:.8,con:.86,br:1.1,fade:.1,tS:[1.04,1,.94],tH:[1.05,1.02,.92],edge:.7,edgeC:[.58,.46,.4],dith:0,levels:48,grain:.015,vig:.1,bloom:1.4,grade:.7,paper:1,px:-.5,ramp:[140,185,225,250],soft:.12,warm:.5,cool:.3},
@@ -6575,7 +6581,7 @@ const HOME_STYLES={
 function applyHomeStyle(){const st=HOME_STYLES[(S.home&&S.home.style)||'meadow']||HOME_STYLES.meadow;BIOMES.home.grass=S.wild?isleTint(SEASON_GRASS[season()]):st.grass;BIOMES.home.sand=st.sand;return st;}
 /* ---- real seasons (a wild island follows the calendar: northern-hemisphere months, or S.seasonOv from the dev tools) ---- */
 function season(){if(S.seasonOv)return S.seasonOv;const m=new Date(typeof gameNow==='function'?gameNow():Date.now()).getMonth();return m===11||m<2?'winter':m<5?'spring':m<9?'summer':'autumn';} // leaves turn in October and November, as they do in the woods
-const SEASON_GRASS={spring:[0x82ca50,0x8ed25a,0x78c048],summer:[0x5c9640,0x66a048,0x528c38],autumn:[0x98b048,0xa4b850,0x8ea842],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
+const SEASON_GRASS={spring:[0x7cbf56,0x88c660,0x72b44e],summer:[0x5c9640,0x66a048,0x528c38],autumn:[0x84a650,0x8eae58,0x7c9e4a],winter:[0xd2ddd6,0xdfe7e2,0xc6d3cb]};
 let seasonNow=null;
 // when the season turns (checked each morning), the island's trees and grass change with it
 function seasonCheck(force){const s=season();if(s===seasonNow&&!force)return;const first=seasonNow===null;seasonNow=s;if(!S.wild||first&&!force)return;
@@ -6810,6 +6816,7 @@ const SP_COLS={
   peach:{spring:[0xffc0cc,0xf08aa4,0xc05a7a],summer:[0x86c054,0x5a9a3e,0x346a2e],autumn:[0xe8b848,0xc88a30,0x8a5a22]},
   birch:{spring:[0xc0e88a,0x8ecc5e,0x5a9a40],summer:[0x9ad464,0x6cb048,0x3e7a34],autumn:[0xfae070,0xf0c040,0xc08a20]},
   poplar:{spring:[0x9ad46a,0x68aa48,0x3c7434],summer:[0x6aac4a,0x46883a,0x265a2c],autumn:[0xf6d25a,0xe0aa38,0xa87a24]}};
+{const c=new T.Color(),h={};for(const k in SP_COLS)SP_COLS[k].autumn=SP_COLS[k].autumn.map(v=>{c.setHex(v).getHSL(h);return c.setHSL(h.h,h.s*0.84,h.l*0.97).getHex();});}/* autumn, muted to sit together */
 // scale a set of parts about a point (for stretching a crown taller or wider)
 function stretchParts(p,from,sx,sy,sz,cx,cy,cz){for(let i=from;i<p.length;i++){const q=p[i];q.x=cx+(q.x-cx)*sx;q.y=cy+(q.y-cy)*sy;q.z=cz+(q.z-cz)*sz;q.sx*=sx;q.sy*=sy;q.sz*=sz;}}
 function blossom(p,R,n,cx,cy,cz,rad,cols){dots(p,R,n,cx,cy+rad*0.2,cz,rad*1.7,rad*1.5,cols,0xf6d04a,0.075);}
@@ -12093,7 +12100,7 @@ function debrisParts(k,R,v,sub){const p=[];switch(k){
   return p;}
 // wild bushes change with the seasons too: v0 a plain round bush, v1 a flowering one (azalea pink in spring, hydrangea blue
 // in summer), v2 a berry bush; autumn turns them rust and gold, winter tucks them under a cap of snow
-const BUSH_COLS={spring:[0xa0dc6c,0x58a846,0x2c6630],summer:[0x86c85a,0x48943c,0x245a2a],autumn:[0xe8a848,0xc8742e,0x8a4a22],winter:[0x6a9a6a,0x4a7a52,0x2c4e3a]};
+const BUSH_COLS={spring:[0xa0dc6c,0x58a846,0x2c6630],summer:[0x86c85a,0x48943c,0x245a2a],autumn:[0xc89a58,0xa8703a,0x7a4a2a],winter:[0x6a9a6a,0x4a7a52,0x2c4e3a]};
 function bushParts(v,bk){const s=season(),R=mulberry(hi(v,57,S.worldSeed|0)),p=[],c=(s==='autumn'&&v===0)?[0xa8c860,0x6a9a3e,0x3a6a2a]:BUSH_COLS[s],sc=0.62;
   bushClump(p,R,c,sc);
   if(v===1&&s==='spring')dots(p,R,10,0,0.3*sc,0,0.5*sc,0.38*sc,[0xf8a8c8,0xf490b8,0xffffff],0xf6d04a,0.075);
@@ -15776,7 +15783,7 @@ function layCove(){dreamProgress();coveBag();const D=COVE,R=mulberry(D.seed^0x5c
   lane([23,-5],[26,-4]);lane([FX1+2,2],[-10,4]);
   // the cherry avenue down from the plaza: blossom either side of the first trail
   {const p=walk([cx,cz+5],doors[1]);p.forEach(([x,z],i)=>{if(i%2===0&&i>1&&i<p.length-2){tree(x-1,z,3);tree(x+1,z,3);}});}
-  all.forEach(([x,z],i)=>{const sd=i%2?1:-1;if(i%9===4)obj('stonelantern',x+sd,z)||obj('stonelantern',x,z+sd);else if(R()<0.35)obj('flowers',x+(R()<0.5?1:-1),z)||obj('flowers',x,z+(R()<0.5?1:-1));});
+  all.forEach(([x,z],i)=>{const sd=i%2?1:-1;if(i%16===8)obj('stonelantern',x+sd,z)||obj('stonelantern',x,z+sd);else if(R()<0.12)obj('flowers',x+(R()<0.5?1:-1),z)||obj('flowers',x,z+(R()<0.5?1:-1));});
   // ---- trees: pines and spruces along the foot of the cliff, a maple wood round the west house, oaks in the
   // meadows with a swing under one, poplars by the shore, blossom round the plaza
   for(let x=-27;x<=25;x+=2)if(R()<0.6)tree(x,-10+(R()<0.5?1:0),R()<0.5?1:8);
@@ -15790,9 +15797,9 @@ function layCove(){dreamProgress();coveBag();const D=COVE,R=mulberry(D.seed^0x5c
     const mixes=[[0,2,7],[3,7,9],[1,8,0],[2,2,3],[0,0,9],[7,7,2]];
     for(let g=0;g<70;g++){const x=Math.round(-27+R()*52),z=Math.round(-9+R()*28);if(!clear(x,z))continue;const mix=mixes[g%mixes.length],n=3+Math.floor(R()*4);
       for(let i=0;i<n;i++){const a=R()*6.283,r=i?1.5+R()*1.8:0,tx=Math.round(x+Math.cos(a)*r),tz=Math.round(z+Math.sin(a)*r);if(clear(tx,tz))tree(tx,tz,mix[i%3]+(R()<0.4?TREE_NS:0));}
-      if(R()<0.5){const a=R()*6.283;obj(R()<0.5?'toadstool':'birdhouse',Math.round(x+Math.cos(a)*1.2),Math.round(z+Math.sin(a)*1.2),a);}}}
+      if(R()<0.2){const a=R()*6.283;obj(R()<0.5?'toadstool':'birdhouse',Math.round(x+Math.cos(a)*1.2),Math.round(z+Math.sin(a)*1.2),a);}}}
   // meadow flowers and clover in the open grass that's left
-  for(let x=-28;x<=26;x++)for(let z=-9;z<=21;z++){if(!grass(x,z)||occ.has(k2(x,z))||focc.has(k2(x,z))||inBld(x,z))continue;const h=hash(x*0.21+7,z*0.19);if(h>0.9)obj('flowers',x,z);else if(h<0.04)obj('clover',x,z);}
+  for(let x=-28;x<=26;x++)for(let z=-9;z<=21;z++){if(!grass(x,z)||occ.has(k2(x,z))||focc.has(k2(x,z))||inBld(x,z))continue;const h=hash(x*0.21+7,z*0.19);if(h>0.965)obj('flowers',x,z);else if(h<0.015)obj('clover',x,z);}
   S.nextId=id;
   // ---- clear the wild off the lowland; keep the woods on the cliff and along the far west and east edges
   const kept=(x,z)=>(lvlMap.get(k2(x,z))||0)>0||x>=26||x<=-29;
@@ -15843,6 +15850,7 @@ function frame(now){
   const k=paint?0:Math.min(1,dt*5);updateChat(dt,tt);updateCharEd(dt,tt);const [fx,fz]=charEd?charEdFocus():chatFocus();cam.tx+=(fx-cam.tx)*k;cam.tz+=(fz-cam.tz)*k;PL('boat');applyCam();cullIslands();PL('cull');updateNearGrass(dt);PL('near'); // hold the view still while drag-farming so tiles stay under the finger
   {const t0=performance.now();applyTime();FRAME_STAT.time=(FRAME_STAT.time||0)*0.9+(performance.now()-t0)*0.1;}
   updateTides();water.position.set(Math.round(cam.tx/10)*10,tideY,Math.round(cam.tz/10)*10);
+  postMat.uniforms.atmo.value.z=camD()*0.85;postMat.uniforms.hzC.value.copy(scene.fog.color);
   fogW=lerp(fogW,wxNow()==='fog'&&!S.sea?1:0,Math.min(1,dt*0.6));scene.fog.near=Math.max(4,camD()+45-fogBoost*30-fogW*50);scene.fog.far=camD()+300-fogBoost*200-fogW*245;/* foggy days close the world in *//* a light haze: neighbouring islands stay green on the horizon */
   PL('timeTide');updateSwim(dt,tt);updateReefLife(dt,tt);updateTerra(dt);PL('swim');/* after the fog, which it tints under water */
   flushCrops();for(const {g} of cropMeshes.values())if(g.children.length)g.rotation.z=Math.sin(tt*1.6+g.userData.ph)*0.035;

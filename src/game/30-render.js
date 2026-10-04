@@ -14,13 +14,13 @@ const camD=()=>cam.dist*LENS; // how far the camera really is from what it looks
 let W=1,H=1,PX=2,rt=null;
 const post={scene:new T.Scene(),cam:new T.OrthographicCamera(-1,1,1,-1,0,1)};
 const postMat=new T.ShaderMaterial({
-  uniforms:{tC:{value:null},tD:{value:null},tB:{value:null},bloomC:{value:new T.Vector3(.3,.26,.2)},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},tm:{value:0},
+  uniforms:{tC:{value:null},tD:{value:null},tB:{value:null},bloomC:{value:new T.Vector3(.3,.26,.2)},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},atmo:{value:new T.Vector4(.28,.7,40,.16)},hzC:{value:new T.Color(0xbfe0ff)},tm:{value:0},
     // the visual style (applyFx): colour grade, outlines, glow, film texture and palette
     fxA:{value:new T.Vector4(1,1,1,0)}/* saturation, contrast, brightness, faded blacks */,tS:{value:new T.Vector3(1,1,1)},tH:{value:new T.Vector3(1,1,1)},
     edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},uw:{value:0},rip:{value:0},uwC:{value:new T.Color(0x2a8cc0)},uwL:{value:1}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
   fragmentShader:`
-    uniform sampler2D tC;uniform sampler2D tD;uniform sampler2D tB;uniform vec3 bloomC;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;uniform float tm;varying vec2 vUv;
+    uniform sampler2D tC;uniform sampler2D tD;uniform sampler2D tB;uniform vec3 bloomC;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;uniform vec4 atmo;uniform vec3 hzC;uniform float tm;varying vec2 vUv;
     uniform vec4 fxA;uniform vec3 tS;uniform vec3 tH;uniform float edgeK;uniform vec3 edgeC;uniform float dith;uniform float grain;uniform float vig;uniform float bloomK;uniform float gradeK;uniform float pal;uniform float tilt;uniform float scan;uniform float paper;uniform float uw;uniform float rip;uniform vec3 uwC;uniform float uwL;
     float b2(vec2 a){a=floor(a);return fract(a.x*.5+a.y*a.y*.75);}
     float bayer(vec2 a){return b2(.5*a)*.25+b2(a);}
@@ -50,6 +50,12 @@ const postMat=new T.ShaderMaterial({
       float g=gw*gradeK;float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.+.04*g);c=mix(c,(c-.5)*1.08+.48,g);
       c*=mix(vec3(1.),mix(vec3(.96,.98,1.05),vec3(1.04,1.,.95),smoothstep(.25,.85,l)),g);
       c=mix(c,c*vec3(1.04,1.,.95)+vec3(.03,.02,.0),smoothstep(110.,300.,d)*step(d,cf*.6)*.45*g);
+      // atmosphere: the loudest colours roll off softly (limes and yellows most), and the land melts into a soft
+      // sky-coloured haze with distance, so the near things read and the far ones settle back
+      if(pal<0.5){float mx=max(c.r,max(c.g,c.b)),mn=min(c.r,min(c.g,c.b)),ch=mx-mn,lm=dot(c,vec3(.299,.587,.114));
+        float yl=smoothstep(.0,.25,min(c.r,c.g)-c.b)*smoothstep(.35,.0,abs(c.r-c.g));
+        c=mix(vec3(lm),c,1./(1.+ch*atmo.x+yl*ch*atmo.y));
+        float hz=smoothstep(atmo.z,atmo.z*2.6,d)*step(d,cf*.6)*atmo.w*(1.-uw);c=mix(c,hzC*vec3(1.02,1.,.98),hz);}
       // the style's grade: saturation, contrast, brightness, lifted blacks and split-toning
       l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,fxA.x);c=(c-.5)*fxA.y+.5;c*=fxA.z;c=fxA.w+c*(1.-fxA.w);
       c*=mix(tS,tH,smoothstep(.15,.85,l));

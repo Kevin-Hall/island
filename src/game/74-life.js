@@ -58,7 +58,7 @@ function debrisParts(k,R,v,sub){const p=[];switch(k){
   return p;}
 // wild bushes change with the seasons too: v0 a plain round bush, v1 a flowering one (azalea pink in spring, hydrangea blue
 // in summer), v2 a berry bush; autumn turns them rust and gold, winter tucks them under a cap of snow
-const BUSH_COLS={spring:[0xa0dc6c,0x58a846,0x2c6630],summer:[0x86c85a,0x48943c,0x245a2a],autumn:[0xe8a848,0xc8742e,0x8a4a22],winter:[0x6a9a6a,0x4a7a52,0x2c4e3a]};
+const BUSH_COLS={spring:[0xa0dc6c,0x58a846,0x2c6630],summer:[0x86c85a,0x48943c,0x245a2a],autumn:[0xc89a58,0xa8703a,0x7a4a2a],winter:[0x6a9a6a,0x4a7a52,0x2c4e3a]};
 function bushParts(v,bk){const s=season(),R=mulberry(hi(v,57,S.worldSeed|0)),p=[],c=(s==='autumn'&&v===0)?[0xa8c860,0x6a9a3e,0x3a6a2a]:BUSH_COLS[s],sc=0.62;
   bushClump(p,R,c,sc);
   if(v===1&&s==='spring')dots(p,R,10,0,0.3*sc,0,0.5*sc,0.38*sc,[0xf8a8c8,0xf490b8,0xffffff],0xf6d04a,0.075);

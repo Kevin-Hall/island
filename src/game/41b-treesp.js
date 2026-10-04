@@ -21,6 +21,7 @@ const SP_COLS={
   peach:{spring:[0xffc0cc,0xf08aa4,0xc05a7a],summer:[0x86c054,0x5a9a3e,0x346a2e],autumn:[0xe8b848,0xc88a30,0x8a5a22]},
   birch:{spring:[0xc0e88a,0x8ecc5e,0x5a9a40],summer:[0x9ad464,0x6cb048,0x3e7a34],autumn:[0xfae070,0xf0c040,0xc08a20]},
   poplar:{spring:[0x9ad46a,0x68aa48,0x3c7434],summer:[0x6aac4a,0x46883a,0x265a2c],autumn:[0xf6d25a,0xe0aa38,0xa87a24]}};
+{const c=new T.Color(),h={};for(const k in SP_COLS)SP_COLS[k].autumn=SP_COLS[k].autumn.map(v=>{c.setHex(v).getHSL(h);return c.setHSL(h.h,h.s*0.84,h.l*0.97).getHex();});}/* autumn, muted to sit together */
 // scale a set of parts about a point (for stretching a crown taller or wider)
 function stretchParts(p,from,sx,sy,sz,cx,cy,cz){for(let i=from;i<p.length;i++){const q=p[i];q.x=cx+(q.x-cx)*sx;q.y=cy+(q.y-cy)*sy;q.z=cz+(q.z-cz)*sz;q.sx*=sx;q.sy*=sy;q.sz*=sz;}}
 function blossom(p,R,n,cx,cy,cz,rad,cols){dots(p,R,n,cx,cy+rad*0.2,cz,rad*1.7,rad*1.5,cols,0xf6d04a,0.075);}

@@ -153,7 +153,7 @@ function layCove(){dreamProgress();coveBag();const D=COVE,R=mulberry(D.seed^0x5c
   lane([23,-5],[26,-4]);lane([FX1+2,2],[-10,4]);
   // the cherry avenue down from the plaza: blossom either side of the first trail
   {const p=walk([cx,cz+5],doors[1]);p.forEach(([x,z],i)=>{if(i%2===0&&i>1&&i<p.length-2){tree(x-1,z,3);tree(x+1,z,3);}});}
-  all.forEach(([x,z],i)=>{const sd=i%2?1:-1;if(i%9===4)obj('stonelantern',x+sd,z)||obj('stonelantern',x,z+sd);else if(R()<0.35)obj('flowers',x+(R()<0.5?1:-1),z)||obj('flowers',x,z+(R()<0.5?1:-1));});
+  all.forEach(([x,z],i)=>{const sd=i%2?1:-1;if(i%16===8)obj('stonelantern',x+sd,z)||obj('stonelantern',x,z+sd);else if(R()<0.12)obj('flowers',x+(R()<0.5?1:-1),z)||obj('flowers',x,z+(R()<0.5?1:-1));});
   // ---- trees: pines and spruces along the foot of the cliff, a maple wood round the west house, oaks in the
   // meadows with a swing under one, poplars by the shore, blossom round the plaza
   for(let x=-27;x<=25;x+=2)if(R()<0.6)tree(x,-10+(R()<0.5?1:0),R()<0.5?1:8);
@@ -167,9 +167,9 @@ function layCove(){dreamProgress();coveBag();const D=COVE,R=mulberry(D.seed^0x5c
     const mixes=[[0,2,7],[3,7,9],[1,8,0],[2,2,3],[0,0,9],[7,7,2]];
     for(let g=0;g<70;g++){const x=Math.round(-27+R()*52),z=Math.round(-9+R()*28);if(!clear(x,z))continue;const mix=mixes[g%mixes.length],n=3+Math.floor(R()*4);
       for(let i=0;i<n;i++){const a=R()*6.283,r=i?1.5+R()*1.8:0,tx=Math.round(x+Math.cos(a)*r),tz=Math.round(z+Math.sin(a)*r);if(clear(tx,tz))tree(tx,tz,mix[i%3]+(R()<0.4?TREE_NS:0));}
-      if(R()<0.5){const a=R()*6.283;obj(R()<0.5?'toadstool':'birdhouse',Math.round(x+Math.cos(a)*1.2),Math.round(z+Math.sin(a)*1.2),a);}}}
+      if(R()<0.2){const a=R()*6.283;obj(R()<0.5?'toadstool':'birdhouse',Math.round(x+Math.cos(a)*1.2),Math.round(z+Math.sin(a)*1.2),a);}}}
   // meadow flowers and clover in the open grass that's left
-  for(let x=-28;x<=26;x++)for(let z=-9;z<=21;z++){if(!grass(x,z)||occ.has(k2(x,z))||focc.has(k2(x,z))||inBld(x,z))continue;const h=hash(x*0.21+7,z*0.19);if(h>0.9)obj('flowers',x,z);else if(h<0.04)obj('clover',x,z);}
+  for(let x=-28;x<=26;x++)for(let z=-9;z<=21;z++){if(!grass(x,z)||occ.has(k2(x,z))||focc.has(k2(x,z))||inBld(x,z))continue;const h=hash(x*0.21+7,z*0.19);if(h>0.965)obj('flowers',x,z);else if(h<0.015)obj('clover',x,z);}
   S.nextId=id;
   // ---- clear the wild off the lowland; keep the woods on the cliff and along the far west and east edges
   const kept=(x,z)=>(lvlMap.get(k2(x,z))||0)>0||x>=26||x<=-29;
