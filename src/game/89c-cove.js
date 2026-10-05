@@ -170,6 +170,12 @@ function layCove(){dreamProgress();coveBag();const D=COVE,R=mulberry(D.seed^0x5c
       if(R()<0.2){const a=R()*6.283;obj(R()<0.5?'toadstool':'birdhouse',Math.round(x+Math.cos(a)*1.2),Math.round(z+Math.sin(a)*1.2),a);}}}
   // meadow flowers and clover in the open grass that's left
   for(let x=-28;x<=26;x++)for(let z=-9;z<=21;z++){if(!grass(x,z)||occ.has(k2(x,z))||focc.has(k2(x,z))||inBld(x,z))continue;const h=hash(x*0.21+7,z*0.19);if(h>0.965)obj('flowers',x,z);else if(h<0.015)obj('clover',x,z);}
+  // ---- the ranch by the farmyard: a coop and a barn with a few animals, and a pet who already lives with you (75b)
+  {const near=(k,x0,z0)=>{for(let r=0;r<6;r++)for(let a=-r;a<=r;a++)for(let b=-r;b<=r;b++)if(Math.max(Math.abs(a),Math.abs(b))===r&&obj(k,x0+a,z0+b))return S.objs[S.objs.length-1];return null;};
+    const co=near('coop',-14,-6),ba=near('barn',-7,-12+0);const R0=RS();R0.animals=[];R0.eggs={};
+    if(co)[['chicken','Clover',0],['chicken','Pudding',1],['duck','Waffles',1]].forEach(([k,n,v])=>R0.animals.push({id:id++,k,name:n,home:co.id,f:420,pet:0,n:0,ready:null,v}));
+    if(ba)[['cow','Daisy',0],['goat','Nutmeg',1],['sheep','Pippin',0],['pig','Truffle',0]].forEach(([k,n,v])=>R0.animals.push({id:id++,k,name:n,home:ba.id,f:420,pet:0,n:0,ready:k==='cow'?'milk':k==='sheep'?'wool':null,v}));
+    if(co)R0.eggs[co.id]=['egg','legg','duckegg'];R0.pet={k:'dog',v:0,name:'Biscuit',f:520,pet:0,stray:0};S.inv['x:hay']=(S.inv['x:hay']||0)+20;}
   S.nextId=id;
   // ---- clear the wild off the lowland; keep the woods on the cliff and along the far west and east edges
   const kept=(x,z)=>(lvlMap.get(k2(x,z))||0)>0||x>=26||x<=-29;

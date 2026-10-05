@@ -35,6 +35,7 @@ function whereStr(I,key){if(key.startsWith('s:'))return seaWhere(I);const bios=I
   if(I.time)w+=' · '+I.time;if(I.rain)w+=' · rain only';if(I.dry)w+=' · clear skies';if(I.sea)w+=' · '+I.sea.join(' & ');if(I.hr)w+=' · '+clockStr(I.hr[0])+'–'+clockStr(I.hr[1]);if(I.tpl&&!I.forage&&I.w)w+=' · on beaches';if(key==='g:feather')w='shoo a crow at home';if(key==='g:starfrag')w='wish on a shooting star, then check your beach';return w;}
 function renderSheet(){
   if(!sheet)return;const body=$('sheetBody');const lv=level();let h='';
+  if(sheet.kind==='ranch'){ranchSheet(body);return;}/* a coop or barn (75b) */
   if(sheet.kind==='seeds'){$('sheetTitle').textContent='Seeds';tabs([]);
     h+=`<p class="note">Pick a seed, then tap tilled soil on your home island. You pay when you plant.</p><div class="grid">`;
     for(const id of [...CROP_IDS,'mystery']){const C=id==='mystery'?MYSTERY:CROPS[id],lock=C.lvl>lv;
@@ -42,8 +43,8 @@ function renderSheet(){
       h+=`<button class="card ${S.seed===id?'sel':''} ${lock?'lock':''}" data-seed="${id}" ${lock?'disabled':''}><img class="px" src="${seedIcon(id)}" alt=""><span class="grow"><span class="nm">${C.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+C.lvl:sub}</span></span><span class="price">${S.free[id]?`<span class="done">${S.free[id]} free</span>`:sh(C.seed)}</span></button>`;}
     h+='</div>';}
   // the workbench: everything you can make, what you can make right now first
-  else if(sheet.kind==='craft'){$('sheetTitle').textContent='Workbench';tabs([['all','All'],['can','Can make now'],['decor','Decor'],['treat','Treats'],['handy','Handy things']]);
-    const T0=sheet.tab||'all',ok=r=>T0==='all'||T0==='can'&&canCraft(r)||T0==='decor'&&r.out[0]==='b'||T0==='treat'&&r.out[0]==='x'&&(CONSUM[r.out[1]]||{}).cat==='treat'||T0==='handy'&&r.out[0]!=='b'&&(CONSUM[r.out[1]]||{}).cat!=='treat';
+  else if(sheet.kind==='craft'){$('sheetTitle').textContent='Workbench';tabs([['all','All'],['can','Can make now'],['decor','Decor'],['ranch','Ranch'],['treat','Treats'],['handy','Handy things']]);
+    const T0=sheet.tab||'all',ok=r=>T0==='all'||T0==='can'&&canCraft(r)||T0==='decor'&&r.out[0]==='b'||T0==='treat'&&r.out[0]==='x'&&(CONSUM[r.out[1]]||{}).cat==='treat'||T0==='ranch'&&(r.out[0]==='b'?/^(coop|barn)$/.test(r.out[1]):/^(farm|artisan)$/.test((CONSUM[r.out[1]]||{}).cat))||T0==='handy'&&r.out[0]!=='b'&&!/^(treat|farm|artisan)$/.test((CONSUM[r.out[1]]||{}).cat);
     const list=RECIPES.map((r,i)=>[r,i]).filter(([r])=>ok(r)).sort(([a],[b])=>(canCraft(b)-canCraft(a))||((a.lvl>lv)-(b.lvl>lv)));
     h+=`<p class="note">Wood, stone and fiber, and whatever you forage, catch and grow, make decor, treats and handy things. Decor you make goes in your <b>Bag</b>, ready to place.</p><div class="list">`;
     if(!list.length)h+=`<p class="note">Nothing you can make just yet: shake trees, break rocks and pull weeds to gather more.</p>`;
@@ -201,6 +202,7 @@ $('sheetBody').addEventListener('input',e=>{if(e.target.id==='devHour'){setHour(
 $('sheetTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;sheet.tab=b.dataset.tab;SFX.ui();renderSheet();});
 $('sheetBody').addEventListener('click',e=>{
   const el=e.target.closest('button');if(!el||el.disabled)return;const d=el.dataset;
+  if(sheet&&sheet.kind==='ranch'&&ranchClick(d))return;
   if(d.openlook){openSheet('look');return;}
   if(d.human){closeSheet();openCharEd();return;}
   if(d.look){setLook({sp:d.look});renderSheet();return;}if(d.fur){setLook({fur:+d.fur});renderSheet();return;}if(d.shirt){setLook({shirt:+d.shirt});renderSheet();return;}

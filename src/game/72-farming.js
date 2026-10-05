@@ -61,7 +61,7 @@ function updatePops(dt){for(let i=pops.length-1;i>=0;i--){const p=pops[i];p.t+=d
   else{const s=Math.max(0,1-(p.t-1.2)/0.25)*(p.sc||0.7);g.scale.setScalar(s);g.position.set(hx,hy,hz);if(s<=0){scene.remove(g);g.traverse(o=>{if(o.geometry&&!o.geometry.userData.keep)o.geometry.dispose();});pops.splice(i,1);}}}}
 function harvest(k,x,z){
   const t=S.tiles[k],c=t.crop,C=CROPS[c.t],V=VAR[c.v||'normal'];const key=c.t+'|'+V.id;popCrop(c.t,x,z);
-  const first=gain(key);S.harvested++;
+  const first=gain(key);S.harvested++;if(c.t==='wheat')gain('x:hay',3);/* straw for the animals (75b) */
   t.crop=null;syncCrop(k);walkTo(x,z);vil.hop=0.3;
   burst(x,0.8,z,C.col,10,1.5,0.08);if(V.id!=='normal')for(let i=0;i<10;i++)sparkle(x,0.8,z,0xfff0a0);
   floatText(x,1.3,z,'+ '+(V.name?V.name+' ':'')+C.name,V.id!=='normal'?'gold':'');
@@ -85,7 +85,7 @@ function useFixed(x,z){
   if(isFire(x,z)){restByFire();return true;}
   if(isTent(x,z)){walkTo(x+0.5,z+2);tentTap();return true;}
   if(f&&townTap(f,x,z))return true;
-  const o=objAt(x,z);if(o&&DISPLAYS.has(o.k)){walkTo(x,z);displayTap(o);return true;}/* a produce display: fill it (58c) */
+  const o=objAt(x,z);if(o&&(o.k==='coop'||o.k==='barn')){ranchBldTap(o);return true;}/* the ranch (75b) */if(o&&DISPLAYS.has(o.k)){walkTo(x,z);displayTap(o);return true;}/* a produce display: fill it (58c) */
   if(o){const B=BUILD[o.k];walkTo(x,z);toast(`<b>${B.name}</b> — ${B.desc}`);return true;}
   return false;}
 // the farming actions tools perform (71-tools decides which one a tap means)

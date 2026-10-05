@@ -45,7 +45,7 @@ function clockStr(h){let hh=Math.floor(h),mm=Math.floor((h-hh)*6)*10;const ap=hh
    ========================================================= */
 let sprayT=0;
 function dawn(quiet){
-  S.day++;for(const k in S.tiles)S.tiles[k].w=0;regrowDebris();seasonCheck();morningMoveIn();seaGifts();collectCrate();/* the sea leaves something every night */
+  S.day++;try{ranchDawn(quiet);}catch(e){console.error(e);}/* the animals and the pet (75b): before the weather turns over */for(const k in S.tiles)S.tiles[k].w=0;regrowDebris();seasonCheck();morningMoveIn();seaGifts();collectCrate();/* the sea leaves something every night */
   dawnWeather();S.meteor=false;
   const wishes=Math.min(4,S.wishes||0);S.wishes=0;for(let i=0;i<wishes;i++){const c=islands[0].sand.filter(([x,z])=>freeTile(x,z));if(c.length){const [x,z]=pickR(c);S.finds.push({k:'starfrag',x,z});}}
   if(wishes&&!quiet)setTimeout(()=>toast('Star fragments washed up on your beach overnight!','rare',ICON['g:starfrag']),1200);

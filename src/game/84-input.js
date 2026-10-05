@@ -32,6 +32,7 @@ function onTap(cx,cy){buzz(6);if(charEd)return;/* the character editor: taps go 
     else{const w=waterPoint(cx,cy);if(w)sailTo(w.x,w.z,null,'');}
     return;}
   if(swim.on&&swim.uw>0.5){clearAction();swimTap(cx,cy);return;}/* under water: swim, or catch what you tapped */
+  if(S.mode!=='edit'&&ranchTap(cx,cy)){clearAction();return;}/* animals and the pet (75b) */
   if(S.mode!=='edit'&&tapLife(cx,cy)){clearAction();updateHUD();return;}
   if(S.mode!=='edit'&&playTap(cx,cy)){clearAction();return;}/* the beach ball, or yourself (77b) */
   if(hit&&hit.river){clearAction();const ri=islandAt(hit.x,hit.z),here0=curIsl();if(!ri||!here0||ri.id!==here0.id)return;

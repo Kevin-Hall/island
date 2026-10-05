@@ -38,5 +38,5 @@ function updateLife(dt,tt){
     checkDiscovery();const ci=curIsl();if((ci?ci.id:-1)!==ffIsl)placeFireflies(ci);}
   for(const i of islands){if(!i.pgroup)continue;for(const m of i.pgroup.children){const Pd=PLANTS[m.userData.plant.id];if(Pd.w<5&&Math.random()<dt*1.2)sparkle(m.position.x,0.8,m.position.z,0xfff0a0);}
     if(i.vent&&Math.random()<dt*3&&Math.hypot(i.cx-cam.tx,i.cz-cam.tz)<50)emit(i.vent[0]+(Math.random()-0.5)*0.6,i.vent[1],i.vent[2]+(Math.random()-0.5)*0.6,{vy:0.9,vx:0.2,life:3,max:3,size:0.28,color:Math.random()<0.3?0xf06a2a:0x8a8490});}
-  updateBugs(dt,tt);updateCritters(dt,tt);updateForage(dt);updatePlay(dt);updateCraftFx(dt);updateDecorate(dt,tt);updateCrow(dt,tt);updateFishing(dt,tt);updateFlotsam(dt,tt);}
+  updateBugs(dt,tt);updateCritters(dt,tt);updateForage(dt);updatePlay(dt);updateCraftFx(dt);updateDecorate(dt,tt);updateRanch(dt,tt);updateCrow(dt,tt);updateFishing(dt,tt);updateFlotsam(dt,tt);}
 

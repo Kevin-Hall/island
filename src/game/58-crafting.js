@@ -50,7 +50,7 @@ function syncObjs(){
   houseMesh=houseGroup(S.house);houseMesh.position.set(HOUSE_AT.x+0.5,Math.min(topY(HOUSE_AT.x,HOUSE_AT.z),topY(HOUSE_AT.x+1,HOUSE_AT.z+1))||0.3,HOUSE_AT.z+0.5);
   objRoot.add(houseMesh);
   binMesh=binGroup();binMesh.position.set(BIN_AT.x,topY(BIN_AT.x,BIN_AT.z),BIN_AT.z);binMesh.rotation.y=-0.2;objRoot.add(binMesh);
-  recomputeBonuses();
+  recomputeBonuses();try{syncRanch();}catch(e){}/* the animals follow their buildings (75b) */
 }
 let bonus=new Map(),hasWindmill=false;
 function recomputeBonuses(){bonus=new Map();hasWindmill=S.objs.some(o=>o.k==='windmill');
