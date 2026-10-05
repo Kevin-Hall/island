@@ -85,7 +85,7 @@ function useFixed(x,z){
   if(isFire(x,z)){restByFire();return true;}
   if(isTent(x,z)){walkTo(x+0.5,z+2);tentTap();return true;}
   if(f&&townTap(f,x,z))return true;
-  const o=objAt(x,z);if(o&&(o.k==='coop'||o.k==='barn')){ranchBldTap(o);return true;}/* the ranch (75b) */if(o&&DISPLAYS.has(o.k)){walkTo(x,z);displayTap(o);return true;}/* a produce display: fill it (58c) */
+  const o=objAt(x,z);if(o&&(o.k==='coop'||o.k==='barn')){ranchBldTap(o);return true;}if(o&&MACH[o.k]){machineTap(o);return true;}if(o&&o.k==='trough'){troughTap(o);return true;}/* (75c) *//* the ranch (75b) */if(o&&DISPLAYS.has(o.k)){walkTo(x,z);displayTap(o);return true;}/* a produce display: fill it (58c) */
   if(o){const B=BUILD[o.k];walkTo(x,z);toast(`<b>${B.name}</b> — ${B.desc}`);return true;}
   return false;}
 // the farming actions tools perform (71-tools decides which one a tap means)

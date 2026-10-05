@@ -175,6 +175,10 @@ function layCove(){dreamProgress();coveBag();const D=COVE,R=mulberry(D.seed^0x5c
     const co=near('coop',-14,-6),ba=near('barn',-7,-12+0);const R0=RS();R0.animals=[];R0.eggs={};
     if(co)[['chicken','Clover',0],['chicken','Pudding',1],['duck','Waffles',1]].forEach(([k,n,v])=>R0.animals.push({id:id++,k,name:n,home:co.id,f:420,pet:0,n:0,ready:null,v}));
     if(ba)[['cow','Daisy',0],['goat','Nutmeg',1],['sheep','Pippin',0],['pig','Truffle',0]].forEach(([k,n,v])=>R0.animals.push({id:id++,k,name:n,home:ba.id,f:420,pet:0,n:0,ready:k==='cow'?'milk':k==='sheep'?'wool':null,v}));
+    // farm pieces round the yard (75c): troughs, machines already at work, a pet bed, a cart and churns
+    if(ba){const t=near('trough',ba.x+2,ba.z+1);if(t)t.hay=20;near('watertrough',ba.x-2,ba.z+1);near('churns',ba.x+2,ba.z-1);const cp=near('cheesepress',ba.x+3,ba.z+2);if(cp)cp.job={out:'cheese',n:1,at:S.day*24+S.hour+0.5};near('keg',ba.x+4,ba.z+2);near('farmcart',ba.x-3,ba.z+3,Math.PI/2);}
+    if(co){near('nestbox',co.x-2,co.z);const mm=near('mayomaker',co.x+2,co.z+1);if(mm)mm.job={out:'mayo',n:1,at:S.day*24+S.hour-1};near('duckpond',co.x,co.z+3);near('presjar',co.x-2,co.z+2);}
+    near('doghouse',hx-3,hz+2);near('petbowl',hx-3,hz+3);near('compost',FX0-2,FZ1);near('farmsign',FM,FZ1+3);
     if(co)R0.eggs[co.id]=['egg','legg','duckegg'];R0.pet={k:'dog',v:0,name:'Biscuit',f:520,pet:0,stray:0};S.inv['x:hay']=(S.inv['x:hay']||0)+20;}
   S.nextId=id;
   // ---- clear the wild off the lowland; keep the woods on the cliff and along the far west and east edges

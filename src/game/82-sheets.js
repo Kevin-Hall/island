@@ -44,7 +44,7 @@ function renderSheet(){
     h+='</div>';}
   // the workbench: everything you can make, what you can make right now first
   else if(sheet.kind==='craft'){$('sheetTitle').textContent='Workbench';tabs([['all','All'],['can','Can make now'],['decor','Decor'],['ranch','Ranch'],['treat','Treats'],['handy','Handy things']]);
-    const T0=sheet.tab||'all',ok=r=>T0==='all'||T0==='can'&&canCraft(r)||T0==='decor'&&r.out[0]==='b'||T0==='treat'&&r.out[0]==='x'&&(CONSUM[r.out[1]]||{}).cat==='treat'||T0==='ranch'&&(r.out[0]==='b'?/^(coop|barn)$/.test(r.out[1]):/^(farm|artisan)$/.test((CONSUM[r.out[1]]||{}).cat))||T0==='handy'&&r.out[0]!=='b'&&!/^(treat|farm|artisan)$/.test((CONSUM[r.out[1]]||{}).cat);
+    const T0=sheet.tab||'all',ok=r=>T0==='all'||T0==='can'&&canCraft(r)||T0==='decor'&&r.out[0]==='b'||T0==='treat'&&r.out[0]==='x'&&(CONSUM[r.out[1]]||{}).cat==='treat'||T0==='ranch'&&(r.out[0]==='b'?(/^(coop|barn)$/.test(r.out[1])||FARM_DECOR.has(r.out[1])):/^(farm|artisan)$/.test((CONSUM[r.out[1]]||{}).cat))||T0==='handy'&&r.out[0]!=='b'&&!/^(treat|farm|artisan)$/.test((CONSUM[r.out[1]]||{}).cat);
     const list=RECIPES.map((r,i)=>[r,i]).filter(([r])=>ok(r)).sort(([a],[b])=>(canCraft(b)-canCraft(a))||((a.lvl>lv)-(b.lvl>lv)));
     h+=`<p class="note">Wood, stone and fiber, and whatever you forage, catch and grow, make decor, treats and handy things. Decor you make goes in your <b>Bag</b>, ready to place.</p><div class="list">`;
     if(!list.length)h+=`<p class="note">Nothing you can make just yet: shake trees, break rocks and pull weeds to gather more.</p>`;

@@ -69,7 +69,7 @@ function RS(){if(!S.ranch)S.ranch={animals:[],eggs:{},pet:null};if(!S.ranch.eggs
 // ---- models: small, round, chibi animals, rigged so they can move: the rig (scale, hops) holds the legs (pivoting at
 // the hip) and the body (bobs, sways, sits back), which holds the head (pecks, grazes, looks at you), the tail and wings
 const ANIM_SCALE={chicken:0.6,duck:0.6,cow:0.68,goat:0.66,sheep:0.68,pig:0.66,dog:0.62,cat:0.6};
-function animalModel(k,v){v=v|0;const g=new T.Group(),rig=new T.Group(),body=new T.Group(),head=new T.Group(),tail=new T.Group();g.add(rig);rig.add(body);body.add(head,tail);
+function animalModel(k,v,acc){v=v|0;const g=new T.Group(),rig=new T.Group(),body=new T.Group(),head=new T.Group(),tail=new T.Group();g.add(rig);rig.add(body);body.add(head,tail);
   const p=[],hp=[],tp=[],legs=[],wings=[],dk=(c,f=0.8)=>lerpHex(c,0x000000,1-f),lt=(c,f=0.25)=>lerpHex(c,0xffffff,f),R=mulberry(v*7+3);
   const eye=(x,y,z,s=0.034)=>hp.push(P(SPH,0x2a2230,x,y,z,0,0,0,s,s*1.15,s*0.8),P(SPH_XS,0xffffff,x+s*0.22,y+s*0.3,z+s*0.32,0,0,0,s*0.42,s*0.42,s*0.3),P(SPH_XS,0xffffff,x-s*0.15,y-s*0.2,z+s*0.34,0,0,0,s*0.18,s*0.18,s*0.15));
   const blush=(x,y,z,s=0.04)=>hp.push(P(SPH_XS,0xf6a0a8,x,y,z,0,0,0,s,s*0.6,s*0.3));
@@ -141,6 +141,7 @@ function animalModel(k,v){v=v|0;const g=new T.Group(),rig=new T.Group(),body=new
       if(v%4===0)for(let i=0;i<3;i++)hp.push(P(SPH,D,(i-1)*0.04,0.11,0.06,0,0,0,0.025,0.02,0.05));
       eye(0.065,0.02,0.1,0.034);eye(-0.065,0.02,0.1,0.034);blush(0.09,-0.035,0.09,0.035);blush(-0.09,-0.035,0.09,0.035);head.position.set(0,0.4,0.19);
       for(const [x,z] of [[-0.065,0.12],[0.065,0.12],[-0.065,-0.12],[0.065,-0.12]])leg(C,W,x,z,0.13,0.042);H=0.6;sitDrop=0.04;lieDrop=0.08;}}
+  if(acc)hp.push(...accParts(acc,k));/* a bow, crown, hat, bandana or bell (75c) */
   body.add(M(p));head.add(M(hp));if(tp.length)tail.add(M(tp));rig.scale.setScalar(ANIM_SCALE[k]||0.65);
   g.traverse(o=>{if(o.isMesh)o.castShadow=true;});g.userData={k,rig,body,head,tail,legs,wings,H:H*(ANIM_SCALE[k]||0.65),sitDrop,lieDrop,cy:legs.length?legs[0].position.y+0.12:0.3,bird:k==='chicken'||k==='duck'};return g;}
 // the pose, every frame: walk cycle (diagonal pairs; birds waddle; pets gallop when running), breathing, peck and
@@ -190,9 +191,9 @@ const herd=[];let petR=null;
 function ranchHomes(){return S.objs.filter(o=>o.k==='coop'||o.k==='barn');}
 function animalsOf(o){return RS().animals.filter(a=>a.home===o.id);}
 function ranchSpace(type){for(const o of ranchHomes())if(o.k===type&&animalsOf(o).length<RANCH_CAP)return o;return null;}
-function syncRanch(){for(const h of herd)scene.remove(h.g);herd.length=0;const homes=new Map(ranchHomes().map(o=>[o.id,o]));
+function syncRanch(){const was=new Map(herd.map(h=>[h.a,h]));for(const h of herd)scene.remove(h.g);herd.length=0;const homes=new Map(ranchHomes().map(o=>[o.id,o]));
   for(const a of RS().animals){if(!homes.has(a.home)){const o=ranchSpace(RANCH[a.k].home);if(o)a.home=o.id;else continue;}const o=homes.get(a.home)||S.objs.find(q=>q.id===a.home);if(!o)continue;
-    const g=animalModel(a.k,a.v||0);g.visible=false;scene.add(g);herd.push({a,g,o,x:o.x,z:o.z+0.9,tx:o.x,tz:o.z+0.9,t:Math.random()*3,ph:Math.random()*6,out:false,walk:0});}}
+    const g=animalModel(a.k,a.v||0,a.acc);if(isBaby(a))g.scale.setScalar(0.6);/* a baby (75c) */g.visible=false;scene.add(g);const w=was.get(a);herd.push(w&&w.o===o?{a,g,o,x:w.x,z:w.z,tx:w.tx,tz:w.tz,t:w.t,ph:w.ph,out:w.out,walk:w.walk}:{a,g,o,x:o.x,z:o.z+0.9,tx:o.x,tz:o.z+0.9,t:Math.random()*3,ph:Math.random()*6,out:false,walk:0});/* (keep where they were) */}}
 function ranchOutside(){return !S.sea&&!inside&&S.hour>=6&&S.hour<19&&!S.rain&&S.wx!=='snow'&&S.wx!=='storm';}
 // can an animal stand here, and walk straight here from where it is? (never through fences, decor or trees)
 function ranchFree(x,z){const k=K(Math.round(x),Math.round(z));const t=landMap.get(k);if(t!=='grass'&&t!=='sand'&&t!=='bridge')return false;return !solidR(Math.round(x),Math.round(z));}
@@ -215,9 +216,10 @@ function updateRanch(dt,tt){const out=ranchOutside();
     const want=h.a.ready||h.a.pet!==S.day;if(want&&Math.random()<dt*0.8)emit(h.x,topY(Math.round(h.x),Math.round(h.z))+h.g.userData.H+0.15,h.z,{vy:0.4,life:1,max:1,size:0.07,color:h.a.ready?0xfff0a0:0xffa8c8,g:-0.1});}
   updatePet(dt,tt);}
 function updatePet(dt,tt){const P0=RS().pet;if(!P0){if(petR){scene.remove(petR.g);petR=null;}return;}
-  if(!petR||petR.k!==P0.k+P0.v){if(petR)scene.remove(petR.g);const g=animalModel(P0.k,P0.v);scene.add(g);petR={k:P0.k+P0.v,g,x:P0.x!=null?P0.x:HOUSE_AT.x+0.5,z:P0.z!=null?P0.z:HOUSE_AT.z+2.4,walk:0,sit:0,ph:0};}
+  if(!petR||petR.k!==P0.k+P0.v+(P0.acc||'')){if(petR)scene.remove(petR.g);const g=animalModel(P0.k,P0.v,P0.acc);scene.add(g);petR={k:P0.k+P0.v+(P0.acc||''),g,x:P0.x!=null?P0.x:HOUSE_AT.x+0.5,z:P0.z!=null?P0.z:HOUSE_AT.z+2.4,walk:0,sit:0,ph:0};}
   const r=petR,g=r.g;g.visible=!inside&&!S.sea&&!(swim&&swim.on);if(!g.visible)return;
-  let tx=r.x,tz=r.z;if(!P0.stray){const dist=Math.hypot(vil.x-r.x,vil.z-r.z);if(dist>14){r.x=vil.x-1;r.z=vil.z-1;}
+  let tx=r.x,tz=r.z;const ph0=!P0.stray&&(S.hour>=20.5||S.hour<6)&&petHouse();if(ph0){tx=ph0.x;tz=ph0.z+0.75;}/* bedtime: off to its own bed (75c) */
+  else if(!P0.stray){const dist=Math.hypot(vil.x-r.x,vil.z-r.z);if(dist>14){r.x=vil.x-1;r.z=vil.z-1;}
     const back=villager.rotation.y+Math.PI+0.6;tx=vil.x+Math.sin(back)*1.1;tz=vil.z+Math.cos(back)*1.1;if(Math.hypot(tx-r.x,tz-r.z)<0.5){tx=r.x;tz=r.z;}}
   else{r.ph+=dt;if(r.ph>3){r.ph=0;const a=Math.random()*6.28;const x=HOUSE_AT.x+0.5+Math.cos(a)*2,z=HOUSE_AT.z+2.6+Math.sin(a)*1.2;if(ranchFree(x,z)){r.tx=x;r.tz=z;}}if(r.tx!=null){tx=r.tx;tz=r.tz;}}
   const dx=tx-r.x,dz=tz-r.z,d=Math.hypot(dx,dz),run=d>2.6,sp=d>4?4:run?2.8:1.3,moving=d>0.08;
@@ -243,21 +245,19 @@ function animalTap(h){const a=h.a,R0=RANCH[a.k],y=h.g.position.y+0.6;
     if(a.pet!==S.day){a.pet=S.day;hearts(h.x,y,h.z);}save();updateHUD();return;}
   h.happy=0.9;if(h.a.k==='chicken'||h.a.k==='duck')h.flap=0.6;
   if(a.pet!==S.day){a.pet=S.day;a.f=Math.min(1000,(a.f||0)+10);hearts(h.x,y,h.z);sayAnimal(a.k);floatText(h.x,y+0.4,h.z,`${a.name} ♥`);save();return;}
-  sayAnimal(a.k);const next=Math.max(1,R0.every-(a.n||0));
-  setAction(`<b>${a.name}</b> the ${R0.name.toLowerCase()} · <span class="hearts">${hrt(a.f)}</span><br><small>Petted today. ${a.k==='pig'?'Finds truffles on fair days.':`Next ${CONSUM[R0.prod]?CONSUM[R0.prod].name.toLowerCase():R0.prod} ${next>1?'in '+next+' days':'tomorrow'}, if fed.`} ${S.inv['x:hay']?`Hay in your bag: ${S.inv['x:hay']}.`:'No hay in your bag for rainy days.'}</small>`,
-    [{label:'Rename',fn:()=>{const n=prompt(`A new name for ${a.name}?`,a.name);if(n&&n.trim()){a.name=n.trim().slice(0,14);save();}clearAction();}},{label:'Close',fn:clearAction}],R0.name);}
+  sayAnimal(a.k);careCard(h);}/* brush, treat, dress up (75c) */
 function petTap(){const P0=RS().pet;if(!P0)return;const y=petR.g.position.y+0.5;
   if(P0.stray){setAction(`A little ${PET_KINDS[P0.k].cn[P0.v%4].toLowerCase()} ${P0.k} has been hanging about your home. It looks hungry, and very hopeful.`,[{label:'Adopt it',cls:'go',fn:()=>{const n=prompt(`What will you call your ${P0.k}?`,P0.k==='dog'?'Biscuit':'Mochi');P0.name=(n&&n.trim()||(P0.k==='dog'?'Biscuit':'Mochi')).slice(0,14);P0.stray=0;P0.f=200;P0.pet=S.day;SFX.rare();hearts(petR.x,y,petR.z);sayAnimal(P0.k);toast(`<b>${P0.name}</b> is part of the family! Pet ${P0.k==='dog'?'him':'her'} every day.`,'rare',ICON.star);save();clearAction();}},{label:'Not now',fn:clearAction}],'Stray');return;}
   sayAnimal(P0.k);hearts(petR.x,y,petR.z);petR.sit=0;petR.lie=0;petR.idle=0;petR.happy=1;petR.excite=2.5;
   if(P0.pet!==S.day){P0.pet=S.day;P0.f=Math.min(1000,(P0.f||0)+12);floatText(petR.x,y+0.4,petR.z,`${P0.name} ♥`);save();}
-  else setAction(`<b>${P0.name}</b> · <span class="hearts">${hrt(P0.f)}</span><br><small>${P0.k==='dog'?'Tail going like a windmill.':'Purring like a little engine.'} Happy pets bring you things they find.</small>`,[{label:'Rename',fn:()=>{const n=prompt(`A new name for ${P0.name}?`,P0.name);if(n&&n.trim()){P0.name=n.trim().slice(0,14);save();}clearAction();}},{label:'Close',fn:clearAction}],PET_KINDS[P0.k].name);}
+  else setAction(`<b>${P0.name}</b> · <span class="hearts">${hrt(P0.f)}</span><br><small>${P0.k==='dog'?'Tail going like a windmill.':'Purring like a little engine.'} Happy pets bring you things they find${petHouse()?'':', and more often with a bed of their own (a Doghouse or Cat Bed)'}.</small>`,[{label:'Dress up',fn:()=>{const i=(ACCS.indexOf(P0.acc||null)+1)%ACCS.length;P0.acc=ACCS[i];if(!P0.acc)delete P0.acc;save();toast(P0.acc?`${P0.name} is wearing ${ACC_N[P0.acc]}!`:`${P0.name}'s dressed down.`);}},{label:'Rename',fn:()=>{const n=prompt(`A new name for ${P0.name}?`,P0.name);if(n&&n.trim()){P0.name=n.trim().slice(0,14);save();}clearAction();}},{label:'Close',fn:clearAction}],PET_KINDS[P0.k].name);}
 
 // ---- dawn: feeding, friendship, produce; the pet's gifts; a stray turns up
 function ranchDawn(quiet){const R=RS(),fair=!S.rain&&S.wx!=='snow'&&S.wx!=='storm'&&season()!=='winter',prev=S.day-1;let eggs=0,ready=[],hungry=[],truffles=0;
   for(const a of R.animals){const o=S.objs.find(q=>q.id===a.home);if(!o)continue;const R0=RANCH[a.k];
-    let fed=fair;if(!fed&&S.inv['x:hay']>0){S.inv['x:hay']--;if(!S.inv['x:hay'])delete S.inv['x:hay'];fed=true;}
+    let fed=fair;if(!fed&&takeHay())fed=true;/* troughs first, then your bag (75c) */a.hungry=!fed;
     a.f=Math.max(0,Math.min(1000,(a.f||0)+(a.pet===prev?15:-6)+(fed?0:-10)));
-    if(!fed){hungry.push(a.name);continue;}
+    if(!fed){hungry.push(a.name);continue;}if(isBaby(a))continue;/* too young yet */
     a.n=(a.n||0)+1;if(a.n<R0.every)continue;a.n=0;
     const big=R0.big&&a.f>=400&&Math.random()<a.f/1400,key=big?R0.big:R0.prod;
     if(a.k==='chicken'||a.k==='duck'){const L=R.eggs[o.id]||(R.eggs[o.id]=[]);if(L.length<16){L.push(key);eggs++;}if(a.k==='duck'&&a.f>=700&&Math.random()<0.12)L.push('dfeather');}
@@ -265,8 +265,9 @@ function ranchDawn(quiet){const R=RS(),fair=!S.rain&&S.wx!=='snow'&&S.wx!=='stor
     else{a.ready=key;ready.push(a.name);}}
   // the pet
   const P0=R.pet;if(P0&&!P0.stray){P0.f=Math.max(0,Math.min(1000,(P0.f||0)+(P0.pet===prev?12:-5)));
-    if(P0.pet===prev&&Math.random()<0.25+P0.f/2000){const G=['g:shell','g:acorn','g:mushroom','g:feather','g:pinecone','g:oldcoin','g:geode','g:button','g:arrowhead','g:robinegg'].filter(k=>FINDS[k.slice(2)]),k=pickR(G);gain(k);if(!quiet)setTimeout(()=>toast(`<b>${P0.name}</b> brought you a ${nameOf(k).toLowerCase()} this morning!`,'',iconOf(k)),2600);}}
+    if(P0.pet===prev&&Math.random()<0.25+P0.f/2000+(petHouse()?0.15:0)){const G=['g:shell','g:acorn','g:mushroom','g:feather','g:pinecone','g:oldcoin','g:geode','g:button','g:arrowhead','g:robinegg'].filter(k=>FINDS[k.slice(2)]),k=pickR(G);gain(k);if(!quiet)setTimeout(()=>toast(`<b>${P0.name}</b> brought you a ${nameOf(k).toLowerCase()} this morning!`,'',iconOf(k)),2600);}}
   if(!P0&&S.day>=2&&S.wild!==undefined){const k=Math.random()<0.5?'dog':'cat';R.pet={k,v:Math.floor(Math.random()*4),name:'',f:0,pet:0,stray:1};if(!quiet)setTimeout(()=>toast(`A stray ${k} is hanging about by your home… go and say hello.`,'',ICON.star),3200);}
+  try{farmDawn(quiet);}catch(e){console.error(e);}/* babies, births, the incubator (75c) */
   if(!quiet&&(eggs||ready.length||hungry.length||truffles))setTimeout(()=>toast([eggs?`${eggs} egg${eggs>1?'s':''} in the coop`:'',ready.length?`${ready.slice(0,3).join(', ')} ${ready.length>1?'are':'is'} ready`:'',truffles?`truffles by the barn`:'',hungry.length?`${hungry.slice(0,2).join(' and ')} went hungry (no hay)`:''].filter(Boolean).join(' · '),hungry.length?'':'',ICON['x:egg']),2000);}
 
 // ---- the coop / barn sheet: who lives here, eggs, and buying animals
@@ -275,15 +276,17 @@ const animalThumbs={};function animalThumb(k,v=0){const id=k+v;if(!animalThumbs[
 function ranchSheet(body){const o=sheet.ctx;if(!o||!S.objs.includes(o)){closeSheet();return;}const B=BUILD[o.k],list=animalsOf(o),eggs=RS().eggs[o.id]||[];
   $('sheetTitle').textContent=B.name;$('sheetTabs').innerHTML='';let h='';
   if(o.k==='coop')h+=eggs.length?`<div class="sellall"><button class="pbtn go" data-rcollect="1">Collect ${eggs.length} egg${eggs.length>1?'s':''}</button></div>`:`<p class="note">No eggs yet. Hens lay overnight when they've been fed.</p>`;
+  if(o.k==='coop'){const inc=(RS().inc||{})[o.id],eg=['x:egg','x:legg','x:duckegg'].filter(k=>S.inv[k]>0);h+=inc?`<p class="note">An egg is warming in the incubator: it hatches ${inc.day-S.day>1?'in '+(inc.day-S.day)+' days':'tomorrow'}.</p>`:`<div class="card wide"><span class="grow"><span class="nm">Incubator</span><br><span class="sub">Put in an egg and a chick (or duckling) hatches in 2 days, if there's room.</span></span>${eg.slice(0,2).map(k=>`<button class="pbtn go" data-rinc="${k}" ${list.length>=RANCH_CAP?'disabled':''}>${nameOf(k)}</button>`).join('')||'<span class="sub">No eggs in your bag</span>'}</div>`;}
   h+=`<h3 class="sech">Living here (${list.length}/${RANCH_CAP})</h3>`;
-  h+=list.length?`<div class="grid">${list.map(a=>`<div class="card wide"><img src="${animalThumb(a.k,a.v||0)}" alt=""><span class="grow"><span class="nm">${a.name}</span> <span class="hearts">${hrt(a.f)}</span><br><span class="sub">${RANCH[a.k].name} · ${a.pet===S.day?'petted today':'wants a pat today'}${a.ready?' · <b>ready!</b>':''}</span></span></div>`).join('')}</div>`:`<p class="note">Nobody lives here yet.</p>`;
+  h+=list.length?`<div class="grid">${list.map(a=>`<div class="card wide"><img src="${animalThumb(a.k,a.v||0)}" alt=""><span class="grow"><span class="nm">${a.name}</span> <span class="hearts">${hrt(a.f)}</span><br><span class="sub">${isBaby(a)?'Baby '+BABY[a.k]+' · grows up in '+(GROW[a.k]-(S.day-a.born))+'d':RANCH[a.k].name} · ${a.pet===S.day?'petted today':'wants a pat today'}${a.ready?' · <b>ready!</b>':''}</span></span></div>`).join('')}</div>`:`<p class="note">Nobody lives here yet.</p>`;
   h+=`<p class="note">Animals graze outside on fair days. On rainy, snowy and winter days they eat <b>hay</b> from your bag at dawn (you have ${S.inv['x:hay']||0}). Harvesting wheat gives hay, or make it from fiber at the Workbench.</p>`;
   h+=`<h3 class="sech">Buy animals</h3><div class="grid">`;const lv=level();
   for(const [k,R0] of Object.entries(RANCH)){if(R0.home!==o.k)continue;const lock=R0.lvl>lv,full=list.length>=RANCH_CAP,poor=S.shells<R0.cost;
     h+=`<div class="card wide ${lock?'lock':''}"><img src="${animalThumb(k,0)}" alt=""><span class="grow"><span class="nm">${R0.name}</span><br><span class="sub">${lock?'Unlocks at Lv '+R0.lvl:R0.desc}</span></span><button class="pbtn go" data-rbuy="${k}" ${lock||full||poor?'disabled':''}>${fmt(R0.cost)}</button></div>`;}
   body.innerHTML=h+'</div>';}
 function ranchClick(d){const o=sheet.ctx;
+  if(d.rinc){const k=d.rinc;if(!(S.inv[k]>0))return true;S.inv[k]--;if(!S.inv[k])delete S.inv[k];const R0=RS();R0.inc=R0.inc||{};R0.inc[o.id]={k:k==='x:duckegg'?'duck':'chicken',day:S.day+2};SFX.place();toast('The egg is warm and snug. It hatches in 2 days.','',ICON[k]);save();renderSheet();return true;}
   if(d.rcollect){const L=RS().eggs[o.id]||[];const n=L.length;for(const k of L)gain('x:'+k);RS().eggs[o.id]=[];SFX.coin();if(n)floatText(o.x,1.4,o.z,`+${n} egg${n>1?'s':''}`);save();updateHUD();renderSheet();return true;}
   if(d.rbuy){const R0=RANCH[d.rbuy];if(S.shells<R0.cost||animalsOf(o).length>=RANCH_CAP)return true;S.shells-=R0.cost;const used=new Set(RS().animals.map(a=>a.name));const name=pickR(RANCH_NAMES.filter(n=>!used.has(n)))||R0.name;
-    RS().animals.push({id:(S.nextId++),k:d.rbuy,name,home:o.id,f:100,pet:0,n:0,ready:null,v:Math.floor(Math.random()*3)});SFX.coin();toast(`Welcome, <b>${name}</b> the ${R0.name.toLowerCase()}! Tap ${name} to pet them every day.`,'rare',animalThumb(d.rbuy,0));syncRanch();save();updateHUD();renderSheet();return true;}
+    RS().animals.push({id:(S.nextId++),k:d.rbuy,name,home:o.id,f:100,pet:0,n:0,ready:null,v:Math.floor(Math.random()*3),born:S.day});SFX.coin();toast(`Welcome, <b>${name}</b> the ${R0.name.toLowerCase()}! Tap ${name} to pet them every day.`,'rare',animalThumb(d.rbuy,0));syncRanch();save();updateHUD();renderSheet();return true;}
   return false;}
