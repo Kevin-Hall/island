@@ -12937,46 +12937,106 @@ function RS(){if(!S.ranch)S.ranch={animals:[],eggs:{},pet:null};if(!S.ranch.eggs
   set('omelette',mk(x=>{x.fillStyle='#f4f0e8';x.strokeStyle='#a8a090';x.lineWidth=2;x.beginPath();x.ellipse(32,40,26,14,0,0,6.283);x.fill();x.stroke();x.fillStyle='#f6d050';x.strokeStyle='#c8a030';x.beginPath();x.ellipse(32,36,17,9,0,0,6.283);x.fill();x.stroke();x.fillStyle='#6aa84a';x.beginPath();x.arc(26,33,2.5,0,6.283);x.arc(36,35,2,0,6.283);x.fill();}));
 })();
 
-// ---- models: soft rounded animals, legs separate so they can walk
-function animalModel(k,v){const g=new T.Group(),p=[],legs=[],head=new T.Group();const R=mulberry((v|0)*7+3);
-  const eye=(q,x,y,z,s=0.03)=>q.push(P(SPH_XS,0x2a2230,x,y,z,0,0,0,s,s*1.1,s),P(SPH_XS,0xffffff,x+s*0.25,y+s*0.3,z+s*0.35,0,0,0,s*0.4,s*0.4,s*0.4));
-  const leg=(col,x,z,h,r)=>{const m=M([P(CYL8,col,0,-h/2,0,0,0,0,r,h,r)]);m.position.set(x,h,z);legs.push(m);g.add(m);};
-  let hp=[];
+// ---- models: small, round, chibi animals, rigged so they can move: the rig (scale, hops) holds the legs (pivoting at
+// the hip) and the body (bobs, sways, sits back), which holds the head (pecks, grazes, looks at you), the tail and wings
+const ANIM_SCALE={chicken:0.6,duck:0.6,cow:0.68,goat:0.66,sheep:0.68,pig:0.66,dog:0.62,cat:0.6};
+function animalModel(k,v){v=v|0;const g=new T.Group(),rig=new T.Group(),body=new T.Group(),head=new T.Group(),tail=new T.Group();g.add(rig);rig.add(body);body.add(head,tail);
+  const p=[],hp=[],tp=[],legs=[],wings=[],dk=(c,f=0.8)=>lerpHex(c,0x000000,1-f),lt=(c,f=0.25)=>lerpHex(c,0xffffff,f),R=mulberry(v*7+3);
+  const eye=(x,y,z,s=0.034)=>hp.push(P(SPH,0x2a2230,x,y,z,0,0,0,s,s*1.15,s*0.8),P(SPH_XS,0xffffff,x+s*0.22,y+s*0.3,z+s*0.32,0,0,0,s*0.42,s*0.42,s*0.3),P(SPH_XS,0xffffff,x-s*0.15,y-s*0.2,z+s*0.34,0,0,0,s*0.18,s*0.18,s*0.15));
+  const blush=(x,y,z,s=0.04)=>hp.push(P(SPH_XS,0xf6a0a8,x,y,z,0,0,0,s,s*0.6,s*0.3));
+  // a leg: a little tapered post hanging from the hip, with a hoof, paw or bird's foot at the bottom
+  const leg=(col,foot,x,z,h,r,toes)=>{const q=[PG(CYL8,col,dk(col,0.9),0,-h/2,0,0,0,0,r,h,r)];
+    if(toes){for(const a of [-0.5,0,0.5])q.push(P(BOX,foot,Math.sin(a)*r*1.4,-h,r*0.9*Math.cos(a)+r*0.4,0,a,0,r*0.5,r*0.4,r*2.4));}else q.push(P(CYL8,foot,0,-h+r*0.35,r*0.1,0,0,0,r*1.12,r*0.7,r*1.12));
+    const L=new T.Group();L.add(M(q));L.position.set(x,h,z);legs.push(L);rig.add(L);};
+  const wing=(col,side,x,y,z,sx,sy,sz)=>{const W=new T.Group();W.add(M([PG(SPH,col,dk(col,0.82),side*sx*0.35,0,0,0,0,0,sx,sy,sz)]));W.position.set(x*side,y,z);wings.push(W);body.add(W);};
+  let H=0.5,sitDrop=0.06,lieDrop=0.1;
   switch(k){
-    case'chicken':{const C=[0xfbf8f0,0xc87a3a,0x3a3434][v%3];p.push(PG(SPH_LO,C,lerpHex(C,0x000000,0.15),0,0.24,0,0,0,0,0.3,0.26,0.36),PG(SCONE,C,lerpHex(C,0x000000,0.2),0,0.32,-0.2,-0.9,0,0,0.16,0.18,0.12));
-      hp.push(PG(SPH_LO,C,lerpHex(C,0x000000,0.1),0,0,0,0,0,0,0.17,0.18,0.17),P(BOX,0xe8403a,0,0.1,0.01,0,0,0,0.03,0.07,0.09),P(BOX,0xe8403a,0,0.115,-0.03,0,0,0,0.03,0.06,0.06),P(CONE4,0xf2b440,0,-0.01,0.1,1.57,0,0,0.05,0.07,0.05),P(SPH_XS,0xe8403a,0,-0.06,0.07,0,0,0,0.035,0.05,0.03));
-      eye(hp,0.06,0.02,0.06);eye(hp,-0.06,0.02,0.06);head.position.set(0,0.4,0.15);for(const x of [-0.06,0.06])leg(0xe8a040,x,0,0.12,0.025);break;}
-    case'duck':{const C=v%2?0xfbf8f0:0xa88a5a;p.push(PG(SPH_LO,C,lerpHex(C,0x000000,0.15),0,0.2,0,0,0,0,0.3,0.22,0.42),PG(SCONE,C,C,0,0.26,-0.24,-1.2,0,0,0.12,0.12,0.1));
-      hp.push(PG(SPH_LO,v%2?C:0x3a7a4a,C,0,0,0,0,0,0,0.16,0.16,0.17),P(BOX,0xf09a30,0,-0.02,0.11,0,0,0,0.09,0.03,0.1));eye(hp,0.055,0.03,0.05);eye(hp,-0.055,0.03,0.05);head.position.set(0,0.38,0.17);
-      for(const x of [-0.07,0.07])leg(0xf09a30,x,0,0.1,0.025);break;}
-    case'cow':{const C=v%2?0x8a5a3a:0xfbf8f0,S2=v%2?0xfbf8f0:0x2e2a2c;p.push(PG(SPH_LO,C,lerpHex(C,0x000000,0.12),0,0.52,0,0,0,0,0.52,0.46,0.86));
-      for(let i=0;i<5;i++){const a=R()*6.28,y=0.48+R()*0.18;p.push(P(SPH_LO,S2,Math.cos(a)*0.24,y,(R()-0.5)*0.6,0,0,0,0.04+R()*0.06,0.16+R()*0.1,0.18+R()*0.12));}
-      p.push(P(SPH_LO,0xf2a8b0,0,0.3,-0.18,0,0,0,0.16,0.1,0.18),PG(CYL6,C,C,0,0.62,-0.45,0.6,0,0,0.04,0.3,0.04));
-      hp.push(PG(SPH_LO,C,lerpHex(C,0x000000,0.1),0,0,0,0,0,0,0.3,0.3,0.32),P(SPH_LO,0xf2c0b8,0,-0.07,0.14,0,0,0,0.22,0.15,0.12),P(SPH_XS,0x6a4a4a,0.04,-0.06,0.2,0,0,0,0.025,0.025,0.02),P(SPH_XS,0x6a4a4a,-0.04,-0.06,0.2,0,0,0,0.025,0.025,0.02),
-        P(CONE4,0xf2ead8,0.1,0.15,-0.02,0,0,-0.5,0.04,0.12,0.04),P(CONE4,0xf2ead8,-0.1,0.15,-0.02,0,0,0.5,0.04,0.12,0.04),P(SPH_XS,C,0.16,0.06,-0.04,0,0,0,0.12,0.05,0.08),P(SPH_XS,C,-0.16,0.06,-0.04,0,0,0,0.12,0.05,0.08));
-      eye(hp,0.09,0.05,0.11,0.035);eye(hp,-0.09,0.05,0.11,0.035);head.position.set(0,0.7,0.46);for(const [x,z] of [[-0.14,0.26],[0.14,0.26],[-0.14,-0.26],[0.14,-0.26]])leg(C,x,z,0.3,0.09);break;}
-    case'goat':{const C=[0xf2ece0,0xb08a5a,0x6a5a4a][v%3];p.push(PG(SPH_LO,C,lerpHex(C,0x000000,0.15),0,0.42,0,0,0,0,0.36,0.34,0.62),PG(CONE4,C,C,0,0.5,-0.32,-0.8,0,0,0.06,0.12,0.06));
-      hp.push(PG(SPH_LO,C,lerpHex(C,0x000000,0.1),0,0,0,0,0,0,0.2,0.22,0.26),P(SPH_XS,0x3a3030,0,-0.05,0.13,0,0,0,0.04,0.03,0.03),P(CONE8,0x8a7a6a,0.06,0.14,-0.06,-0.6,0,-0.3,0.04,0.18,0.04),P(CONE8,0x8a7a6a,-0.06,0.14,-0.06,-0.6,0,0.3,0.04,0.18,0.04),
-        P(CONE4,lerpHex(C,0xffffff,0.3),0,-0.15,0.08,3.14,0,0,0.05,0.1,0.05),P(SPH_XS,C,0.13,0.03,-0.02,0,0,0.4,0.1,0.04,0.06),P(SPH_XS,C,-0.13,0.03,-0.02,0,0,-0.4,0.1,0.04,0.06));
-      eye(hp,0.07,0.03,0.08);eye(hp,-0.07,0.03,0.08);head.position.set(0,0.62,0.32);for(const [x,z] of [[-0.1,0.18],[0.1,0.18],[-0.1,-0.18],[0.1,-0.18]])leg(C,x,z,0.26,0.06);break;}
-    case'sheep':{for(let i=0;i<14;i++){const a=i*2.4,y=0.36+(i%3)*0.08;p.push(P(SPH_LO,i%4?0xf6f2ea:0xe8e2d6,Math.cos(a)*0.14,y,Math.sin(a)*0.22,0,0,0,0.24,0.22,0.24));}
-      hp.push(P(SPH_LO,0x3a3438,0,0,0,0,0,0,0.18,0.2,0.22),P(SPH_LO,0xf6f2ea,0,0.09,-0.02,0,0,0,0.16,0.08,0.14),P(SPH_XS,0x3a3438,0.12,0.02,-0.02,0,0,0.5,0.1,0.04,0.06),P(SPH_XS,0x3a3438,-0.12,0.02,-0.02,0,0,-0.5,0.1,0.04,0.06));
-      hp.push(P(SPH_XS,0xffffff,0.05,0.03,0.09,0,0,0,0.03,0.035,0.02),P(SPH_XS,0xffffff,-0.05,0.03,0.09,0,0,0,0.03,0.035,0.02),P(SPH_XS,0x1a1a1a,0.05,0.03,0.1,0,0,0,0.018,0.02,0.015),P(SPH_XS,0x1a1a1a,-0.05,0.03,0.1,0,0,0,0.018,0.02,0.015));
-      head.position.set(0,0.5,0.3);for(const [x,z] of [[-0.1,0.14],[0.1,0.14],[-0.1,-0.14],[0.1,-0.14]])leg(0x3a3438,x,z,0.24,0.05);break;}
-    case'pig':{const C=v%2?0xf4b0b0:0xe89a9a;p.push(PG(SPH_LO,C,lerpHex(C,0x000000,0.12),0,0.32,0,0,0,0,0.44,0.38,0.62));for(let i=0;i<5;i++){const a=i*1.3;p.push(P(CYL6,C,Math.cos(a)*0.03,0.42+i*0.015,-0.32-Math.sin(a)*0.03,1.57,0,0,0.015,0.03,0.015));}
-      hp.push(PG(SPH_LO,C,lerpHex(C,0x000000,0.1),0,0,0,0,0,0,0.3,0.28,0.28),P(CYL12,lerpHex(C,0xff8080,0.2),0,-0.03,0.15,1.57,0,0,0.12,0.06,0.1),P(SPH_XS,0x8a4a4a,0.025,-0.03,0.185,0,0,0,0.02,0.025,0.015),P(SPH_XS,0x8a4a4a,-0.025,-0.03,0.185,0,0,0,0.02,0.025,0.015),
-        P(CONE4,C,0.1,0.13,0,0.4,0,-0.3,0.08,0.1,0.05),P(CONE4,C,-0.1,0.13,0,0.4,0,0.3,0.08,0.1,0.05));eye(hp,0.07,0.05,0.12);eye(hp,-0.07,0.05,0.12);head.position.set(0,0.38,0.36);
-      for(const [x,z] of [[-0.12,0.18],[0.12,0.18],[-0.12,-0.18],[0.12,-0.18]])leg(C,x,z,0.16,0.07);break;}
-    case'dog':{const C=PET_KINDS.dog.coats[v%4],W=v%4===3?0xf4f0e8:0xfbf6ea;p.push(PG(SPH_LO,C,lerpHex(C,0x000000,0.15),0,0.3,0,0,0,0,0.28,0.28,0.48),P(SPH_LO,W,0,0.28,0.12,0,0,0,0.2,0.22,0.22));
-      for(let i=0;i<4;i++){const a=i*0.7;p.push(P(SPH_XS,i?C:W,0,0.42+Math.sin(a)*0.08,-0.22-Math.cos(a)*0.06+0.06,0,0,0,0.09,0.09,0.09));}
-      hp.push(PG(SPH_LO,C,lerpHex(C,0x000000,0.1),0,0,0,0,0,0,0.26,0.24,0.24),P(SPH_LO,W,0,-0.04,0.1,0,0,0,0.15,0.11,0.13),P(SPH_XS,0x2a2230,0,-0.01,0.17,0,0,0,0.04,0.03,0.03),P(CONE4,C,0.08,0.14,0,0,0.785,-0.2,0.07,0.12,0.05),P(CONE4,C,-0.08,0.14,0,0,0.785,0.2,0.07,0.12,0.05));
-      eye(hp,0.06,0.04,0.1);eye(hp,-0.06,0.04,0.1);head.position.set(0,0.48,0.24);for(const [x,z] of [[-0.08,0.14],[0.08,0.14],[-0.08,-0.14],[0.08,-0.14]])leg(C,x,z,0.16,0.055);break;}
-    default:{/* cat */const C=PET_KINDS.cat.coats[v%4];p.push(PG(SPH_LO,C,lerpHex(C,0x000000,0.15),0,0.22,0,0,0,0,0.22,0.22,0.38));
-      for(let i=0;i<7;i++){const t=i/6;p.push(P(SPH_XS,C,0,0.24+Math.sin(t*2.2)*0.2,-0.2-t*0.2,0,0,0,0.06,0.06,0.07));}
-      hp.push(PG(SPH_LO,C,lerpHex(C,0x000000,0.1),0,0,0,0,0,0,0.22,0.2,0.2),P(SPH_XS,0xf2a8b0,0,-0.02,0.1,0,0,0,0.025,0.02,0.02),P(CONE4,C,0.07,0.11,0,0,0.785,-0.15,0.07,0.1,0.04),P(CONE4,C,-0.07,0.11,0,0,0.785,0.15,0.07,0.1,0.04));
-      eye(hp,0.05,0.02,0.085,0.028);eye(hp,-0.05,0.02,0.085,0.028);head.position.set(0,0.38,0.18);for(const [x,z] of [[-0.06,0.11],[0.06,0.11],[-0.06,-0.11],[0.06,-0.11]])leg(C,x,z,0.12,0.045);}}
-  const body=M(p);g.add(body);head.add(M(hp));g.add(head);g.traverse(o=>{if(o.isMesh)o.castShadow=true;});g.userData={legs,head};return g;}
-
+    case'chicken':{const C=[0xfbf8f0,0xc8783a,0x3a3434,0xe8d0a0][v%4],D=dk(C,0.85);
+      p.push(PG(SPH,C,D,0,0.26,0,0,0,0,0.34,0.32,0.4),PG(SPH,lt(C,0.15),C,0,0.24,0.1,0,0,0,0.3,0.28,0.26),PG(SPH,C,C,0,0.36,0.08,0,0,0,0.18,0.2,0.18));
+      for(const [rz,dy] of [[-0.45,0],[0,0.03],[0.45,0]])tp.push(PG(SPH,dk(C,0.92),C,0,0.08+dy,-0.02,-0.55,0,rz,0.07,0.22,0.12));tail.position.set(0,0.3,-0.16);
+      wing(dk(C,0.92),1,0.165,0.27,-0.02,0.07,0.17,0.26);wing(dk(C,0.92),-1,0.165,0.27,-0.02,0.07,0.17,0.26);
+      hp.push(PG(SPH,C,D,0,0,0,0,0,0,0.21,0.22,0.21));for(const [z,y,s2] of [[0.05,0.11,0.045],[0,0.13,0.055],[-0.05,0.11,0.045]])hp.push(P(SPH,0xe8403a,0,y,z,0,0,0,0.035,s2*1.5,s2*1.1));
+      hp.push(P(CONE4,0xf2b440,0,-0.01,0.12,1.57,0.785,0,0.05,0.08,0.05),P(SPH,0xe8403a,0,-0.07,0.085,0,0,0,0.035,0.06,0.03));eye(0.068,0.025,0.075);eye(-0.068,0.025,0.075);blush(0.08,-0.02,0.07,0.03);blush(-0.08,-0.02,0.07,0.03);
+      head.position.set(0,0.47,0.14);for(const x of [-0.07,0.07])leg(0xf0a83a,0xf0a83a,x,0.02,0.13,0.022,1);H=0.6;sitDrop=0.08;break;}
+    case'duck':{const mal=v%2===0,C=mal?0xa88a5a:0xfbf8f0,HC=mal?0x2e7a4a:0xfbf8f0;
+      p.push(PG(SPH,C,dk(C,0.85),0,0.21,-0.02,0,0,0,0.32,0.25,0.46),PG(SPH,lt(C,0.1),C,0,0.2,0.1,0,0,0,0.28,0.22,0.26),PG(SPH,mal?0xfbf8f0:C,C,0,0.31,0.12,0,0,0,0.12,0.16,0.12));
+      tp.push(PG(CONE8,dk(C,0.9),C,0,0.04,-0.04,-0.9,0,0,0.12,0.16,0.08));tail.position.set(0,0.26,-0.22);
+      wing(dk(C,0.9),1,0.15,0.23,-0.04,0.06,0.13,0.3);wing(dk(C,0.9),-1,0.15,0.23,-0.04,0.06,0.13,0.3);
+      hp.push(PG(SPH,HC,dk(HC,0.85),0,0,0,0,0,0,0.19,0.19,0.2),P(SPH,0xf09a30,0,-0.025,0.12,0,0,0,0.12,0.045,0.13));if(mal)hp.push(P(CYL12,0xfbf8f0,0,-0.08,0,0,0,0,0.15,0.025,0.15));
+      eye(0.07,0.03,0.06);eye(-0.07,0.03,0.06);head.position.set(0,0.42,0.17);
+      for(const x of [-0.07,0.07])leg(0xf09a30,0xf09a30,x,0,0.1,0.024,1);H=0.55;sitDrop=0.07;break;}
+    case'cow':{const C=[0xfbf8f0,0xb87a4a,0x6a4a3a][v%3],S2=v%3===0?0x2e2a2c:v%3===1?0xfbf8f0:0x3a2a24,D=dk(C,0.88);
+      p.push(PG(SPH,C,D,0,0.5,0,0,0,0,0.56,0.46,0.8));
+      for(let i=0;i<6;i++){const sd=i%2?1:-1,z=(R()-0.5)*0.5,y=0.42+R()*0.18,rz=0.27*Math.sqrt(Math.max(0.15,1-(z/0.4)**2-((y-0.5)/0.23)**2));p.push(P(SPH,S2,sd*rz,y,z,0,0,sd*0.15,0.06,0.15+R()*0.08,0.18+R()*0.1));}p.push(P(SPH,S2,0.04,0.72,-0.1,0,0.3,0,0.2,0.05,0.22));
+      p.push(PG(SPH,0xf6b8c0,0xe8909a,0,0.3,-0.14,0,0,0,0.2,0.12,0.2));for(const [x,z] of [[-0.04,-0.1],[0.04,-0.1],[-0.04,-0.18],[0.04,-0.18]])p.push(P(CYL6,0xe8909a,x,0.24,z,0,0,0,0.025,0.06,0.025));
+      tp.push(P(CYL6,C,0,-0.12,-0.02,0.2,0,0,0.03,0.26,0.03),P(SPH,S2===0xfbf8f0?0x5a3a2a:S2,0,-0.27,-0.05,0,0,0,0.07,0.1,0.07));tail.position.set(0,0.62,-0.38);
+      hp.push(PG(SPH,C,D,0,0,0,0,0,0,0.36,0.32,0.34),PG(SPH,0xf6c4bc,0xe8a8a0,0,-0.08,0.14,0,0,0,0.3,0.18,0.18),P(SPH_XS,0x8a4a4a,0.05,-0.08,0.225,0,0,0,0.03,0.03,0.02),P(SPH_XS,0x8a4a4a,-0.05,-0.08,0.225,0,0,0,0.03,0.03,0.02));
+      for(const sd of [-1,1])hp.push(PG(SPH,C,D,sd*0.2,0.04,-0.03,0,0,sd*0.35,0.16,0.05,0.09),P(SPH,0xf6b8c0,sd*0.205,0.04,-0.02,0,0,sd*0.35,0.1,0.03,0.05),P(CONE8,0xf2ead8,sd*0.09,0.16,-0.05,0,0,-sd*0.5,0.045,0.12,0.045));
+      hp.push(P(SPH,v%3===0?S2:dk(C,0.85),0,0.15,0.04,0,0,0,0.12,0.06,0.1));eye(0.1,0.04,0.13,0.04);eye(-0.1,0.04,0.13,0.04);blush(0.13,-0.04,0.12);blush(-0.13,-0.04,0.12);head.position.set(0,0.66,0.42);
+      for(const [x,z] of [[-0.15,0.24],[0.15,0.24],[-0.15,-0.24],[0.15,-0.24]])leg(C,0x3a3434,x,z,0.3,0.085);H=1;sitDrop=0.12;lieDrop=0.2;break;}
+    case'goat':{const C=[0xf2ece0,0xb08a5a,0x6a5a4a][v%3],D=dk(C,0.88);
+      p.push(PG(SPH,C,D,0,0.43,0,0,0,0,0.38,0.36,0.6),PG(SPH,C,C,0,0.55,0.22,0,0,0,0.16,0.2,0.18));
+      tp.push(PG(CONE8,C,D,0,0.05,0,-0.6,0,0,0.07,0.14,0.06));tail.position.set(0,0.56,-0.28);
+      hp.push(PG(SPH,C,D,0,0,0,0,0,0,0.22,0.24,0.26),PG(SPH,lt(C,0.1),C,0,-0.05,0.1,0,0,0,0.15,0.13,0.16),P(SPH_XS,0x3a3030,0,-0.05,0.18,0,0,0,0.04,0.025,0.025),PG(CONE8,lt(C,0.2),C,0,-0.15,0.08,3.14,0,0,0.05,0.11,0.05));
+      for(const sd of [-1,1]){for(let i=0;i<4;i++){const t=i/3;hp.push(P(SPH,0x9a8a78,sd*(0.06+t*0.03),0.12+Math.sin(t*2)*0.06,-0.02-t*0.1,0,0,0,0.045-t*0.008,0.045-t*0.008,0.06));}
+        hp.push(PG(SPH,C,D,sd*0.14,0.03,-0.02,0,0,sd*0.5,0.12,0.04,0.07));}
+      eye(0.075,0.035,0.09);eye(-0.075,0.035,0.09);blush(0.09,-0.02,0.09,0.03);blush(-0.09,-0.02,0.09,0.03);head.position.set(0,0.64,0.32);
+      for(const [x,z] of [[-0.1,0.18],[0.1,0.18],[-0.1,-0.18],[0.1,-0.18]])leg(C,0x4a3a30,x,z,0.27,0.055);H=0.85;sitDrop=0.1;lieDrop=0.17;break;}
+    case'sheep':{const W=[0xf6f2ea,0xe8dccb,0x5a5050][v%3],F=v%3===2?0x2a2224:0x3a3438;
+      for(let i=0;i<18;i++){const a=i*2.39996,y=(i/17-0.5)*0.9,r=Math.sqrt(1-y*y);p.push(PG(SPH,i%3?W:lt(W,0.06),dk(W,0.9),Math.cos(a)*r*0.2,0.44+y*0.18,Math.sin(a)*r*0.26,0,0,0,0.22,0.2,0.22));}
+      tp.push(P(SPH,W,0,0,0,0,0,0,0.1,0.1,0.1));tail.position.set(0,0.46,-0.3);
+      hp.push(PG(SPH,F,dk(F,0.8),0,0,0,0,0,0,0.19,0.23,0.22));for(const [x,y,z] of [[0,0.11,-0.02],[0.06,0.1,-0.04],[-0.06,0.1,-0.04]])hp.push(P(SPH,W,x,y,z,0,0,0,0.11,0.09,0.11));
+      for(const sd of [-1,1])hp.push(P(SPH,F,sd*0.13,0.02,-0.02,0,0,sd*0.5,0.12,0.04,0.07),P(SPH,0xf6a0a8,sd*0.135,0.02,-0.01,0,0,sd*0.5,0.07,0.025,0.04));
+      hp.push(P(SPH_XS,0xffffff,0.055,0.03,0.09,0,0,0,0.04,0.045,0.025),P(SPH_XS,0xffffff,-0.055,0.03,0.09,0,0,0,0.04,0.045,0.025),P(SPH_XS,0x1a1a1a,0.055,0.03,0.105,0,0,0,0.022,0.026,0.012),P(SPH_XS,0x1a1a1a,-0.055,0.03,0.105,0,0,0,0.022,0.026,0.012));
+      head.position.set(0,0.52,0.32);for(const [x,z] of [[-0.1,0.14],[0.1,0.14],[-0.1,-0.14],[0.1,-0.14]])leg(F,0x1a1a1a,x,z,0.24,0.045);H=0.8;sitDrop=0.1;lieDrop=0.16;break;}
+    case'pig':{const C=[0xf29aa6,0xe88894,0xf2b49a][v%3],D=dk(C,0.88);
+      p.push(PG(SPH,C,D,0,0.32,0,0,0,0,0.46,0.4,0.62));if(v%3===2)for(let i=0;i<3;i++)p.push(P(SPH,0x5a4040,(R()-0.5)*0.3,0.38+R()*0.1,(R()-0.5)*0.4,0,0,0,0.12,0.1,0.12));
+      for(let i=0;i<7;i++){const a=i*1.1;tp.push(P(SPH,C,Math.cos(a)*0.035,i*0.012,-Math.sin(a)*0.035-i*0.01,0,0,0,0.035,0.035,0.035));}tail.position.set(0,0.38,-0.31);
+      hp.push(PG(SPH,C,D,0,0,0,0,0,0,0.33,0.3,0.29),PG(CYL12,lt(C,0.1),dk(C,0.95),0,-0.03,0.155,1.57,0,0,0.13,0.06,0.1),P(SPH_XS,0x8a4a4a,0.028,-0.03,0.188,0,0,0,0.022,0.028,0.012),P(SPH_XS,0x8a4a4a,-0.028,-0.03,0.188,0,0,0,0.022,0.028,0.012));
+      for(const sd of [-1,1])hp.push(PG(CONE4,C,D,sd*0.1,0.13,0.03,0.6,0.785,-sd*0.3,0.1,0.12,0.06));
+      eye(0.08,0.05,0.12);eye(-0.08,0.05,0.12);blush(0.11,-0.02,0.11,0.045);blush(-0.11,-0.02,0.11,0.045);head.position.set(0,0.38,0.34);
+      for(const [x,z] of [[-0.12,0.18],[0.12,0.18],[-0.12,-0.18],[0.12,-0.18]])leg(C,dk(C,0.75),x,z,0.17,0.065);H=0.6;sitDrop=0.06;lieDrop=0.1;break;}
+    case'dog':{const C=PET_KINDS.dog.coats[v%4],W=0xfbf6ea,D=dk(C,0.88);
+      p.push(PG(SPH,C,D,0,0.3,0,0,0,0,0.28,0.28,0.46),PG(SPH,W,lt(W,0),0,0.28,0.13,0,0,0,0.2,0.22,0.2),P(CYL12,0xd8403a,0,0.42,0.17,0.5,0,0,0.19,0.035,0.19),P(SPH_XS,0xf6c840,0,0.37,0.26,0,0,0,0.04,0.045,0.02));
+      for(let i=0;i<6;i++){const t=i/5,a=t*3.4;tp.push(P(SPH,i>3?W:C,0,Math.sin(a)*0.1+0.02,-Math.cos(a)*0.06+0.02,0,0,0,0.07,0.07,0.07));}tail.position.set(0,0.4,-0.22);
+      hp.push(PG(SPH,C,D,0,0,0,0,0,0,0.32,0.29,0.29),PG(SPH,W,W,0,-0.055,0.12,0,0,0,0.17,0.12,0.15),P(SPH,0x2a2230,0,-0.02,0.19,0,0,0,0.045,0.035,0.03),P(SPH,W,0.09,-0.05,0.08,0,0,0,0.1,0.08,0.08),P(SPH,W,-0.09,-0.05,0.08,0,0,0,0.1,0.08,0.08));
+      for(const sd of [-1,1])hp.push(PG(CONE4,C,D,sd*0.095,0.15,-0.01,0,0.785,-sd*0.2,0.09,0.13,0.05),P(CONE4,0xf6c0b8,sd*0.093,0.14,0.005,0,0.785,-sd*0.2,0.05,0.08,0.02));
+      eye(0.07,0.035,0.115,0.036);eye(-0.07,0.035,0.115,0.036);blush(0.1,-0.03,0.1);blush(-0.1,-0.03,0.1);head.position.set(0,0.5,0.24);
+      for(const [x,z] of [[-0.08,0.14],[0.08,0.14],[-0.08,-0.14],[0.08,-0.14]])leg(C,W,x,z,0.17,0.05);H=0.7;sitDrop=0.05;lieDrop=0.1;break;}
+    default:{/* cat */const C=PET_KINDS.cat.coats[v%4],D=dk(C,0.86),W=v%4===2?0xf4f0e8:lt(C,0.45);
+      p.push(PG(SPH,C,D,0,0.24,0,0,0,0,0.24,0.24,0.42),PG(SPH,W,W,0,0.24,0.12,0,0,0,0.17,0.19,0.16),P(CYL12,0x4a7ad0,0,0.35,0.15,0.5,0,0,0.16,0.03,0.16),P(SPH_XS,0xf6c840,0,0.31,0.22,0,0,0,0.035,0.035,0.035));
+      if(v%4===0||v%4===1)for(let i=0;i<3;i++)p.push(P(SPH,D,0,0.34,-0.08+i*0.08,0,0,0,0.2,0.03,0.04));
+      for(let i=0;i<8;i++){const t=i/7;tp.push(P(SPH,i===7?(v%4===2?C:W):C,0,t*0.3,-Math.sin(t*2.6)*0.07-t*0.04,0,0,0,0.055,0.06,0.055));}tail.position.set(0,0.28,-0.2);
+      hp.push(PG(SPH,C,D,0,0,0,0,0,0,0.29,0.25,0.25),PG(SPH,W,W,0,-0.05,0.09,0,0,0,0.15,0.1,0.12),P(SPH_XS,0xf2a0a8,0,-0.025,0.14,0,0,0,0.03,0.02,0.02));
+      for(const sd of [-1,1]){hp.push(PG(CONE4,C,D,sd*0.085,0.13,0,0,0.785,-sd*0.15,0.09,0.12,0.05),P(CONE4,0xf6c0c8,sd*0.083,0.12,0.012,0,0.785,-sd*0.15,0.05,0.07,0.02));for(const dy of [-0.01,0.01])hp.push(P(BOX,0xfbf8f0,sd*0.12,-0.04+dy*2,0.1,0,0,sd*dy*8,0.1,0.006,0.006));}
+      if(v%4===0)for(let i=0;i<3;i++)hp.push(P(SPH,D,(i-1)*0.04,0.11,0.06,0,0,0,0.025,0.02,0.05));
+      eye(0.065,0.02,0.1,0.034);eye(-0.065,0.02,0.1,0.034);blush(0.09,-0.035,0.09,0.035);blush(-0.09,-0.035,0.09,0.035);head.position.set(0,0.4,0.19);
+      for(const [x,z] of [[-0.065,0.12],[0.065,0.12],[-0.065,-0.12],[0.065,-0.12]])leg(C,W,x,z,0.13,0.042);H=0.6;sitDrop=0.04;lieDrop=0.08;}}
+  body.add(M(p));head.add(M(hp));if(tp.length)tail.add(M(tp));rig.scale.setScalar(ANIM_SCALE[k]||0.65);
+  g.traverse(o=>{if(o.isMesh)o.castShadow=true;});g.userData={k,rig,body,head,tail,legs,wings,H:H*(ANIM_SCALE[k]||0.65),sitDrop,lieDrop,cy:legs.length?legs[0].position.y+0.12:0.3,bird:k==='chicken'||k==='duck'};return g;}
+// the pose, every frame: walk cycle (diagonal pairs; birds waddle; pets gallop when running), breathing, peck and
+// graze, a look towards you, tail and wings, a happy hop, and pets sitting and lying down
+function animRig(e,dt,tt,o){const U=e.g.userData,k=U.k,bird=U.bird,seed=e.seed||(e.seed=Math.random()*9);
+  e.spd=(e.spd||0)+((o.moving?1:0)-(e.spd||0))*Math.min(1,dt*7);const s=e.spd,ph=e.walk||0,sit=e.sit||0,lie=e.lie||0;
+  U.legs.forEach((L,i)=>{let a=bird?Math.sin(ph+(i?Math.PI:0))*0.75*s:o.gallop?Math.sin(ph+(i<2?0:2.2))*0.95*s:Math.sin(ph+((i===0||i===3)?0:Math.PI))*0.6*s;
+    const sa0=sit*(1-lie);if(!bird){if(i>=2)a+=-0.95*sa0;a+=(i<2?-1.35:1.35)*lie;}else a*=1-sit;L.rotation.x=a;
+    if(!bird&&i<2){const h0=L.userData.h||(L.userData.h=L.position.y),st=1+0.9*sa0;L.scale.y=st;L.position.y=h0*st;}});/* sitting: the front legs straighten up to the raised chest */
+  const B=U.body;B.position.y=Math.abs(Math.sin(ph))*(bird?0.03:0.045)*s+Math.sin(tt*2.3+seed)*0.008-U.sitDrop*sit*(1-lie)-U.lieDrop*lie;
+  B.rotation.z=(bird?Math.sin(ph)*0.16:Math.sin(ph)*0.05)*s;const sa=sit*(1-lie),pit=bird?0:-sa*0.55;B.rotation.x=pit+(o.gallop?Math.sin(ph)*0.08*s:0);B.position.z=0;
+  if(pit){/* sitting up: the body pivots at the hips, so the chest rises over the front legs and the haunches stay put */const Py=U.legs[2].position.y,Pz=U.legs[2].position.z,c=Math.cos(pit),sn=Math.sin(pit);B.position.y+=Py-(Py*c-Pz*sn);B.position.z=Pz-(Py*sn+Pz*c);}
+  if(e.happy>0){e.happy-=dt;U.rig.position.y=Math.abs(Math.sin(e.happy*11))*0.12*Math.min(1,e.happy*2);}else U.rig.position.y=0;
+  let hx=bird?Math.sin(ph*2)*0.14*s:0,hy=0;
+  if(e.act==='peck')hx+=Math.max(0,Math.sin((e.actT||0)*8))**3*1.0;
+  if(e.act==='graze')hx+=Math.min(0.85,(e.actT||0)*2)+Math.sin(tt*7)*0.04;
+  if(o.look!=null&&s<0.3&&!e.act)hy=clamp(o.look,-0.85,0.85);
+  hx+=lie*0.3-sit*0.15;U.head.rotation.x+=(hx-U.head.rotation.x)*Math.min(1,dt*10);U.head.rotation.y+=(hy-U.head.rotation.y)*Math.min(1,dt*5);
+  U.head.rotation.z=o.tilt?Math.sin(tt*2)*0.12:U.head.rotation.z*0.9;
+  const Tl=U.tail;if(Tl){if(k==='dog'){Tl.rotation.z=Math.sin(tt*(o.excited?20:8))*(o.excited?0.55:0.22);Tl.rotation.x=0;}
+    else if(k==='cat'){Tl.rotation.z=Math.sin(tt*1.4+seed)*0.4;Tl.rotation.x=-0.2+Math.sin(tt*0.9+seed)*0.2-lie*0.6;}
+    else if(k==='cow'){Tl.rotation.z=Math.sin(tt*1.7+seed)*0.4;Tl.rotation.x=0.1;}
+    else if(bird)Tl.rotation.x=Math.sin(tt*4+seed)*0.08+s*Math.sin(ph*2)*0.1;
+    else Tl.rotation.z=Math.sin(tt*(o.excited?16:5)+seed)*(o.excited?0.4:0.18);}
+  if(U.wings.length){e.flap=Math.max(0,(e.flap||0)-dt);const f=e.flap>0?Math.abs(Math.sin(e.flap*24))*1.15:0.06*s;U.wings[0].rotation.z=f;U.wings[1].rotation.z=-f;}}
 // ---- the buildings
 function ranchBld(g,kind){const p=[],gl=[];
   if(kind==='coop'){const W=0xb8583e,T2=0xf4ece0;for(const [x,z] of [[-0.42,-0.36],[0.42,-0.36],[-0.42,0.36],[0.42,0.36]])p.push(P(CYL6,0x6a4a30,x,0.12,z,0,0,0,0.06,0.24,0.06));
@@ -13013,13 +13073,17 @@ function updateRanch(dt,tt){const out=ranchOutside();
     if(out!==h.out){h.out=out;if(out){h.x=door[0];h.z=door[1];h.tx=h.x;h.tz=h.z;}}
     h.g.visible=out;if(!out)continue;
     h.t-=dt;if(h.t<=0){h.t=2+Math.random()*5;for(let i=0;i<8;i++){const a=Math.random()*6.283,r=0.8+Math.random()*3.2,x=o.x+Math.cos(a)*r,z=o.z+0.6+Math.sin(a)*r;if(ranchFree(x,z)&&ranchLine(h.x,h.z,x,z)){h.tx=x;h.tz=z;break;}}}
-    const dx=h.tx-h.x,dz=h.tz-h.z,d=Math.hypot(dx,dz),sp=h.a.k==='chicken'||h.a.k==='duck'?0.7:0.45;
-    if(d>0.05){const s=Math.min(d,sp*dt);h.x+=dx/d*s;h.z+=dz/d*s;h.walk+=dt*sp*9;const yaw=Math.atan2(dx,dz);let dy=yaw-h.g.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));h.g.rotation.y+=dy*Math.min(1,dt*6);}
-    const moving=d>0.05,U=h.g.userData;U.legs.forEach((l,i)=>{l.rotation.x=moving?Math.sin(h.walk+(i%2?Math.PI:0)+(i>1?Math.PI/2:0))*0.5:0;});
-    if(U.head){const peck=(h.a.k==='chicken'||h.a.k==='duck')&&!moving?Math.max(0,Math.sin(tt*3+h.ph))**8*0.9:(!moving?Math.max(0,Math.sin(tt*0.7+h.ph))**6*0.5:0);U.head.rotation.x=peck;}
-    h.g.position.set(h.x,topY(Math.round(h.x),Math.round(h.z))+(moving&&(h.a.k==='chicken')?Math.abs(Math.sin(h.walk))*0.03:0),h.z);
+    const dx=h.tx-h.x,dz=h.tz-h.z,d=Math.hypot(dx,dz),bird=h.a.k==='chicken'||h.a.k==='duck',sp=bird?0.55:0.38,moving=d>0.05;
+    if(moving){h.act=null;const s=Math.min(d,sp*dt);h.x+=dx/d*s;h.z+=dz/d*s;h.walk+=dt*sp*(bird?22:15);const yaw=Math.atan2(dx,dz);let dy=yaw-h.g.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));h.g.rotation.y+=dy*Math.min(1,dt*5);}
+    else{// idle: peck, graze, flap, or just stand and breathe
+      if(h.act){h.actT+=dt;if(h.actT>(h.act==='graze'?4.5:1.6))h.act=null;}
+      else if(Math.random()<dt*(bird?0.7:0.25)){h.act=bird?'peck':'graze';h.actT=0;}
+      if(bird&&Math.random()<dt*0.06)h.flap=0.6;}
+    const pd=Math.hypot(vil.x-h.x,vil.z-h.z);let look=null;if(pd<3){look=Math.atan2(vil.x-h.x,vil.z-h.z)-h.g.rotation.y;look=Math.atan2(Math.sin(look),Math.cos(look));}
+    animRig(h,dt,tt,{moving,look});
+    h.g.position.set(h.x,topY(Math.round(h.x),Math.round(h.z)),h.z);
     // the "ready" bubble: milk, wool, or wanting a pat today
-    const want=h.a.ready||h.a.pet!==S.day;if(want&&Math.random()<dt*0.8)emit(h.x,topY(Math.round(h.x),Math.round(h.z))+(OBJ_H[h.a.k]||0.9)+0.25,h.z,{vy:0.4,life:1,max:1,size:0.07,color:h.a.ready?0xfff0a0:0xffa8c8,g:-0.1});}
+    const want=h.a.ready||h.a.pet!==S.day;if(want&&Math.random()<dt*0.8)emit(h.x,topY(Math.round(h.x),Math.round(h.z))+h.g.userData.H+0.15,h.z,{vy:0.4,life:1,max:1,size:0.07,color:h.a.ready?0xfff0a0:0xffa8c8,g:-0.1});}
   updatePet(dt,tt);}
 function updatePet(dt,tt){const P0=RS().pet;if(!P0){if(petR){scene.remove(petR.g);petR=null;}return;}
   if(!petR||petR.k!==P0.k+P0.v){if(petR)scene.remove(petR.g);const g=animalModel(P0.k,P0.v);scene.add(g);petR={k:P0.k+P0.v,g,x:P0.x!=null?P0.x:HOUSE_AT.x+0.5,z:P0.z!=null?P0.z:HOUSE_AT.z+2.4,walk:0,sit:0,ph:0};}
@@ -13027,12 +13091,14 @@ function updatePet(dt,tt){const P0=RS().pet;if(!P0){if(petR){scene.remove(petR.g
   let tx=r.x,tz=r.z;if(!P0.stray){const dist=Math.hypot(vil.x-r.x,vil.z-r.z);if(dist>14){r.x=vil.x-1;r.z=vil.z-1;}
     const back=villager.rotation.y+Math.PI+0.6;tx=vil.x+Math.sin(back)*1.1;tz=vil.z+Math.cos(back)*1.1;if(Math.hypot(tx-r.x,tz-r.z)<0.5){tx=r.x;tz=r.z;}}
   else{r.ph+=dt;if(r.ph>3){r.ph=0;const a=Math.random()*6.28;const x=HOUSE_AT.x+0.5+Math.cos(a)*2,z=HOUSE_AT.z+2.6+Math.sin(a)*1.2;if(ranchFree(x,z)){r.tx=x;r.tz=z;}}if(r.tx!=null){tx=r.tx;tz=r.tz;}}
-  const dx=tx-r.x,dz=tz-r.z,d=Math.hypot(dx,dz),sp=d>3?4.2:d>1.2?2.6:1.2,moving=d>0.08;
-  if(moving){const s=Math.min(d,sp*dt);r.x+=dx/d*s;r.z+=dz/d*s;r.walk+=dt*sp*7;const yaw=Math.atan2(dx,dz);let dy=yaw-g.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));g.rotation.y+=dy*Math.min(1,dt*8);r.sit=Math.max(0,r.sit-dt*4);}
-  else{r.sit=Math.min(1,r.sit+dt*1.5);const ty=Math.atan2(vil.x-r.x,vil.z-r.z);if(!P0.stray){let dy=ty-g.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));g.rotation.y+=dy*Math.min(1,dt*2);}}
-  const U=g.userData;U.legs.forEach((l,i)=>{l.rotation.x=moving?Math.sin(r.walk+(i%2?Math.PI:0)+(i>1?Math.PI/2:0))*0.7:(i>1?-r.sit*0.9:0);});
-  if(U.head)U.head.rotation.x=moving?0:Math.sin(tt*1.3)*0.08-r.sit*0.1;
-  g.rotation.x=-r.sit*0.18;g.position.set(r.x,topY(Math.round(r.x),Math.round(r.z))+(moving?Math.abs(Math.sin(r.walk))*0.04:0)-r.sit*0.04,r.z);P0.x=r.x;P0.z=r.z;}
+  const dx=tx-r.x,dz=tz-r.z,d=Math.hypot(dx,dz),run=d>2.6,sp=d>4?4:run?2.8:1.3,moving=d>0.08;
+  if(moving){const s=Math.min(d,sp*dt);r.x+=dx/d*s;r.z+=dz/d*s;r.walk+=dt*sp*(run?11:15);const yaw=Math.atan2(dx,dz);let dy=yaw-g.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));g.rotation.y+=dy*Math.min(1,dt*9);r.idle=0;r.sit=Math.max(0,(r.sit||0)-dt*5);r.lie=Math.max(0,(r.lie||0)-dt*5);}
+  else{r.idle=(r.idle||0)+dt;if(r.idle>0.5)r.sit=Math.min(1,(r.sit||0)+dt*2.5);if(r.idle>10&&!P0.stray)r.lie=Math.min(1,(r.lie||0)+dt*1.2);
+    if(!P0.stray){const ty=Math.atan2(vil.x-r.x,vil.z-r.z);let dy=ty-g.rotation.y;dy=Math.atan2(Math.sin(dy),Math.cos(dy));if(Math.abs(dy)>0.9)g.rotation.y+=dy*Math.min(1,dt*1.5);}}
+  const pd=Math.hypot(vil.x-r.x,vil.z-r.z);let look=null;if(pd<4){look=Math.atan2(vil.x-r.x,vil.z-r.z)-g.rotation.y;look=Math.atan2(Math.sin(look),Math.cos(look));}
+  r.excite=Math.max(0,(r.excite||0)-dt);const vm=Math.hypot(vil.tx-vil.x,vil.tz-vil.z)>0.2;
+  animRig(r,dt,tt,{moving,gallop:run,look,excited:r.excite>0||(vm&&!P0.stray),tilt:!moving&&r.idle>2&&r.idle<6});
+  g.position.set(r.x,topY(Math.round(r.x),Math.round(r.z)),r.z);P0.x=r.x;P0.z=r.z;}
 
 // ---- tapping an animal or the pet
 function ranchTap(cx,cy){let best=null,bd=46;
@@ -13046,13 +13112,14 @@ function sayAnimal(k){for(const [i,s] of (RANCH[k]?RANCH[k].sound:k==='dog'?[[62
 function animalTap(h){const a=h.a,R0=RANCH[a.k],y=h.g.position.y+0.6;
   if(a.ready){const key=a.ready;a.ready=null;gain('x:'+key);a.f=Math.min(1000,(a.f||0)+5);SFX.coin();floatText(h.x,y+0.4,h.z,'+ '+CONSUM[key].name,key.startsWith('l')?'gold':'');burst(h.x,y,h.z,a.k==='sheep'?0xf6f2ea:0xffffff,10,1.2,0.07);
     if(a.pet!==S.day){a.pet=S.day;hearts(h.x,y,h.z);}save();updateHUD();return;}
+  h.happy=0.9;if(h.a.k==='chicken'||h.a.k==='duck')h.flap=0.6;
   if(a.pet!==S.day){a.pet=S.day;a.f=Math.min(1000,(a.f||0)+10);hearts(h.x,y,h.z);sayAnimal(a.k);floatText(h.x,y+0.4,h.z,`${a.name} ♥`);save();return;}
   sayAnimal(a.k);const next=Math.max(1,R0.every-(a.n||0));
   setAction(`<b>${a.name}</b> the ${R0.name.toLowerCase()} · <span class="hearts">${hrt(a.f)}</span><br><small>Petted today. ${a.k==='pig'?'Finds truffles on fair days.':`Next ${CONSUM[R0.prod]?CONSUM[R0.prod].name.toLowerCase():R0.prod} ${next>1?'in '+next+' days':'tomorrow'}, if fed.`} ${S.inv['x:hay']?`Hay in your bag: ${S.inv['x:hay']}.`:'No hay in your bag for rainy days.'}</small>`,
     [{label:'Rename',fn:()=>{const n=prompt(`A new name for ${a.name}?`,a.name);if(n&&n.trim()){a.name=n.trim().slice(0,14);save();}clearAction();}},{label:'Close',fn:clearAction}],R0.name);}
 function petTap(){const P0=RS().pet;if(!P0)return;const y=petR.g.position.y+0.5;
   if(P0.stray){setAction(`A little ${PET_KINDS[P0.k].cn[P0.v%4].toLowerCase()} ${P0.k} has been hanging about your home. It looks hungry, and very hopeful.`,[{label:'Adopt it',cls:'go',fn:()=>{const n=prompt(`What will you call your ${P0.k}?`,P0.k==='dog'?'Biscuit':'Mochi');P0.name=(n&&n.trim()||(P0.k==='dog'?'Biscuit':'Mochi')).slice(0,14);P0.stray=0;P0.f=200;P0.pet=S.day;SFX.rare();hearts(petR.x,y,petR.z);sayAnimal(P0.k);toast(`<b>${P0.name}</b> is part of the family! Pet ${P0.k==='dog'?'him':'her'} every day.`,'rare',ICON.star);save();clearAction();}},{label:'Not now',fn:clearAction}],'Stray');return;}
-  sayAnimal(P0.k);hearts(petR.x,y,petR.z);petR.sit=0;
+  sayAnimal(P0.k);hearts(petR.x,y,petR.z);petR.sit=0;petR.lie=0;petR.idle=0;petR.happy=1;petR.excite=2.5;
   if(P0.pet!==S.day){P0.pet=S.day;P0.f=Math.min(1000,(P0.f||0)+12);floatText(petR.x,y+0.4,petR.z,`${P0.name} ♥`);save();}
   else setAction(`<b>${P0.name}</b> · <span class="hearts">${hrt(P0.f)}</span><br><small>${P0.k==='dog'?'Tail going like a windmill.':'Purring like a little engine.'} Happy pets bring you things they find.</small>`,[{label:'Rename',fn:()=>{const n=prompt(`A new name for ${P0.name}?`,P0.name);if(n&&n.trim()){P0.name=n.trim().slice(0,14);save();}clearAction();}},{label:'Close',fn:clearAction}],PET_KINDS[P0.k].name);}
 
