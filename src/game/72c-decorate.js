@@ -20,11 +20,11 @@ const dec={sel:null,mv:null,erase:false,paint:false,undo:[],cat:'all'};
 // take the colour out; o.tint is the index here (0 = its own colours)
 const OD_TINTS=[null,{h:0.01,n:'Red',c:0xd8483e},{h:0.05,n:'Coral',c:0xf08a5a},{h:0.12,n:'Mustard',c:0xe8b840},{h:0.27,n:'Sage',c:0x8ab46a},{h:0.36,n:'Green',c:0x4f9a4a},
   {h:0.47,n:'Teal',c:0x3aa89a},{h:0.58,n:'Blue',c:0x4a7ad0},{h:0.7,n:'Lilac',c:0x9a7ad8},{h:0.9,n:'Pink',c:0xf06aa0},{n:'White',c:0xf4f0e8,l:0.9},{n:'Charcoal',c:0x3a3a40,l:0.24},{h:0.07,n:'Walnut',c:0x7a5034,s:0.42,l:0.32}];
-const DEC_CATS=[['all','All'],['furn','Furniture'],['garden','Garden'],['light','Lights'],['floor','Floors'],['fence','Fences'],['farm','Farm']];
+const DEC_CATS=[['all','All'],['furn','Furniture'],['garden','Garden'],['light','Lights'],['floor','Floors'],['fence','Fences'],['farm','Farm'],['isle','Islands']];
 const DC_FENCE=new Set(['fence','picket','gate','hedge','topiary','arbor','railfence','stonewall']),DC_LIGHT=new Set(['lantern','lamppost','stonelantern','firepit','bunting','chime']),
   DC_FARM=new Set(['scarecrow','sprinkler','beehive','haybale','windmill','well','pcrate','pbasket','psack','barrow','stall','pumpkins','feeder','coop','barn','trough','watertrough','doghouse','catbed','petbowl','churns','nestbox','haystack','farmcart','tractor','farmsign','duckpond','mayomaker','cheesepress','loom','oilmaker','presjar','keg','compost']),
   DC_GARDEN=new Set(['flowers','cattail','clover','planter','flowerpot','pine','oak','palm','urn','boatplanter','birdbath','birdhouse','sundial','fountain','gnome','koipond','toadstool','flowercart','snowman']);
-function decCat(k){if(isFloor(k))return'floor';if(DC_FENCE.has(k))return'fence';if(DC_LIGHT.has(k))return'light';if(DC_FARM.has(k))return'farm';if(DC_GARDEN.has(k)||BUILD[k].plant)return'garden';return'furn';}
+function decCat(k){if(isFloor(k))return'floor';if(ISLE_DECOR.has(k))return'isle';if(DC_FENCE.has(k))return'fence';if(DC_LIGHT.has(k))return'light';if(DC_FARM.has(k))return'farm';if(DC_GARDEN.has(k)||BUILD[k].plant)return'garden';return'furn';}
 
 // paint: find the piece's main colour family (the most common saturated hue) and move it to the new colour
 const _tc=new T.Color(),_hsl={};

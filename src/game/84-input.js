@@ -44,6 +44,7 @@ function onTap(cx,cy){buzz(6);if(charEd)return;/* the character editor: taps go 
   const here=curIsl(),there=islandAt(hit.x,hit.z);
   if(here&&there&&here.id!==there.id){toast(`That's ${S.disc[there.id]?there.name:'another island'} — take your boat to get there.`);return;}
   cursorAt(hit.x,hit.z);
+  if(S.mode!=='edit'&&isleTap(hit.x,hit.z))return;
   if(S.mode==='edit')odTap(hit.x,hit.z);else toolTap(hit.x,hit.z,there);
   updateHUD();}
 function tapLife(cx,cy){

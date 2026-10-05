@@ -181,6 +181,7 @@ function buildIsland(isl){
     if(parts.length)g.add(M(parts));addVeg(isl,g,tp);
     if(glowParts.length){const m=M(glowParts,lumMat);m.castShadow=false;g.add(m);}
     if(isl.style)frDeco(isl,g,blocked);/* the frontier's strange decor (44b) */
+    isleExtras(isl,g,blocked);/* landmark + gather nodes (85c) */
     buildHeart(isl);
     isl.spots=gr.filter(([x,z])=>!blocked.has(K(x,z))).slice(0,Math.max(5,Math.min(isl.grand?30:18,Math.round(gr.length*0.18))));
     for(const k of fell)blocked.delete(k);/* (a felled tree's tile is open ground now) */
