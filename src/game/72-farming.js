@@ -144,7 +144,7 @@ function startPlace(kind,fromStore,rot=0){
   if(!spot){toast(curIsl()&&!curIsl().home?'No free space here.':'No free space left — expand your island in Shop → Island.');return;}
   placing={kind,fromStore,rot,x:spot[0],z:spot[1]};
   ghost=objGroup(kind,S.nextId,rot);ghost.traverse(o=>{if(o.isMesh){if(o.userData.noThumb)o.visible=false;else if(isFloor(kind)){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=0.75;o.position.y+=0.02;}else{o.material=ghostMat;o.castShadow=false;}}});
-  scene.add(ghost);moveGhost(spot[0],spot[1]);
+  scene.add(ghost);moveGhost(spot[0],spot[1]);if(S.mode==='edit')renderDecoBar();
 }
 function moveGhost(x,z){if(!placing)return;if(placing.bp){bpMove(x,z);return;}placing.x=x;placing.z=z;ghost.position.set(x,topY(x,z),z);ghost.rotation.y=placing.rot;
   const ok=canPlace(x,z);ghostMat.color.set(ok?0xffffff:0xff6a5a);cursorAt(x,z,ok?0xfff6e2:0xff6a5a);cursorT=1e9;placeBar();}
@@ -156,11 +156,11 @@ function placeBar(){const B=BUILD[placing.kind],n=S.store[placing.kind]||0,ok=ca
 function doPlace(){const B=BUILD[placing.kind];const {x,z}=placing;if(!canPlace(x,z))return;
   if(placing.fromStore){S.store[placing.kind]--;if(!S.store[placing.kind])delete S.store[placing.kind];}
   else{if(S.shells<B.cost){SFX.no();return;}S.shells-=B.cost;}
-  S.objs.push({id:S.nextId++,k:placing.kind,x,z,r:placing.rot});S.placedK=S.placedK||{};addXP(S.placedK[placing.kind]?1:6);S.placedK[placing.kind]=1;logEvent('decor',{name:BUILD[placing.kind].name.toLowerCase()});syncObjs();SFX.place();burst(x,topY(x,z)+0.2,z,0xf6eedb,12,1.4,0.08);walkTo(x,z);
+  S.objs.push(Object.assign({id:S.nextId++,k:placing.kind,x,z,r:placing.rot},placing.tint?{tint:placing.tint}:{}));S.placedK=S.placedK||{};addXP(S.placedK[placing.kind]?1:6);S.placedK[placing.kind]=1;logEvent('decor',{name:BUILD[placing.kind].name.toLowerCase()});syncObjs();SFX.place();burst(x,topY(x,z)+0.2,z,0xf6eedb,12,1.4,0.08);walkTo(x,z);
   if(placing.fromStore?!S.store[placing.kind]:!B.multi){endPlace();toast(`${B.name} placed.`);return;}
   if(B.floor){placeBar();return;}/* floors stay where you are laying them: tap or drag on to the next tile */
   const nxt=nearestValid(x,z,placing.kind);if(nxt)moveGhost(nxt[0],nxt[1]);else endPlace();}
 // laying floors: a tap on a free tile lays one straight away (a tap on a taken one just moves the ghost there)
 function layFloorAt(x,z){if(!placing||!isFloor(placing.kind))return false;moveGhost(x,z);if(canPlace(x,z)){doPlace();return true;}return false;}
-function endPlace(){if(ghost){scene.remove(ghost);ghost=null;}placing=null;cursor.visible=false;cursorT=0;clearAction();}
+function endPlace(){if(ghost){scene.remove(ghost);ghost=null;}placing=null;cursor.visible=false;cursorT=0;clearAction();if(S.mode==='edit')setTimeout(renderDecoBar,0);/* back to decorating (72c) */}
 

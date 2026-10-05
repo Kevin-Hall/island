@@ -35,7 +35,7 @@ function syncObjs(){
   // piece; animated or sparkling pieces, and parts that can't merge (light pools, indexed shapes), stay as they are
   const pools=[],batches=new Map(),take=c=>c.isMesh&&!c.children.length&&!c.geometry.index&&c.geometry.attributes.color&&c.material&&c.material.vertexColors;
   for(const m of floorMeshes(S.objs.filter(o=>isFloor(o.k))))objRoot.add(m); // floors: one instanced mesh per kind
-  for(const o of S.objs){if(isFloor(o.k))continue;objCtx={x:o.x,z:o.z};const g=objGroup(o.k,o.id,o.r||0);objCtx=null;g.position.set(o.x,topY(o.x,o.z),o.z);g.userData.tile={x:o.x,z:o.z};g.userData.obj=o;
+  for(const o of S.objs){if(isFloor(o.k))continue;objCtx={x:o.x,z:o.z};const g=objGroup(o.k,o.id,o.r||0);objCtx=null;if(o.tint)try{tintGroup(g,o.tint);}catch(e){}/* painted (72c) */g.position.set(o.x,topY(o.x,o.z),o.z);g.userData.tile={x:o.x,z:o.z};g.userData.obj=o;
     if(!g.userData.anim&&!g.userData.sparkle){g.updateMatrixWorld(true);const rest=[];
       for(const c of g.children){if(c.isMesh&&c.geometry===POOL_GEO){c.updateMatrixWorld(true);pools.push(c.matrixWorld.clone());continue;}/* lamp glows: one batch for all */if(take(c)){if(!batches.has(c.material))batches.set(c.material,[]);batches.get(c.material).push(c);}else rest.push(c);}
       if(!rest.length)continue;for(const c of g.children.slice())if(!rest.includes(c))g.remove(c);}

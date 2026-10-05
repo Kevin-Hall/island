@@ -34,7 +34,7 @@ function shopHTML(lv){const tab=sheet.tab,keys=shopList(tab),items=keys.map(shop
   if(inStore()){const st=S.stamps||0,sp=S.stampSpend||0;
     h+=`<div class="shophead"><span class="purse">${shellHTML}<b>${fmt(S.shells)}</b></span><span class="card-l"><span class="lbl">Hazel’s loyalty card</span><span class="stamps">${[...Array(STAMP_FULL)].map((_,i)=>`<i class="${i<st?'on':''}">${i<st?'★':''}</i>`).join('')}</span><span class="lbl sm">${fmt(STAMP_EVERY-sp)} more shells to the next stamp · a gift when it’s full</span></span></div>`;}
   else h+=`<div class="shophead visit"><span class="purse">${shellHTML}<b>${fmt(S.shells)}</b></span><span class="lbl">Pop into <b>Hazel’s store</b> in town for <b>seeds</b>, <b>daily deals</b>, a <b>loyalty card</b> and <b>+10%</b> for your produce.</span></div>`;
-  if(!inStore()&&tab==='decor')h+=`<div class="sellall"><button class="pbtn" data-edit="1">Move or store your decor</button></div>`;
+  if(!inStore()&&tab==='decor')h+=`<div class="sellall"><button class="pbtn" data-edit="1">Decorate: move, paint or store your decor</button></div>`;
   if(tab==='deals')h+=`<p class="note">Today’s deals, ${Math.round(DEAL_OFF*100)}% off. New ones every morning.</p>`;
   if(!items.length)return h+`<p class="note">Nothing here yet.</p>`;
   // the pinned panel: the chosen thing, and how to buy it

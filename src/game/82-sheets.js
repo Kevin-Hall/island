@@ -227,7 +227,7 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.sellshop){openSheet('bag','all','trader');return;}
   if(d.ssel){sheet.ssel=d.ssel;SFX.ui();renderSheet();const p=document.querySelector('#sheetBody .detail.pin');if(p)p.scrollIntoView({block:'nearest',behavior:'smooth'});return;}
   if(d.sbuy){shopBuy(d.sbuy,Number(d.n)||1);renderSheet();return;}
-  if(d.edit){S.mode='edit';closeSheet();toast('Edit mode: tap decor to move or store it, tap empty soil to clear it.','',ICON.hammer);return;}
+  if(d.edit){odStart();return;}
   if(d.isle){chartGo(islands[Number(d.isle)]);return;}
   if(d.rumour){if(!unlocked('boat')){say('You need your boat for that (Island Heart level 4).');return;}closeSheet();sailToIsland(islands[Number(d.rumour)]);return;}
   if(d.deliver!==undefined){deliver(Number(d.deliver));renderSheet();updateHUD();return;}

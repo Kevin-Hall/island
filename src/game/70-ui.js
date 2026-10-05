@@ -54,7 +54,7 @@ function updateCtx(){
   if(st==='inside'&&deco)h='';
   else if(st==='inside'&&inside.kind==='home'){const c=cosyScore();h=`<span class="msg cosy">${starStr(c.stars)}</span><button class="pbtn" data-c="deco">Decorate</button><button class="pbtn go" data-c="leave">Go outside</button>`;}
   else if(st==='inside')h=`<button class="pbtn go" data-c="leave">Go outside</button>`;
-  else if(st==='edit')h=`<span class="msg">Editing: tap decor to move or store it</span><button class="pbtn go" data-c="doneEdit">Done</button>`;
+  else if(st==='edit')h='';/* the Decorate bar has it all (72c) */
   else if(st==='sailing')h=`<span class="msg">Sailing${sail.name?' to '+sail.name:''}…</span><button class="pbtn" data-c="stop">Stop</button>`;
   else if(st==='sea')h=`<span class="msg">Tap the sea to steer · tap land to go ashore</span><button class="pbtn sea" data-c="cast">Cast line</button>${farHome?'<button class="pbtn" data-c="home">Sail home</button>':''}`;
   else if(st==='board')h=`<button class="pbtn sea" data-c="board">Board boat</button>`;
