@@ -66,7 +66,7 @@ function sdfRig(o){const parts=o.parts,f=(x,y,z)=>{let d=1e9;for(const p of part
   const body=mochiSurface(f,o.lo,o.hi,o.h),c=o.c;
   const hit=(dx,dy,dz)=>{const d=new T.Vector3(dx,dy,dz).normalize();let a=0,b=0.5;for(let i=0;i<30;i++){const m=(a+b)/2,p=c.clone().addScaledVector(d,m);if(f(p.x,p.y,p.z)<0)a=m;else b=m;}
       const p=c.clone().addScaledVector(d,a),n=new T.Vector3(f(p.x+1e-3,p.y,p.z)-f(p.x-1e-3,p.y,p.z),f(p.x,p.y+1e-3,p.z)-f(p.x,p.y-1e-3,p.z),f(p.x,p.y,p.z+1e-3)-f(p.x,p.y,p.z-1e-3)).normalize();return{p,n};};
-  const bits=[],put=(geo,col,p,n,sx,sy,sz,spin=0,bone)=>{const g=geo.clone(),q=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,0,1),n),m=new T.Matrix4().compose(p,q.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),spin)),new T.Vector3(sx,sy,sz));
+  let bits=[];const put=(geo,col,p,n,sx,sy,sz,spin=0,bone)=>{const g=geo.clone(),q=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,0,1),n),m=new T.Matrix4().compose(p,q.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),spin)),new T.Vector3(sx,sy,sz));
       g.applyMatrix4(m);const k=g.attributes.position.count,cc=new T.Color(col),ca=new Float32Array(k*3);for(let i=0;i<k;i++)ca.set([cc.r,cc.g,cc.b],i*3);g.setAttribute('color',new T.BufferAttribute(ca,3));const out=g.index?g.toNonIndexed():g;out.userData.bone=bone;bits.push(out);};
   const eyes=o.face(hit,put,new T.SphereGeometry(1,16,12));
   const bones={},list=[];for(const [nm,par,x,y,z] of o.bones){const b=new T.Bone();b.name=nm;let w=new T.Vector3(x,y,z);if(nm==='EyeL')w=eyes[-1].clone();if(nm==='EyeR')w=eyes[1].clone();b.userData.w=w;
@@ -78,8 +78,12 @@ function sdfRig(o){const parts=o.parts,f=(x,y,z)=>{let d=1e9;for(const p of part
     g.setAttribute('skinIndex',new T.BufferAttribute(si,4));g.setAttribute('skinWeight',new T.BufferAttribute(sw,4));if(!only)g.setAttribute('part',new T.BufferAttribute(pa,1));return g;};
   const scene=new T.Group();scene.add(bones[o.bones[0][0]]);scene.updateMatrixWorld(true);const skel=new T.Skeleton(list);
   const bg=weigh(body),bm=new T.SkinnedMesh(bg,o.body(bg));bm.name=o.name+'Body';scene.add(bm);bm.bind(skel);
-  const merged=new T.BufferGeometry(),parts2=bits.map(g=>weigh(g,g.userData.bone));for(const a of ['position','normal','color','skinIndex','skinWeight']){const C=a==='skinIndex'?Uint16Array:Float32Array,sz=parts2[0].attributes[a].itemSize,arr=new C(parts2.reduce((t,g)=>t+g.attributes[a].array.length,0));let k=0;for(const g of parts2){arr.set(g.attributes[a].array,k);k+=g.attributes[a].array.length;}merged.setAttribute(a,new T.BufferAttribute(arr,sz));}
-  const fm=new T.SkinnedMesh(merged,toon({vertexColors:true,skinning:true}));fm.name=o.name+'Face';scene.add(fm);fm.bind(skel);return scene;}
+  const faceMesh=(list,name)=>{if(!list.length)return;const merged=new T.BufferGeometry(),parts2=list.map(g=>weigh(g,g.userData.bone));for(const a of ['position','normal','color','skinIndex','skinWeight']){const C=a==='skinIndex'?Uint16Array:Float32Array,sz=parts2[0].attributes[a].itemSize,arr=new C(parts2.reduce((t,g)=>t+g.attributes[a].array.length,0));let k=0;for(const g of parts2){arr.set(g.attributes[a].array,k);k+=g.attributes[a].array.length;}merged.setAttribute(a,new T.BufferAttribute(arr,sz));}
+    const fm=new T.SkinnedMesh(merged,toon({vertexColors:true,skinning:true}));fm.name=name;scene.add(fm);fm.bind(skel);};
+  faceMesh(bits,o.name+'Face');
+  // optional alternative features (o.faces: Sprig's eyes and mouths), each its own mesh, shown one at a time by its look
+  for(const k in o.faces||{}){bits=[];o.faces[k](hit,put,new T.SphereGeometry(1,16,12),eyes);faceMesh(bits,o.name+'Face_'+k);}
+  return scene;}
 // the clips, sampled densely from smooth functions of each cycle's phase (whole turns only, so every loop is seamless);
 // the ears always trail the body a little (follow-through), the head counters the body's sway
 // tracks sampled from smooth functions of a clip's phase a (0..2π) and t (0..1), for a code-built rig's bones

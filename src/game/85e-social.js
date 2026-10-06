@@ -92,7 +92,7 @@ async function visitIsland(id){if(!SOC.ok||id===SOC.me)return;toast('Sailing ove
   let snap;try{snap=JSON.parse(d.snap);}catch(e){toast("That island couldn't be loaded.");return;}
   if(!S.visit){statBump('visits');try{localStorage.setItem(HOME_KEY,JSON.stringify(S));}catch(e){toast('Could not back up your save, so the visit was cancelled.');return;}}
   else{try{const h=JSON.parse(localStorage.getItem(HOME_KEY));if(h){statBumpOn(h,'visits');localStorage.setItem(HOME_KEY,JSON.stringify(h));}}catch(e){}}
-  snap.v=1;snap.visit={o:id,n:String(d.name||'an island').slice(0,40)};snap.sea=false;snap.boat=null;snap.inv={};snap.t=Date.now();
+  snap.look=S.look;/* (you stay yourself) */snap.v=1;snap.visit={o:id,n:String(d.name||'an island').slice(0,40)};snap.sea=false;snap.boat=null;snap.inv={};snap.t=Date.now();
   resetting=true;try{localStorage.setItem(SAVE_KEY,JSON.stringify(snap));}catch(e){resetting=false;toast("That island couldn't be loaded.");return;}location.reload();}
 function goHome(){let s=null;try{s=localStorage.getItem(HOME_KEY);}catch(e){}resetting=true;
   try{if(s)localStorage.setItem(SAVE_KEY,s);else{const v=JSON.parse(localStorage.getItem(SAVE_KEY));if(v)delete v.visit;localStorage.setItem(SAVE_KEY,JSON.stringify(v));}localStorage.removeItem(HOME_KEY);}catch(e){}location.reload();}
