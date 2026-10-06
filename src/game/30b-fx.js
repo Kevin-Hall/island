@@ -29,7 +29,7 @@ const FXS={
   bluehour: {name:'Blue Hour',desc:'Cool dusk light, warm glowing windows and lamps',sat:1.02,con:1.08,br:.88,tS:[.74,.86,1.26],tH:[1.18,1,.86],bloom:2.8,vig:.38,soft:.08,warm:1.3,cool:1.6,haze:.2,hzT:[.86,.94,1.16]},
   // the visual identities' own (20b-ident)
   clean:    {name:'Clean',desc:'Flat colour and soft light, crisp edges',sat:1.12,con:1.02,br:1.05,tS:[.96,1,1.04],tH:[1.03,1.02,.97],edge:.35,edgeC:[.4,.4,.46],dith:0,levels:64,vig:.04,bloom:.6,grade:.6,px:-1,ramp:[176,176,255,255],leaf:[160,160,250,255],soft:.04,warm:.5,cool:.5,rim:.6,haze:.06},
-  hike:     {name:'Hike',desc:'Chunky pixels, warm light, soft sun rays',sat:1.08,con:1.04,br:1.02,fade:.02,tS:[.94,.94,1.06],tH:[1.05,1.02,.93],edge:.3,edgeC:[.42,.32,.36],dith:0,levels:16,vig:.1,bloom:.8,grade:.6,px:2,ramp:[136,200,245,255],soft:.03,warm:.9,cool:.8,rays:1,haze:.08},
+  hike:     {name:'Hike',desc:'Warm light, crisp edges, soft sun rays',sat:1.08,con:1.04,br:1.02,fade:.02,tS:[.94,.94,1.06],tH:[1.05,1.02,.93],edge:.3,edgeC:[.42,.32,.36],dith:0,levels:64,vig:.1,bloom:.8,grade:.6,px:-1,ramp:[136,200,245,255],soft:.03,warm:.9,cool:.8,rays:1,haze:.08},
   lofi:     {name:'Lo-fi',desc:'Muted and warm, chunky pixels and film grain',sat:.88,con:.95,fade:.1,tS:[.9,1,1.04],tH:[1.1,1.02,.88],dith:0,levels:16,px:1,grain:.05,vig:.3,bloom:1.2,soft:.06,warm:.9,cool:.6,haze:.12},
   gameboy:  {name:'Game Boy',   desc:'Four shades of green',pal:1,edge:1.2,edgeC:[.2,.2,.2],levels:4,vig:0,bloom:0,grade:0,px:2,rim:0},
 };

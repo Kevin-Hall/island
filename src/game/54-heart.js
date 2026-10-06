@@ -1,7 +1,7 @@
 /* =========================================================
    The Island Heart: your level, made visible. It starts as a sapling in the square of the island you chose and grows
    with every level (farming, fishing, bugs, decorating, restoring other islands all feed it). Each level builds out
-   the island: the store, the boat, the nature lodge, the café, the town hall, the lighthouse, and plots
+   the island: the store, the boat, the island fair, the café, the town hall, the lighthouse, and plots
    that neighbours move into the morning after they appear.
    Saves from before this (no S.scratch) have everything unlocked, as they always did.
    To add an unlock: an entry in HEART_UNLOCKS, then check unlocked(key) wherever it's built or used.
@@ -10,7 +10,7 @@ const HEART_UNLOCKS=[
   {lv:2, k:'shop',   name:'General store',   icon:'shop',  desc:'Decor, fences, sprinklers and tool upgrades.'},
   {lv:3, k:'vh0',    name:'A plot for a neighbour',icon:'heart',desc:'Someone will move in the next morning.'},
   {lv:4, k:'boat',   name:'Your boat',       icon:'boat',  desc:'Repaired and seaworthy: sail out and explore the other islands.'},
-  {lv:5, k:'lodge',  name:'Nature lodge',    icon:'dex',   desc:'Release the creatures you catch, and they come to live on your island.'},
+  {lv:5, k:'fair',   name:'Island fair',     icon:'star',  desc:'A new contest every day: win ribbons, shells and trophies.'},
   {lv:5, k:'vh1',    name:'A second plot',   icon:'heart', desc:'Another neighbour arrives the next morning.'},
   {lv:6, k:'cafe',   name:'Harbour café',    icon:'star',  desc:'Cocoa and coffee that give you a boost for the day.'},
   {lv:7, k:'hall',   name:'Town hall',       icon:'task',  desc:'A home for the daily requests and island news.'},
@@ -24,7 +24,7 @@ const unlocked=k=>{if(!S.scratch)return true;const u=HEART_UNLOCKS.find(q=>q.k==
 const movedIn=n=>!S.scratch||!!(S.moved&&S.moved[n]);
 // on a wild island a building stands once you've placed its kit and a night has passed
 const built=t=>!S.scratch||(S.builds||[]).some(b=>b.t===t&&S.day>b.day);
-const KIT_KINDS=['shop','lodge','cafe','hall','vh0','vh1','vh2','vh3','vh4','vh5'];
+const KIT_KINDS=['shop','fair','cafe','hall','vh0','vh1','vh2','vh3','vh4','vh5'];
 // every building kit your level has earned and you haven't placed yet
 function grantKits(){if(!S.scratch)return;S.kits=S.kits||{};const placed=k=>(S.builds||[]).some(b=>(b.t==='vh'?'vh'+b.n:b.t)===k);
   for(const u of HEART_UNLOCKS)if(KIT_KINDS.includes(u.k)&&level()>=u.lv&&!placed(u.k))S.kits[u.k]=1;}

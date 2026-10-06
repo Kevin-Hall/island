@@ -1,6 +1,6 @@
 /* =========================================================
    Settling a wild island (S.scratch): you choose where everything goes.
-   Blueprints: your tent, and each kit the Island Heart gives you (store, nature lodge, café, town hall, a neighbour's plot).
+   Blueprints: your tent, and each kit the Island Heart gives you (store, island fair, café, town hall, a neighbour's plot).
    Each takes a 2×2 patch of clear, level grass, with room at the door. You tap to move the outline, then place it;
    buildings go up overnight (S.builds, finished by morningMoveIn). Pitching your tent is also when you name the island.
    Your driftseed is placed the same way (one tile, with open ground round it): it becomes the Island Heart.

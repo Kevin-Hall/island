@@ -157,7 +157,7 @@ function reel(){const f=fishing;if(!f)return;
   endFishing();}
 function catchFish(){const f=fishing,id=f.target.fish,F=FISH[id],key='f:'+id;const first=gain(key);buzz(25);
   if(f.target.gold){const b=F.price;S.shells+=b;setTimeout(()=>{SFX.discover();stamp('A golden catch!',`${F.name} · +${b} bonus shells`,true);flyShells(10);},700);for(let i=0;i<24;i++)sparkle(f.px+(Math.random()-0.5),0.4+Math.random(),f.pz+(Math.random()-0.5),0xffe27a);}
-  const kg=Math.round((F.size*(0.5+Math.random()*0.9)+Math.random()*0.3)*F.size*10)/10;const rec=!F.junk&&kg>(S.rec[id]||0);if(!F.junk)S.rec[id]=Math.max(S.rec[id]||0,kg);
+  const kg=Math.round((F.size*(0.5+Math.random()*0.9)+Math.random()*0.3)*F.size*10)/10;const rec=!F.junk&&kg>(S.rec[id]||0);if(!F.junk){S.rec[id]=Math.max(S.rec[id]||0,kg);fairFish(kg);}/* (the derby, 59-fair) */
   f.caughtIt=true;const s=f.target;scene.remove(s.g);shadows.splice(shadows.indexOf(s),1);
   burst(f.px,0.1,f.pz,0xe8f4ff,18,1.9,0.08,5);ripple(f.px,f.pz,true);SFX.splash();vil.hop=0.3;
   if(caught){scene.remove(caught.g);catchCard(null);}const g=fishModel(F);scene.add(g);const kind=fishKind(id,F);

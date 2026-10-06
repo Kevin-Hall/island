@@ -111,7 +111,7 @@ function updateRoom(dt,tt){const I=inside;if(!I)return;let walking=false,climb=f
   roomWinMat.color.setHex(nightF>0.5?0x2a3a6a:S.rain?0x9aa8b8:S.hour<7||S.hour>18?0xf4b890:0x9fd4ff);roomLamp.intensity=0.25+nightF*0.5;}
 function townTap(f,x,z){const b=TOWN.bld.find(q=>x>=q.x&&x<=q.x+1&&z>=q.z&&z<=q.z+1);
   if(f==='shop'){goTo(b.door[0]+0.5,b.door[1]+0.6,()=>enterHouse('shop',b));return true;}
-  if(f==='lodge'){lodgeTap(b);return true;}
+  if(f==='fair'){fairTap(b);return true;}
   if(f==='cafe'){goTo(b.door[0]+0.5,b.door[1]+0.6,()=>enterHouse('cafe',b));return true;}
   if(f==='lighthouse'){walkTo(x,z+1);toast('The old lighthouse. At night its beam sweeps the sea, so you can always find your way home.','',ICON.boat);return true;}
   if(f==='hall'){walkTo(b.door[0]+0.5,b.door[1]);openSheet('orders');return true;}

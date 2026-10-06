@@ -53,7 +53,7 @@ function frame(now){
   rainbowMat.color.setHSL((tt*0.25)%1,0.85,0.6);rainbowMat.emissive.setHSL((tt*0.25)%1,0.9,0.18);
   for(const a of anims)a(tt,dt);
   PL('anims');{let t0=performance.now();const lap=k=>{const t=performance.now();FRAME_STAT[k]=(FRAME_STAT[k]||0)*0.9+(t-t0)*0.1;t0=t;};/* smoothed per-system timings, read by DS.perf() */
-    updateLife(dt,tt);lap('life');updateAtmos(dt,tt);updateAmbience(dt,tt);lap('atmos');updateNPCs(dt,tt);lap('npcs');updateSeaLife(dt,tt);lap('sea');updateDebris(dt,tt);updateTool(dt);updateResidents(dt,tt);updateLighthouse(dt,tt);lap('misc');}
+    updateLife(dt,tt);lap('life');updateAtmos(dt,tt);updateAmbience(dt,tt);lap('atmos');updateNPCs(dt,tt);lap('npcs');updateSeaLife(dt,tt);lap('sea');updateDebris(dt,tt);updateTool(dt);updateFair(dt);updateLighthouse(dt,tt);lap('misc');}
   if(sprayT>0){sprayT-=dt;for(const o of S.objs)if(o.k==='sprinkler'&&Math.random()<0.8){const a=Math.random()*6.28;emit(o.x,topY(o.x,o.z)+0.4,o.z,{vx:Math.cos(a)*1.6,vy:1.6,vz:Math.sin(a)*1.6,life:0.6,max:0.6,size:0.05,color:0x9ad0ff,g:6});}}
   for(const c of clouds){const u=c.userData;u.ox+=dt*u.sp;const rx=((u.ox-cam.tx)%80+120)%80-40,rz=((u.oz-cam.tz)%80+120)%80-40;c.position.set(cam.tx+rx,11,cam.tz+rz);}
   const day=1-nightF;

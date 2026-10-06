@@ -24,7 +24,8 @@ const STATS=[// id, title, what, icon
   ['watch','Wildlife Whisperer','animals watched','w:fox'],
   ['tidy','Weed Warrior','weeds and clutter cleared','g:clover4'],
   ['steps','Marathon Bunny','steps taken','star'],
-  ['visits','Social Butterfly','islands visited','chart']];
+  ['visits','Social Butterfly','islands visited','chart'],
+  ['ribbons','Blue Ribbon','ribbons won at the fair','star']];
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const socIcon=k=>k==='heart'?HEART_ICO:ICON[k]||ICON.star;
 const HEART_ICO=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.fillStyle='#f0507a';x.strokeStyle='#a8264a';x.lineWidth=3;

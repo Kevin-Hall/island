@@ -752,3 +752,7 @@ body.decorating .clockb,body.decorating #joy,body.decorating #ctx{display:none}
 .ldbr.me{background:#fff3c4;border-radius:10px}.ldbr.none{color:var(--ink2);font-size:13px}
 .ldbr .rk{width:26px;text-align:center;font-weight:700}.ldbr .who{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .ldbr .who small{display:block;color:var(--ink2);font-size:12px}.ldbr .v{font-weight:700;font-variant-numeric:tabular-nums}
+/* the island fair (59-fair): a ribbon rosette, and today's contest header */
+.ribb{flex:none;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 50% 50%,#fff8 0 18%,var(--rc) 20% 58%,color-mix(in srgb,var(--rc) 70%,#000) 60% 66%,var(--rc) 68%);box-shadow:0 2px 0 var(--line)}
+.fairhd{display:flex;gap:12px;align-items:center;background:color-mix(in srgb,var(--fc) 16%,var(--paper));border:2px solid color-mix(in srgb,var(--fc) 45%,transparent);border-radius:16px;padding:10px 12px;margin:2px 0 8px}
+.fairhd img{width:40px;height:40px}.fairhd b{font-size:16px}.fairhd span{font-size:13px;color:var(--ink2)}

@@ -71,9 +71,9 @@ await ev(()=>DS.sheet('bag','craft'));await wait(400);await pg.screenshot({path:
 // houses
 st=await enter(()=>DS.enterHome());check(!!st.inside,`entered ${st.inside}`);await pg.screenshot({path:join(shots,'3-home.png')});
 await leave();st=await enter(()=>DS.enterNpc(0));check(!!st.inside,`entered ${st.inside}`);await leave();
-// rewilding: release a creature at the nature lodge, and the ones you've let go live about the island
-{const n0=await ev(()=>DS.ev("S.inv['f:sardine']=(S.inv['f:sardine']||0)+1;openSheet('lodge','release');releaseOne('f:sardine');closeSheet();rewildN()"));check(n0>=1,`released a sardine (${n0} kinds living here)`);
-  await ev(()=>DS.rewildAll(40));await wait(600);const rs=await ev(()=>DS.residents());check(Array.isArray(rs),`residents about the island: ${rs.length}`);await pg.screenshot({path:join(shots,'3b-lodge.png')});}
+// the island fair: today's contest, scored from the day's counts, and a ribbon collected at the pavilion
+{const f0=await ev(()=>DS.fairInfo());check(!!f0.today,`today's contest: ${f0.today}`);
+  const won=await ev(()=>DS.ev("(()=>{const C=fairToday();if(C.k==='derby')fairFish(C.tiers[0]+1);else statBump(C.stat,C.tiers[0]);openSheet('fair','today');fairCollect(0);closeSheet();return fairState().got[0];})()"));check(won===1,'won a bronze ribbon at the fair');await pg.screenshot({path:join(shots,'3b-fair.png')});}
 // explore: visit an island, fish there, travel home
 const isl=await ev(()=>DS.islands().find(i=>!i.grand&&i.id>0));await ev(id=>DS.visit(id),isl.id);await wait(1500);
 st=await ev(()=>DS.state());check(st.loc===isl.name,`visited ${isl.name}`);check(await ev(()=>DS.fish()),'started fishing');await wait(1500);

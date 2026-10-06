@@ -1,6 +1,6 @@
 /* =========================================================
    The town: a Wild World-style village generated from the world seed —
-   plaza with a town tree, shops, a nature lodge, a town hall, villager homes, dirt paths, lamps and trees
+   plaza with a town tree, shops, the island fair's pavilion, a town hall, villager homes, dirt paths, lamps and trees
    ========================================================= */
 const TOWN={fHid:null,name:'',plaza:[0,0],benches:[],cafeSeats:[],light:null,bld:[],path:new Map(),fixed:new Map(),plot:[],board:null,lamps:[],flora:new Map(),res:new Map()};
 // (wild flowers and clover: 54b-flora)
@@ -38,7 +38,7 @@ function layoutTown(isl){
     pc=pc||[0,1];TOWN.plaza=pc;for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++){const k=K(pc[0]+dx,pc[1]+dz);TOWN.path.set(k,2);}
     TOWN.fixed.set(K(pc[0],pc[1]),'tree');TOWN.board=[pc[0]+2,pc[1]-2];TOWN.fixed.set(K(...TOWN.board),'board');
     // buildings: civic ones close to the plaza, homes spread around
-    const want=[{t:'hall',d:[4,7]},{t:'shop',d:[4,8]},{t:'lodge',d:[4,9]},{t:'cafe',d:[4,10]},{t:'home',d:[5,9]}];for(let i=0;i<6;i++)want.push({t:'vh',d:[6,24],n:i});
+    const want=[{t:'hall',d:[4,7]},{t:'shop',d:[4,8]},{t:'fair',d:[4,9]},{t:'cafe',d:[4,10]},{t:'home',d:[5,9]}];for(let i=0;i<6;i++)want.push({t:'vh',d:[6,24],n:i});
     for(const w of want){let best=null,bs=-1e9;
       for(let it=0;it<900;it++){const x=Math.floor((R()-0.5)*2*(TOWN_W-3)),z=Math.floor((R()-0.5)*2*(TOWN_D-3))-1;if(!fits(x,z,2,3,1))continue;
         const d=Math.hypot(x+0.5-pc[0],z+1-pc[1]);if(d<w.d[0]||d>w.d[1])continue;let near=99;for(const b of TOWN.bld)near=Math.min(near,Math.hypot(b.x-x,b.z-z));
@@ -128,7 +128,7 @@ function townBuilding(b,R){const p=[],gl=[];let lit=true;
     gl.push(P(BOX,0x404a60,-0.6,0.55,0.76,0,0,0,0.34,0.3,0.03),P(BOX,0x404a60,0.6,0.55,0.76,0,0,0,0.34,0.3,0.03));
     for(const [x,c] of [[-0.95,0xa87444],[0.98,0x9a6a3a]])p.push(P(BOX,c,x,0.16,1.05,0,0.3,0,0.3,0.3,0.3),P(ICO2,x<0?0xf08a2a:0xe0303a,x,0.36,1.05,0,0,0,0.14,0.12,0.14));
     /* hanging sign: a basket of produce */p.push(P(BOX,0x5a3a2a,0.72,1.1,0.95,0,0,0,0.5,0.04,0.04),P(BOX,0xf6ecd0,0.82,0.92,0.95,0,0,0,0.34,0.26,0.03),P(BOX,0x8a5a3a,0.82,0.88,0.97,0,0,0,0.2,0.08,0.02),P(ICO2,0xe0303a,0.76,0.96,0.97,0,0,0,0.07,0.07,0.02),P(ICO2,0xf08a2a,0.86,0.97,0.97,0,0,0,0.07,0.07,0.02),P(ICO2,0x6ab84a,0.82,1.01,0.97,0,0,0,0.06,0.05,0.02));}
-  else if(b.t==='lodge')lodgeParts(p,gl);/* a log cabin with a lookout, a bird feeder and a pond (59-lodge) */
+  else if(b.t==='fair')fairParts(p,gl);/* a striped pavilion with bunting and a ribbon board (59-fair) */
   else if(b.t==='cafe'){// the harbour café: a sailcloth awning, a big window, a coffee-cup sign and a little patio with parasols
     p.push(P(BOX,0xf4ecdc,0,0.55,-0.35,0,0,0,1.8,1.1,1.1),P(BOX,0x9a9ea8,0,0.05,-0.35,0,0,0,1.86,0.1,1.16),P(BOX,0x86c8b8,0,1.12,-0.35,0,0,0,1.86,0.06,1.16));roof(p,0x86c8b8,0xf4ecdc,1.9,0.6,1.1,1.1,0,-0.35);
     for(let i=0;i<7;i++)p.push(P(BOX,i%2?0xfbf8f0:0x86c8b8,-0.78+i*0.26,0.96,0.34,0.4,0,0,0.26,0.03,0.42));

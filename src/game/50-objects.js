@@ -58,7 +58,7 @@ function objGroup(kind,seed=1,rot=0){
       const blades=M(bl);blades.position.set(0,1.95,0.5);g.add(blades);g.userData.anim=(t,dt)=>{blades.rotation.z-=dt*1.1;};break;}
     case'pcrate':case'pbasket':case'psack':produceDisplay(g,kind,R);break;/* (58c) */
     case'coop':case'barn':ranchBld(g,kind);break;/* (58c) */
-    default:if(!moreDecor(kind,g,R,seed)&&!farmDecor(kind,g)&&!isleDecorParts(kind,g)&&!wildflowerParts(kind,g))furnParts(kind,g,R,seed,rot);/* (the newer pieces: 50e) */
+    default:if(!moreDecor(kind,g,R,seed)&&!farmDecor(kind,g)&&!isleDecorParts(kind,g)&&!wildflowerParts(kind,g)&&!fairCupParts(kind,g))furnParts(kind,g,R,seed,rot);/* (the newer pieces: 50e) */
   }
   g.rotation.y=rot;return g;
 }

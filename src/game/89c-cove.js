@@ -1,7 +1,7 @@
 /* =========================================================
    Dev: Hollyhock Cove, a hand-curated test island for everything recent: one walk round it passes every new thing.
    A river runs down the middle; the village is on the east bank and the farm on the west.
-     - Harbour Street under the cliff: the hall, Hazel's store, the café and the nature lodge on a cobbled street that runs
+     - Harbour Street under the cliff: the hall, Hazel's store, the café and the island fair on a cobbled street that runs
        to the lighthouse. Go in: the shop and café interiors are the cozy ones (56d).
      - the market square west of the plaza: stalls, a flower cart and rows of produce crates, baskets and sacks, each
        filled with something (58c), under bunting
@@ -18,7 +18,7 @@
    ========================================================= */
 const COVE={seed:9137,scale:1.5,shape:[0.05,0.03,0.02,1,2,3,3.4],coves:[[0.4,0.22,0.3],[3.4,0.16,0.22]],cliff:[0.4,0],wild:0.35,dockX:-6,
   home:[-9,-9],heart:[11,2],fire:[16,23],
-  civic:[['hall',3,-8],['shop',8,-8],['cafe',13,-8],['lodge',18,-8]],
+  civic:[['hall',3,-8],['shop',8,-8],['cafe',13,-8],['fair',18,-8]],
   cottages:[[1,12,0x4a6ad0],[8,16,0xd87a9a],[17,13,0x4f9a4a],[24,-2,0xe0913a],[-11,14,0x8a6ad0],[-22,-9,0x3aa8a0]]};
 function loadCove(){
   try{if(!S.showcase)localStorage.setItem(REAL_KEY,JSON.stringify(S));}catch(e){toast('Could not back up your save, so Hollyhock Cove was not loaded.');return;}

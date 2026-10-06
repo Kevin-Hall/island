@@ -116,7 +116,7 @@ function buildIsland(isl){
   if(isl.riverN||isl.home&&S.terra&&Object.values(S.terra).some(v=>v<0))carveRivers(isl,isl.riverG);
   if(isl.home)reefDirty=true;/* the reef's seabed follows the coast (76c-swim) */
   shapeBeach(isl);
-  if(isl.home){layoutTown(isl);addMarks(isl);addBench(isl);/* the island's landmarks (85b) */setPathMask(TOWN.path);resid.t=0;}
+  if(isl.home){layoutTown(isl);addMarks(isl);addBench(isl);/* the island's landmarks (85b) */setPathMask(TOWN.path);}
   isl.tch=new Map();isl.tMesh=null;bakeTerrain(isl,g,null);
   if(isl.grass.length)buildGrass(isl,g);
   // shallow-water bands, with rounded outer corners so the coast doesn't step in squares
