@@ -7046,10 +7046,10 @@ function buildGrass(isl,g){const B=BIOMES[isl.biome],per=GRASS_DENS[isl.biome]||
   isl.gHid=null;im.userData.per=per;im.renderOrder=3;im.receiveShadow=true;im.castShadow=false;im.frustumCulled=false;g.add(im);isl.gIM=im;}
 // hide the blades where something sits on the home island (tilled soil, the house, furniture)
 function refreshHomeGrass(){nearT=0;const isl=islands&&islands[0];if(!isl)return;if(isl.gIM){const im=isl.gIM,per=im.userData.per;if(!isl.gHid)isl.gHid=new Map();let ch=false;
-  for(const [k,i0] of isl.gIdx){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||objAt(x,z)||floorAt(x,z)||fixedAt(x,z)||TOWN.path.has(k));if(isl.gHid.get(k)===hide)continue;isl.gHid.set(k,hide);ch=true;
+  for(const [k,i0] of isl.gIdx){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||(S.holes&&S.holes[k])||objAt(x,z)||floorAt(x,z)||fixedAt(x,z)||TOWN.path.has(k));if(isl.gHid.get(k)===hide)continue;isl.gHid.set(k,hide);ch=true;
     for(let j=0;j<per;j++){if(hide)im.setMatrixAt(i0+j,_m.makeScale(0,0,0));else im.setMatrixAt(i0+j,clumpMat(x,z,j));}}
   if(ch)im.instanceMatrix.needsUpdate=true;}
-  const dirty=new Set();if(!TOWN.fHid)TOWN.fHid=new Map();for(const [k,arr] of TOWN.flora){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||objAt(x,z)||floorAt(x,z)||fixedAt(x,z));if(TOWN.fHid.get(k)===hide)continue;TOWN.fHid.set(k,hide);
+  const dirty=new Set();if(!TOWN.fHid)TOWN.fHid=new Map();for(const [k,arr] of TOWN.flora){const [x,z]=k.split(',').map(Number);const hide=!!(S.tiles[k]||(S.holes&&S.holes[k])||(S.dugFlora&&S.dugFlora[k])||objAt(x,z)||floorAt(x,z)||fixedAt(x,z));if(TOWN.fHid.get(k)===hide)continue;TOWN.fHid.set(k,hide);
     for(const [fm,i,mat] of arr){fm.setMatrixAt(i,hide?_m.makeScale(0,0,0):_m.fromArray(mat));dirty.add(fm);}}for(const fm of dirty)fm.instanceMatrix.needsUpdate=true;}
 const TUFT_GEO=merge([P(BOX,0xffffff,0,0.07,0,0.25,0,0.2,0.035,0.16,0.05),P(BOX,0xdddddd,0.06,0.06,0.03,-0.2,0.6,-0.3,0.035,0.13,0.05),P(BOX,0xeeeeee,-0.05,0.05,-0.03,0.3,1.2,0.4,0.035,0.11,0.05),P(BOX,0xd4d4d4,0.02,0.05,-0.06,-0.35,2,0.1,0.035,0.1,0.05)]);
 const riverU={uTime:{value:0}};
@@ -7073,7 +7073,7 @@ function updateNearGrass(dt){
   let i=0;const Ri=Math.ceil(NEAR_R);
   for(let dz=-Ri;dz<=Ri;dz++)for(let dx=-Ri;dx<=Ri;dx++){const d=Math.hypot(dx,dz);if(d>NEAR_R)continue;const x=cx+dx,z=cz+dz,k=K(x,z);
     if(landMap.get(k)!=='grass')continue;const isl=islandAt(x,z);if(!isl||NEAR_SKIP.has(isl.biome)||(isl.home&&S.wild&&season()==='winter'))continue;
-    if(S.tiles[k]||TOWN.path.has(k)||(isl.blocked&&isl.blocked.has(k))||objAt(x,z)||floorAt(x,z)||fixedAt(x,z)||debrisAt(x,z))continue;
+    if(S.tiles[k]||(S.holes&&S.holes[k])||TOWN.path.has(k)||(isl.blocked&&isl.blocked.has(k))||objAt(x,z)||floorAt(x,z)||fixedAt(x,z)||debrisAt(x,z))continue;
     const f=Math.min(1,(NEAR_R-d)/2.5),gc=groundCol(islLook(isl).grass,x,z,isl.seed);
     for(let j=0;j<NEAR_PER&&i<NEAR_MAX;j++,i++){clumpMat(x,z,j);if(f<1)_m.scale(_nv.set(f,f,f));nearIM.setMatrixAt(i,_m);nearIM.setColorAt(i,_c.setHex(gc).offsetHSL(0,0,(hash(x*3+j,z*5-j)-0.5)*0.05));}}
   nearIM.count=i;nearIM.instanceMatrix.needsUpdate=true;nearIM.instanceColor.needsUpdate=true;}
@@ -7855,7 +7855,7 @@ function objGroup(kind,seed=1,rot=0){
       const blades=M(bl);blades.position.set(0,1.95,0.5);g.add(blades);g.userData.anim=(t,dt)=>{blades.rotation.z-=dt*1.1;};break;}
     case'pcrate':case'pbasket':case'psack':produceDisplay(g,kind,R);break;/* (58c) */
     case'coop':case'barn':ranchBld(g,kind);break;/* (58c) */
-    default:if(!moreDecor(kind,g,R,seed)&&!farmDecor(kind,g)&&!isleDecorParts(kind,g))furnParts(kind,g,R,seed,rot);/* (the newer pieces: 50e) */
+    default:if(!moreDecor(kind,g,R,seed)&&!farmDecor(kind,g)&&!isleDecorParts(kind,g)&&!wildflowerParts(kind,g))furnParts(kind,g,R,seed,rot);/* (the newer pieces: 50e) */
   }
   g.rotation.y=rot;return g;
 }
@@ -11323,7 +11323,7 @@ function pipHair(style){if(_pipHair[style])return _pipHair[style];const V=(x,y,z
 // mushroom cap, a floppy wizard's hat, an explorer's pith helmet. Each hat has its colour (the Hat tab) and a fixed
 // accent (its band, or the mushroom's spots), and the mushroom a pale underside.
 const SPRIG_BONES=[['Hips',null,0,0.2,0],['Spine','Hips',0,0.3,0],['Head','Spine',0,0.44,0],
-  ['ArmL','Spine',-0.068,0.39,0],['ArmR','Spine',0.068,0.39,0],['LegL','Hips',-0.048,0.21,0],['LegR','Hips',0.048,0.21,0],['EyeL','Head',0,0,0],['EyeR','Head',0,0,0]];
+  ['ArmL','Spine',-0.068,0.39,0],['ArmR','Spine',0.068,0.39,0],['LegL','Hips',-0.048,0.21,0],['LegR','Hips',0.048,0.21,0],['EyeL','Head',0,0,0],['EyeR','Head',0,0,0],['Hat','Head',0,0.74,0]];/* (the hat rides its own bone, so it can lag, bounce and hop) */
 const SPRIG_DRESS={labels:['skin','top','shoe','trim'],own:{skin:0xf4ead8,top:0x8fae5a,shoe:0x8a5a3a,trim:0xf6efdc},
   cols:{trim:[0xf6efdc,0xf2c14e,0xe98aa0,0x8fc0e8,0xc8e0a0,0xd9524a,0x6c62b8,0x5a4a44],top:[0x8fae5a,0xe98aa0,0x74a9de,0xf2c14e,0xbfa3e3,0xe4683f,0x3f5a85,0xf2ede4,0x5a8a6a,0xc89a62]}};
 const SPRIG_HATS=[{name:'Straw',own:0xdcae62,band:0x8a5a34},{name:'Mushroom',own:0xd9524a,band:0xfff6ea},{name:'Wizard',own:0x6c62b8,band:0xf2c14e},{name:'Explorer',own:0xe4d2a2,band:0x6b4a32},
@@ -11358,8 +11358,8 @@ function sprigParts(outfit=0){const V=(x,y,z)=>new T.Vector3(x,y,z),ss=(a,b,x)=>
     if(outfit===2)P.push({d:(x,y,z)=>sdMax(sdE(V(0,0.33,-0.05),V(0.17,0.16,0.11))(x,y,z),-0.02-z,0.02),bone:'Spine',k:0.02,col:'trim'},/* a cloak down the back */
       {d:sdE(V(0,0.47,-0.1),V(0.15,0.075,0.075)),bone:'Spine',k:0.03,col:'trim'});}/* its hood, folded down */
   for(const s of [-1,1]){const S=s<0?'L':'R';
-    P.push({d:sdC(V(s*0.066,0.405,0),V(s*0.112,0.335,0.008),0.032,0.029),bone:'Arm'+S,k:0.025,col:outfit===1?'trim':'top'},{d:sdC(V(s*0.112,0.335,0.008),V(s*0.148,0.272,0.016),0.025,0.012),bone:'Arm'+S,k:0.015,col:'skin'},
-      {d:sdC(V(s*0.048,0.22,0),V(s*0.048,0.07,0),0.03,0.028),bone:'Leg'+S,k:0.02,col:'skin'},{d:sdE(V(s*0.05,0.042,0.018),V(0.044,0.042,0.062)),bone:'Leg'+S,k:0.02,col:'shoe'},
+    P.push({d:sdC(V(s*0.066,0.405,0),V(s*0.112,0.335,0.008),0.032,0.029),bone:'Arm'+S,k:0.025,col:outfit===1?'trim':'top'},{d:sdC(V(s*0.112,0.335,0.008),V(s*0.146,0.276,0.016),0.025,0.016),bone:'Arm'+S,k:0.015,col:'skin'},{d:sdE(V(s*0.152,0.262,0.018),V(0.024,0.024,0.024)),bone:'Arm'+S,k:0.012,col:'skin'},/* round little mitten hands */
+      {d:sdC(V(s*0.048,0.22,0),V(s*0.048,0.07,0),0.03,0.028),bone:'Leg'+S,k:0.02,col:'skin'},{d:sdE(V(s*0.05,0.044,0.022),V(0.05,0.046,0.07)),bone:'Leg'+S,k:0.02,col:'shoe'},
       {d:ringAt(s*0.048,0.004,0.085,0.03,0.011),bone:'Leg'+S,k:0.01,col:'shoe'});}/* boot cuffs */
   return P;}
 // the faces: the base (blush, and where the eyes go) and the alternatives, each its own mesh (sdfRig o.faces)
@@ -11384,12 +11384,22 @@ function sprigScene(outfit=0){if(_sprigBody[outfit])return _sprigBody[outfit];
     face:(hit,put,S)=>{const eyes={};// where the eyes sit (their bones) and a hint of blush; the eyes and mouth themselves are SPRIG_FACES
       for(const s of [-1,1]){eyes[s]=sprigEye(hit,s).p;const b=hit(s*0.56,-0.36,0.78);put(S,0xf2b4ae,b.p.clone().addScaledVector(b.n,-0.003),b.n,0.03,0.016,0.01);}
       return eyes;},faces:SPRIG_FACES});}
-function sprigRig(){if(!_sprigClips)_sprigClips=pipClips(SPRIG_BONES);
+// the hat's own motion on top of Pip's clips: it lags the head and sways in the idle, bobs and tilts a beat behind each
+// step, and in a twirl or a cheer it pops up off the head and drops back on
+function sprigHatTracks(clips){const {rest,R,V3}=rigKit(SPRIG_BONES),H0=rest('Hat');
+  for(const c of clips){const d=c.duration,n=c.name;let rot,pos;
+    if(n==='Idle'){rot=a=>[Math.sin(a+1.2)*0.035,0,Math.sin(a+1.7)*0.05];pos=()=>H0;}
+    else if(n==='Walk'){rot=a=>[-0.07*Math.cos(2*a+0.9),0,Math.sin(a-0.7)*0.12];pos=a=>[H0[0],H0[1]+0.012*Math.max(0,Math.sin(2*a-0.9)),H0[2]];}
+    else if(n==='Run'){rot=a=>[-0.16-0.08*Math.cos(2*a+0.9),0,Math.sin(a-0.7)*0.16];pos=a=>[H0[0],H0[1]+0.02*Math.max(0,Math.sin(2*a-0.9)),H0[2]];}
+    else{const pop=t=>Math.max(0,Math.sin(Math.PI*clamp((t-0.25)/0.55,0,1)));rot=(a,t)=>[-0.3*pop(t),Math.sin(t*Math.PI*2)*0.6*pop(t),0];pos=(a,t)=>[H0[0],H0[1]+0.14*pop(t),H0[2]];}
+    c.tracks.push(R('Hat',d,rot),V3('Hat','position',d,pos));}
+  return clips;}
+function sprigRig(){if(!_sprigClips)_sprigClips=sprigHatTracks(pipClips(SPRIG_BONES));
   const [idle,walk,run,spin,flip]=_sprigClips;return{scene:T.SkeletonUtils.clone(sprigScene(0)),clips:[idle,walk,run],emotes:{spin,flip},speeds:[0.55,3.2]};}
 // dressing a Sprig: its outfit's body (charModel picks it), its eyes and mouth shown, its hat and any extra
 function sprigDress(m,look){const ey='SprigFace_e'+(look.eyes|0),mo='SprigFace_m'+(look.mouth|0);
   m.traverse(o=>{if(o.isMesh&&o.name.startsWith('SprigFace_'))o.visible=o.name===ey||o.name===mo;});
-  const st=look.style|0;headMesh(m,dressGeo(sprigHat(st),look,sprigHatDress(st)),null);
+  const st=look.style|0;headMesh(m,dressGeo(sprigHat(st),look,sprigHatDress(st)),null,'Hat');
   const x=look.extra|0;if(x>0&&SPRIG_ACC[x])headMesh(m,dressGeo(sprigAcc(x),look,sprigAccDress(x)),null,SPRIG_ACC[x].bone);}
 // the hats, each built once: a smooth shape painted in its colour (hair: the Hat tab), its accent (band) and a third
 // (gill: the mushroom's gills, a pompom, frog eyes, a vine)
@@ -11810,9 +11820,8 @@ function toolTap(x,z,isl){if(S.visit){visitNo();return;}const tool=S.tool,k=K(x,
     if(t.crop){autoTool('hand');actAt(x,z,()=>tendAt(x,z));return;}
     if(!t.crop){autoTool('seeds');actAt(x,z,()=>plant(k,x,z));return;}}
   switch(tool){
-    case'hoe':if(canTill(x,z)){actAt(x,z,()=>tillAt(x,z));return;}if(t)toolHint(t.crop?'Something is growing there.':'That soil is already tilled.');else if(TOWN.path.has(k))toolHint('Better not till the path!');break;
-    case'shovel':if(t&&!t.crop){actAt(x,z,()=>fillAt(x,z));return;}if(canTill(x,z)){autoTool('hoe');actAt(x,z,()=>tillAt(x,z));return;}
-      if(t)toolHint('Something is growing there.');else if(TOWN.path.has(k))toolHint('Better not dig up the town path!');break;
+    case'hoe':if(canTill(x,z)){actAt(x,z,()=>tillAt(x,z));return;}if(isHole(x,z))toolHint('Fill the hole back in with the <b>shovel</b> first.','shovel');else if(t)toolHint(t.crop?'Something is growing there.':'That soil is already tilled.');else if(TOWN.path.has(k))toolHint('Better not till the path!');break;
+    case'shovel':if(shovelTap(x,z))return;/* dig a hole, fill one, dig up flowers or a crop (72d) */if(TOWN.path.has(k))toolHint('Better not dig up the town path!');break;
     case'can':actAt(x,z,()=>waterAt(x,z));return;
     case'seeds':if(t&&!t.crop){actAt(x,z,()=>plant(k,x,z));return;}if(!t&&landMap.get(k)==='grass')toolHint('Till the ground with the <b>hoe</b> first.','hoe');break;
     case'hand':if(t&&t.crop){actAt(x,z,()=>tendAt(x,z));return;}break;
@@ -11977,7 +11986,7 @@ function useFixed(x,z){
   if(o){const B=BUILD[o.k];walkTo(x,z);toast(`<b>${B.name}</b> — ${B.desc}`);return true;}
   return false;}
 // the farming actions tools perform (71-tools decides which one a tap means)
-function canTill(x,z){const k=K(x,z);return !S.tiles[k]&&landMap.get(k)==='grass'&&!TOWN.path.has(k)&&freeTile(x,z)&&!fixedAt(x,z)&&!objAt(x,z)&&!debrisAt(x,z);}
+function canTill(x,z){const k=K(x,z);return !S.tiles[k]&&!(S.holes&&S.holes[k])&&landMap.get(k)==='grass'&&!TOWN.path.has(k)&&freeTile(x,z)&&!fixedAt(x,z)&&!objAt(x,z)&&!debrisAt(x,z);}
 function tillAt(x,z){if(!canTill(x,z))return false;S.tiles[K(x,z)]={w:S.rain?1:0,crop:null};rebuildSoil();SFX.till();tillFx(x,z);vil.hop=0.25;
   if(!S.tipSeed){S.tipSeed=1;setTimeout(()=>toast('Nice soil! Pick <b>Seeds</b> from your tools and tap it to plant.','',seedIcon(S.seed)),600);}return true;}
 function fillAt(x,z){const k=K(x,z),t=S.tiles[k];if(!t||t.crop)return false;delete S.tiles[k];rebuildSoil();noise(0.08,0.04,700);burst(x,0.5,z,0x6ab84a,8,1.0,0.06);return true;}
@@ -12262,6 +12271,60 @@ function renderDecoBar(){let el=$('decoBar');
     h+=list.length?`<div class="dtray">${list.map(k=>`<button data-put="${k}"><img src="${THUMB[k]||''}" alt=""><span>${BUILD[k].name}</span><em>×${S.store[k]}</em></button>`).join('')}</div>`:`<p class="dhint">Your bag has no decor. ${S.scratch?'Buy some from Marlo’s boat or Hazel’s store, or craft it.':'Buy some in the Shop, or craft it.'}</p>`;}
   el.innerHTML=h;decMark();}
 /* =========================================================
+   Digging: the shovel opens a hole in any open grass on your island, and fills it back in to grass.
+   - dig where wild flowers grow and they come up roots and all, into your bag as a clump to plant somewhere else
+     (BUILD 'wf<n>', one per wild flower kind and colour in 54b-flora: placed, it's that same clump; S.dugFlora remembers
+     where they came from, so the meadow stays dug)
+   - dig on a planted crop (after a quick "are you sure") and it's gone, leaving a hole
+   - tilled soil with nothing in it is filled straight back to grass (as before)
+   Holes are S.holes (tile keys); they hide the grass and flowers there (42-grass) and block tilling, building and
+   spawning until filled. Drawn as one merged mesh (syncHoles): a dark pit, a crumbly rim and a heap of dug-out earth.
+   ========================================================= */
+const isHole=(x,z)=>!!(S.holes&&S.holes[K(x,z)]);
+// the wild flowers, as things you can hold and plant: "Pink Tulips", "White Daisies"…
+const FLOWER_NAME={tulip:'Tulips',rose:'Roses',cosmos:'Cosmos',pansy:'Pansies',lily:'Lilies',lupine:'Lupins',daisy:'Daisies',crocus:'Crocuses'};
+const FLOWER_COL={0xe8453a:'Red',0xf6d04a:'Yellow',0xf2a6c8:'Pink',0xffffff:'White',0x9a6ad0:'Purple',0xd8303a:'Red',0xf8f4ee:'White',0xe86a8a:'Rose',0xf6a830:'Orange',
+  0x7a5ad0:'Violet',0x8ac8f0:'Blue',0xf08a2a:'Orange',0x8a6ae0:'Purple',0x6a7ae0:'Blue',0xf6e6f0:'Blush',0xb8a0ee:'Lilac',0xb48ee8:'Lilac',0xf6f2fa:'White',0xf6c440:'Yellow'};
+{let i=0;for(const sp in FLOWER_SP)FLOWER_SP[sp].forEach(c=>{const k='wf'+i++;BUILD[k]={name:`${FLOWER_COL[c]||'Wild'} ${FLOWER_NAME[sp]||sp}`,cost:0,lvl:1,craft:true,multi:true,wildflower:1,
+  desc:'Wild flowers you dug up with the shovel, roots and all. Plant them wherever you like.'};OBJ_H[k]=0.3;WALK_OVER.add(k);DC_GARDEN.add(k);});}
+const WF_MAT=toon({vertexColors:true,side:T.DoubleSide});/* (its own: the meadow's flowerMat is built for instancing) */
+// a placed clump: the meadow's own flowers (objGroup's default, 50-objects)
+function wildflowerParts(kind,g){if(!/^wf\d+$/.test(kind))return false;const i=+kind.slice(2),geo=FLORA_GEOS[i];if(!geo)return false;
+  const m=new T.Mesh(geo.clone(),WF_MAT);m.castShadow=true;m.receiveShadow=true;g.add(m);return true;}
+
+// ---- the holes ----
+const holeRoot=new T.Group();scene.add(holeRoot);
+function syncHoles(){while(holeRoot.children.length){const c=holeRoot.children.pop();c.geometry.dispose();}
+  const p=[],keys=Object.keys(S.holes||{});
+  for(const k of keys){const [x,z]=k.split(',').map(Number),y=topY(x,z),R=mulberry(hi(x,z,77)),a=R()*6.28,ca=Math.cos(a),sa=Math.sin(a);
+    p.push(P(CYL12,0x3a2818,x,y+0.008,z,0,R()*3,0,0.66,0.02,0.6),P(CYL12,0x22160e,x,y+0.012,z,0,R()*3,0,0.44,0.02,0.4));/* the pit, darker at its heart */
+    for(let i=0;i<9;i++){const b=i/9*6.283+R()*0.3,r=0.32+R()*0.04;p.push(P(SPH_LO,i%2?0x6a4a30:0x5a3e28,x+Math.cos(b)*r,y+0.025,z+Math.sin(b)*r*0.92,0,R()*3,0,0.12+R()*0.05,0.05+R()*0.02,0.1+R()*0.04));}/* a crumbly rim */
+    p.push(PG(SPH_LO,0x8a6040,0x5a3e28,x+ca*0.36,y+0.05,z+sa*0.36,0,a,0,0.3,0.14,0.22),PG(SPH_LO,0x7a5638,0x553a24,x+ca*0.3-sa*0.14,y+0.03,z+sa*0.3+ca*0.14,0,a,0,0.16,0.09,0.14));}/* the heap dug out of it */
+  if(p.length){const m=M(p);m.castShadow=false;m.receiveShadow=true;holeRoot.add(m);}}
+// open grass you can put a spade in: not path, soil, buildings, decor, rocks, trees, finds or an old hole
+function canDig(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&!TOWN.path.has(k)&&!S.tiles[k]&&!isHole(x,z)&&!objAt(x,z)&&!floorAt(x,z)&&!fixedAt(x,z)&&!debrisAt(x,z)&&!findAt(x,z)&&!weedAt(x,z);}
+const floraHere=k=>TOWN.flora&&TOWN.flora.has(k)&&!(S.dugFlora&&S.dugFlora[k])&&!(TOWN.fHid&&TOWN.fHid.get(k));
+function digHole(x,z){if(!canDig(x,z))return false;const k=K(x,z),y=topY(x,z);S.holes=S.holes||{};
+  if(floraHere(k)){const fk='wf'+floraIndex(x,z);(S.dugFlora||(S.dugFlora={}))[k]=1;S.store[fk]=(S.store[fk]||0)+1;
+    floatText(x,y+0.9,z,'+ '+BUILD[fk].name,'gold');for(let i=0;i<8;i++)emit(x,y+0.3,z,{vx:(Math.random()-0.5)*1.4,vy:1.4+Math.random(),vz:(Math.random()-0.5)*1.4,life:0.8,max:0.8,size:0.05,color:pickR([0xf6d04a,0xf2a6c8,0xffffff,0x6ab84a]),g:4});
+    if(!S.dugTip){S.dugTip=1;setTimeout(()=>toast(`The <b>${BUILD[fk].name}</b> came up roots and all. They're in your Bag (Decor) to plant wherever you like.`,'',THUMB[fk]),700);}}
+  S.holes[k]=1;syncHoles();refreshHomeGrass();digFx(x,z);return true;}
+function fillHole(x,z){const k=K(x,z);if(!isHole(x,z))return false;delete S.holes[k];syncHoles();refreshHomeGrass();noise(0.08,0.04,700);burst(x,topY(x,z)+0.2,z,0x6ab84a,8,1.0,0.06);vil.hop=0.2;return true;}
+function digFx(x,z){const y=topY(x,z);SFX.till();burst(x,y+0.15,z,0x6a4a30,12,1.4,0.07);vil.hop=0.25;}
+// a crop: dig it up (it's lost) after a check, leaving a hole
+function digCrop(x,z){const k=K(x,z),t=S.tiles[k];if(!t||!t.crop)return;const C=CROPS[t.crop.t]||{name:'crop'};
+  setAction(`Dig up your <b>${C.name.toLowerCase()}</b>? It'll be gone, and leave a hole.`,[{label:'Dig it up',cls:'go',fn:()=>{clearAction();actAt(x,z,()=>{
+      const tt=S.tiles[k];if(!tt||!tt.crop)return;delete S.tiles[k];if(typeof syncCrop==='function')try{syncCrop(k);}catch(e){}rebuildSoil();S.holes=S.holes||{};S.holes[k]=1;syncHoles();refreshHomeGrass();digFx(x,z);
+      burst(x,topY(x,z)+0.3,z,0x6ab84a,10,1.4,0.06);floatText(x,topY(x,z)+0.9,z,'Dug up');save();});}},{label:'Leave it',fn:clearAction}],'Shovel');}
+// what the shovel does on your island (from toolTap): fill a hole or empty soil, dig up a crop, or dig a new hole
+function shovelTap(x,z){const k=K(x,z),t=S.tiles[k];
+  if(isHole(x,z)){actAt(x,z,()=>fillHole(x,z));return true;}
+  if(t&&!t.crop){actAt(x,z,()=>fillAt(x,z));return true;}
+  if(t&&t.crop){digCrop(x,z);return true;}
+  if(canDig(x,z)){actAt(x,z,()=>digHole(x,z));return true;}
+  return false;}
+setTimeout(syncHoles,0);/* (once the island is laid out) */
+/* =========================================================
    Settling a wild island (S.scratch): you choose where everything goes.
    Blueprints: your tent, and each kit the Island Heart gives you (store, museum, café, town hall, a neighbour's plot).
    Each takes a 2×2 patch of clear, level grass, with room at the door. You tap to move the outline, then place it;
@@ -12491,7 +12554,7 @@ function syncLife(){syncDebris();
   for(const w of S.weeds){const g=findGroup('weed',w.x*31+w.z*7+99);g.position.set(w.x,topY(w.x,w.z),w.z);lifeRoot.add(g);
     for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)weedSlow.add(K(w.x+dx,w.z+dz));}
 }
-const freeTile=(x,z)=>!TOWN.path.has(K(x,z))&&!debrisAt(x,z)&&!objAt(x,z)&&!floorAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z)&&!S.tiles[K(x,z)];
+const freeTile=(x,z)=>!TOWN.path.has(K(x,z))&&!(S.holes&&S.holes[K(x,z)])&&!debrisAt(x,z)&&!objAt(x,z)&&!floorAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z)&&!S.tiles[K(x,z)];
 function spawnFind(quiet,isl){if(!isl)return;const here=S.finds.filter(f=>islMap.get(K(f.x,f.z))===isl.id&&!forageOf(f)&&f.eco==null);if(here.length>=5)return;
   if(S.finds.length>=70)S.finds.shift();
   const c=isl.sand.filter(([x,z])=>freeTile(x,z)&&!(isl.blocked&&isl.blocked.has(K(x,z))));if(!c.length)return;const [x,z]=pickR(c);
@@ -15502,10 +15565,10 @@ const ptrs=new Map();let drag=null,pinch=null,paint=null,holdT=null;
 function paintMode(x,z){if(!onHome(x,z))return null;const tool=S.tool,d=debrisAt(x,z);
   if(d)return !DEBRIS_TOOL[d.k]||DEBRIS_TOOL[d.k]===tool?'clear':null;
   if(fixedAt(x,z)||objAt(x,z))return null;const t=S.tiles[K(x,z)];
-  switch(tool){case'terra':return terraPlan(x,z,terraMode()).why?null:'terra';case'hoe':case'shovel':return canTill(x,z)?'till':null;case'can':return t?'water':null;case'seeds':return t&&!t.crop?'plant':null;
+  switch(tool){case'terra':return terraPlan(x,z,terraMode()).why?null:'terra';case'hoe':return canTill(x,z)?'till':null;case'shovel':return isHole(x,z)||(t&&!t.crop)?'fill':null;/* (a drag with the shovel fills holes and bare soil back in) */case'can':return t?'water':null;case'seeds':return t&&!t.crop?'plant':null;
     case'hand':return t&&t.crop?(t.crop.p>=1?'harvest':'tend'):null;}
   return null;}
-const PAINT_LBL={terra:'Landscaping',till:'Tilling',plant:'Planting',water:'Watering',harvest:'Harvesting',tend:'Tending',clear:'Clearing'};
+const PAINT_LBL={terra:'Landscaping',till:'Tilling',plant:'Planting',water:'Watering',harvest:'Harvesting',tend:'Tending',clear:'Clearing',fill:'Filling in'};
 function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!onHome(x,z))return;paint.done.add(k);const t=S.tiles[k];let did=false;
   switch(paint.mode){
     case'till':if(canTill(x,z)){S.tiles[k]={w:S.rain?1:0,crop:null};tillFx(x,z);SFX.till();paint.soil=did=true;}break;
@@ -15514,6 +15577,7 @@ function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!
     case'harvest':if(t&&t.crop&&t.crop.p>=1){harvest(k,x,z);did=true;}break;
     case'tend':if(t&&t.crop&&t.crop.p<1&&t.crop.td!==S.day){const c=t.crop,s0=stageOf(c.p);c.td=S.day;c.p=Math.min(0.995,c.p+0.08);if(stageOf(c.p)!==s0)syncCrop(k);hearts(x,0.9,z);tone(880+paint.n*40,0.06,'triangle',0.03);did=true;}break;
     case'terra':if(!terraPlan(x,z,terraMode()).why){(paint.terra||(paint.terra=[])).push([x,z]);cursorAt(x,z,0xffe08a);sparkle(x,topY(x,z)+0.2,z,0xfff0c0);paint.n++;}return;/* brushed now, changed all at once when you let go */
+    case'fill':if(isHole(x,z)){fillHole(x,z);did=true;}else if(t&&!t.crop){fillAt(x,z);did=true;}break;
     case'clear':{const d=debrisAt(x,z);if(d&&(!DEBRIS_TOOL[d.k]||DEBRIS_TOOL[d.k]===S.tool)){hitDebris(d);did=true;}break;}}
   if(did){paint.n++;cursorAt(x,z);walkTo(x,z);swingTool();if(paint.soil){rebuildSoil();paint.soil=false;}}}
 function endPaint(){if(!paint)return;const n=paint.n,m=paint.mode,tl=paint.terra;paint=null;if(m==='terra'&&tl){clearAction();terraApply(tl,terraMode());updateHUD();return;}clearAction();updateHUD();if(n>1)floatText(vil.x,1.3,vil.z,PAINT_LBL[m]+' ×'+n);}

@@ -59,10 +59,10 @@ const ptrs=new Map();let drag=null,pinch=null,paint=null,holdT=null;
 function paintMode(x,z){if(!onHome(x,z))return null;const tool=S.tool,d=debrisAt(x,z);
   if(d)return !DEBRIS_TOOL[d.k]||DEBRIS_TOOL[d.k]===tool?'clear':null;
   if(fixedAt(x,z)||objAt(x,z))return null;const t=S.tiles[K(x,z)];
-  switch(tool){case'terra':return terraPlan(x,z,terraMode()).why?null:'terra';case'hoe':case'shovel':return canTill(x,z)?'till':null;case'can':return t?'water':null;case'seeds':return t&&!t.crop?'plant':null;
+  switch(tool){case'terra':return terraPlan(x,z,terraMode()).why?null:'terra';case'hoe':return canTill(x,z)?'till':null;case'shovel':return isHole(x,z)||(t&&!t.crop)?'fill':null;/* (a drag with the shovel fills holes and bare soil back in) */case'can':return t?'water':null;case'seeds':return t&&!t.crop?'plant':null;
     case'hand':return t&&t.crop?(t.crop.p>=1?'harvest':'tend'):null;}
   return null;}
-const PAINT_LBL={terra:'Landscaping',till:'Tilling',plant:'Planting',water:'Watering',harvest:'Harvesting',tend:'Tending',clear:'Clearing'};
+const PAINT_LBL={terra:'Landscaping',till:'Tilling',plant:'Planting',water:'Watering',harvest:'Harvesting',tend:'Tending',clear:'Clearing',fill:'Filling in'};
 function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!onHome(x,z))return;paint.done.add(k);const t=S.tiles[k];let did=false;
   switch(paint.mode){
     case'till':if(canTill(x,z)){S.tiles[k]={w:S.rain?1:0,crop:null};tillFx(x,z);SFX.till();paint.soil=did=true;}break;
@@ -71,6 +71,7 @@ function paintAt(x,z){const k=K(x,z);if(!paint||paint.stop||paint.done.has(k)||!
     case'harvest':if(t&&t.crop&&t.crop.p>=1){harvest(k,x,z);did=true;}break;
     case'tend':if(t&&t.crop&&t.crop.p<1&&t.crop.td!==S.day){const c=t.crop,s0=stageOf(c.p);c.td=S.day;c.p=Math.min(0.995,c.p+0.08);if(stageOf(c.p)!==s0)syncCrop(k);hearts(x,0.9,z);tone(880+paint.n*40,0.06,'triangle',0.03);did=true;}break;
     case'terra':if(!terraPlan(x,z,terraMode()).why){(paint.terra||(paint.terra=[])).push([x,z]);cursorAt(x,z,0xffe08a);sparkle(x,topY(x,z)+0.2,z,0xfff0c0);paint.n++;}return;/* brushed now, changed all at once when you let go */
+    case'fill':if(isHole(x,z)){fillHole(x,z);did=true;}else if(t&&!t.crop){fillAt(x,z);did=true;}break;
     case'clear':{const d=debrisAt(x,z);if(d&&(!DEBRIS_TOOL[d.k]||DEBRIS_TOOL[d.k]===S.tool)){hitDebris(d);did=true;}break;}}
   if(did){paint.n++;cursorAt(x,z);walkTo(x,z);swingTool();if(paint.soil){rebuildSoil();paint.soil=false;}}}
 function endPaint(){if(!paint)return;const n=paint.n,m=paint.mode,tl=paint.terra;paint=null;if(m==='terra'&&tl){clearAction();terraApply(tl,terraMode());updateHUD();return;}clearAction();updateHUD();if(n>1)floatText(vil.x,1.3,vil.z,PAINT_LBL[m]+' ×'+n);}

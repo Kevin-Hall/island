@@ -45,7 +45,7 @@ await ev(()=>DS.hour(10));
 check((await ev(()=>DS.state())).perfPx===0,'no automatic pixel scaling');
 // drag-farming across a free row
 await ev(()=>DS.calm());/* no forage or critters appearing under the test's taps */const row=await ev(()=>DS.freeRow(5));check(!!row,'found a free row of grass');
-if(row){await ev(r=>DS.tp(r[0]+2,r[1]+1.5),row);check(await ev(()=>DS.tool('shovel'))==='shovel','equipped the shovel');await wait(2000);const pts=[];for(let i=0;i<5;i++)pts.push(await ev(([x,z])=>DS.screen(x,z),[row[0]+i,row[1]]));
+if(row){await ev(r=>DS.tp(r[0]+2,r[1]+1.5),row);check(await ev(()=>DS.tool('hoe'))==='hoe','equipped the hoe');await wait(2000);const pts=[];for(let i=0;i<5;i++)pts.push(await ev(([x,z])=>DS.screen(x,z),[row[0]+i,row[1]]));
   // long-press then drag; headless rendering can starve the 300ms hold timer, so hold generously and retry once
   const before=(await ev(()=>DS.state())).tiles;let after=before;
   for(let tries=0;tries<2&&after===before;tries++){await pg.mouse.move(pts[0][0],pts[0][1]);await pg.mouse.down();await wait(1500);

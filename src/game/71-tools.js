@@ -112,9 +112,8 @@ function toolTap(x,z,isl){if(S.visit){visitNo();return;}const tool=S.tool,k=K(x,
     if(t.crop){autoTool('hand');actAt(x,z,()=>tendAt(x,z));return;}
     if(!t.crop){autoTool('seeds');actAt(x,z,()=>plant(k,x,z));return;}}
   switch(tool){
-    case'hoe':if(canTill(x,z)){actAt(x,z,()=>tillAt(x,z));return;}if(t)toolHint(t.crop?'Something is growing there.':'That soil is already tilled.');else if(TOWN.path.has(k))toolHint('Better not till the path!');break;
-    case'shovel':if(t&&!t.crop){actAt(x,z,()=>fillAt(x,z));return;}if(canTill(x,z)){autoTool('hoe');actAt(x,z,()=>tillAt(x,z));return;}
-      if(t)toolHint('Something is growing there.');else if(TOWN.path.has(k))toolHint('Better not dig up the town path!');break;
+    case'hoe':if(canTill(x,z)){actAt(x,z,()=>tillAt(x,z));return;}if(isHole(x,z))toolHint('Fill the hole back in with the <b>shovel</b> first.','shovel');else if(t)toolHint(t.crop?'Something is growing there.':'That soil is already tilled.');else if(TOWN.path.has(k))toolHint('Better not till the path!');break;
+    case'shovel':if(shovelTap(x,z))return;/* dig a hole, fill one, dig up flowers or a crop (72d) */if(TOWN.path.has(k))toolHint('Better not dig up the town path!');break;
     case'can':actAt(x,z,()=>waterAt(x,z));return;
     case'seeds':if(t&&!t.crop){actAt(x,z,()=>plant(k,x,z));return;}if(!t&&landMap.get(k)==='grass')toolHint('Till the ground with the <b>hoe</b> first.','hoe');break;
     case'hand':if(t&&t.crop){actAt(x,z,()=>tendAt(x,z));return;}break;

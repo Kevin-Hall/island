@@ -8,7 +8,7 @@
 // mushroom cap, a floppy wizard's hat, an explorer's pith helmet. Each hat has its colour (the Hat tab) and a fixed
 // accent (its band, or the mushroom's spots), and the mushroom a pale underside.
 const SPRIG_BONES=[['Hips',null,0,0.2,0],['Spine','Hips',0,0.3,0],['Head','Spine',0,0.44,0],
-  ['ArmL','Spine',-0.068,0.39,0],['ArmR','Spine',0.068,0.39,0],['LegL','Hips',-0.048,0.21,0],['LegR','Hips',0.048,0.21,0],['EyeL','Head',0,0,0],['EyeR','Head',0,0,0]];
+  ['ArmL','Spine',-0.068,0.39,0],['ArmR','Spine',0.068,0.39,0],['LegL','Hips',-0.048,0.21,0],['LegR','Hips',0.048,0.21,0],['EyeL','Head',0,0,0],['EyeR','Head',0,0,0],['Hat','Head',0,0.74,0]];/* (the hat rides its own bone, so it can lag, bounce and hop) */
 const SPRIG_DRESS={labels:['skin','top','shoe','trim'],own:{skin:0xf4ead8,top:0x8fae5a,shoe:0x8a5a3a,trim:0xf6efdc},
   cols:{trim:[0xf6efdc,0xf2c14e,0xe98aa0,0x8fc0e8,0xc8e0a0,0xd9524a,0x6c62b8,0x5a4a44],top:[0x8fae5a,0xe98aa0,0x74a9de,0xf2c14e,0xbfa3e3,0xe4683f,0x3f5a85,0xf2ede4,0x5a8a6a,0xc89a62]}};
 const SPRIG_HATS=[{name:'Straw',own:0xdcae62,band:0x8a5a34},{name:'Mushroom',own:0xd9524a,band:0xfff6ea},{name:'Wizard',own:0x6c62b8,band:0xf2c14e},{name:'Explorer',own:0xe4d2a2,band:0x6b4a32},
@@ -43,8 +43,8 @@ function sprigParts(outfit=0){const V=(x,y,z)=>new T.Vector3(x,y,z),ss=(a,b,x)=>
     if(outfit===2)P.push({d:(x,y,z)=>sdMax(sdE(V(0,0.33,-0.05),V(0.17,0.16,0.11))(x,y,z),-0.02-z,0.02),bone:'Spine',k:0.02,col:'trim'},/* a cloak down the back */
       {d:sdE(V(0,0.47,-0.1),V(0.15,0.075,0.075)),bone:'Spine',k:0.03,col:'trim'});}/* its hood, folded down */
   for(const s of [-1,1]){const S=s<0?'L':'R';
-    P.push({d:sdC(V(s*0.066,0.405,0),V(s*0.112,0.335,0.008),0.032,0.029),bone:'Arm'+S,k:0.025,col:outfit===1?'trim':'top'},{d:sdC(V(s*0.112,0.335,0.008),V(s*0.148,0.272,0.016),0.025,0.012),bone:'Arm'+S,k:0.015,col:'skin'},
-      {d:sdC(V(s*0.048,0.22,0),V(s*0.048,0.07,0),0.03,0.028),bone:'Leg'+S,k:0.02,col:'skin'},{d:sdE(V(s*0.05,0.042,0.018),V(0.044,0.042,0.062)),bone:'Leg'+S,k:0.02,col:'shoe'},
+    P.push({d:sdC(V(s*0.066,0.405,0),V(s*0.112,0.335,0.008),0.032,0.029),bone:'Arm'+S,k:0.025,col:outfit===1?'trim':'top'},{d:sdC(V(s*0.112,0.335,0.008),V(s*0.146,0.276,0.016),0.025,0.016),bone:'Arm'+S,k:0.015,col:'skin'},{d:sdE(V(s*0.152,0.262,0.018),V(0.024,0.024,0.024)),bone:'Arm'+S,k:0.012,col:'skin'},/* round little mitten hands */
+      {d:sdC(V(s*0.048,0.22,0),V(s*0.048,0.07,0),0.03,0.028),bone:'Leg'+S,k:0.02,col:'skin'},{d:sdE(V(s*0.05,0.044,0.022),V(0.05,0.046,0.07)),bone:'Leg'+S,k:0.02,col:'shoe'},
       {d:ringAt(s*0.048,0.004,0.085,0.03,0.011),bone:'Leg'+S,k:0.01,col:'shoe'});}/* boot cuffs */
   return P;}
 // the faces: the base (blush, and where the eyes go) and the alternatives, each its own mesh (sdfRig o.faces)
@@ -69,12 +69,22 @@ function sprigScene(outfit=0){if(_sprigBody[outfit])return _sprigBody[outfit];
     face:(hit,put,S)=>{const eyes={};// where the eyes sit (their bones) and a hint of blush; the eyes and mouth themselves are SPRIG_FACES
       for(const s of [-1,1]){eyes[s]=sprigEye(hit,s).p;const b=hit(s*0.56,-0.36,0.78);put(S,0xf2b4ae,b.p.clone().addScaledVector(b.n,-0.003),b.n,0.03,0.016,0.01);}
       return eyes;},faces:SPRIG_FACES});}
-function sprigRig(){if(!_sprigClips)_sprigClips=pipClips(SPRIG_BONES);
+// the hat's own motion on top of Pip's clips: it lags the head and sways in the idle, bobs and tilts a beat behind each
+// step, and in a twirl or a cheer it pops up off the head and drops back on
+function sprigHatTracks(clips){const {rest,R,V3}=rigKit(SPRIG_BONES),H0=rest('Hat');
+  for(const c of clips){const d=c.duration,n=c.name;let rot,pos;
+    if(n==='Idle'){rot=a=>[Math.sin(a+1.2)*0.035,0,Math.sin(a+1.7)*0.05];pos=()=>H0;}
+    else if(n==='Walk'){rot=a=>[-0.07*Math.cos(2*a+0.9),0,Math.sin(a-0.7)*0.12];pos=a=>[H0[0],H0[1]+0.012*Math.max(0,Math.sin(2*a-0.9)),H0[2]];}
+    else if(n==='Run'){rot=a=>[-0.16-0.08*Math.cos(2*a+0.9),0,Math.sin(a-0.7)*0.16];pos=a=>[H0[0],H0[1]+0.02*Math.max(0,Math.sin(2*a-0.9)),H0[2]];}
+    else{const pop=t=>Math.max(0,Math.sin(Math.PI*clamp((t-0.25)/0.55,0,1)));rot=(a,t)=>[-0.3*pop(t),Math.sin(t*Math.PI*2)*0.6*pop(t),0];pos=(a,t)=>[H0[0],H0[1]+0.14*pop(t),H0[2]];}
+    c.tracks.push(R('Hat',d,rot),V3('Hat','position',d,pos));}
+  return clips;}
+function sprigRig(){if(!_sprigClips)_sprigClips=sprigHatTracks(pipClips(SPRIG_BONES));
   const [idle,walk,run,spin,flip]=_sprigClips;return{scene:T.SkeletonUtils.clone(sprigScene(0)),clips:[idle,walk,run],emotes:{spin,flip},speeds:[0.55,3.2]};}
 // dressing a Sprig: its outfit's body (charModel picks it), its eyes and mouth shown, its hat and any extra
 function sprigDress(m,look){const ey='SprigFace_e'+(look.eyes|0),mo='SprigFace_m'+(look.mouth|0);
   m.traverse(o=>{if(o.isMesh&&o.name.startsWith('SprigFace_'))o.visible=o.name===ey||o.name===mo;});
-  const st=look.style|0;headMesh(m,dressGeo(sprigHat(st),look,sprigHatDress(st)),null);
+  const st=look.style|0;headMesh(m,dressGeo(sprigHat(st),look,sprigHatDress(st)),null,'Hat');
   const x=look.extra|0;if(x>0&&SPRIG_ACC[x])headMesh(m,dressGeo(sprigAcc(x),look,sprigAccDress(x)),null,SPRIG_ACC[x].bone);}
 // the hats, each built once: a smooth shape painted in its colour (hair: the Hat tab), its accent (band) and a third
 // (gill: the mushroom's gills, a pompom, frog eyes, a vine)
