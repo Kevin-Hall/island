@@ -750,6 +750,20 @@ body.decorating .clockb,body.decorating #joy,body.decorating #ctx{display:none}
 #decoBar .dtray img{width:48px;height:48px;object-fit:contain}
 #decoBar .dtray span{font-size:10.5px;font-weight:600;line-height:1.1;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #decoBar .dtray em{position:absolute;top:3px;right:5px;font-style:normal;font-size:10.5px;font-weight:700;color:#8a6a4a}
+
+/* friends: the visit bar and the leaderboards (85e) */
+.visitbar{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 64px);z-index:7;display:flex;align-items:center;gap:8px;background:var(--paper);border-radius:999px;padding:6px 6px 6px 12px;box-shadow:var(--shadow);font-size:13.5px;font-weight:600;color:var(--ink);max-width:calc(100vw - 24px)}
+.visitbar .vt{display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.visitbar .vt img{width:18px;height:18px}
+.visitbar button{border-radius:999px;padding:6px 12px;font-weight:700;font-size:13px;background:#f8d4e0;color:#a8264a;white-space:nowrap}
+.visitbar button.on{background:#f0507a;color:#fff}
+.visitbar button[data-vb=home]{background:var(--wash);color:var(--ink)}
+.ldb{background:var(--paper);border-radius:16px;padding:10px 12px;margin:0 0 10px;box-shadow:0 2px 0 var(--line)}
+.ldbh{display:flex;align-items:center;gap:10px;margin-bottom:6px}.ldbh img{width:34px;height:34px}.ldbh small{color:var(--ink2);font-weight:600}
+.ldbr{display:flex;align-items:center;gap:10px;padding:5px 4px;border-top:1px solid var(--line);font-size:14px}
+.ldbr.me{background:#fff3c4;border-radius:10px}.ldbr.none{color:var(--ink2);font-size:13px}
+.ldbr .rk{width:26px;text-align:center;font-weight:700}.ldbr .who{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ldbr .who small{display:block;color:var(--ink2);font-size:12px}.ldbr .v{font-weight:700;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -790,6 +804,7 @@ body.decorating .clockb,body.decorating #joy,body.decorating #ctx{display:none}
   <button class="btn" id="bTask" style="--c:#ffc9a3"><span class="ico"><img class="pix" id="icoTask" alt=""></span><span class="lb">Orders</span></button>
   <button class="btn" id="bChart" style="--c:#b7d7f7"><span class="ico"><img class="pix" id="icoChart" alt=""></span><span class="lb">Chart</span></button>
   <button class="btn" id="bDeco" style="--c:#e8d4f4"><span class="ico"><img id="icoDeco" alt=""></span><span class="lb">Decorate</span></button>
+  <button class="btn" id="bSocial" style="--c:#f8c4d4" hidden><span class="ico"><img id="icoSocial" alt=""></span><span class="lb">Friends</span></button>
   <button class="btn" id="bDex" style="--c:#fac3cf"><span class="ico"><img class="pix" id="icoDex" alt=""></span><span class="lb" id="dexTxt">Dex</span></button>
 </nav>
 
@@ -5461,7 +5476,7 @@ function freshState(){
 }
 function load(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s&&s.v===1){const f=freshState();for(const k in f)if(s[k]===undefined)s[k]=f[k];return s;}}catch(e){}return null;}
 let resetting=false;
-function save(){if(resetting)return;S.t=Date.now();S.px=vil.x;S.pz=vil.z;try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
+function save(){if(resetting||S.visit)return;/* (a friend's island you're visiting is never saved) */S.t=Date.now();S.px=vil.x;S.pz=vil.z;try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
 let S=load(); const isNew=!S; if(!S) S=freshState();
 if(S.mode==='edit')S.mode='farm';
 // games started with the short-lived island picker (plots in a ready-made town) carry on as a classic, fully built town
@@ -11582,7 +11597,7 @@ function itemInfo(key){const pre=key.slice(0,2),id=key.slice(2);if(pre==='f:')re
 function nameOf(key){{const A=anyOf(key);if(A)return A.name;}const I=itemInfo(key);if(I)return I.name;if(key.startsWith('c:'))return CROPS[key.slice(2)].name;const [t,v]=key.split('|');return(VAR[v].name?VAR[v].name+' ':'')+CROPS[t].name;}
 function iconOf(key){{const A=anyOf(key);if(A)return ICON[A.icon];}if(key.startsWith('c:'))return seedIcon(key.slice(2));if(key.includes(':'))return ICON[key];return seedIcon(key.split('|')[0]);}
 function varOf(key){return key.includes(':')?'normal':key.split('|')[1];}
-function gain(key,n=1){S.inv[key]=(S.inv[key]||0)+n;const first=!S.alm[key];S.alm[key]=(S.alm[key]||0)+n;noteGain(key,first);if(first&&key.includes(':'))setTimeout(()=>checkDex(key),600);jrGain(key,n,first);return first;}
+function gain(key,n=1){S.inv[key]=(S.inv[key]||0)+n;statGain(key,n);const first=!S.alm[key];S.alm[key]=(S.alm[key]||0)+n;noteGain(key,first);if(first&&key.includes(':'))setTimeout(()=>checkDex(key),600);jrGain(key,n,first);return first;}
 function checkDex(key){const cat=DEX_CATS.find(c=>key.startsWith(c[2]));if(!cat)return;const [id,label,pre,tab]=cat;
   if(!S.dexR[id]&&Object.keys(tab).every(k=>S.alm[pre+k])){S.dexR[id]=1;const r=5000;S.shells+=r;SFX.discover();toast(`Islandex: every ${label.toLowerCase()} recorded! +${fmt(r)} shells`,'rare',ICON.dex);}
   const [g,t]=dexCount();if(g===t&&!S.dexR.all){S.dexR.all=1;setTimeout(()=>{SFX.discover();toast('You completed the Islandex! Every creature, plant and treasure of the archipelago is yours.','rare',ICON.star);for(let i=0;i<40;i++)sparkle(vil.x+(Math.random()-0.5)*4,1,vil.z+(Math.random()-0.5)*4,0xfff0a0);},1500);}}
@@ -11677,7 +11692,7 @@ function updateTool(dt){toolHold.visible=!S.sea&&!fishing&&!rodAfter;const base=
 function actAt(x,z,fn){const run=()=>{villager.rotation.y=Math.atan2(x-vil.x,z-vil.z);swingTool(()=>{fn();updateHUD();});};
   if(Math.hypot(x-vil.x,z-vil.z)<1.1){vil.tx=vil.x;vil.tz=vil.z;vil.path=null;vil.cb=null;run();return;}
   walkTo(x,z);vil.cb=run;}
-function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
+function toolTap(x,z,isl){if(S.visit){visitNo();return;}const tool=S.tool,k=K(x,z);
   if(tool==='terra'&&isl&&isl.home){terraTap(x,z);return;}
   {const fd0=findAt(x,z);if(fd0&&fd0.k==='glint'){actAt(x,z,()=>openGlint(fd0));return;}if(fd0&&fd0.k==='tuft'){actAt(x,z,()=>rustleTuft(fd0));return;}}
   {const fd=findAt(x,z);if(fd&&(fd.k==='dig'||fd.k==='bubbles')){autoTool('shovel');actAt(x,z,()=>{digStab(x,z,0.6);/* two stabs: the hole opens, then whatever's buried comes up */swingTool(()=>{digStab(x,z,1);digSpot(fd);});});return;}if(fd){actAt(x,z,()=>collectFind(fd));return;}const pl=plantAt(x,z);if(pl){actAt(x,z,()=>pickPlant(pl));return;}}
@@ -12082,7 +12097,7 @@ function decMark(){const o=dec.mv?dec.mv:dec.sel;if(S.mode!=='edit'||!o||placing
 function updateDecorate(dt,tt){if(!decRing.visible)return;const s=1+Math.sin(tt*5)*0.06;decRing.scale.set(s,1,s);decRing.material.opacity=0.65+Math.sin(tt*5)*0.25;decArrow.position.y=(decArrow.userData.y||0)+Math.sin(tt*4)*0.06;decArrow.rotation.y=tt*1.5;}
 
 // ---- entering and leaving
-function odStart(){if(S.sea||inside){toast('Step ashore to decorate.');return;}closeSheet();clearAction();if(placing)endPlace();S.mode='edit';dec.sel=null;dec.mv=null;dec.erase=false;dec.paint=false;dec.undo=[];SFX.ui();renderDecoBar();updateCtx();}
+function odStart(){if(S.visit){visitNo();return;}if(S.sea||inside){toast('Step ashore to decorate.');return;}closeSheet();clearAction();if(placing)endPlace();S.mode='edit';dec.sel=null;dec.mv=null;dec.erase=false;dec.paint=false;dec.undo=[];SFX.ui();renderDecoBar();updateCtx();}
 function odEnd(){if(dec.mv)odCancelMove();S.mode='farm';dec.sel=null;dec.erase=false;dec.paint=false;decMark();renderDecoBar();updateCtx();save();}
 // ---- undo: a snapshot of the decor and the bag before each change
 function decSnap(){dec.undo.push({objs:S.objs.map(o=>Object.assign({},o)),store:Object.assign({},S.store)});if(dec.undo.length>40)dec.undo.shift();}
@@ -12365,7 +12380,7 @@ function hitDebris(d){walkTo(d.x,d.z);vil.hop=0.2;d.hp--;const m=debMesh.get(K(d
   if(wood&&d.k!=='bush')chips(d.x,d.z,y+(d.k==='tree'?0.15:0));else burst(d.x,y,d.z,stone?0xa4a4b4:wood?0x9a6a3a:0x6a9a3a,6,1.1,0.06);
   if(d.k==='tree'&&d.hp>0){const s=season();for(let i=0;i<4;i++)emit(d.x+(Math.random()-0.5)*1.2,y+1.3+Math.random()*0.6,d.z+(Math.random()-0.5)*1.2,{vx:(Math.random()-0.5)*0.5,vy:-0.3,vz:(Math.random()-0.5)*0.5,life:1.6,max:1.6,size:0.06,color:s==='autumn'?0xe8803a:0x6ab84a,g:0.5,sw:0.8,ph:Math.random()*6,spin:1});}
   if(d.hp>0)return;
-  S.debris=S.debris.filter(q=>q!==d);if(d.k==='tree'){fellTree(d);const s=newDebris(d.x,d.z,'stump');s.r=d.r;S.debris.push(s);}syncDebris();const got=[];const add=(k,n)=>{if(n>0){gain('m:'+k,n);got.push('+'+n+' '+MATS[k].name);}};const c=()=>Math.random()<0.5?1:0;
+  S.debris=S.debris.filter(q=>q!==d);statBump('tidy');if(d.k==='tree'){fellTree(d);const s=newDebris(d.x,d.z,'stump');s.r=d.r;S.debris.push(s);}syncDebris();const got=[];const add=(k,n)=>{if(n>0){gain('m:'+k,n);got.push('+'+n+' '+MATS[k].name);}};const c=()=>Math.random()<0.5?1:0;
   switch(d.k){case'weed':add('fiber',1+c());break;case'twig':add('wood',1);break;case'bush':add('fiber',1);add('wood',1+c());break;
     case'rock':add('stone',1+c());break;case'stump':add('wood',3+c());break;case'tree':add('wood',3+c()+c());if(Math.random()<0.25){S.free.turnip=(S.free.turnip||0)+1;got.push('+1 seed from the branches');}break;case'boulder':add('stone',4+c());break;}
   if(Math.random()<(d.k==='boulder'?0.3:d.k==='rock'?0.06:0)){const n=40+Math.floor(Math.random()*(d.k==='boulder'?160:60));S.shells+=n;got.push('+'+n+' shells (an old coin!)');}
@@ -12393,7 +12408,7 @@ function spawnFind(quiet,isl){if(!isl)return;const here=S.finds.filter(f=>islMap
   if(!quiet){syncLife();for(let i=0;i<5;i++)sparkle(x,0.4,z,0xe8f4ff);}}
 function spawnWeed(quiet){if(S.weeds.length>=7)return;const c=islands[0].grass.filter(([x,z])=>freeTile(x,z));if(!c.length)return;const [x,z]=pickR(c);
   S.weeds.push({x,z});if(!quiet){syncLife();burst(x,0.6,z,0x4f8a34,4,0.6,0.05);}}
-function pullWeed(w){S.weeds=S.weeds.filter(q=>q!==w);syncLife();walkTo(w.x,w.z);vil.hop=0.25;SFX.till();burst(w.x,0.6,w.z,0x4f8a34,10,1.3,0.07);addXP(1);
+function pullWeed(w){S.weeds=S.weeds.filter(q=>q!==w);statBump('tidy');syncLife();walkTo(w.x,w.z);vil.hop=0.25;SFX.till();burst(w.x,0.6,w.z,0x4f8a34,10,1.3,0.07);addXP(1);
   if(Math.random()<0.3){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+1;floatText(w.x,1.1,w.z,'+1 '+CROPS[id].name+' seed','gold');SFX.pop();}
   else floatText(w.x,1,w.z,'pulled!');}
 function collectFind(f){S.finds=S.finds.filter(q=>q!==f);syncLife();walkTo(f.x,f.z);vil.hop=0.25;popHold(findGroup(f.k,f.x*31+f.z),f.x,f.z,1.3);
@@ -14425,7 +14440,7 @@ function playTap(cx,cy){if(ball&&!S.sea&&!inside){const s=toScreen(ball.x,ball.y
    Sailing
    ========================================================= */
 function boatNear(){if(S.sea||!S.boat)return false;return Math.hypot(vil.x-S.boat.x,vil.z-S.boat.z)<8;}
-function boardBoat(then){if(S.sea)return;if(!unlocked('boat')){toast('Your old boat needs patching up. It will be seaworthy when your Island Heart reaches <b>level 4</b>.','',ICON.boat);return;}const b=S.boat,isl=curIsl();if(!isl)return;
+function boardBoat(then){if(S.sea)return;if(S.visit){visitNo();return;}if(!unlocked('boat')){toast('Your old boat needs patching up. It will be seaworthy when your Island Heart reaches <b>level 4</b>.','',ICON.boat);return;}const b=S.boat,isl=curIsl();if(!isl)return;
   let best=null,bd=1e9;for(const [x,z] of [...isl.grass,...isl.sand]){const d=(x-b.x)**2+(z-b.z)**2;if(d<bd){bd=d;best=[x,z];}}
   if(!best||bd>16){toast(isl.home?'Your boat is moored elsewhere.':'Your boat is moored on another shore.');return;}
   if(fishing)endFishing();clearAction();
@@ -14759,7 +14774,7 @@ function updateLife(dt,tt){
     checkDiscovery();const ci=curIsl();if((ci?ci.id:-1)!==ffIsl)placeFireflies(ci);}
   for(const i of islands){if(!i.pgroup)continue;for(const m of i.pgroup.children){const Pd=PLANTS[m.userData.plant.id];if(Pd.w<5&&Math.random()<dt*1.2)sparkle(m.position.x,0.8,m.position.z,0xfff0a0);}
     if(i.vent&&Math.random()<dt*3&&Math.hypot(i.cx-cam.tx,i.cz-cam.tz)<50)emit(i.vent[0]+(Math.random()-0.5)*0.6,i.vent[1],i.vent[2]+(Math.random()-0.5)*0.6,{vy:0.9,vx:0.2,life:3,max:3,size:0.28,color:Math.random()<0.3?0xf06a2a:0x8a8490});}
-  updateBugs(dt,tt);updateCritters(dt,tt);updateEco(dt,tt);updateForage(dt);updatePlay(dt);updateCraftFx(dt);updateDecorate(dt,tt);updateRanch(dt,tt);updateFarm(dt);updateCrow(dt,tt);updateFishing(dt,tt);updateFlotsam(dt,tt);}
+  updateBugs(dt,tt);updateCritters(dt,tt);updateEco(dt,tt);updateSocial(dt);updateForage(dt);updatePlay(dt);updateCraftFx(dt);updateDecorate(dt,tt);updateRanch(dt,tt);updateFarm(dt);updateCrow(dt,tt);updateFishing(dt,tt);updateFlotsam(dt,tt);}
 
 /* =========================================================
    Marlo's boat: a trader who sails in to your dock every day (8am to 6pm, on a wild island before your store is
@@ -15023,7 +15038,8 @@ function whereStr(I,key){if(key.startsWith('s:'))return seaWhere(I);const bios=I
   if(I.time)w+=' · '+I.time;if(I.rain)w+=' · rain only';if(I.dry)w+=' · clear skies';if(I.sea)w+=' · '+I.sea.join(' & ');if(I.hr)w+=' · '+clockStr(I.hr[0])+'–'+clockStr(I.hr[1]);if(I.tpl&&!I.forage&&I.w)w+=' · on beaches';if(I.how)w=I.how;else if(I.eco&&!key.startsWith('w:'))w+=' · forage';if(key==='g:feather')w='shoo a crow at home';if(key==='g:starfrag')w='wish on a shooting star, then check your beach';return w;}
 function renderSheet(){
   if(!sheet)return;const body=$('sheetBody');const lv=level();let h='';
-  if(sheet.kind==='ranch'){ranchSheet(body);return;}/* a coop or barn (75b) */
+  if(sheet.kind==='ranch'){ranchSheet(body);return;}
+  if(sheet.kind==='social'){socialSheet(body);return;}/* friends and leaderboards (85e) *//* a coop or barn (75b) */
   if(sheet.kind==='seeds'){$('sheetTitle').textContent='Seeds';tabs([]);
     h+=`<p class="note">Pick a seed, then tap tilled soil on your home island. You pay when you plant.</p><div class="grid">`;
     for(const id of [...CROP_IDS,'mystery']){const C=id==='mystery'?MYSTERY:CROPS[id],lock=C.lvl>lv;
@@ -15191,6 +15207,7 @@ $('sheetTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]
 $('sheetBody').addEventListener('click',e=>{
   const el=e.target.closest('button');if(!el||el.disabled)return;const d=el.dataset;
   if(sheet&&sheet.kind==='ranch'&&ranchClick(d))return;
+  if(sheet&&sheet.kind==='social'&&socialClick(d))return;
   if(d.openlook){openSheet('look');return;}
   if(d.human){closeSheet();openCharEd();return;}
   if(d.look){setLook({sp:d.look});renderSheet();return;}if(d.fur){setLook({fur:+d.fur});renderSheet();return;}if(d.shirt){setLook({shirt:+d.shirt});renderSheet();return;}
@@ -16038,7 +16055,7 @@ function obsTap(cx,cy){let best=null,bd=46;
   return true;}
 function ecoWatch(c){if(!critters.includes(c)||c.state==='gone'){say('It slipped away…');return;}
   villager.rotation.y=Math.atan2(c.x-vil.x,c.z-vil.z);c.calm=4;
-  const sp=c.sp||(c.sp=ecoSpecies(c.k,c.v,ecoKindHere())),W=WILD[sp];if(!W)return;const key='w:'+sp,first=!S.alm[key];S.alm[key]=(S.alm[key]||0)+1;
+  const sp=c.sp||(c.sp=ecoSpecies(c.k,c.v,ecoKindHere())),W=WILD[sp];if(!W)return;const key='w:'+sp,first=!S.alm[key];S.alm[key]=(S.alm[key]||0)+1;statBump('watch');
   for(let i=0;i<6;i++)sparkle(c.x,c.y+0.2,c.z,W.rare?0xfff0a0:0xfffbe8);
   floatText(c.x,c.y+0.7,c.z,first?'New! '+W.name:W.name,first||W.rare?'gold':'');
   if(first){SFX.discover();toast(`You watched ${/^[aeiou]/i.test(W.name)?'an':'a'} <b>${W.name}</b>${W.rare?', a rare sight':''}! It's in your Islandex now, under Wildlife.`,W.rare?'rare':'',ICON[key]);addXP(W.rare?40:8);setTimeout(()=>checkDex(key),500);}
@@ -16145,6 +16162,142 @@ function updateEco(dt,tt){const isl=S.sea||inside?null:curIsl();
     if(c.rare&&c.state!=='gone'){if(Math.random()<dt*2.5)sparkle(c.x,c.y+0.25,c.z,0xfff0a0);
       if(!c.told&&Math.hypot(c.x-vil.x,c.z-vil.z)<10){c.told=1;const W=WILD[c.sp];if(W)say(`Look! ${/^[aeiou]/i.test(W.name)?'An':'A'} ${W.name}… tap it to watch quietly.`);}}}
   if(isl&&!isl.home)ecoMotes(dt,isl);}
+/* =========================================================
+   Friends: visit each other's islands, leave a like, and silly leaderboards.
+   Runs on the published page's shared database (the `db` and `user` capabilities, declared when the page is
+   published); anywhere else (a local copy, a viewer who can't use it) the Friends button simply stays hidden.
+   Shared documents, one of each per player and each written only by its player (rules at publish):
+     islands/<id>  {name, t, snap}  a snapshot of your home island (your save minus bag, dex and the like)
+     stats/<id>    {isl, lvl, t, d, w, m, all}  your counts for today / this week / this month / ever (UTC)
+     likes/<id>    {at: {<island owner id>: [days you liked it]}}  one like per island per day
+   Visiting: your save is backed up (HOME_KEY), the friend's snapshot is loaded in its place with S.visit set (look,
+   don't touch: tools, the boat and decorating are off, and nothing is saved), and Go home puts yours back.
+   Counts (S.social) tick up from gain() (fish, bugs, forage, boots), harvests, shells earned, steps walked,
+   weeds and clutter cleared, animals watched and islands visited.
+   ========================================================= */
+const HOME_KEY=SAVE_KEY+'-home';
+const SOC={db:null,user:null,me:null,ok:false,ro:false,stats:[],likes:[],mine:null,names:{},loaded:0,busy:false};
+const STATS=[// id, title, what, icon
+  ['likes','Most Loved Island','likes received','heart'],
+  ['crops','Green Thumb','crops harvested','sprout'],
+  ['shells','Shell Tycoon','shells earned','shell'],
+  ['fish','Master Angler','fish caught','f:mackerel'],
+  ['boots','Boot Collector','old boots fished up','f:boot'],
+  ['bugs','Bug Buddy','bugs caught','b:monarch'],
+  ['forage','Forager Supreme','things foraged','g:mushroom'],
+  ['watch','Wildlife Whisperer','animals watched','w:fox'],
+  ['tidy','Weed Warrior','weeds and clutter cleared','g:clover4'],
+  ['steps','Marathon Bunny','steps taken','star'],
+  ['visits','Social Butterfly','islands visited','chart']];
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const socIcon=k=>k==='heart'?HEART_ICO:ICON[k]||ICON.star;
+const HEART_ICO=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.fillStyle='#f0507a';x.strokeStyle='#a8264a';x.lineWidth=3;
+  x.beginPath();x.moveTo(32,54);x.bezierCurveTo(4,36,8,10,24,12);x.bezierCurveTo(30,13,32,18,32,20);x.bezierCurveTo(32,18,34,13,40,12);x.bezierCurveTo(56,10,60,36,32,54);x.closePath();x.fill();x.stroke();
+  x.fillStyle='rgba(255,255,255,.6)';x.beginPath();x.ellipse(21,22,5,3,-0.6,0,6.283);x.fill();return c.toDataURL();})();
+
+// ---- days, weeks and months (UTC, so everyone shares the same boards) ----
+function perKeys(t=Date.now()){const d=new Date(t),day=d.toISOString().slice(0,10);
+  const w=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())),dn=w.getUTCDay()||7;w.setUTCDate(w.getUTCDate()+4-dn);
+  const wk=Math.ceil(((w-Date.UTC(w.getUTCFullYear(),0,1))/864e5+1)/7);return{d:day,w:w.getUTCFullYear()+'-W'+String(wk).padStart(2,'0'),m:day.slice(0,7)};}
+const dayKeys=day=>perKeys(Date.parse(day+'T12:00:00Z'));
+
+// ---- counting ----
+function statBumpOn(st,stat,n=1){if(!(n>0))return;const P=perKeys();st.social=st.social||{};const so=st.social;
+  for(const p of ['d','w','m']){if(!so[p]||so[p].k!==P[p])so[p]={k:P[p],v:{}};so[p].v[stat]=(so[p].v[stat]||0)+n;}
+  so.all=so.all||{v:{}};so.all.v[stat]=(so.all.v[stat]||0)+n;so.dirty=1;}
+function statBump(stat,n=1){if(S.visit)return;statBumpOn(S,stat,Math.round(n));}
+function statGain(key,n){if(key==='f:boot')statBump('boots',n);if(key.startsWith('f:')||key.startsWith('s:'))statBump('fish',n);else if(key.startsWith('b:'))statBump('bugs',n);
+  else if(key.startsWith('g:')||key.startsWith('p:'))statBump('forage',n);}
+let socShells=null,socHarv=null,socPos=null,socStep=0,socPubT=20,socIslT=0;
+function updateSocial(dt){
+  if(S.visit){visitBar();return;}
+  if(socShells==null){socShells=S.shells;socHarv=S.harvested||0;}
+  if(S.shells>socShells)statBump('shells',S.shells-socShells);socShells=S.shells;
+  if((S.harvested||0)>socHarv)statBump('crops',S.harvested-socHarv);socHarv=S.harvested||0;
+  if(!S.sea&&!inside){if(socPos){socStep+=Math.min(1,Math.hypot(vil.x-socPos[0],vil.z-socPos[1]));if(socStep>=1){statBump('steps',Math.floor(socStep));socStep%=1;}}socPos=[vil.x,vil.z];}else socPos=null;
+  socPubT-=dt;if(socPubT<=0){socPubT=120;socialPublish(false);}}
+
+// ---- the shared database ----
+(async()=>{try{if(!window.claude||typeof claude.use!=='function')return;
+  const [db,user]=await Promise.all([claude.use('db'),claude.use('user')]);if(!db||!user)return;
+  const me=await user.id();if(!me)return;SOC.db=db;SOC.user=user;SOC.me=me;SOC.ok=true;$('bSocial').hidden=false;
+  if(S.visit){visitBar();loadMyLikes();return;}
+  await socialPublish(true);await socialRefresh();
+  const mine=likeTally()[me],tot=mine?mine.all:0;if(tot>(S.likesSeen||0)){const n=tot-(S.likesSeen||0);S.likesSeen=tot;save();
+    setTimeout(()=>{SFX.discover();toast(`Your island got <b>${n}</b> new like${n>1?'s':''} while you were away!`,'rare',HEART_ICO);},3000);}
+}catch(e){}})();
+document.addEventListener('visibilitychange',()=>{if(document.hidden)socialPublish(false);});
+
+// a copy of your island for visitors: everything that draws it, nothing private
+const SNAP_SKIP=['inv','alm','almR','dexR','jr','orders','log','eco','free','social','store','mail','isleNodes','isleMarks','shook','picked','likesSeen','visit','ranchLog'];
+function islandSnap(){const o={};for(const k in S)if(!SNAP_SKIP.includes(k))o[k]=S[k];return JSON.stringify(o);}
+let lastSnap='';
+async function socialPublish(force){if(!SOC.ok||SOC.ro||S.visit||SOC.busy)return;SOC.busy=true;
+  try{const P=perKeys(),so=S.social||{},cur=p=>so[p]&&so[p].k===P[p]?so[p]:{k:P[p],v:{}};
+    if(force||so.dirty||!SOC.loaded){await SOC.db.doc('stats/'+SOC.me).set({isl:String(S.islandName||'A little island').slice(0,40),lvl:level(),t:Date.now(),d:cur('d'),w:cur('w'),m:cur('m'),all:so.all||{v:{}}});if(S.social)S.social.dirty=0;}
+    socIslT-=1;const snap=islandSnap();
+    if(snap!==lastSnap&&(force||socIslT<=0)){await SOC.db.doc('islands/'+SOC.me).set({name:String(S.islandName||'A little island').slice(0,40),t:Date.now(),snap});lastSnap=snap;socIslT=4;}
+  }catch(e){if(e&&e.code==='invalid_argument')SOC.ro=true;}finally{SOC.busy=false;}}
+async function socialRefresh(){if(!SOC.ok)return;try{const [st,lk]=await Promise.all([SOC.db.collection('stats').get(),SOC.db.collection('likes').get()]);
+    SOC.stats=st.docs.filter(d=>d.exists).map(d=>({id:d.id,...d.data()}));SOC.likes=lk.docs.filter(d=>d.exists).map(d=>({id:d.id,...d.data()}));
+    SOC.mine=(SOC.likes.find(l=>l.id===SOC.me)||{}).at||{};SOC.loaded=Date.now();
+    const ps=await SOC.user.profiles(SOC.stats.map(s=>s.id));for(const id in ps)SOC.names[id]=ps[id].name||'';}catch(e){}
+  if(sheet&&sheet.kind==='social')renderSheet();}
+async function loadMyLikes(){try{const d=await SOC.db.doc('likes/'+SOC.me).get();SOC.mine=(d.exists&&d.data().at)||{};}catch(e){SOC.mine={};}visitBar();}
+// likes received by each island: all time and for each period
+function likeTally(){const P=perKeys(),out={};
+  for(const l of SOC.likes)for(const [owner,days] of Object.entries(l.at||{})){if(owner===l.id||!Array.isArray(days))continue;const o=out[owner]||(out[owner]={all:0,d:0,w:0,m:0});
+    for(const day of days){o.all++;const k=dayKeys(day);if(k.d===P.d)o.d++;if(k.w===P.w)o.w++;if(k.m===P.m)o.m++;}}
+  return out;}
+
+// ---- visiting ----
+async function visitIsland(id){if(!SOC.ok||id===SOC.me)return;toast('Sailing over…');
+  let d;try{const s=await SOC.db.doc('islands/'+id).get();if(!s.exists){toast("That island hasn't been shared yet.");return;}d=s.data();}catch(e){toast('The sea is too rough to visit right now. Try again in a moment.');return;}
+  let snap;try{snap=JSON.parse(d.snap);}catch(e){toast("That island couldn't be loaded.");return;}
+  if(!S.visit){statBump('visits');try{localStorage.setItem(HOME_KEY,JSON.stringify(S));}catch(e){toast('Could not back up your save, so the visit was cancelled.');return;}}
+  else{try{const h=JSON.parse(localStorage.getItem(HOME_KEY));if(h){statBumpOn(h,'visits');localStorage.setItem(HOME_KEY,JSON.stringify(h));}}catch(e){}}
+  snap.v=1;snap.visit={o:id,n:String(d.name||'an island').slice(0,40)};snap.sea=false;snap.boat=null;snap.inv={};snap.t=Date.now();
+  resetting=true;try{localStorage.setItem(SAVE_KEY,JSON.stringify(snap));}catch(e){resetting=false;toast("That island couldn't be loaded.");return;}location.reload();}
+function goHome(){let s=null;try{s=localStorage.getItem(HOME_KEY);}catch(e){}resetting=true;
+  try{if(s)localStorage.setItem(SAVE_KEY,s);else{const v=JSON.parse(localStorage.getItem(SAVE_KEY));if(v)delete v.visit;localStorage.setItem(SAVE_KEY,JSON.stringify(v));}localStorage.removeItem(HOME_KEY);}catch(e){}location.reload();}
+function visitNo(){toast(`You're visiting <b>${esc(S.visit.n)}</b>. Look around, leave a like, and head home when you're ready.`,'',HEART_ICO);}
+async function likeIsland(){const o=S.visit&&S.visit.o;if(!o||!SOC.ok)return;const today=perKeys().d,mine=SOC.mine||{},days=(mine[o]||[]).slice();
+  if(days.includes(today)){toast('You already liked this island today. Come back tomorrow!','',HEART_ICO);return;}
+  days.push(today);const next={...mine,[o]:days.slice(-60)};
+  try{await SOC.db.doc('likes/'+SOC.me).set({at:next});SOC.mine=next;}catch(e){toast(e&&e.code==='invalid_argument'?'Your access to this page is view-only, so you can look but not leave likes.':"The like didn't send. Try again in a moment.");return;}
+  SFX.discover();for(let i=0;i<3;i++)setTimeout(()=>hearts(vil.x,villager.position.y+1.1,vil.z),i*180);toast(`You liked <b>${esc(S.visit.n)}</b>!`,'rare',HEART_ICO);visitBar();}
+let vbEl=null,vbKey='';
+function visitBar(){if(!S.visit)return;if(!vbEl){vbEl=document.createElement('div');vbEl.className='visitbar';document.body.appendChild(vbEl);
+    vbEl.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.vb==='like')likeIsland();else if(b.dataset.vb==='home')goHome();});}
+  const liked=((SOC.mine||{})[S.visit.o]||[]).includes(perKeys().d),key=liked+'|'+SOC.ok;if(key===vbKey)return;vbKey=key;
+  vbEl.innerHTML=`<span class="vt"><img src="${HEART_ICO}" alt="">Visiting <b>${esc(S.visit.n)}</b></span>${SOC.ok?`<button data-vb="like" class="${liked?'on':''}">${liked?'Liked ♥':'♥ Like'}</button>`:''}<button data-vb="home">Go home</button>`;}
+
+// ---- the Friends sheet ----
+function socName(id){return id===SOC.me?'You':SOC.names[id]||'A friend';}
+function socialSheet(body){$('sheetTitle').textContent='Friends';tabs([['islands','Islands'],['d','Today'],['w','This week'],['m','This month']]);
+  if(!sheet.tab)sheet.tab='islands';if(!SOC.ok){body.innerHTML='<p class="note">Friends works on the shared page, where everyone you share the game with can visit each other.</p>';return;}
+  if(!SOC.loaded||Date.now()-SOC.loaded>60000){if(!sheet.asked){sheet.asked=1;socialPublish(true).then(socialRefresh);}}
+  const L=likeTally(),P=perKeys();let h='';
+  if(sheet.tab==='islands'){const me=L[SOC.me]||{all:0,d:0};
+    h+=`<p class="note"><img class="px" src="${HEART_ICO}" alt="" style="width:20px;vertical-align:-4px"> Your island has <b>${me.all}</b> like${me.all===1?'':'s'}${me.d?` (<b>${me.d}</b> today)`:''}. Visit a friend's island and leave them a like, once a day each.${SOC.ro?' <b>Your access to this page is view-only, so your island isn\'t shared and you can\'t leave likes.</b>':''}</p>`;
+    const others=SOC.stats.filter(s=>s.id!==SOC.me).sort((a,b)=>((L[b.id]||{}).all||0)-((L[a.id]||{}).all||0)||(b.t||0)-(a.t||0));
+    if(!others.length)h+=`<p class="note">${SOC.loaded?'No one else has shared their island yet. Share this page with friends (as Contributors) and their islands will appear here.':'Looking for islands…'}</p>`;
+    h+='<div class="grid">';for(const s of others){const lk=(L[s.id]||{}).all||0,ago=s.t?Math.max(0,Math.round((Date.now()-s.t)/36e5)):null;
+      h+=`<div class="card"><img class="px" src="${ICON.sprout}" alt=""><span class="grow"><span class="nm">${esc(s.isl||'An island')}</span><br><span class="sub">${esc(socName(s.id))} · Lv ${s.lvl||1} · ♥ ${lk}${ago!=null?` · ${ago<1?'just now':ago<48?ago+'h ago':Math.round(ago/24)+'d ago'}`:''}</span></span><button class="buy" data-visit="${esc(s.id)}">Visit</button></div>`;}
+    h+='</div>';}
+  else{const p=sheet.tab,label={d:'today',w:'this week',m:'this month'}[p];
+    h+=`<p class="note">Who did the most ${label}? The boards reset every ${({d:'day',w:'Monday',m:'month'})[p]} (UTC).</p>`;
+    for(const [id,title,what,ic] of STATS){const rows=SOC.stats.map(s=>({id:s.id,isl:s.isl,v:id==='likes'?(L[s.id]||{})[p]||0:(s[p]&&s[p].k===P[p]&&s[p].v&&s[p].v[id])||0})).filter(r=>r.v>0).sort((a,b)=>b.v-a.v);
+      const mine=rows.findIndex(r=>r.id===SOC.me);
+      h+=`<div class="ldb"><div class="ldbh"><img class="px" src="${socIcon(ic)}" alt=""><span><b>${title}</b><br><small>most ${what}</small></span></div>`;
+      if(!rows.length)h+='<div class="ldbr none">No one yet. It could be you!</div>';
+      rows.slice(0,5).forEach((r,i)=>{h+=`<div class="ldbr ${r.id===SOC.me?'me':''}"><span class="rk">${['🥇','🥈','🥉'][i]||i+1}</span><span class="who">${esc(r.isl||'An island')}<small>${esc(socName(r.id))}</small></span><span class="v">${fmt(Math.round(r.v))}</span></div>`;});
+      if(mine>=5)h+=`<div class="ldbr me"><span class="rk">${mine+1}</span><span class="who">${esc(rows[mine].isl||'Your island')}<small>You</small></span><span class="v">${fmt(Math.round(rows[mine].v))}</span></div>`;
+      h+='</div>';}}
+  h+=`<p class="note"><button class="buy" data-socref="1">Refresh</button></p>`;body.innerHTML=h;}
+function socialClick(d){if(d.visit){closeSheet();visitIsland(d.visit);return true;}if(d.socref){SOC.loaded=0;sheet.asked=0;socialPublish(true).then(socialRefresh);return true;}return false;}
+$('bSocial').onclick=()=>openSheet('social',sheet&&sheet.kind==='social'?sheet.tab:'islands');
+$('icoSocial').src=HEART_ICO;
 /* =========================================================
    New game setup
    ========================================================= */

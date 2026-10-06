@@ -85,7 +85,7 @@ function updateTool(dt){toolHold.visible=!S.sea&&!fishing&&!rodAfter;const base=
 function actAt(x,z,fn){const run=()=>{villager.rotation.y=Math.atan2(x-vil.x,z-vil.z);swingTool(()=>{fn();updateHUD();});};
   if(Math.hypot(x-vil.x,z-vil.z)<1.1){vil.tx=vil.x;vil.tz=vil.z;vil.path=null;vil.cb=null;run();return;}
   walkTo(x,z);vil.cb=run;}
-function toolTap(x,z,isl){const tool=S.tool,k=K(x,z);
+function toolTap(x,z,isl){if(S.visit){visitNo();return;}const tool=S.tool,k=K(x,z);
   if(tool==='terra'&&isl&&isl.home){terraTap(x,z);return;}
   {const fd0=findAt(x,z);if(fd0&&fd0.k==='glint'){actAt(x,z,()=>openGlint(fd0));return;}if(fd0&&fd0.k==='tuft'){actAt(x,z,()=>rustleTuft(fd0));return;}}
   {const fd=findAt(x,z);if(fd&&(fd.k==='dig'||fd.k==='bubbles')){autoTool('shovel');actAt(x,z,()=>{digStab(x,z,0.6);/* two stabs: the hole opens, then whatever's buried comes up */swingTool(()=>{digStab(x,z,1);digSpot(fd);});});return;}if(fd){actAt(x,z,()=>collectFind(fd));return;}const pl=plantAt(x,z);if(pl){actAt(x,z,()=>pickPlant(pl));return;}}

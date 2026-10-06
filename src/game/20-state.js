@@ -10,7 +10,7 @@ function freshState(){
 }
 function load(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s&&s.v===1){const f=freshState();for(const k in f)if(s[k]===undefined)s[k]=f[k];return s;}}catch(e){}return null;}
 let resetting=false;
-function save(){if(resetting)return;S.t=Date.now();S.px=vil.x;S.pz=vil.z;try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
+function save(){if(resetting||S.visit)return;/* (a friend's island you're visiting is never saved) */S.t=Date.now();S.px=vil.x;S.pz=vil.z;try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
 let S=load(); const isNew=!S; if(!S) S=freshState();
 if(S.mode==='edit')S.mode='farm';
 // games started with the short-lived island picker (plots in a ready-made town) carry on as a classic, fully built town

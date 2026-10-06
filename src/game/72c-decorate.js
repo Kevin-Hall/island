@@ -47,7 +47,7 @@ function decMark(){const o=dec.mv?dec.mv:dec.sel;if(S.mode!=='edit'||!o||placing
 function updateDecorate(dt,tt){if(!decRing.visible)return;const s=1+Math.sin(tt*5)*0.06;decRing.scale.set(s,1,s);decRing.material.opacity=0.65+Math.sin(tt*5)*0.25;decArrow.position.y=(decArrow.userData.y||0)+Math.sin(tt*4)*0.06;decArrow.rotation.y=tt*1.5;}
 
 // ---- entering and leaving
-function odStart(){if(S.sea||inside){toast('Step ashore to decorate.');return;}closeSheet();clearAction();if(placing)endPlace();S.mode='edit';dec.sel=null;dec.mv=null;dec.erase=false;dec.paint=false;dec.undo=[];SFX.ui();renderDecoBar();updateCtx();}
+function odStart(){if(S.visit){visitNo();return;}if(S.sea||inside){toast('Step ashore to decorate.');return;}closeSheet();clearAction();if(placing)endPlace();S.mode='edit';dec.sel=null;dec.mv=null;dec.erase=false;dec.paint=false;dec.undo=[];SFX.ui();renderDecoBar();updateCtx();}
 function odEnd(){if(dec.mv)odCancelMove();S.mode='farm';dec.sel=null;dec.erase=false;dec.paint=false;decMark();renderDecoBar();updateCtx();save();}
 // ---- undo: a snapshot of the decor and the bag before each change
 function decSnap(){dec.undo.push({objs:S.objs.map(o=>Object.assign({},o)),store:Object.assign({},S.store)});if(dec.undo.length>40)dec.undo.shift();}

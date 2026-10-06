@@ -738,3 +738,17 @@ body.decorating .clockb,body.decorating #joy,body.decorating #ctx{display:none}
 #decoBar .dtray img{width:48px;height:48px;object-fit:contain}
 #decoBar .dtray span{font-size:10.5px;font-weight:600;line-height:1.1;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #decoBar .dtray em{position:absolute;top:3px;right:5px;font-style:normal;font-size:10.5px;font-weight:700;color:#8a6a4a}
+
+/* friends: the visit bar and the leaderboards (85e) */
+.visitbar{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 64px);z-index:7;display:flex;align-items:center;gap:8px;background:var(--paper);border-radius:999px;padding:6px 6px 6px 12px;box-shadow:var(--shadow);font-size:13.5px;font-weight:600;color:var(--ink);max-width:calc(100vw - 24px)}
+.visitbar .vt{display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.visitbar .vt img{width:18px;height:18px}
+.visitbar button{border-radius:999px;padding:6px 12px;font-weight:700;font-size:13px;background:#f8d4e0;color:#a8264a;white-space:nowrap}
+.visitbar button.on{background:#f0507a;color:#fff}
+.visitbar button[data-vb=home]{background:var(--wash);color:var(--ink)}
+.ldb{background:var(--paper);border-radius:16px;padding:10px 12px;margin:0 0 10px;box-shadow:0 2px 0 var(--line)}
+.ldbh{display:flex;align-items:center;gap:10px;margin-bottom:6px}.ldbh img{width:34px;height:34px}.ldbh small{color:var(--ink2);font-weight:600}
+.ldbr{display:flex;align-items:center;gap:10px;padding:5px 4px;border-top:1px solid var(--line);font-size:14px}
+.ldbr.me{background:#fff3c4;border-radius:10px}.ldbr.none{color:var(--ink2);font-size:13px}
+.ldbr .rk{width:26px;text-align:center;font-weight:700}.ldbr .who{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ldbr .who small{display:block;color:var(--ink2);font-size:12px}.ldbr .v{font-weight:700;font-variant-numeric:tabular-nums}

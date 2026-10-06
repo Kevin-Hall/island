@@ -105,7 +105,7 @@ function hitDebris(d){walkTo(d.x,d.z);vil.hop=0.2;d.hp--;const m=debMesh.get(K(d
   if(wood&&d.k!=='bush')chips(d.x,d.z,y+(d.k==='tree'?0.15:0));else burst(d.x,y,d.z,stone?0xa4a4b4:wood?0x9a6a3a:0x6a9a3a,6,1.1,0.06);
   if(d.k==='tree'&&d.hp>0){const s=season();for(let i=0;i<4;i++)emit(d.x+(Math.random()-0.5)*1.2,y+1.3+Math.random()*0.6,d.z+(Math.random()-0.5)*1.2,{vx:(Math.random()-0.5)*0.5,vy:-0.3,vz:(Math.random()-0.5)*0.5,life:1.6,max:1.6,size:0.06,color:s==='autumn'?0xe8803a:0x6ab84a,g:0.5,sw:0.8,ph:Math.random()*6,spin:1});}
   if(d.hp>0)return;
-  S.debris=S.debris.filter(q=>q!==d);if(d.k==='tree'){fellTree(d);const s=newDebris(d.x,d.z,'stump');s.r=d.r;S.debris.push(s);}syncDebris();const got=[];const add=(k,n)=>{if(n>0){gain('m:'+k,n);got.push('+'+n+' '+MATS[k].name);}};const c=()=>Math.random()<0.5?1:0;
+  S.debris=S.debris.filter(q=>q!==d);statBump('tidy');if(d.k==='tree'){fellTree(d);const s=newDebris(d.x,d.z,'stump');s.r=d.r;S.debris.push(s);}syncDebris();const got=[];const add=(k,n)=>{if(n>0){gain('m:'+k,n);got.push('+'+n+' '+MATS[k].name);}};const c=()=>Math.random()<0.5?1:0;
   switch(d.k){case'weed':add('fiber',1+c());break;case'twig':add('wood',1);break;case'bush':add('fiber',1);add('wood',1+c());break;
     case'rock':add('stone',1+c());break;case'stump':add('wood',3+c());break;case'tree':add('wood',3+c()+c());if(Math.random()<0.25){S.free.turnip=(S.free.turnip||0)+1;got.push('+1 seed from the branches');}break;case'boulder':add('stone',4+c());break;}
   if(Math.random()<(d.k==='boulder'?0.3:d.k==='rock'?0.06:0)){const n=40+Math.floor(Math.random()*(d.k==='boulder'?160:60));S.shells+=n;got.push('+'+n+' shells (an old coin!)');}
@@ -133,7 +133,7 @@ function spawnFind(quiet,isl){if(!isl)return;const here=S.finds.filter(f=>islMap
   if(!quiet){syncLife();for(let i=0;i<5;i++)sparkle(x,0.4,z,0xe8f4ff);}}
 function spawnWeed(quiet){if(S.weeds.length>=7)return;const c=islands[0].grass.filter(([x,z])=>freeTile(x,z));if(!c.length)return;const [x,z]=pickR(c);
   S.weeds.push({x,z});if(!quiet){syncLife();burst(x,0.6,z,0x4f8a34,4,0.6,0.05);}}
-function pullWeed(w){S.weeds=S.weeds.filter(q=>q!==w);syncLife();walkTo(w.x,w.z);vil.hop=0.25;SFX.till();burst(w.x,0.6,w.z,0x4f8a34,10,1.3,0.07);addXP(1);
+function pullWeed(w){S.weeds=S.weeds.filter(q=>q!==w);statBump('tidy');syncLife();walkTo(w.x,w.z);vil.hop=0.25;SFX.till();burst(w.x,0.6,w.z,0x4f8a34,10,1.3,0.07);addXP(1);
   if(Math.random()<0.3){const id=pickR(CROP_IDS.filter(i=>CROPS[i].lvl<=level()));S.free[id]=(S.free[id]||0)+1;floatText(w.x,1.1,w.z,'+1 '+CROPS[id].name+' seed','gold');SFX.pop();}
   else floatText(w.x,1,w.z,'pulled!');}
 function collectFind(f){S.finds=S.finds.filter(q=>q!==f);syncLife();walkTo(f.x,f.z);vil.hop=0.25;popHold(findGroup(f.k,f.x*31+f.z),f.x,f.z,1.3);

@@ -247,7 +247,7 @@ function obsTap(cx,cy){let best=null,bd=46;
   return true;}
 function ecoWatch(c){if(!critters.includes(c)||c.state==='gone'){say('It slipped away…');return;}
   villager.rotation.y=Math.atan2(c.x-vil.x,c.z-vil.z);c.calm=4;
-  const sp=c.sp||(c.sp=ecoSpecies(c.k,c.v,ecoKindHere())),W=WILD[sp];if(!W)return;const key='w:'+sp,first=!S.alm[key];S.alm[key]=(S.alm[key]||0)+1;
+  const sp=c.sp||(c.sp=ecoSpecies(c.k,c.v,ecoKindHere())),W=WILD[sp];if(!W)return;const key='w:'+sp,first=!S.alm[key];S.alm[key]=(S.alm[key]||0)+1;statBump('watch');
   for(let i=0;i<6;i++)sparkle(c.x,c.y+0.2,c.z,W.rare?0xfff0a0:0xfffbe8);
   floatText(c.x,c.y+0.7,c.z,first?'New! '+W.name:W.name,first||W.rare?'gold':'');
   if(first){SFX.discover();toast(`You watched ${/^[aeiou]/i.test(W.name)?'an':'a'} <b>${W.name}</b>${W.rare?', a rare sight':''}! It's in your Islandex now, under Wildlife.`,W.rare?'rare':'',ICON[key]);addXP(W.rare?40:8);setTimeout(()=>checkDex(key),500);}
