@@ -2,7 +2,7 @@
    Dev: Acornfield, a hand-laid island (from the concept art), grown into a whole storybook island about ten times the
    size of a usual home island. One tap in Settings swaps this save for it. It's laid out in districts:
      - the village square: a stone-paved plaza round the grown Island Heart, benches and lamps, with the town hall,
-       general store, harbour café and museum looking onto it
+       general store, harbour café and nature lodge looking onto it
      - your house just south of the square, with a fenced front garden
      - Cottage Lane to the west: six neighbours' cottages (coloured roofs) along a winding lane, each with a garden
      - the farm to the east: three fenced fields of crops, an orchard, a windmill, hay bales, scarecrows and beehives
@@ -14,7 +14,7 @@
    and everything else is laid once after it (layAcornfield), when the land exists to lay paths on.
    ========================================================= */
 const ACORN={seed:24117,scale:2.6,home:[-8,6],heart:[0,0],fire:[31,27],tent:[34,23],dockX:-30,
-  civic:[['hall',-1,-10],['shop',-10,-6],['cafe',8,-6],['museum',16,-3]],
+  civic:[['hall',-1,-10],['shop',-10,-6],['cafe',8,-6],['lodge',16,-3]],
   // Cottage Lane: [x, z, roof colour] (2x2 footprints, doors on the +z side)
   cottages:[[-22,-9,0x4f9a4a],[-31,-4,0x8a6ad0],[-24,3,0x4a6ad0],[-37,6,0x3aa8a0],[-29,13,0xe0913a],[-19,13,0xd87a9a]]};
 function loadAcornfield(){

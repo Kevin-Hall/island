@@ -5,7 +5,7 @@
    stripe, lantern lights…). Every fin is cut to follow the body's own outline where it meets it, so fins grow out of
    the fish instead of floating beside it. The shape comes from the name (tall angelfish, long pike, torpedo tuna,
    sharks, flatfish lying on their side, eels, puffers…) and the size. Models point +z (nose), up +y, about 2 × (0.32 +
-   size × 0.1) long, as the old ones were (the museum and the leaping fish scale to that). Geometry is cached per species.
+   size × 0.1) long, as the old ones were (the fish living in your rivers and the leaping fish scale to that). Geometry is cached per species.
    ========================================================= */
 const FISH_GEO=new Map();let FISH_ID=null;
 const fsm=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};

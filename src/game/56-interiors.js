@@ -32,7 +32,7 @@ function furn(k,c){const p=[],gl=[];
       p.push(P(BOX,0x8a8e98,-0.3,0.58,0.05,0,0.4,0,0.3,0.05,0.08),P(BOX,0x7a5230,-0.3,0.58,0.15,0,0.4,0,0.06,0.04,0.22),P(BOX,0xc8905a,0.25,0.58,0,0,0,0,0.3,0.06,0.2),P(CYL8,0x6a4428,0.3,0.12,0,0,0,0,0.04,0.2,0.04),P(BOX,0x7a5230,0,0.18,0,0,0,0,1.0,0.04,0.4));break;
     case'dresser':p.push(P(BOX,0xa8744a,0,0.45,0,0,0,0,0.9,0.9,0.45));for(let i=0;i<3;i++)p.push(P(BOX,0xc8905a,0,0.2+i*0.27,0.23,0,0,0,0.8,0.2,0.01),P(ICO2,0xf6d04a,0,0.2+i*0.27,0.24,0,0,0,0.04,0.04,0.03));p.push(P(CYL12,0xf2a6c8,0.25,0.98,0,0,0,0,0.12,0.14,0.12));break;}
   return{p,gl};}
-function buildRoom(kind,n){if(kind==='museum')return buildMuseum();if(kind==='shop')return buildShop();if(kind==='cafe')return buildCafe();/* 56d */if(kind==='home'||kind==='vh')return buildDiorama(kind,n);/* 56b */const st=ROOM_STYLE[kind==='home'?'home':n.pers],RW=kind==='home'?4.6+S.house*0.6:5.2,RD=4.4,p=[],gl=[];
+function buildRoom(kind,n){if(kind==='shop')return buildShop();if(kind==='cafe')return buildCafe();/* 56d */if(kind==='home'||kind==='vh')return buildDiorama(kind,n);/* 56b */const st=ROOM_STYLE[kind==='home'?'home':n.pers],RW=kind==='home'?4.6+S.house*0.6:5.2,RD=4.4,p=[],gl=[];
   for(let i=0;i<Math.round(RW/0.5);i++)p.push(P(BOX,st.floor[i%2],-RW/2+0.25+i*0.5,-0.05,0,0,0,0,0.5,0.1,RD));
   p.push(P(BOX,st.wall,0,1.3,-RD/2-0.05,0,0,0,RW+0.2,2.6,0.1),P(BOX,st.wall,-RW/2-0.05,1.3,0,0,0,0,0.1,2.6,RD+0.1),P(BOX,st.wall,RW/2+0.05,1.3,0,0,0,0,0.1,2.6,RD+0.1));
   for(let i=0;i<Math.round(RW/0.4);i++)p.push(P(BOX,new T.Color(st.wall).lerp(new T.Color(0xffffff),0.25).getHex(),-RW/2+0.2+i*0.4,1.3,-RD/2+0.005,0,0,0,0.12,2.5,0.01));
@@ -57,11 +57,9 @@ function enterHouse(kind,b,n){if(inside)return;$('fade').classList.add('on');SFX
     inside={kind,b,n,room:r,me,who,wl:who?limbsOf(who):null,ml:null,x:0,y:0,lv:0,tlv:0,path:null,z:r.RD/2-0.8,tx:0,tz:r.RD/2-0.8,face:Math.PI,title:r.title||(kind==='home'?'Your '+HOUSES[S.house].toLowerCase():n.name+'’s house')};
     if(kind==='home')syncRoomItems();
     ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');
-    if(kind==='museum'&&!(S.log||[]).some(e=>e.t==='museum'&&e.day===S.day))logEvent('museum');
     if(kind==='shop')setTimeout(()=>toast('Hazel: “Welcome to the General Store! Come to the counter whenever you’re ready.”','',ICON.shop),350);
     if(kind==='cafe')setTimeout(()=>toast('The smell of fresh coffee and warm buns. Order at the counter.','',ICON.shop),350);
-    if(kind==='museum')setTimeout(()=>toast(`Grandpa Tully: “Welcome to the ${TOWN.name} Museum! Tap an exhibit to learn about it, or come chat with an old turtle.”`,'',ICON.dex),350);
-    else if(kind==='vh'&&!who)toast(`${n.name} is out. You peek around the cosy ${n.pers==='scholar'?'study':n.pers==='tinkerer'?'workshop':'room'}.`);
+    if(kind==='vh'&&!who)toast(`${n.name} is out. You peek around the cosy ${n.pers==='scholar'?'study':n.pers==='tinkerer'?'workshop':'room'}.`);
     else if(who)setTimeout(()=>showTalk(n,`Oh! Welcome to my home! Make yourself comfortable.`),350);},450);}
 function leaveHouse(){if(!inside)return;if(deco)decoClose();roomScene.background.setHex(0x2e2430);$('fade').classList.add('on');SFX.ui();clearAction();
   setTimeout(()=>{roomScene.remove(inside.room.g);for(const c of inside.room.g.children)if(c.isMesh)c.geometry.dispose();inside=null;ctxSig='';updateCtx();updateHUD();$('fade').classList.remove('on');},420);}
@@ -113,7 +111,7 @@ function updateRoom(dt,tt){const I=inside;if(!I)return;let walking=false,climb=f
   roomWinMat.color.setHex(nightF>0.5?0x2a3a6a:S.rain?0x9aa8b8:S.hour<7||S.hour>18?0xf4b890:0x9fd4ff);roomLamp.intensity=0.25+nightF*0.5;}
 function townTap(f,x,z){const b=TOWN.bld.find(q=>x>=q.x&&x<=q.x+1&&z>=q.z&&z<=q.z+1);
   if(f==='shop'){goTo(b.door[0]+0.5,b.door[1]+0.6,()=>enterHouse('shop',b));return true;}
-  if(f==='museum'){goTo(b.door[0]+0.5,b.door[1]+0.2,()=>enterHouse('museum',b,null));return true;}
+  if(f==='lodge'){lodgeTap(b);return true;}
   if(f==='cafe'){goTo(b.door[0]+0.5,b.door[1]+0.6,()=>enterHouse('cafe',b));return true;}
   if(f==='lighthouse'){walkTo(x,z+1);toast('The old lighthouse. At night its beam sweeps the sea, so you can always find your way home.','',ICON.boat);return true;}
   if(f==='hall'){walkTo(b.door[0]+0.5,b.door[1]);openSheet('orders');return true;}

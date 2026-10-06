@@ -36,7 +36,8 @@ function whereStr(I,key){if(key.startsWith('s:'))return seaWhere(I);const bios=I
 function renderSheet(){
   if(!sheet)return;const body=$('sheetBody');const lv=level();let h='';
   if(sheet.kind==='ranch'){ranchSheet(body);return;}
-  if(sheet.kind==='social'){socialSheet(body);return;}/* friends and leaderboards (85e) *//* a coop or barn (75b) */
+  if(sheet.kind==='social'){socialSheet(body);return;}
+  if(sheet.kind==='lodge'){lodgeSheet(body);return;}/* releasing creatures (59-lodge) *//* friends and leaderboards (85e) *//* a coop or barn (75b) */
   if(sheet.kind==='seeds'){$('sheetTitle').textContent='Seeds';tabs([]);
     h+=`<p class="note">Pick a seed, then tap tilled soil on your home island. You pay when you plant.</p><div class="grid">`;
     for(const id of [...CROP_IDS,'mystery']){const C=id==='mystery'?MYSTERY:CROPS[id],lock=C.lvl>lv;
@@ -205,6 +206,7 @@ $('sheetBody').addEventListener('click',e=>{
   const el=e.target.closest('button');if(!el||el.disabled)return;const d=el.dataset;
   if(sheet&&sheet.kind==='ranch'&&ranchClick(d))return;
   if(sheet&&sheet.kind==='social'&&socialClick(d))return;
+  if(sheet&&sheet.kind==='lodge'&&lodgeClick(d))return;
   if(d.openlook){openSheet('look');return;}
   if(d.human){closeSheet();openCharEd();return;}
   if(d.look){setLook({sp:d.look});renderSheet();return;}if(d.fur){setLook({fur:+d.fur});renderSheet();return;}if(d.shirt){setLook({shirt:+d.shirt});renderSheet();return;}

@@ -5,7 +5,7 @@
      - the villa under the northern cliff, a terracotta patio out front (picnic table, parasol, chairs) and a walled
        home garden of rare flowers with a rose arbor, a swing, a sundial and a bird bath
      - a brick plaza round the grown Island Heart, lamps at the corners and benches facing the tree
-     - Main Street: the shop, café, museum and hall in a row on a cobbled road, planters between them
+     - Main Street: the shop, café, nature lodge and hall in a row on a cobbled road, planters between them
      - Cottage Row: six neighbours' cottages facing the sea, each with a picket-fenced garden of rare flowers
      - the orchard (peach, starfruit, dragon fruit) and a tea garden on decking by the pond
      - the farm across the river: two fenced fields, a row per crop, every one a legendary harvest (prismatic,
@@ -15,7 +15,7 @@
    ========================================================= */
 const DREAM={seed:4242,scale:1.4,shape:[0.05,0.03,0.02,1,2,3,3.6],coves:[[1.2,0.2,0.25],[4.4,0.18,0.2]],cliff:[0.44,0],wild:0.4,dockX:-8,
   home:[-7,-8],heart:[-7,4],fire:[12,18],
-  civic:[['shop',-25,8],['cafe',-21,8],['museum',-17,8],['hall',-13,8]],
+  civic:[['shop',-25,8],['cafe',-21,8],['lodge',-17,8],['hall',-13,8]],
   cottages:[[-25,13,0x4f9a4a],[-21,13,0x8a6ad0],[-17,13,0x4a6ad0],[-13,13,0x3aa8a0],[-9,13,0xe0913a],[-5,13,0xd87a9a]]};
 function loadDream(){
   try{if(!S.showcase)localStorage.setItem(REAL_KEY,JSON.stringify(S));}catch(e){toast('Could not back up your save, so the Dream Island was not loaded.');return;}
@@ -75,7 +75,7 @@ function layDream(){dreamProgress();const D=DREAM,R=mulberry(D.seed^0x7e1),occ=n
   for(const [dx,dz,r] of [[-3,-1,Math.PI/2],[-3,1,Math.PI/2],[3,-1,-Math.PI/2],[3,1,-Math.PI/2],[-1,3,Math.PI],[1,3,Math.PI]])swap('bench',cx+dx,cz+dz,r);
   for(const [dx,dz] of [[-3,-3],[3,-3],[-3,3],[3,3]])swap('lamppost',cx+dx,cz+dz);
   for(const [dx,dz] of [[-2,-3],[2,-3]])swap('urn',cx+dx,cz+dz);
-  // ---- Main Street: a cobbled road in front of the shop, café, museum and hall; planters and lamps between them
+  // ---- Main Street: a cobbled road in front of the shop, café, nature lodge and hall; planters and lamps between them
   pave('cobble',-26,10,cx+3,11);obj('marble',-27,8);obj('marble',-27,9);
   for(const x of [-23,-19,-15]){obj('planter',x,9,0);obj('lamppost',x+1,9);obj('topiary',x,8);obj('topiary',x+1,8);}
   obj('lamppost',-11,9);obj('planter',-11,8,Math.PI/2);obj('signpost',-27,10,Math.PI/2);

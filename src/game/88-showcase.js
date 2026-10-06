@@ -2,7 +2,7 @@
    Dev: the showcase farm. One tap turns this save into a late-game, hand-planned farm (what a player who has
    put in the hours could build): the field grown to full size and fenced, a stone avenue and cross path, sprinkler-fed
    vegetable plots, an orchard round a windmill, striped flower beds with beehives, and lanterns and planters along
-   the paths. It also maxes progress (Villa, tools, level, every island found and restored, a full museum).
+   the paths. It also maxes progress (Villa, tools, level, every island found and restored, a full Islandex).
    The real save is copied to SAVE_KEY+'-real' first, and "Restore my save" puts it back.
    ========================================================= */
 const REAL_KEY=SAVE_KEY+'-real';

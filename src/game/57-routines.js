@@ -21,15 +21,15 @@ const ACT_LINES={fish:['Shh… they’re biting.','Caught three this morning. Th
 /* ---- memory: things you did that villagers can mention ---- */
 function logEvent(t,data={}){if(!S.log)S.log=[];S.log.push({t,day:S.day,...data});if(S.log.length>30)S.log.splice(0,S.log.length-30);}
 const MEM_TPL={
-  catch:{sailor:n=>`Heard you landed a ${n}! Proper catch, that.`,scholar:n=>`A ${n}? Fascinating specimen. Did you donate it to the museum?`,dreamer:n=>`You caught a ${n}? I hope you told it something nice.`,_:n=>`I heard you caught a ${n}! Impressive!`},
-  bug:{explorer:n=>`A ${n}! Where’d you find it? I want to go too!`,homebody:n=>`A ${n}? Keep it away from my garden, dear.`,_:n=>`You caught a ${n}? The museum will be thrilled.`},
+  catch:{sailor:n=>`Heard you landed a ${n}! Proper catch, that.`,scholar:n=>`A ${n}? Fascinating specimen. Will you let it go at the lodge?`,dreamer:n=>`You caught a ${n}? I hope you told it something nice.`,_:n=>`I heard you caught a ${n}! Impressive!`},
+  bug:{explorer:n=>`A ${n}! Where’d you find it? I want to go too!`,homebody:n=>`A ${n}? Keep it away from my garden, dear.`,_:n=>`You caught a ${n}? Let it go by the lodge and it might stay!`},
   house:{homebody:()=>`Your new house is lovely! You’ll have to have me over for tea.`,tinkerer:()=>`Saw the work on your house. Solid joinery!`,_:()=>`Your house is looking so grand now!`},
   decor:{scholar:n=>`I noticed your new ${n}. An interesting choice.`,dreamer:n=>`Your ${n} makes the whole town feel dreamier.`,_:n=>`I love the ${n} you put up!`},
   island:{explorer:n=>`You made it to ${n}?! I’m so jealous. What was it like?`,sailor:n=>`${n}, eh? Tricky waters out that way. Well sailed.`,_:n=>`I heard you sailed to ${n}! Bring me back a story.`},
   rarecrop:{homebody:n=>`A ${n}! Your farm must be very happy.`,_:n=>`Everyone’s talking about your ${n}!`},
   restore:{dreamer:n=>`I dreamed ${n} was singing last night. Was that you?`,explorer:n=>`You brought ${n} back to life?! I have to see it!`,_:n=>`Everyone’s talking about how you restored ${n}!`},
   trade:{sailor:n=>`Running cargo to ${n} now, are we? Good trade winds to you.`,_:n=>`I heard you’ve been trading with ${n}. How exciting!`},
-  museum:{scholar:()=>`I saw you at the museum. Grandpa Tully speaks very highly of you.`,_:()=>`Grandpa Tully says you’ve been a great help to the museum!`}};
+  release:{scholar:n=>`I spotted a ${n} by the water this morning. One of yours, I believe?`,_:n=>`There’s a ${n} living near my place now! Was that you?`}};
 // what's worth remembering when you pick something up: new or valuable catches, and special crops
 function noteGain(key,first){if(key.startsWith('f:')||key.startsWith('b:')){const I=(key[0]==='f'?FISH:BUGS)[key.slice(2)];if(I&&!I.junk&&(first||I.price>=250))logEvent(key[0]==='f'?'catch':'bug',{name:I.name});}
   else if(key.includes('|')&&!key.endsWith('|normal'))logEvent('rarecrop',{name:nameOf(key)});}

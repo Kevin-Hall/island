@@ -1,6 +1,6 @@
 /* =========================================================
    The town: a Wild World-style village generated from the world seed —
-   plaza with a town tree, shops, a museum, a town hall, villager homes, dirt paths, lamps and trees
+   plaza with a town tree, shops, a nature lodge, a town hall, villager homes, dirt paths, lamps and trees
    ========================================================= */
 const TOWN={fHid:null,name:'',plaza:[0,0],benches:[],cafeSeats:[],light:null,bld:[],path:new Map(),fixed:new Map(),plot:[],board:null,lamps:[],flora:new Map(),res:new Map()};
 // (wild flowers and clover: 54b-flora)
@@ -38,7 +38,7 @@ function layoutTown(isl){
     pc=pc||[0,1];TOWN.plaza=pc;for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++){const k=K(pc[0]+dx,pc[1]+dz);TOWN.path.set(k,2);}
     TOWN.fixed.set(K(pc[0],pc[1]),'tree');TOWN.board=[pc[0]+2,pc[1]-2];TOWN.fixed.set(K(...TOWN.board),'board');
     // buildings: civic ones close to the plaza, homes spread around
-    const want=[{t:'hall',d:[4,7]},{t:'shop',d:[4,8]},{t:'museum',d:[4,9]},{t:'cafe',d:[4,10]},{t:'home',d:[5,9]}];for(let i=0;i<6;i++)want.push({t:'vh',d:[6,24],n:i});
+    const want=[{t:'hall',d:[4,7]},{t:'shop',d:[4,8]},{t:'lodge',d:[4,9]},{t:'cafe',d:[4,10]},{t:'home',d:[5,9]}];for(let i=0;i<6;i++)want.push({t:'vh',d:[6,24],n:i});
     for(const w of want){let best=null,bs=-1e9;
       for(let it=0;it<900;it++){const x=Math.floor((R()-0.5)*2*(TOWN_W-3)),z=Math.floor((R()-0.5)*2*(TOWN_D-3))-1;if(!fits(x,z,2,3,1))continue;
         const d=Math.hypot(x+0.5-pc[0],z+1-pc[1]);if(d<w.d[0]||d>w.d[1])continue;let near=99;for(const b of TOWN.bld)near=Math.min(near,Math.hypot(b.x-x,b.z-z));
@@ -128,27 +128,7 @@ function townBuilding(b,R){const p=[],gl=[];let lit=true;
     gl.push(P(BOX,0x404a60,-0.6,0.55,0.76,0,0,0,0.34,0.3,0.03),P(BOX,0x404a60,0.6,0.55,0.76,0,0,0,0.34,0.3,0.03));
     for(const [x,c] of [[-0.95,0xa87444],[0.98,0x9a6a3a]])p.push(P(BOX,c,x,0.16,1.05,0,0.3,0,0.3,0.3,0.3),P(ICO2,x<0?0xf08a2a:0xe0303a,x,0.36,1.05,0,0,0,0.14,0.12,0.14));
     /* hanging sign: a basket of produce */p.push(P(BOX,0x5a3a2a,0.72,1.1,0.95,0,0,0,0.5,0.04,0.04),P(BOX,0xf6ecd0,0.82,0.92,0.95,0,0,0,0.34,0.26,0.03),P(BOX,0x8a5a3a,0.82,0.88,0.97,0,0,0,0.2,0.08,0.02),P(ICO2,0xe0303a,0.76,0.96,0.97,0,0,0,0.07,0.07,0.02),P(ICO2,0xf08a2a,0.86,0.97,0.97,0,0,0,0.07,0.07,0.02),P(ICO2,0x6ab84a,0.82,1.01,0.97,0,0,0,0.06,0.05,0.02));}
-  else if(b.t==='museum'){// a grand little museum: stone steps, columns, a glass dome with a gold fish weathervane, aquarium windows and banners
-    const ST=0xeee6d4,ST2=0xd8d0c0,GOLD=0xd8b050;
-    p.push(P(BOX,0xc8c0b0,0,0.06,0,0,0,0,2.2,0.12,2.0),P(BOX,ST,0,0.8,-0.25,0,0,0,2.0,1.36,1.3),P(BOX,ST2,0,0.2,-0.25,0,0,0,2.04,0.16,1.34),P(BOX,GOLD,0,1.44,-0.25,0,0,0,2.06,0.06,1.36));
-    for(let i=0;i<3;i++)p.push(P(BOX,i%2?ST2:0xe0d8c8,0,0.05+i*0.05,0.95-i*0.12,0,0,0,1.3-i*0.12,0.1+i*0.1,0.14));
-    for(const x of [-0.78,-0.26,0.26,0.78])p.push(P(CYL12,0xf8f4ea,x,0.8,0.72,0,0,0,0.15,1.2,0.15),P(BOX,ST2,x,0.23,0.72,0,0,0,0.22,0.06,0.22),P(BOX,ST2,x,1.4,0.72,0,0,0,0.22,0.06,0.22));
-    p.push(P(BOX,ST,0,1.5,0.62,0,0,0,2.1,0.12,0.5),P(PRISM,ST2,0,1.74,0.62,0,0,0,2.1,0.36,0.5),P(CYL12,GOLD,0,1.68,0.88,1.57,0,0,0.3,0.03,0.3),P(CYL12,0x8a6040,0,1.68,0.9,1.57,0,0,0.22,0.02,0.22));
-    for(const [x,y] of [[0,1.68],[-0.07,1.72],[0.07,1.72],[-0.07,1.64],[0.07,1.64]])p.push(P(CYL6,0x6aa86a,x,y,0.91,1.57,0,0,0.06,0.01,0.06));/* turtle-shell crest */
-    // door and the two aquarium windows (your fish swim in front of the blue glass, see refreshMuseumShow)
-    p.push(P(BOX,GOLD,0,0.56,0.41,0,0,0,0.5,0.8,0.02),P(BOX,0x5a3a2a,0,0.54,0.42,0,0,0,0.42,0.72,0.02),P(ICO2,GOLD,0.12,0.54,0.44,0,0,0,0.04,0.04,0.03));
-    for(const x of [-0.62,0.62])p.push(P(BOX,GOLD,x,0.8,0.405,0,0,0,0.46,0.5,0.02),P(BOX,0x4aa0d0,x,0.8,0.41,0,0,0,0.4,0.44,0.02),P(BOX,0xe8d6a8,x,0.61,0.43,0,0,0,0.4,0.05,0.05));
-    // dome with a gold finial and a fish weathervane
-    p.push(P(CYL12,ST2,0,1.6,-0.3,0,0,0,1.0,0.24,1.0),P(ICO2,0x7ac8c0,0,1.72,-0.3,0,0,0,0.96,0.78,0.96),P(CYL12,GOLD,0,1.72,-0.3,0,0,0,1.0,0.04,1.0),P(CYL8,GOLD,0,2.2,-0.3,0,0,0,0.03,0.3,0.03),
-      P(ICO2,GOLD,0,2.36,-0.3,0,0,0,0.05,0.1,0.22),P(CONE4,GOLD,0,2.36,-0.44,1.57,0.785,0,0.1,0.1,0.02));
-    for(let i=0;i<6;i++){const a=i/6*Math.PI*2;p.push(P(BOX,0xfbf8f0,Math.sin(a)*0.46,1.9,-0.3+Math.cos(a)*0.46,0,a,0,0.02,0.3,0.1));}
-    // banners: fish in blue, butterfly in green
-    for(const [x,c,e] of [[-0.98,0x3a6ab0,'fish'],[0.98,0x4a8a4a,'bug']]){p.push(P(BOX,GOLD,x,1.38,0.82,0,0,0,0.3,0.03,0.03),P(BOX,c,x,1.12,0.82,0,0,0,0.26,0.5,0.02),P(PRISM,c,x,0.82,0.82,Math.PI,0,0,0.26,0.1,0.02));
-      if(e==='fish')p.push(P(ICO2,0xf6d04a,x,1.14,0.835,0,0,0,0.12,0.08,0.02),P(CONE4,0xf6d04a,x+0.08,1.14,0.835,0,0,1.57,0.06,0.06,0.01));
-      else p.push(P(ICO2,0xf6d04a,x-0.05,1.16,0.835,0,0,0.5,0.08,0.1,0.02),P(ICO2,0xf6d04a,x+0.05,1.16,0.835,0,0,-0.5,0.08,0.1,0.02),P(ICO2,0xf39ab0,x-0.04,1.07,0.835,0,0,0.3,0.06,0.07,0.02),P(ICO2,0xf39ab0,x+0.04,1.07,0.835,0,0,-0.3,0.06,0.07,0.02));}
-    // flower planters at the front corners (your butterflies visit them)
-    for(const x of [-0.95,0.95]){p.push(P(BOX,ST2,x,0.2,1.0,0,0,0,0.42,0.28,0.36),P(BOX,0x5a3a2a,x,0.35,1.0,0,0,0,0.36,0.02,0.3));const q=[];wildflowers(q,mulberry(x>0?5:6),[0xf2a6c8,0xf6d04a,0xffffff,0xb8a8f2],7,0.15);p.push(...shift(q,x,0.36,1.0,0));}
-    gl.push(P(BOX,0xfff0b8,-0.26,1.2,0.86,0,0,0,0.1,0.14,0.1),P(BOX,0xfff0b8,0.26,1.2,0.86,0,0,0,0.1,0.14,0.1));}
+  else if(b.t==='lodge')lodgeParts(p,gl);/* a log cabin with a lookout, a bird feeder and a pond (59-lodge) */
   else if(b.t==='cafe'){// the harbour café: a sailcloth awning, a big window, a coffee-cup sign and a little patio with parasols
     p.push(P(BOX,0xf4ecdc,0,0.55,-0.35,0,0,0,1.8,1.1,1.1),P(BOX,0x9a9ea8,0,0.05,-0.35,0,0,0,1.86,0.1,1.16),P(BOX,0x86c8b8,0,1.12,-0.35,0,0,0,1.86,0.06,1.16));roof(p,0x86c8b8,0xf4ecdc,1.9,0.6,1.1,1.1,0,-0.35);
     for(let i=0;i<7;i++)p.push(P(BOX,i%2?0xfbf8f0:0x86c8b8,-0.78+i*0.26,0.96,0.34,0.4,0,0,0.26,0.03,0.42));
