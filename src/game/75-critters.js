@@ -12,7 +12,7 @@ const CRIT={
   bird:{n:[5,0],flee:2.6,sp:1.1},rabbit:{n:[2,1],flee:3,sp:1.3},squirrel:{n:[2,0],flee:2.5,sp:1.8},
   frog:{n:[2,2],flee:2,sp:1.2},crab:{n:[3,2],flee:2.2,sp:0.7},bee:{n:[3,0],flee:0,sp:1},deer:{n:[1,0],flee:5,sp:1.1}};
 const critSeason=()=>{const i=S.sea?null:curIsl();return i&&i.home?season():'summer';};
-function critWant(k){const night=isNight(),s=critSeason(),n=CRIT[k].n[night?1:0];
+function critWant(k){const night=isNight(),s=critSeason(),R=ecoRoster(),n=(R?R[k]||[0,0]:CRIT[k].n)[night?1:0];
   if(s==='winter'&&(k==='frog'||k==='bee'))return 0;if(s==='winter'&&k==='bird')return 2;if(s==='autumn'&&k==='bee')return 1;
   if(S.rain&&(k==='bee'||k==='bird'))return 0;return n;}
 
@@ -23,10 +23,10 @@ const CRIT_COLS={bird:[[0x9a6a44,0xe8d8b8,0x7a5234],[0x8a6048,0xe8703a,0x5a4034]
 function rpiv(parent,x,y,z,parts,par=[0,0,0]){const gg=new T.Group();gg.position.set(x-par[0],y-par[1],z-par[2]);if(parts&&parts.length)gg.add(M(shift(parts,-x,-y,-z)));parent.add(gg);return gg;}
 // yaw first, then pitch, so a nose-up or nose-down tilt is always along the way the animal faces
 function rigDone(g){g.rotation.order='YXZ';g.traverse(o=>{if(o.isGroup)o.rotation.order='YXZ';});return g;}
-function critModel(k,v){const g=new T.Group(),p=[],e=(x,y,z,s=0.035)=>p.push(P(SPH_XS,0x2a2230,x,y,z,0,0,0,s,s,s),P(SPH_XS,0xffffff,x+s*0.2,y+s*0.25,z+s*0.3,0,0,0,s*0.35,s*0.35,s*0.35));
+function critModel(k,v){if(ECO_CRIT[k])return ecoCritModel(k,v);const g=new T.Group(),p=[],e=(x,y,z,s=0.035)=>p.push(P(SPH_XS,0x2a2230,x,y,z,0,0,0,s,s,s),P(SPH_XS,0xffffff,x+s*0.2,y+s*0.25,z+s*0.3,0,0,0,s*0.35,s*0.35,s*0.35));
   let wings=null,tail=null;const wint=critSeason()==='winter';
   switch(k){
-    case'bird':{const [b,bl,dk]=CRIT_COLS.bird[v%3];p.push(PG(SPH,b,dk,0,0.12,0,0,0,0,0.2,0.17,0.26),P(SPH_LO,bl,0,0.1,0.05,0,0,0,0.15,0.12,0.16),PG(SPH_LO,b,dk,0,0.21,0.1,0,0,0,0.15,0.14,0.15),
+    case'bird':{const [b,bl,dk]=CRIT_COLS.bird[v]||CRIT_COLS.bird[v%3];p.push(PG(SPH,b,dk,0,0.12,0,0,0,0,0.2,0.17,0.26),P(SPH_LO,bl,0,0.1,0.05,0,0,0,0.15,0.12,0.16),PG(SPH_LO,b,dk,0,0.21,0.1,0,0,0,0.15,0.14,0.15),
         P(CONE5,0xf0b040,0,0.2,0.19,1.57,0,0,0.04,0.07,0.035),P(BOX,dk,0,0.14,-0.14,-0.35,0,0,0.07,0.015,0.12),P(CYL5,0xe0a040,0.04,0.03,0,0,0,0,0.012,0.06,0.012),P(CYL5,0xe0a040,-0.04,0.03,0,0,0,0,0.012,0.06,0.012));
       e(0.055,0.23,0.15,0.025);e(-0.055,0.23,0.15,0.025);
       const w=sd=>{const m=M([PG(SPH_LO,b,dk,sd*0.06,0,0,0,0,0,0.12,0.03,0.18)]);m.position.set(sd*0.07,0.14,-0.01);return m;};wings=[w(-1),w(1)];break;}
@@ -73,10 +73,11 @@ function critModel(k,v){const g=new T.Group(),p=[],e=(x,y,z,s=0.035)=>p.push(P(S
   const body=M(p);g.add(body);if(wings)g.add(...wings);if(tail)g.add(tail);g.userData={body,wings,tail};return g;}
 
 // ---- where each kind lives ----
-function critGround(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&!debrisAt(x,z)&&!objAt(x,z)&&!floorAt(x,z)&&!fixedAt(x,z)&&!riverSurf.has(k);}
-function nearTree(x,z,r){for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const d=debrisAt(x+dx,z+dz);if(d&&d.k==='tree')return[x+dx,z+dz];}return null;}
+function critGround(x,z){const k=K(x,z);return landMap.get(k)==='grass'&&!isleBlocked(x,z)&&!debrisAt(x,z)&&!objAt(x,z)&&!floorAt(x,z)&&!fixedAt(x,z)&&!riverSurf.has(k);}
+function nearTree(x,z,r){for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const d=debrisAt(x+dx,z+dz);if(d&&d.k==='tree')return[x+dx,z+dz];}
+  const isl=islandAt(x,z);if(isl&&!isl.home&&isl.trees)for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)if(isl.trees.has(K(x+dx,z+dz)))return[x+dx,z+dz];/* the other islands' trees */return null;}
 function nearWater(x,z,r){for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)if(riverSurf.has(K(x+dx,z+dz)))return[x+dx,z+dz];return null;}
-function critHabitat(k,x,z){
+function critHabitat(k,x,z){if(ECO_CRIT[k])return ECO_CRIT[k].hab(x,z);
   switch(k){
     case'crab':return landMap.get(K(x,z))==='sand'&&!objAt(x,z);
     case'frog':return critGround(x,z)&&!!nearWater(x,z,1);
@@ -90,9 +91,9 @@ const critLvl=(x,z)=>lvlMap.get(K(Math.round(x),Math.round(z)))||0;
 function spawnCritter(k){const a=Math.random()*6.283,d=(k==='deer'?8:4)+Math.random()*(k==='deer'?4:8);
   for(let it=0;it<14;it++){const x=Math.round(vil.x+Math.cos(a+it*0.45)*d),z=Math.round(vil.z+Math.sin(a+it*0.45)*d);if(!critHabitat(k,x,z))continue;
     const n=k==='bird'?1+Math.floor(Math.random()*3):1;
-    for(let i=0;i<n;i++){const v=Math.floor(Math.random()*3),g=critModel(k,k==='bird'&&i>0?critters[critters.length-1].v:v),cx=x+(Math.random()-0.5)*0.8,cz=z+(Math.random()-0.5)*0.8;
+    for(let i=0;i<n;i++){const v=k==='bird'&&i>0?critters[critters.length-1].v:ecoV(k),g=critModel(k,v),cx=x+(Math.random()-0.5)*0.8,cz=z+(Math.random()-0.5)*0.8;
       const c={k,v,g,x:cx,z:cz,y:critY(cx,cz),state:'idle',t:Math.random()*2,wait:1+Math.random()*3,tx:cx,tz:cz,ph:Math.random()*6.28,out:0,hx:x,hz:z,sc:k==='deer'?1:1.1};
-      g.position.set(cx,c.y,cz);g.rotation.y=Math.random()*6.28;g.scale.setScalar(0.01);scene.add(g);critters.push(c);}
+      g.position.set(cx,c.y,cz);g.rotation.y=Math.random()*6.28;g.scale.setScalar(0.01);scene.add(g);critters.push(c);ecoMark(c);}
     if(k==='deer'&&!S.sawDeer){S.sawDeer=1;setTimeout(()=>say('A deer! Shh…'),600);}
     return true;}
   return false;}
@@ -112,11 +113,11 @@ function critFlee(c){c.state='flee';c.t=0;const a=Math.atan2(c.z-vil.z,c.x-vil.x
 
 function updateCritters(dt,tt){
   // keep a lively population around you
-  critT-=dt;if(critT<=0){critT=1.2;if(!S.sea&&!inside){const ks=Object.keys(CRIT).filter(k=>critters.filter(c=>c.k===k).length<critWant(k));
+  critT-=dt;if(critT<=0){critT=ecoRoster()?0.45:1.2;/* (the wild islands fill up quickly) */if(!S.sea&&!inside){const ks=Object.keys(CRIT).filter(k=>critters.filter(c=>c.k===k).length<critWant(k));
       if(ks.length){const k=ks[Math.floor(Math.random()*ks.length)];if(k!=='deer'||Math.random()<0.15)spawnCritter(k);}}}
   for(let i=critters.length-1;i>=0;i--){const c=critters[i],g=c.g,u=g.userData;c.t+=dt;
     const far=Math.hypot(c.x-vil.x,c.z-vil.z);if(far>26||S.sea){dropCritter(i);continue;}
-    if(c.state!=='flee'&&c.state!=='gone'&&c.k!=='bee'&&far<CRIT[c.k].flee*(vil.idle>1.5?0.6:1))critFlee(c);
+    if(c.state!=='flee'&&c.state!=='gone'&&c.k!=='bee'&&!(c.calm>0)&&far<CRIT[c.k].flee*(vil.idle>1.5?0.6:1))critFlee(c);
     let hop=0,sq=1;
     if(c.k==='bee'){// drifts in lazy loops round its flowers, wings a blur
       const a=c.t*0.9+c.ph;c.x=c.hx+Math.cos(a)*0.7+Math.sin(c.t*2.1)*0.2;c.z=c.hz+Math.sin(a*1.3)*0.6;c.y=critY(c.hx,c.hz)+0.35+Math.sin(c.t*3)*0.08;
@@ -161,7 +162,7 @@ function hopStep(c,dt,H){const o={mv:0,h:0,sq:1,pit:0,leg:0,air:0};
 function critBeh(c,dt){c.bt=(c.bt||0)-dt;if(c.bt<=0){const L=BEH[c.k];c.beh=L[Math.floor(Math.random()*L.length)];c.bt=1.2+Math.random()*2.8;c.ly=(Math.random()-.5)*1.4;}return c.beh;}
 function earFlick(c,dt,ears,rate){if(!(c.ef>0)&&Math.random()<dt*rate){c.ef=0.3;c.ei=Math.random()<.5?0:1;}
   ears.forEach((e,i)=>{const sd=i?1:-1;if(c.ef>0&&c.ei===i)e.rotation.z=sd*Math.sin((1-c.ef/0.3)*Math.PI*2)*0.45;else dmp(e.rotation,'z',0,12,dt);});if(c.ef>0)c.ef-=dt;}
-function rigCritter(c,dt,tt){const g=c.g,u=g.userData,k=c.k,T0=c.t;let hop=0,sq=1,o=null,gait=0;
+function rigCritter(c,dt,tt){if(ECO_CRIT[c.k])return ecoRig(c,dt,tt);/* the island animals (85d) */const g=c.g,u=g.userData,k=c.k,T0=c.t;let hop=0,sq=1,o=null,gait=0;
   // ---- where it's going ----
   if(c.state==='idle'){c.wait-=dt;if(c.wait<=0)critWander(c);}
   if(c.state==='move'){const dx=c.tx-c.x,dz=c.tz-c.z,d=Math.hypot(dx,dz);

@@ -192,6 +192,7 @@ function buildIsland(isl){
   if(!isl.home&&B.tuft){const pts=[];for(const [x,z] of isl.grass){if(blocked.has(K(x,z)))continue;const h=hash(x*3.1,z*1.7);if(h<0.45){pts.push([x+(hash(z,x*2)-0.5)*0.7,topY(x,z),z+(hash(x+5,z)-0.5)*0.7]);if(h<0.15)pts.push([x+(hash(z*3,x)-0.5)*0.7,topY(x,z),z+(hash(x,z*7)-0.5)*0.7]);}}
     if(pts.length){const im=new T.InstancedMesh(TUFT_GEO,grassMat,pts.length);pts.forEach(([x,y,z],i)=>{_e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x,y,z),_q,_s.set(1,0.8+hash(z,x)*0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.set(B.tuft));});
       im.frustumCulled=false;im.receiveShadow=true;im.renderOrder=3;g.add(im);}}
+  if(!isl.home)ecoFlora(isl,g,blocked);/* undergrowth: ferns, flowers, reeds, mushrooms (85d) */
   scene.add(g);islandBounds(isl);if(isl.fr)frLandAdd(isl);else rebuildLandList();
 }
 function islandAt(x,z){const id=islMap.get(K(Math.round(x),Math.round(z)));return id===undefined?null:islands[id];}
@@ -199,5 +200,5 @@ function curIsl(){if(S.sea)return null;return islandAt(vil.x,vil.z);}
 function nearestIsland(x,z){let best=null,bd=1e9;for(const isl of islands){const d=Math.hypot(x-isl.cx,z-isl.cz)-islR(isl)/0.75;if(d<bd){bd=d;best=isl;}}return[best,bd];}
 function regionAt(x,z){const [isl,d]=nearestIsland(x,z);return d<9?isl.biome:'open';}
 function landDist(x,z,isl){let bd=1e9;const tiles=isl?[...isl.grass,...isl.sand]:landList;for(const t of tiles){const d=(t[0]-x)**2+(t[1]-z)**2;if(d<bd)bd=d;}return Math.sqrt(bd);}
-function bioLabel(b){return b==='any'?'anywhere':b==='home'?'your island':b==='wild'?'the woods and meadows at home':b==='open'?'the open sea':BIOMES[b]?BIOMES[b].name.toLowerCase()+' isles':b;}
+function bioLabel(b){return b==='any'?'anywhere':b==='home'?'your island':b==='wild'?'the woods and meadows at home':b==='open'?'the open sea':BIOMES[b]?BIOMES[b].name.toLowerCase()+' isles':FSTY[b]?FSTY[b].name.toLowerCase()+' isles':b;}
 

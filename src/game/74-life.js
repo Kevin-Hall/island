@@ -126,7 +126,7 @@ function syncLife(){syncDebris();
     for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)weedSlow.add(K(w.x+dx,w.z+dz));}
 }
 const freeTile=(x,z)=>!TOWN.path.has(K(x,z))&&!debrisAt(x,z)&&!objAt(x,z)&&!floorAt(x,z)&&!fixedAt(x,z)&&!findAt(x,z)&&!weedAt(x,z)&&!S.tiles[K(x,z)];
-function spawnFind(quiet,isl){if(!isl)return;const here=S.finds.filter(f=>islMap.get(K(f.x,f.z))===isl.id&&!forageOf(f));if(here.length>=5)return;
+function spawnFind(quiet,isl){if(!isl)return;const here=S.finds.filter(f=>islMap.get(K(f.x,f.z))===isl.id&&!forageOf(f)&&f.eco==null);if(here.length>=5)return;
   if(S.finds.length>=70)S.finds.shift();
   const c=isl.sand.filter(([x,z])=>freeTile(x,z)&&!(isl.blocked&&isl.blocked.has(K(x,z))));if(!c.length)return;const [x,z]=pickR(c);
   const k=pickW(FINDS,k=>FINDS[k].w>0&&!FINDS[k].forage&&(FINDS[k].bio.includes('any')||FINDS[k].bio.includes(isl.biome))&&dexOk(FINDS[k],isl));if(!k)return;S.finds.push({k,x,z});

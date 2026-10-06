@@ -32,7 +32,7 @@ function tabs(list){$('sheetTabs').innerHTML=list.map(([id,l])=>`<button class="
 const sh=n=>`<span class="shl">${shellHTML}${fmt(n)}</span>`;
 function whereStr(I,key){if(key.startsWith('s:'))return seaWhere(I);const bios=I.bio||[];let w=bios.map(bioLabel).filter((v,i,a)=>a.indexOf(v)===i).join(' / ');
   if(key.startsWith('f:'))w+=' · '+(I.hab==='deep'?'deep water':I.hab==='shore'?'near shore':'any water');
-  if(I.time)w+=' · '+I.time;if(I.rain)w+=' · rain only';if(I.dry)w+=' · clear skies';if(I.sea)w+=' · '+I.sea.join(' & ');if(I.hr)w+=' · '+clockStr(I.hr[0])+'–'+clockStr(I.hr[1]);if(I.tpl&&!I.forage&&I.w)w+=' · on beaches';if(key==='g:feather')w='shoo a crow at home';if(key==='g:starfrag')w='wish on a shooting star, then check your beach';return w;}
+  if(I.time)w+=' · '+I.time;if(I.rain)w+=' · rain only';if(I.dry)w+=' · clear skies';if(I.sea)w+=' · '+I.sea.join(' & ');if(I.hr)w+=' · '+clockStr(I.hr[0])+'–'+clockStr(I.hr[1]);if(I.tpl&&!I.forage&&I.w)w+=' · on beaches';if(I.how)w=I.how;else if(I.eco&&!key.startsWith('w:'))w+=' · forage';if(key==='g:feather')w='shoo a crow at home';if(key==='g:starfrag')w='wish on a shooting star, then check your beach';return w;}
 function renderSheet(){
   if(!sheet)return;const body=$('sheetBody');const lv=level();let h='';
   if(sheet.kind==='ranch'){ranchSheet(body);return;}/* a coop or barn (75b) */
@@ -112,7 +112,7 @@ function renderSheet(){
     S.orders.forEach((o,i)=>{const have=orderHave(o),ok=have>=o.n;
       h+=`<div class="card"><img class="px" src="${iconOf(o.k)}" alt=""><span class="grow"><span class="nm">${o.n} × ${nameOf(o.k)}</span><br><span class="sub">${o.done?'<span class="done">Delivered</span>':`You have ${Math.min(have,o.n)}/${o.n} · pays ${fmt(o.reward)} shells${o.k.includes(':')&&!o.k.startsWith('c:')?' · '+whereStr(itemInfo(o.k),o.k):''}`}</span></span>${o.done?'':`<button class="pbtn ${ok?'go':''}" data-deliver="${i}" ${ok?'':'disabled'}>Deliver</button>`}</div>`;});
     h+='</div>';if(S.ordBonus)h+=`<p class="note" style="margin-top:10px">All done for today. New orders arrive at dawn.</p>`;}
-  else if(sheet.kind==='dex'){$('sheetTitle').textContent='Islandex';tabs([['fish','Fish'],['sea','Sea Life'],['bugs','Bugs'],['plants','Plants'],['finds','Finds'],['crops','Crops']]);
+  else if(sheet.kind==='dex'){$('sheetTitle').textContent='Islandex';tabs([['fish','Fish'],['sea','Sea Life'],['bugs','Bugs'],['plants','Plants'],['wild','Wildlife'],['finds','Finds'],['crops','Crops']]);
     const [g,t]=dexCount();
     h+=`<div class="stat"><span><b>${g}</b>/${t} recorded</span><span>${Object.keys(S.disc).length}/${islands.length} islands charted</span></div><div class="meter"><b style="width:${g/t*100}%"></b></div>`;
     if(sheet.tab==='crops'){const total=CROP_IDS.length*VARIANTS.length,found=Object.keys(S.alm).filter(k=>!k.includes(':')).length;
@@ -123,7 +123,7 @@ function renderSheet(){
         h+='</div>';}
       h+='</div>';}
     else{const cat=DEX_CATS.find(c=>c[0]===sheet.tab),[,label,pre,tab]=cat;const keys=Object.keys(tab);const got=keys.filter(k=>S.alm[pre+k]).length;
-      const tips={fish:'Each island\'s waters, the shallows, the deep and the open sea all hold different fish. Cast from your boat out at sea.',bugs:'Every island has its own bugs. Butterflies fly by day, moths and glowing things by night, and beetles crawl in the grass.',plants:'Wild berries, flowers and mushrooms grow on the other islands. They regrow every morning and evening, and some only bloom at night.',finds:'The tide leaves treasures on every beach. Crates and bottles drift on the open sea.',sea:'Swim out from your beach and dive on the reef. The tide changes who is about, and the legendary ones only come out when the tide, the weather and the hour all line up.'};
+      const tips={fish:'Each island\'s waters, the shallows, the deep and the open sea all hold different fish. Cast from your boat out at sea.',bugs:'Every island has its own bugs. Butterflies fly by day, moths and glowing things by night, and beetles crawl in the grass.',plants:'Wild berries, flowers and mushrooms grow on the other islands. They regrow every morning and evening, and some only bloom at night.',wild:'Every island has its own animals. Tap one to watch it quietly and it goes in your log. Some only come out at night, a few are very rare, and now and then one leaves you a little gift.',finds:'The tide leaves treasures on every beach. Crates and bottles drift on the open sea.',sea:'Swim out from your beach and dive on the reef. The tide changes who is about, and the legendary ones only come out when the tide, the weather and the hour all line up.'};
       h+=`<p class="note"><b>${got}/${keys.length}</b> ${label.toLowerCase()} recorded. ${tips[sheet.tab]}</p><div class="grid">`;
       const sorted=keys.slice().sort((a,b)=>(tab[b].w||0)-(tab[a].w||0));
       for(const id of sorted){const I=tab[id],key=pre+id,n=S.alm[key]||0;

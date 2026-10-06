@@ -155,6 +155,6 @@ function markOpen(isl){const kind=isleKindOf(isl),X=ISLE_X[kind];S.isleMarks=S.i
   logEvent('island',{name:isl.name+'’s '+name});addXP(25);
   toast(`You found <b>${X.markN}</b> on ${isl.name}! The chest holds ${n} ${MATS[X.mat].name.toLowerCase()}, ${rare?(/^[aeiou]/i.test(nameOf(rare))?'an ':'a ')+nameOf(rare).toLowerCase()+', ':''}and ${fmt(sh)} shells.`,'rare',ICON['m:'+X.mat]);save();updateHUD();}
 // what an island holds, for the landing toast and the chart
-function isleTag(isl){const kind=isleKindOf(isl);if(!kind)return'';const X=ISLE_X[kind];return `<br>${MATS[X.mat].name} · ${(S.isleMarks||{})[isl.id]?X.markN.replace(/^an? /,'')+' found ✓':'treasure to find'}`;}
+function isleTag(isl){const kind=isleKindOf(isl);if(!kind)return'';const X=ISLE_X[kind];return `<br>${MATS[X.mat].name} · ${(S.isleMarks||{})[isl.id]?X.markN.replace(/^an? /,'')+' found ✓':'treasure to find'} · ${ecoLine(isl)}`;}
 function isleBlurb(isl){const kind=isleKindOf(isl);if(!kind)return'';const X=ISLE_X[kind],seen=(S.isleMarks||{})[isl.id];
-  return `${MATS[X.mat].name} grows here${seen?'':`, and somewhere there's ${X.markN}`}.`;}
+  return `${MATS[X.mat].name} grows here${seen?'':`, and somewhere there's ${X.markN}`}. ${ecoBlurb(isl)}`;}
