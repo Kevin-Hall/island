@@ -8,16 +8,16 @@ function patternTex(size,draw){const cv=document.createElement('canvas');cv.widt
   const t=new T.CanvasTexture(cv);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=T.NearestFilter;t.minFilter=T.LinearMipmapLinearFilter;return t;}
 const shade=v=>`rgb(${v},${v},${v})`;
 // painted grass: little tufts of three or four blades (dark strokes with a lit edge), scattered so the tiling doesn't show
-const GRASS_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(236);g.fillRect(0,0,n,n);
+const GRASS_TEX=patternTex(64,(g,n,R)=>{if(identTex('grass',g,n,R))return;g.fillStyle=shade(236);g.fillRect(0,0,n,n);
   const px=(x,y,v)=>{g.fillStyle=shade(v);g.fillRect(((Math.round(x)%n)+n)%n,((Math.round(y)%n)+n)%n,1,1);};
   for(let i=0;i<30;i++){const x=R()*n,y=R()*n,blades=3+Math.floor(R()*2),dark=R()<0.8;
     for(let b=0;b<blades;b++){const lean=(b-(blades-1)/2)*0.55+(R()-0.5)*0.3,h=3+Math.floor(R()*3);
       for(let k=0;k<h;k++){px(x+b*1.2+lean*k,y-k,dark?(k===h-1?210:192):250);if(dark&&k>0&&R()<0.5)px(x+b*1.2+lean*k+1,y-k,224);}}}
   for(let i=0;i<40;i++)px(R()*n,R()*n,R()<0.6?216:248);});
-const PATH_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(238);g.fillRect(0,0,n,n);
+const PATH_TEX=patternTex(64,(g,n,R)=>{if(identTex('path',g,n,R))return;g.fillStyle=shade(238);g.fillRect(0,0,n,n);
   for(let i=0;i<70;i++){const x=R()*n,y=R()*n,r=1+R()*3.2;g.fillStyle=R()<0.55?shade(214):shade(250);g.beginPath();g.arc(x,y,r,0,6.283);g.fill();if(x<r*2||y<r*2){g.beginPath();g.arc(x+n,y+n,r,0,6.283);g.fill();}}});
-const SAND_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(244);g.fillRect(0,0,n,n);for(let i=0;i<140;i++){g.fillStyle=R()<0.7?shade(222):shade(255);g.fillRect(Math.floor(R()*n),Math.floor(R()*n),1+(R()<0.2),1);}});
-const CLIFF_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(238);g.fillRect(0,0,n,n);
+const SAND_TEX=patternTex(64,(g,n,R)=>{if(identTex('sand',g,n,R))return;g.fillStyle=shade(244);g.fillRect(0,0,n,n);for(let i=0;i<140;i++){g.fillStyle=R()<0.7?shade(222):shade(255);g.fillRect(Math.floor(R()*n),Math.floor(R()*n),1+(R()<0.2),1);}});
+const CLIFF_TEX=patternTex(64,(g,n,R)=>{if(identTex('cliff',g,n,R))return;g.fillStyle=shade(238);g.fillRect(0,0,n,n);
   for(let y=0;y<n;y+=8){g.fillStyle=shade(206);g.fillRect(0,y,n,1);let x=R()*10;while(x<n){g.fillRect(Math.floor(x),y,1,8);x+=10+R()*14;}}
   for(let i=0;i<40;i++){g.fillStyle=shade(222);g.fillRect(Math.floor(R()*n),Math.floor(R()*n),2,1);}});
 // a toon material whose map is sampled by world position (triplanar-lite: top-down or side-on by face normal)

@@ -17,11 +17,11 @@ const postMat=new T.ShaderMaterial({
   uniforms:{tC:{value:null},tD:{value:null},tB:{value:null},bloomC:{value:new T.Vector3(.3,.26,.2)},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},atmo:{value:new T.Vector4(.06,.5,60,.1)},hzC:{value:new T.Color(0xbfe0ff)},hzT:{value:new T.Vector3(1.02,1,.98)},tm:{value:0},
     // the visual style (applyFx): colour grade, outlines, glow, film texture and palette
     fxA:{value:new T.Vector4(1,1,1,0)}/* saturation, contrast, brightness, faded blacks */,tS:{value:new T.Vector3(1,1,1)},tH:{value:new T.Vector3(1,1,1)},
-    edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},uw:{value:0},rip:{value:0},uwC:{value:new T.Color(0x2a8cc0)},uwL:{value:1}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},
+    edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},rays:{value:0},uw:{value:0},rip:{value:0},uwC:{value:new T.Color(0x2a8cc0)},uwL:{value:1}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
   fragmentShader:`
     uniform sampler2D tC;uniform sampler2D tD;uniform sampler2D tB;uniform vec3 bloomC;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;uniform vec4 atmo;uniform vec3 hzC;uniform vec3 hzT;uniform float tm;varying vec2 vUv;
-    uniform vec4 fxA;uniform vec3 tS;uniform vec3 tH;uniform float edgeK;uniform vec3 edgeC;uniform float dith;uniform float grain;uniform float vig;uniform float bloomK;uniform float gradeK;uniform float pal;uniform float tilt;uniform float scan;uniform float paper;uniform float uw;uniform float rip;uniform vec3 uwC;uniform float uwL;
+    uniform vec4 fxA;uniform vec3 tS;uniform vec3 tH;uniform float edgeK;uniform vec3 edgeC;uniform float dith;uniform float grain;uniform float vig;uniform float bloomK;uniform float gradeK;uniform float pal;uniform float tilt;uniform float scan;uniform float paper;uniform float rays;uniform float uw;uniform float rip;uniform vec3 uwC;uniform float uwL;
     float b2(vec2 a){a=floor(a);return fract(a.x*.5+a.y*a.y*.75);}
     float bayer(vec2 a){return b2(.5*a)*.25+b2(a);}
     float lin(vec2 uv){float d=texture2D(tD,uv).r*2.-1.;return 2.*cn*cf/(cf+cn-d*(cf-cn));}
@@ -79,6 +79,7 @@ const postMat=new T.ShaderMaterial({
       if(rip>0.)c=mix(c,vec3(.85,.97,1.),rip*rip*.35);
       vec2 vg=vUv-.5;c*=1.-dot(vg,vg)*vig;
       float b=bayer(gl_FragCoord.xy)-.5;
+      if(rays>0.){float r=vUv.x*.9+vUv.y*.5,l=0.;for(int i=0;i<3;i++){float p=fract(.18+float(i)*.31+tm*.003)*1.5-.05;l+=smoothstep(.004,0.,abs(r-p))*(.6+.4*float(i==1));}c+=vec3(1.,.93,.62)*l*.16*rays;}/* (the Hike look's soft sun rays) */
       if(pal<0.5)c=floor(c*levels+b*dith+.5)/levels;
       gl_FragColor=vec4(c,1.);
     }`,
@@ -304,7 +305,7 @@ const s1Mat=new T.MeshBasicMaterial({color:0x7ea6e8}),s2Mat=new T.MeshBasicMater
 // water shader uses it to fade from pale aqua at the sand, through turquoise, to deep blue, with a ragged pixel edge
 const DEPTH_N=400,DEPTH_X0=-200;let depthDirty=true,depthX0=DEPTH_X0,depthZ0=DEPTH_X0;/* the window follows you out to the frontier (depthFollow) */
 const depthTex=new T.DataTexture(new Uint8Array([255,255,255,255]),1,1,T.RGBAFormat);depthTex.needsUpdate=true;
-const waterU={uCam:{value:new T.Vector3()},uSky:{value:skyHz},uZen:{value:skyZen},uSunD:{value:new T.Vector3(0,1,0)},uGl:{value:1},uT:{value:0},uYaw:{value:0},uDepth:{value:depthTex},uDB:{value:new T.Vector3(DEPTH_X0,DEPTH_X0,1)},uS1:{value:s1Mat.color},uS2:{value:s2Mat.color}};
+const waterU={uCam:{value:new T.Vector3()},uSky:{value:skyHz},uZen:{value:skyZen},uSunD:{value:new T.Vector3(0,1,0)},uGl:{value:1},uT:{value:0},uYaw:{value:0},uDepth:{value:depthTex},uDB:{value:new T.Vector3(DEPTH_X0,DEPTH_X0,1)},uS1:{value:s1Mat.color},uS2:{value:s2Mat.color},uSt:{value:IDENT.sea||0}};
 function buildDepthTex(){depthDirty=false;const N=DEPTH_N,d=new Float32Array(N*N).fill(99);
   for(const L of [landList,riverList])for(const q of L){const i=q[0]-depthX0,j=q[1]-depthZ0;if(i>=0&&j>=0&&i<N&&j<N)d[j*N+i]=0;}/* (land and rivers, 40-world) */
   // two-pass chamfer distance (rounder than steps along the grid)
@@ -317,7 +318,7 @@ function depthFollow(){const cx=depthX0+DEPTH_N/2,cz=depthZ0+DEPTH_N/2;if(Math.a
   depthX0=Math.round(cam.tx/40)*40-DEPTH_N/2;depthZ0=Math.round(cam.tz/40)*40-DEPTH_N/2;if(Math.abs(depthX0-DEPTH_X0)<60&&Math.abs(depthZ0-DEPTH_X0)<60)depthX0=depthZ0=DEPTH_X0;depthDirty=true;}
 waterMat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,waterU);
   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
-  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;uniform vec3 uCam;uniform vec3 uSky;uniform vec3 uZen;uniform vec3 uSunD;uniform float uGl;uniform sampler2D uDepth;uniform vec3 uDB;uniform vec3 uS1;uniform vec3 uS2;')
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;uniform vec3 uCam;uniform vec3 uSky;uniform vec3 uZen;uniform vec3 uSunD;uniform float uGl;uniform sampler2D uDepth;uniform vec3 uDB;uniform vec3 uS1;uniform vec3 uS2;uniform float uSt;\nfloat h21(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y);}')
     .replace('#include <color_fragment>',`#include <color_fragment>
       {vec2 q=vWp.xz;float n=fract(sin(dot(floor(q*.45),vec2(12.9898,78.233)))*43758.5453)*.5+fract(sin(dot(floor(q*1.3),vec2(39.3,11.7)))*43758.5453)*.5;
        diffuseColor.rgb*=.95+.08*n;
@@ -335,7 +336,18 @@ waterMat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,waterU);
        vec3 rf=reflect(vd,nn);float fr=pow(1.-clamp(-vd.y,0.,1.),4.);
        vec3 skyR=mix(uSky,uZen,clamp(rf.y*1.6,0.,1.));diffuseColor.rgb=mix(diffuseColor.rgb,skyR,fr*.4*smoothstep(1.5,3.5,dd));
        float sp=pow(max(dot(rf,uSunD),0.),600.)*uGl;float gl=step(.8,rh)*step(.2,pow(max(dot(rf,uSunD),0.),160.)*uGl);
-       diffuseColor.rgb+=vec3(1.,.96,.86)*(sp*.25+gl*.65)*smoothstep(1.,2.5,dd);}`);};
+       diffuseColor.rgb+=vec3(1.,.96,.86)*(sp*.25+gl*.65)*smoothstep(1.,2.5,dd);
+       // the visual identity's own seas (20b-ident): Clean, flat turquoise bands with little white wave marks; Hike, deep
+       // blue drawn in slow wavy lighter lines; both with a crisp white edge of foam at the shore
+       if(uSt>.5){float d2=texture2D(uDepth,(q-uDB.xy+.5)/uDB.z).r*6.375-.5+(vn(q*1.3)-.5)*.3;vec3 c;
+         if(uSt<1.5){c=mix(vec3(.56,.9,.86),vec3(.15,.74,.8),smoothstep(.2,1.4,d2));c=mix(c,vec3(.07,.6,.72),smoothstep(2.5,9.,d2));
+           c*=.96+.06*step(.62,vn(q*.12+vec2(uT*.01,0.)));/* big soft darker patches */
+           vec2 cl=floor(q/3.5),f=fract(q/3.5)-.5;float h=h21(cl);vec2 p=f-vec2(h-.5,fract(h*7.)-.5)*.5;p.y+=sin(uT*.8+h*6.)*.02;
+           float tri=step(-.05,p.y)*step(abs(p.x),.08-(p.y+.05)*.8)*step(p.y,.05);c=mix(c,vec3(.88,.97,.98),tri*step(.74,h)*smoothstep(1.5,2.5,d2));}
+         else{c=mix(vec3(.26,.62,.78),vec3(.13,.34,.6),smoothstep(.3,2.8,d2));
+           vec2 qa=vec2(q.x*.09+q.y*.03,q.y*.24-q.x*.05);float nn=vn(qa+vec2(uT*.015,0.))+vn(qa*2.1-vec2(0.,uT*.02))*.4;float ln=abs(fract(nn*3.4)-.5);
+           c=mix(c,c*1.28+vec3(.05,.08,.1),smoothstep(.045,.02,ln)*smoothstep(.8,1.8,d2)*.8);/* (long, thin, stretched like brush strokes) */}
+         c=mix(c,vec3(.95,.99,1.),smoothstep(.32,.08,d2));diffuseColor.rgb=c;}}`);};
 const water=new T.Mesh(new T.PlaneGeometry(520,520,52,52).rotateX(-Math.PI/2),waterMat);water.frustumCulled=false;scene.add(water);
 const TILE_PLANE=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2);
 

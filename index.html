@@ -5487,6 +5487,33 @@ function level(){if(S.scratch&&!(S.heart&&S.heart.revived))return 1;let l=1;whil
 function isNight(h=S.hour){return h>=19.5||h<5.5;}
 
 /* =========================================================
+   Visual identity (Settings → Look): how the whole world is drawn, not just filmed.
+   - Classic: the island as it's always been
+   - Clean: flat colour and soft light, pale cliffs, a calm turquoise sea with little white wave marks, no grass blades
+     or clutter, crisp edges (no pixels)
+   - Hike: chunky pixel art, painted streaks down the cliffs, a deep sea drawn in wavy lighter lines, warm light and a
+     few soft sun rays across the screen
+   It reshapes things built as the island loads (textures 31-ground, grass 42-grass, tufts 44-terrain, undergrowth
+   85d, cliff colours below, the sea shader 30-render, the visual style 30b-fx), so a change reloads the page.
+   ========================================================= */
+const IDENTS={
+  classic:{name:'Classic',desc:'The island as it is'},
+  clean:{name:'Clean',desc:'Flat colour, soft light and a calm turquoise sea',blades:false,tufts:false,flora:0.35,tex:'flat',sea:1,fx:'clean',cliffTo:0xf4f1ea,cliffK:0.82},
+  hike:{name:'Hike',desc:'Chunky pixels, painted cliffs, a sea of wavy lines',blades:false,tufts:true,flora:0.6,tex:'paint',sea:2,fx:'hike',cliffTo:0xb8a090,cliffK:0.3}};
+const IDENT=IDENTS[S.ident]||IDENTS.classic;
+// paler (or warmer) cliffs everywhere (BIOMES, 10-data; the frontier's own styles follow in 44b)
+const identMix=(a,b,t)=>{const r=(a>>16&255)*(1-t)+(b>>16&255)*t,g=(a>>8&255)*(1-t)+(b>>8&255)*t,bl=(a&255)*(1-t)+(b&255)*t;return(Math.round(r)<<16)|(Math.round(g)<<8)|Math.round(bl);};
+if(IDENT.cliffTo)for(const k in BIOMES)if(BIOMES[k].cliff!=null)BIOMES[k].cliff=identMix(BIOMES[k].cliff,IDENT.cliffTo,IDENT.cliffK);
+// the ground textures, redrawn for the look (31-ground calls this on each as it makes it)
+function identTex(kind,g,n,R){if(!IDENT.tex)return false;const base={grass:236,path:238,sand:244,cliff:238}[kind],sh=v=>`rgb(${v},${v},${v})`;g.fillStyle=sh(base);g.fillRect(0,0,n,n);
+  if(IDENT.tex==='flat')return true;
+  if(kind==='grass'){for(let i=0;i<10;i++){g.fillStyle=sh(212);const x=Math.floor(R()*n),y=Math.floor(R()*n);g.fillRect(x,y,1,2);g.fillRect(x+2,y+1,1,2);}}/* a few painted grass flicks */
+  else if(kind==='cliff'){for(let i=0;i<14;i++){g.fillStyle=sh(R()<0.5?196:214);const y=Math.floor(R()*n),x=Math.floor(R()*n),w=6+Math.floor(R()*16);g.fillRect(x,y,w,2);g.fillRect((x+w)%n,y+1,4,1);}}/* brushy streaks across the rock */
+  else if(kind==='sand'){for(let i=0;i<12;i++){g.fillStyle=sh(226);g.fillRect(Math.floor(R()*n),Math.floor(R()*n),1,1);}}
+  else{for(let i=0;i<8;i++){g.fillStyle=sh(220);g.fillRect(Math.floor(R()*n),Math.floor(R()*n),2,1);}}
+  return true;}
+function setIdent(k){if(!IDENTS[k]||(S.ident||'classic')===k)return;S.ident=k;S.fx=IDENTS[k].fx||'island';save();resetting=true;location.reload();}
+/* =========================================================
    Pixel sprites (UI icons)
    ========================================================= */
 const PAL={k:'#2b1e2e',g:'#5f9e3a',G:'#3d6e2c',l:'#9fd060',r:'#dc4034',R:'#962a2e',p:'#f39ab0',o:'#f08a2a',O:'#b85a1e',
@@ -6173,11 +6200,11 @@ const postMat=new T.ShaderMaterial({
   uniforms:{tC:{value:null},tD:{value:null},tB:{value:null},bloomC:{value:new T.Vector3(.3,.26,.2)},res:{value:new T.Vector2(1,1)},levels:{value:22},cn:{value:NEAR},cf:{value:FAR},gw:{value:1},atmo:{value:new T.Vector4(.06,.5,60,.1)},hzC:{value:new T.Color(0xbfe0ff)},hzT:{value:new T.Vector3(1.02,1,.98)},tm:{value:0},
     // the visual style (applyFx): colour grade, outlines, glow, film texture and palette
     fxA:{value:new T.Vector4(1,1,1,0)}/* saturation, contrast, brightness, faded blacks */,tS:{value:new T.Vector3(1,1,1)},tH:{value:new T.Vector3(1,1,1)},
-    edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},uw:{value:0},rip:{value:0},uwC:{value:new T.Color(0x2a8cc0)},uwL:{value:1}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},
+    edgeK:{value:1},edgeC:{value:new T.Vector3(.36,.32,.46)},dith:{value:1},grain:{value:0},vig:{value:.14},bloomK:{value:1},gradeK:{value:1},pal:{value:0},tilt:{value:0},scan:{value:0},paper:{value:0},rays:{value:0},uw:{value:0},rip:{value:0},uwC:{value:new T.Color(0x2a8cc0)},uwL:{value:1}/* under water (76c-swim): how far under, and the ripple as you pass through the surface */},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
   fragmentShader:`
     uniform sampler2D tC;uniform sampler2D tD;uniform sampler2D tB;uniform vec3 bloomC;uniform vec2 res;uniform float levels;uniform float cn;uniform float cf;uniform float gw;uniform vec4 atmo;uniform vec3 hzC;uniform vec3 hzT;uniform float tm;varying vec2 vUv;
-    uniform vec4 fxA;uniform vec3 tS;uniform vec3 tH;uniform float edgeK;uniform vec3 edgeC;uniform float dith;uniform float grain;uniform float vig;uniform float bloomK;uniform float gradeK;uniform float pal;uniform float tilt;uniform float scan;uniform float paper;uniform float uw;uniform float rip;uniform vec3 uwC;uniform float uwL;
+    uniform vec4 fxA;uniform vec3 tS;uniform vec3 tH;uniform float edgeK;uniform vec3 edgeC;uniform float dith;uniform float grain;uniform float vig;uniform float bloomK;uniform float gradeK;uniform float pal;uniform float tilt;uniform float scan;uniform float paper;uniform float rays;uniform float uw;uniform float rip;uniform vec3 uwC;uniform float uwL;
     float b2(vec2 a){a=floor(a);return fract(a.x*.5+a.y*a.y*.75);}
     float bayer(vec2 a){return b2(.5*a)*.25+b2(a);}
     float lin(vec2 uv){float d=texture2D(tD,uv).r*2.-1.;return 2.*cn*cf/(cf+cn-d*(cf-cn));}
@@ -6235,6 +6262,7 @@ const postMat=new T.ShaderMaterial({
       if(rip>0.)c=mix(c,vec3(.85,.97,1.),rip*rip*.35);
       vec2 vg=vUv-.5;c*=1.-dot(vg,vg)*vig;
       float b=bayer(gl_FragCoord.xy)-.5;
+      if(rays>0.){float r=vUv.x*.9+vUv.y*.5,l=0.;for(int i=0;i<3;i++){float p=fract(.18+float(i)*.31+tm*.003)*1.5-.05;l+=smoothstep(.004,0.,abs(r-p))*(.6+.4*float(i==1));}c+=vec3(1.,.93,.62)*l*.16*rays;}/* (the Hike look's soft sun rays) */
       if(pal<0.5)c=floor(c*levels+b*dith+.5)/levels;
       gl_FragColor=vec4(c,1.);
     }`,
@@ -6460,7 +6488,7 @@ const s1Mat=new T.MeshBasicMaterial({color:0x7ea6e8}),s2Mat=new T.MeshBasicMater
 // water shader uses it to fade from pale aqua at the sand, through turquoise, to deep blue, with a ragged pixel edge
 const DEPTH_N=400,DEPTH_X0=-200;let depthDirty=true,depthX0=DEPTH_X0,depthZ0=DEPTH_X0;/* the window follows you out to the frontier (depthFollow) */
 const depthTex=new T.DataTexture(new Uint8Array([255,255,255,255]),1,1,T.RGBAFormat);depthTex.needsUpdate=true;
-const waterU={uCam:{value:new T.Vector3()},uSky:{value:skyHz},uZen:{value:skyZen},uSunD:{value:new T.Vector3(0,1,0)},uGl:{value:1},uT:{value:0},uYaw:{value:0},uDepth:{value:depthTex},uDB:{value:new T.Vector3(DEPTH_X0,DEPTH_X0,1)},uS1:{value:s1Mat.color},uS2:{value:s2Mat.color}};
+const waterU={uCam:{value:new T.Vector3()},uSky:{value:skyHz},uZen:{value:skyZen},uSunD:{value:new T.Vector3(0,1,0)},uGl:{value:1},uT:{value:0},uYaw:{value:0},uDepth:{value:depthTex},uDB:{value:new T.Vector3(DEPTH_X0,DEPTH_X0,1)},uS1:{value:s1Mat.color},uS2:{value:s2Mat.color},uSt:{value:IDENT.sea||0}};
 function buildDepthTex(){depthDirty=false;const N=DEPTH_N,d=new Float32Array(N*N).fill(99);
   for(const L of [landList,riverList])for(const q of L){const i=q[0]-depthX0,j=q[1]-depthZ0;if(i>=0&&j>=0&&i<N&&j<N)d[j*N+i]=0;}/* (land and rivers, 40-world) */
   // two-pass chamfer distance (rounder than steps along the grid)
@@ -6473,7 +6501,7 @@ function depthFollow(){const cx=depthX0+DEPTH_N/2,cz=depthZ0+DEPTH_N/2;if(Math.a
   depthX0=Math.round(cam.tx/40)*40-DEPTH_N/2;depthZ0=Math.round(cam.tz/40)*40-DEPTH_N/2;if(Math.abs(depthX0-DEPTH_X0)<60&&Math.abs(depthZ0-DEPTH_X0)<60)depthX0=depthZ0=DEPTH_X0;depthDirty=true;}
 waterMat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,waterU);
   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
-  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;uniform vec3 uCam;uniform vec3 uSky;uniform vec3 uZen;uniform vec3 uSunD;uniform float uGl;uniform sampler2D uDepth;uniform vec3 uDB;uniform vec3 uS1;uniform vec3 uS2;')
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform float uT;uniform vec3 uCam;uniform vec3 uSky;uniform vec3 uZen;uniform vec3 uSunD;uniform float uGl;uniform sampler2D uDepth;uniform vec3 uDB;uniform vec3 uS1;uniform vec3 uS2;uniform float uSt;\nfloat h21(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y);}')
     .replace('#include <color_fragment>',`#include <color_fragment>
       {vec2 q=vWp.xz;float n=fract(sin(dot(floor(q*.45),vec2(12.9898,78.233)))*43758.5453)*.5+fract(sin(dot(floor(q*1.3),vec2(39.3,11.7)))*43758.5453)*.5;
        diffuseColor.rgb*=.95+.08*n;
@@ -6491,7 +6519,18 @@ waterMat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,waterU);
        vec3 rf=reflect(vd,nn);float fr=pow(1.-clamp(-vd.y,0.,1.),4.);
        vec3 skyR=mix(uSky,uZen,clamp(rf.y*1.6,0.,1.));diffuseColor.rgb=mix(diffuseColor.rgb,skyR,fr*.4*smoothstep(1.5,3.5,dd));
        float sp=pow(max(dot(rf,uSunD),0.),600.)*uGl;float gl=step(.8,rh)*step(.2,pow(max(dot(rf,uSunD),0.),160.)*uGl);
-       diffuseColor.rgb+=vec3(1.,.96,.86)*(sp*.25+gl*.65)*smoothstep(1.,2.5,dd);}`);};
+       diffuseColor.rgb+=vec3(1.,.96,.86)*(sp*.25+gl*.65)*smoothstep(1.,2.5,dd);
+       // the visual identity's own seas (20b-ident): Clean, flat turquoise bands with little white wave marks; Hike, deep
+       // blue drawn in slow wavy lighter lines; both with a crisp white edge of foam at the shore
+       if(uSt>.5){float d2=texture2D(uDepth,(q-uDB.xy+.5)/uDB.z).r*6.375-.5+(vn(q*1.3)-.5)*.3;vec3 c;
+         if(uSt<1.5){c=mix(vec3(.56,.9,.86),vec3(.15,.74,.8),smoothstep(.2,1.4,d2));c=mix(c,vec3(.07,.6,.72),smoothstep(2.5,9.,d2));
+           c*=.96+.06*step(.62,vn(q*.12+vec2(uT*.01,0.)));/* big soft darker patches */
+           vec2 cl=floor(q/3.5),f=fract(q/3.5)-.5;float h=h21(cl);vec2 p=f-vec2(h-.5,fract(h*7.)-.5)*.5;p.y+=sin(uT*.8+h*6.)*.02;
+           float tri=step(-.05,p.y)*step(abs(p.x),.08-(p.y+.05)*.8)*step(p.y,.05);c=mix(c,vec3(.88,.97,.98),tri*step(.74,h)*smoothstep(1.5,2.5,d2));}
+         else{c=mix(vec3(.26,.62,.78),vec3(.13,.34,.6),smoothstep(.3,2.8,d2));
+           vec2 qa=vec2(q.x*.09+q.y*.03,q.y*.24-q.x*.05);float nn=vn(qa+vec2(uT*.015,0.))+vn(qa*2.1-vec2(0.,uT*.02))*.4;float ln=abs(fract(nn*3.4)-.5);
+           c=mix(c,c*1.28+vec3(.05,.08,.1),smoothstep(.045,.02,ln)*smoothstep(.8,1.8,d2)*.8);/* (long, thin, stretched like brush strokes) */}
+         c=mix(c,vec3(.95,.99,1.),smoothstep(.32,.08,d2));diffuseColor.rgb=c;}}`);};
 const water=new T.Mesh(new T.PlaneGeometry(520,520,52,52).rotateX(-Math.PI/2),waterMat);water.frustumCulled=false;scene.add(water);
 const TILE_PLANE=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2);
 
@@ -6532,12 +6571,15 @@ const FXS={
   cozyfall: {name:'Cosy Amber',desc:'Late-afternoon amber light and warm shadows',sat:1.1,con:1.06,br:1.01,tS:[.92,.84,.96],tH:[1.2,1.04,.8],edge:.8,edgeC:[.4,.28,.26],bloom:2,vig:.3,soft:.12,warm:1.7,cool:.5,grain:.015,haze:.18,hzT:[1.16,1,.8]},
   misty:    {name:'Misty Morning',desc:'Cool and quiet, soft white mist in the distance',sat:.8,con:.92,br:1.07,fade:.1,tS:[.92,.98,1.08],tH:[1.03,1.02,.99],bloom:1.6,soft:.14,vig:.14,warm:.4,cool:1.1,haze:.46,hzK:.8,hzT:[1.06,1.08,1.1]},
   bluehour: {name:'Blue Hour',desc:'Cool dusk light, warm glowing windows and lamps',sat:1.02,con:1.08,br:.88,tS:[.74,.86,1.26],tH:[1.18,1,.86],bloom:2.8,vig:.38,soft:.08,warm:1.3,cool:1.6,haze:.2,hzT:[.86,.94,1.16]},
+  // the visual identities' own (20b-ident)
+  clean:    {name:'Clean',desc:'Flat colour and soft light, crisp edges',sat:1.12,con:1.02,br:1.05,tS:[.96,1,1.04],tH:[1.03,1.02,.97],edge:.35,edgeC:[.4,.4,.46],dith:0,levels:64,vig:.04,bloom:.6,grade:.6,px:-1,ramp:[176,176,255,255],leaf:[160,160,250,255],soft:.04,warm:.5,cool:.5,rim:.6,haze:.06},
+  hike:     {name:'Hike',desc:'Chunky pixels, warm light, soft sun rays',sat:1.08,con:1.04,br:1.02,fade:.02,tS:[.94,.94,1.06],tH:[1.05,1.02,.93],edge:.3,edgeC:[.42,.32,.36],dith:0,levels:16,vig:.1,bloom:.8,grade:.6,px:2,ramp:[136,200,245,255],soft:.03,warm:.9,cool:.8,rays:1,haze:.08},
   lofi:     {name:'Lo-fi',desc:'Muted and warm, chunky pixels and film grain',sat:.88,con:.95,fade:.1,tS:[.9,1,1.04],tH:[1.1,1.02,.88],dith:0,levels:16,px:1,grain:.05,vig:.3,bloom:1.2,soft:.06,warm:.9,cool:.6,haze:.12},
   gameboy:  {name:'Game Boy',   desc:'Four shades of green',pal:1,edge:1.2,edgeC:[.2,.2,.2],levels:4,vig:0,bloom:0,grade:0,px:2,rim:0},
 };
 function fxNow(){const F=Object.assign({},FX_BASE,FXS[S.fx]||FXS.island);if(S.scan!==undefined)F.scan=S.scan?1:0;/* the Scanlines switch in Settings overrides the style */return F;}
 function fxPx(){try{return fxNow().px;}catch(e){return 0;}}
-function applyFx(){const F=fxNow(),u=postMat.uniforms;
+function applyFx(){const F=fxNow(),u=postMat.uniforms;u.rays.value=F.rays||0;
   u.fxA.value.set(F.sat,F.con,F.br,F.fade);u.tS.value.set(...F.tS);u.tH.value.set(...F.tH);u.edgeK.value=F.edge;u.edgeC.value.set(...F.edgeC);u.dith.value=F.dith;u.levels.value=F.levels;
   u.atmo.value.x=F.roll;u.atmo.value.y=F.yroll;u.atmo.value.w=F.haze;fxHzK=F.hzK;u.hzT.value.set(...F.hzT);u.grain.value=F.grain;u.vig.value=F.vig;u.bloomK.value=F.bloom;u.gradeK.value=F.grade;u.pal.value=F.pal;u.tilt.value=F.tilt;u.scan.value=F.scan;u.paper.value=F.paper;
   // the toon ramps: how many bands of light and shade every surface is painted in, and how softly
@@ -6597,16 +6639,16 @@ function patternTex(size,draw){const cv=document.createElement('canvas');cv.widt
   const t=new T.CanvasTexture(cv);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=T.NearestFilter;t.minFilter=T.LinearMipmapLinearFilter;return t;}
 const shade=v=>`rgb(${v},${v},${v})`;
 // painted grass: little tufts of three or four blades (dark strokes with a lit edge), scattered so the tiling doesn't show
-const GRASS_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(236);g.fillRect(0,0,n,n);
+const GRASS_TEX=patternTex(64,(g,n,R)=>{if(identTex('grass',g,n,R))return;g.fillStyle=shade(236);g.fillRect(0,0,n,n);
   const px=(x,y,v)=>{g.fillStyle=shade(v);g.fillRect(((Math.round(x)%n)+n)%n,((Math.round(y)%n)+n)%n,1,1);};
   for(let i=0;i<30;i++){const x=R()*n,y=R()*n,blades=3+Math.floor(R()*2),dark=R()<0.8;
     for(let b=0;b<blades;b++){const lean=(b-(blades-1)/2)*0.55+(R()-0.5)*0.3,h=3+Math.floor(R()*3);
       for(let k=0;k<h;k++){px(x+b*1.2+lean*k,y-k,dark?(k===h-1?210:192):250);if(dark&&k>0&&R()<0.5)px(x+b*1.2+lean*k+1,y-k,224);}}}
   for(let i=0;i<40;i++)px(R()*n,R()*n,R()<0.6?216:248);});
-const PATH_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(238);g.fillRect(0,0,n,n);
+const PATH_TEX=patternTex(64,(g,n,R)=>{if(identTex('path',g,n,R))return;g.fillStyle=shade(238);g.fillRect(0,0,n,n);
   for(let i=0;i<70;i++){const x=R()*n,y=R()*n,r=1+R()*3.2;g.fillStyle=R()<0.55?shade(214):shade(250);g.beginPath();g.arc(x,y,r,0,6.283);g.fill();if(x<r*2||y<r*2){g.beginPath();g.arc(x+n,y+n,r,0,6.283);g.fill();}}});
-const SAND_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(244);g.fillRect(0,0,n,n);for(let i=0;i<140;i++){g.fillStyle=R()<0.7?shade(222):shade(255);g.fillRect(Math.floor(R()*n),Math.floor(R()*n),1+(R()<0.2),1);}});
-const CLIFF_TEX=patternTex(64,(g,n,R)=>{g.fillStyle=shade(238);g.fillRect(0,0,n,n);
+const SAND_TEX=patternTex(64,(g,n,R)=>{if(identTex('sand',g,n,R))return;g.fillStyle=shade(244);g.fillRect(0,0,n,n);for(let i=0;i<140;i++){g.fillStyle=R()<0.7?shade(222):shade(255);g.fillRect(Math.floor(R()*n),Math.floor(R()*n),1+(R()<0.2),1);}});
+const CLIFF_TEX=patternTex(64,(g,n,R)=>{if(identTex('cliff',g,n,R))return;g.fillStyle=shade(238);g.fillRect(0,0,n,n);
   for(let y=0;y<n;y+=8){g.fillStyle=shade(206);g.fillRect(0,y,n,1);let x=R()*10;while(x<n){g.fillRect(Math.floor(x),y,1,8);x+=10+R()*14;}}
   for(let i=0;i<40;i++){g.fillStyle=shade(222);g.fillRect(Math.floor(R()*n),Math.floor(R()*n),2,1);}});
 // a toon material whose map is sampled by world position (triplanar-lite: top-down or side-on by face normal)
@@ -7039,7 +7081,7 @@ function clumpMat(x,z,j){const y=topY(x,z),h1=hash(x*7.1+j*3.3,z*2.9-j),h2=hash(
   const gx=(j%3-1)*0.3+(h1-0.5)*0.26,gz=(Math.floor(j/3)-0.5)*0.46+(h2-0.5)*0.3;
   const cm=CMASK.get(K(x,z));if(cm&&inNotch(cm,gx*1.15,gz*1.15))return _m.makeScale(0,0,0);
   _q.identity();return _m.compose(_v.set(x+gx,y,z+gz),_q,_s.set(0.85+h3*0.4,0.7+h1*0.7,0.85+h2*0.4));}
-function buildGrass(isl,g){const B=BIOMES[isl.biome],per=GRASS_DENS[isl.biome]||0;isl.gIM=null;if(!per||!isl.grass.length)return;
+function buildGrass(isl,g){const B=BIOMES[isl.biome],per=IDENT.blades===false?0:GRASS_DENS[isl.biome]||0;isl.gIM=null;if(!per||!isl.grass.length)return;/* (none in the Clean and Hike looks) */
   const im=new T.InstancedMesh(BLADES,grassMat,isl.grass.length*per);isl.gIdx=new Map();let i=0;
   for(const [x,z] of isl.grass){isl.gIdx.set(K(x,z),i);const base=_c.setHex(groundCol(B.grass,x,z,isl.seed));const bc=base.clone();
     for(let j=0;j<per;j++,i++){im.setMatrixAt(i,clumpMat(x,z,j));im.setColorAt(i,_c.copy(bc).offsetHSL(0,0,(hash(x*3+j,z*5-j)-0.5)*0.05));}}
@@ -7066,7 +7108,7 @@ nearGrassMat.onBeforeCompile=sh=>{swayCompile(sh);sh.uniforms.uNoise=pathU.uNois
   {float mac_=texture2D(uNoise,vGP*0.013).r*0.65+texture2D(uNoise,vGP*0.034+vec2(3.1,1.7)).r*0.35;
     if(mac_<0.41)diffuseColor.rgb*=vec3(0.76,0.84,0.8);else if(mac_>0.59)diffuseColor.rgb=diffuseColor.rgb*vec3(1.08,1.09,0.95)+vec3(0.05,0.055,0.0);}`);};
 let nearIM=null,nearAt='';const _nv=new T.Vector3();
-function updateNearGrass(dt){
+function updateNearGrass(dt){if(IDENT.blades===false)return;
   if(!nearIM){nearIM=new T.InstancedMesh(BLADES,nearGrassMat,NEAR_MAX);nearIM.setColorAt(0,_c.set(0xffffff));nearIM.count=0;nearIM.frustumCulled=false;nearIM.renderOrder=3;nearIM.receiveShadow=true;scene.add(nearIM);}
   nearIM.visible=!S.sea&&!inside;if(!nearIM.visible){nearAt='';return;}
   nearT-=dt;const cx=Math.round(cam.tx),cz=Math.round(cam.tz),key=cx+','+cz;if(key===nearAt&&nearT>0)return;nearAt=key;nearT=1.5;
@@ -7390,7 +7432,7 @@ function buildIsland(isl){
   isl.blocked=blocked;
   isl.edges=[];for(const [x,z] of [...isl.grass,...isl.sand])for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(!isLand(x+dx,z+dz)&&!riverSurf.has(K(x+dx,z+dz)))isl.edges.push([x+dx*0.5,z+dz*0.5,dx,dz,hash(x*3+dx,z*5+dz)*6.28]);
   // little grass tufts scattered on the wild islands
-  if(!isl.home&&B.tuft){const pts=[];for(const [x,z] of isl.grass){if(blocked.has(K(x,z)))continue;const h=hash(x*3.1,z*1.7);if(h<0.45){pts.push([x+(hash(z,x*2)-0.5)*0.7,topY(x,z),z+(hash(x+5,z)-0.5)*0.7]);if(h<0.15)pts.push([x+(hash(z*3,x)-0.5)*0.7,topY(x,z),z+(hash(x,z*7)-0.5)*0.7]);}}
+  if(!isl.home&&B.tuft&&IDENT.tufts!==false){const pts=[];for(const [x,z] of isl.grass){if(blocked.has(K(x,z)))continue;const h=hash(x*3.1,z*1.7);if(h<0.45){pts.push([x+(hash(z,x*2)-0.5)*0.7,topY(x,z),z+(hash(x+5,z)-0.5)*0.7]);if(h<0.15)pts.push([x+(hash(z*3,x)-0.5)*0.7,topY(x,z),z+(hash(x,z*7)-0.5)*0.7]);}}
     if(pts.length){const im=new T.InstancedMesh(TUFT_GEO,grassMat,pts.length);pts.forEach(([x,y,z],i)=>{_e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x,y,z),_q,_s.set(1,0.8+hash(z,x)*0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.set(B.tuft));});
       im.frustumCulled=false;im.receiveShadow=true;im.renderOrder=3;g.add(im);}}
   if(!isl.home)ecoFlora(isl,g,blocked);/* undergrowth: ferns, flowers, reeds, mushrooms (85d) */
@@ -15264,6 +15306,7 @@ function renderSheet(){
     h+=`<button class="card lookrow" data-openlook="1"><img src="${lookThumb(S.look.sp,S.look.fur,S.look.shirt)}" alt=""><span class="grow"><span class="nm">Your look</span><br><span class="sub">${S.look.sp==='human'?'Human':LOOKS[S.look.sp]?.name||'Bunny'} · change your character</span></span><span class="sub" style="font-size:22px">›</span></button>`;
     h+=`<div class="tiles"><div><b>${lv}</b><span>${b?fmt(b-S.xp)+' XP to go':'Max level'}</span></div><div><b>${S.day}</b><span>Day</span></div><div><b>${fmt(S.earned)}</b><span>Shells earned</span></div></div>`;
     h+=`<h3 class="sech">Sound & display</h3><div class="group">`;
+    h+=`<div class="setrow col"><div class="rowtop"><span>Look</span><b>${IDENT.name}</b></div><div class="fxgrid">${Object.entries(IDENTS).map(([k,f])=>`<button class="fxb ${(S.ident||'classic')===k?'on':''}" data-ident="${k}"><b>${f.name}</b><small>${f.desc}</small></button>`).join('')}</div></div>`;/* the visual identity (20b-ident) */
     h+=`<div class="setrow"><span>Sound effects</span><button class="iswitch ${S.sound?'on':''}" data-snd="${S.sound?0:1}" aria-label="Sound"></button></div>`;
     h+=`<div class="setrow"><span>Music</span><button class="iswitch ${S.music!==false?'on':''}" data-mus="${S.music!==false?0:1}" aria-label="Music"></button></div>`;
     h+=`<div class="setrow"><span>Joystick<br><small style="opacity:.7;font-weight:600">Move with a stick; tap things to use them</small></span><button class="iswitch ${S.joy?'on':''}" data-joy="${S.joy?0:1}" aria-label="Joystick"></button></div>`;
@@ -15376,6 +15419,7 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.dev==='shells'){S.shells+=1000;SFX.coin();return;}
   if(d.joy!==undefined){S.joy=d.joy==='1';joyShow();save();SFX.ui();renderSheet();return;}
   if(d.scan!==undefined){S.scan=d.scan==='1';applyFx();save();SFX.ui();renderSheet();return;}
+  if(d.ident){SFX.ui();setIdent(d.ident);return;}
   if(d.fx!==undefined){setFx(d.fx);SFX.ui();renderSheet();return;}
   if(d.snd!==undefined){S.sound=d.snd==='1';setWaveVol();if(S.sound)startWaves();renderSheet();return;}
   if(d.px!==undefined){S.pxAdj=Number(d.px);resize();renderSheet();return;}
@@ -16242,7 +16286,7 @@ function floraParts(t,R,cols,p,gl){const col=()=>cols.length?cols[Math.floor(R()
 function ecoFlora(isl,g,blocked){const kind=isleKindOf(isl),E=ECO[kind];if(!E)return;const R=mulberry(hi(isl.seed,0xf10a)),p=[],gl=[];
   const spots=new Set((isl.spots||[]).map(([x,z])=>K(x,z)));
   const put=(t,x,z)=>{const q=[],qg=[];floraParts(t,R,E.fcol||[],q,qg);const ox=x+(R()-0.5)*0.6,oz=z+(R()-0.5)*0.6,y=topY(x,z),a=R()*6.28;p.push(...shift(q,ox,y,oz,a));if(qg.length)gl.push(...shift(qg,ox,y,oz,a));};
-  for(const [x,z] of isl.grass){const k=K(x,z);if(blocked.has(k)||spots.has(k))continue;if(R()<(isl.grand?0.22:0.3))put(E.flora[Math.floor(R()*E.flora.length)],x,z);}
+  for(const [x,z] of isl.grass){const k=K(x,z);if(blocked.has(k)||spots.has(k))continue;if(R()<(isl.grand?0.22:0.3)*(IDENT.flora??1))put(E.flora[Math.floor(R()*E.flora.length)],x,z);}
   if(E.sand)for(const [x,z] of isl.sand){if(blocked.has(K(x,z)))continue;if(R()<0.16)put(E.sand[Math.floor(R()*E.sand.length)],x,z);}
   if(p.length){const m=M(p);m.castShadow=false;m.receiveShadow=true;g.add(m);}if(gl.length){const m=M(gl,lumMat);m.castShadow=false;g.add(m);}}
 

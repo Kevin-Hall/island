@@ -321,7 +321,7 @@ function floraParts(t,R,cols,p,gl){const col=()=>cols.length?cols[Math.floor(R()
 function ecoFlora(isl,g,blocked){const kind=isleKindOf(isl),E=ECO[kind];if(!E)return;const R=mulberry(hi(isl.seed,0xf10a)),p=[],gl=[];
   const spots=new Set((isl.spots||[]).map(([x,z])=>K(x,z)));
   const put=(t,x,z)=>{const q=[],qg=[];floraParts(t,R,E.fcol||[],q,qg);const ox=x+(R()-0.5)*0.6,oz=z+(R()-0.5)*0.6,y=topY(x,z),a=R()*6.28;p.push(...shift(q,ox,y,oz,a));if(qg.length)gl.push(...shift(qg,ox,y,oz,a));};
-  for(const [x,z] of isl.grass){const k=K(x,z);if(blocked.has(k)||spots.has(k))continue;if(R()<(isl.grand?0.22:0.3))put(E.flora[Math.floor(R()*E.flora.length)],x,z);}
+  for(const [x,z] of isl.grass){const k=K(x,z);if(blocked.has(k)||spots.has(k))continue;if(R()<(isl.grand?0.22:0.3)*(IDENT.flora??1))put(E.flora[Math.floor(R()*E.flora.length)],x,z);}
   if(E.sand)for(const [x,z] of isl.sand){if(blocked.has(K(x,z)))continue;if(R()<0.16)put(E.sand[Math.floor(R()*E.sand.length)],x,z);}
   if(p.length){const m=M(p);m.castShadow=false;m.receiveShadow=true;g.add(m);}if(gl.length){const m=M(gl,lumMat);m.castShadow=false;g.add(m);}}
 

@@ -27,7 +27,7 @@ function clumpMat(x,z,j){const y=topY(x,z),h1=hash(x*7.1+j*3.3,z*2.9-j),h2=hash(
   const gx=(j%3-1)*0.3+(h1-0.5)*0.26,gz=(Math.floor(j/3)-0.5)*0.46+(h2-0.5)*0.3;
   const cm=CMASK.get(K(x,z));if(cm&&inNotch(cm,gx*1.15,gz*1.15))return _m.makeScale(0,0,0);
   _q.identity();return _m.compose(_v.set(x+gx,y,z+gz),_q,_s.set(0.85+h3*0.4,0.7+h1*0.7,0.85+h2*0.4));}
-function buildGrass(isl,g){const B=BIOMES[isl.biome],per=GRASS_DENS[isl.biome]||0;isl.gIM=null;if(!per||!isl.grass.length)return;
+function buildGrass(isl,g){const B=BIOMES[isl.biome],per=IDENT.blades===false?0:GRASS_DENS[isl.biome]||0;isl.gIM=null;if(!per||!isl.grass.length)return;/* (none in the Clean and Hike looks) */
   const im=new T.InstancedMesh(BLADES,grassMat,isl.grass.length*per);isl.gIdx=new Map();let i=0;
   for(const [x,z] of isl.grass){isl.gIdx.set(K(x,z),i);const base=_c.setHex(groundCol(B.grass,x,z,isl.seed));const bc=base.clone();
     for(let j=0;j<per;j++,i++){im.setMatrixAt(i,clumpMat(x,z,j));im.setColorAt(i,_c.copy(bc).offsetHSL(0,0,(hash(x*3+j,z*5-j)-0.5)*0.05));}}
@@ -54,7 +54,7 @@ nearGrassMat.onBeforeCompile=sh=>{swayCompile(sh);sh.uniforms.uNoise=pathU.uNois
   {float mac_=texture2D(uNoise,vGP*0.013).r*0.65+texture2D(uNoise,vGP*0.034+vec2(3.1,1.7)).r*0.35;
     if(mac_<0.41)diffuseColor.rgb*=vec3(0.76,0.84,0.8);else if(mac_>0.59)diffuseColor.rgb=diffuseColor.rgb*vec3(1.08,1.09,0.95)+vec3(0.05,0.055,0.0);}`);};
 let nearIM=null,nearAt='';const _nv=new T.Vector3();
-function updateNearGrass(dt){
+function updateNearGrass(dt){if(IDENT.blades===false)return;
   if(!nearIM){nearIM=new T.InstancedMesh(BLADES,nearGrassMat,NEAR_MAX);nearIM.setColorAt(0,_c.set(0xffffff));nearIM.count=0;nearIM.frustumCulled=false;nearIM.renderOrder=3;nearIM.receiveShadow=true;scene.add(nearIM);}
   nearIM.visible=!S.sea&&!inside;if(!nearIM.visible){nearAt='';return;}
   nearT-=dt;const cx=Math.round(cam.tx),cz=Math.round(cam.tz),key=cx+','+cz;if(key===nearAt&&nearT>0)return;nearAt=key;nearT=1.5;

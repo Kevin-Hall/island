@@ -189,7 +189,7 @@ function buildIsland(isl){
   isl.blocked=blocked;
   isl.edges=[];for(const [x,z] of [...isl.grass,...isl.sand])for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])if(!isLand(x+dx,z+dz)&&!riverSurf.has(K(x+dx,z+dz)))isl.edges.push([x+dx*0.5,z+dz*0.5,dx,dz,hash(x*3+dx,z*5+dz)*6.28]);
   // little grass tufts scattered on the wild islands
-  if(!isl.home&&B.tuft){const pts=[];for(const [x,z] of isl.grass){if(blocked.has(K(x,z)))continue;const h=hash(x*3.1,z*1.7);if(h<0.45){pts.push([x+(hash(z,x*2)-0.5)*0.7,topY(x,z),z+(hash(x+5,z)-0.5)*0.7]);if(h<0.15)pts.push([x+(hash(z*3,x)-0.5)*0.7,topY(x,z),z+(hash(x,z*7)-0.5)*0.7]);}}
+  if(!isl.home&&B.tuft&&IDENT.tufts!==false){const pts=[];for(const [x,z] of isl.grass){if(blocked.has(K(x,z)))continue;const h=hash(x*3.1,z*1.7);if(h<0.45){pts.push([x+(hash(z,x*2)-0.5)*0.7,topY(x,z),z+(hash(x+5,z)-0.5)*0.7]);if(h<0.15)pts.push([x+(hash(z*3,x)-0.5)*0.7,topY(x,z),z+(hash(x,z*7)-0.5)*0.7]);}}
     if(pts.length){const im=new T.InstancedMesh(TUFT_GEO,grassMat,pts.length);pts.forEach(([x,y,z],i)=>{_e.set(0,hash(x,z)*6.28,0);_q.setFromEuler(_e);_m.compose(_v.set(x,y,z),_q,_s.set(1,0.8+hash(z,x)*0.6,1));im.setMatrixAt(i,_m);im.setColorAt(i,_c.set(B.tuft));});
       im.frustumCulled=false;im.receiveShadow=true;im.renderOrder=3;g.add(im);}}
   if(!isl.home)ecoFlora(isl,g,blocked);/* undergrowth: ferns, flowers, reeds, mushrooms (85d) */
