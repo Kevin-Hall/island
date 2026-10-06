@@ -6,7 +6,24 @@ function card(p,x,y,z,d,len,wid,cTip,cBase){const tilt=Math.acos(clamp(d[1],-1,1
 // a tree crown the way Animal Crossing draws one: a soft, rounded cloud of foliage (a big body, a dome on top and a few
 // bulges round the sides), smooth-shaded so the toon ramp lays clean bands of light across it: sunlit on top, cool and
 // dark underneath. No loose leaves or spikes. cols = [light, mid, dark]; the crown reaches about 1.7*rad from its centre
+// tree styles (Settings → Trees; S.trees): every leafy crown goes through canopy(), and the pines' tiers through TCONE, so
+// one switch reshapes the whole archipelago's trees. Classic: the soft clouds below; Lollipop: one smooth round crown;
+// Low-poly: faceted gem-cut crowns and pines; Layered: stacked, flat-topped tiers. Changing it reloads the page
+const TREE_STYLES={classic:{name:'Classic',desc:'Soft, cloudy crowns'},round:{name:'Lollipop',desc:'One smooth, round crown'},gem:{name:'Low-poly',desc:'Faceted, gem-cut crowns'},tiered:{name:'Layered',desc:'Stacked, flat-topped tiers'}};
+const TREE_STYLE=TREE_STYLES[S.trees]?S.trees:'classic';
+const facetGeo=g=>{const n=g.toNonIndexed();n.computeVertexNormals();return n;};
+const GEM_CROWN=facetGeo(new T.IcosahedronGeometry(0.5,0)),GEM_CONE=facetGeo(new T.ConeGeometry(0.5,1,6,1));
+const TCONE=TREE_STYLE==='gem'?GEM_CONE:SCONE;
+function setTreeStyle(k){if(!TREE_STYLES[k]||TREE_STYLE===k)return;S.trees=k;save();resetting=true;location.reload();}
 function canopy(p,R,cols,cx,cy,cz,rad){const [L,Mc,Dk]=cols,sh=lerpHex(Dk,0x14261e,0.3),a0=R()*6.283;
+  if(TREE_STYLE==='round'){/* one smooth ball, a touch taller than wide, lit from the top */p.push(PG(SPH,L,lerpHex(Mc,Dk,0.55),cx,cy+rad*0.25,cz,0,a0,0,rad*3.1,rad*3.2,rad*3.1));return;}
+  if(TREE_STYLE==='gem'){/* a faceted crown: one big cut gem with a smaller one set on its shoulder */
+    p.push(PG(GEM_CROWN,Mc,Dk,cx,cy+rad*0.1,cz,R()*0.6,a0,R()*0.6,rad*3.2,rad*2.8,rad*3.2),PG(GEM_CROWN,L,Mc,cx+Math.cos(a0)*rad*0.5,cy+rad*0.95,cz+Math.sin(a0)*rad*0.5,R(),a0,R(),rad*1.9,rad*1.7,rad*1.9),
+      PG(GEM_CROWN,lerpHex(L,Mc,0.4),Dk,cx-Math.cos(a0)*rad*0.9,cy-rad*0.1,cz-Math.sin(a0)*rad*0.9,R(),a0+1,R(),rad*1.6,rad*1.4,rad*1.6));return;}
+  if(TREE_STYLE==='tiered'){/* three stacked pads, wide and dark at the bottom, small and sunlit on top */
+    for(let i=0;i<3;i++){const t=i/2,w=rad*(3.1-t*1.6),h=rad*(1.15-t*0.15),y=cy-rad*0.45+i*rad*0.8,o=(R()-0.5)*rad*0.2;
+      p.push(PG(SPH,lerpHex(Mc,L,0.25+t*0.75),lerpHex(Dk,Mc,t*0.6),cx+o,y,cz+o,0,a0+i,0,w,h,w));}return;}
+
   p.push(PG(SPH,Mc,sh,cx,cy,cz,0,a0,0,rad*2.6,rad*2.1,rad*2.6));
   for(let i=0;i<4;i++){const a=a0+i*1.571+(R()-0.5)*0.5,r=rad*(0.95+R()*0.12),s=rad*(1.35+R()*0.25);
     p.push(PG(SPH,lerpHex(L,Mc,0.5),Dk,cx+Math.cos(a)*r,cy-rad*(0.12+R()*0.12),cz+Math.sin(a)*r,0,a,0,s,s*0.86,s));}
@@ -88,8 +105,8 @@ function treeParts(kind,R,colRock){
       p.push(PG(STRUNK,0x7a4e30,0x5a3622,0,0.4,0,0,0,0,0.3,0.8,0.3),PG(SPH_LO,0x5a3622,0x7a4e30,0,0.04,0,0,0,0,0.46,0.24,0.46));
       // a cedar in the island style: four soft, rounded tiers, each dark under its skirt and lighter towards its top
       for(let i=0;i<4;i++){const t=i/3,y=0.55+i*0.5,rad=1.0-t*0.58,h=0.95-t*0.2,top=lerpHex(mid,tip,0.3+t*0.45),bot=lerpHex(base,mid,t*0.3);
-        p.push(PG(SPH_LO,bot,lerpHex(base,0x0a1a16,0.3),0,y+0.06,0,0,0,0,rad*1.9,0.2,rad*1.9),PG(SCONE,top,bot,0,y+h/2,0,0,R(),0,rad*2,h,rad*2));
-        if(sn)p.push(PG(SCONE,0xffffff,0xdce8f2,0,y+h*0.74,0,0,R(),0,rad*1.12,h*0.52,rad*1.12));}
+        p.push(PG(SPH_LO,bot,lerpHex(base,0x0a1a16,0.3),0,y+0.06,0,0,0,0,rad*1.9,0.2,rad*1.9),PG(TCONE,top,bot,0,y+h/2,0,0,R(),0,rad*2,h,rad*2));
+        if(sn)p.push(PG(TCONE,0xffffff,0xdce8f2,0,y+h*0.74,0,0,R(),0,rad*1.12,h*0.52,rad*1.12));}
       p.push(PG(SPH_LO,sn?0xffffff:lerpHex(tip,0xfff6c0,0.3),tip,0,2.76,0,0,0,0,0.18,0.22,0.18));break;}
     case'palm':palmParts(p,R,{n:9,lean:(R()-0.5)*0.6,fronds:8,cols:[0x2f7a34,0x8ad05a],nuts:3});break;
     case'palmtall':palmParts(p,R,{n:13,lean:(R()<0.5?-1:1)*(0.55+R()*0.3),fronds:9,flen:0.37,cols:[0x3a8a3a,0x9ade6a],nuts:2});break;

@@ -152,6 +152,7 @@ function renderSheet(){
     h+=`<div class="tiles"><div><b>${lv}</b><span>${b?fmt(b-S.xp)+' XP to go':'Max level'}</span></div><div><b>${S.day}</b><span>Day</span></div><div><b>${fmt(S.earned)}</b><span>Shells earned</span></div></div>`;
     h+=`<h3 class="sech">Sound & display</h3><div class="group">`;
     h+=`<div class="setrow col"><div class="rowtop"><span>Look</span><b>${IDENT.name}</b></div><div class="fxgrid">${Object.entries(IDENTS).map(([k,f])=>`<button class="fxb ${(S.ident||'classic')===k?'on':''}" data-ident="${k}"><b>${f.name}</b><small>${f.desc}</small></button>`).join('')}</div></div>`;/* the visual identity (20b-ident) */
+    h+=`<div class="setrow col"><div class="rowtop"><span>Trees</span><b>${TREE_STYLES[TREE_STYLE].name}</b></div><div class="fxgrid">${Object.entries(TREE_STYLES).map(([k,f])=>`<button class="fxb ${TREE_STYLE===k?'on':''}" data-trees="${k}"><b>${f.name}</b><small>${f.desc}</small></button>`).join('')}</div></div>`;/* tree styles (41-trees) */
     h+=`<div class="setrow"><span>Sound effects</span><button class="iswitch ${S.sound?'on':''}" data-snd="${S.sound?0:1}" aria-label="Sound"></button></div>`;
     h+=`<div class="setrow"><span>Music</span><button class="iswitch ${S.music!==false?'on':''}" data-mus="${S.music!==false?0:1}" aria-label="Music"></button></div>`;
     h+=`<div class="setrow"><span>Joystick<br><small style="opacity:.7;font-weight:600">Move with a stick; tap things to use them</small></span><button class="iswitch ${S.joy?'on':''}" data-joy="${S.joy?0:1}" aria-label="Joystick"></button></div>`;
@@ -265,6 +266,7 @@ $('sheetBody').addEventListener('click',e=>{
   if(d.joy!==undefined){S.joy=d.joy==='1';joyShow();save();SFX.ui();renderSheet();return;}
   if(d.scan!==undefined){S.scan=d.scan==='1';applyFx();save();SFX.ui();renderSheet();return;}
   if(d.ident){SFX.ui();setIdent(d.ident);return;}
+  if(d.trees){SFX.ui();setTreeStyle(d.trees);return;}
   if(d.fx!==undefined){setFx(d.fx);SFX.ui();renderSheet();return;}
   if(d.snd!==undefined){S.sound=d.snd==='1';setWaveVol();if(S.sound)startWaves();renderSheet();return;}
   if(d.px!==undefined){S.pxAdj=Number(d.px);resize();renderSheet();return;}

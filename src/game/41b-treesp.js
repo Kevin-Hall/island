@@ -63,7 +63,7 @@ function speciesParts(v,s,R,p){const sp=treeSp(v),sh=treeShape(v),id=sp.id,C=SP_
     case'spruce':{const sn=bare,tip=0x7ab87a,mid=0x2e6e4a,base=0x163a2c;// tall and narrow: many tiers tapering to a spire
       p.push(PG(STRUNK,0x6a4430,0x4e3022,0,0.3,0,0,0,0,0.24,0.6,0.24));
       for(let i=0;i<6;i++){const t=i/5,y=0.4+i*0.36,rad=0.62-t*0.46,h=0.6-t*0.12,top=lerpHex(mid,tip,0.2+t*0.45),bot=lerpHex(base,mid,t*0.35);
-        p.push(PG(SCONE,top,bot,0,y+h/2,0,0,R(),0,rad*2,h,rad*2));if(sn)p.push(PG(SCONE,0xffffff,0xdce8f2,0,y+h*0.68,0,0,R(),0,rad*1.6,h*0.62,rad*1.6));}
+        p.push(PG(TCONE,top,bot,0,y+h/2,0,0,R(),0,rad*2,h,rad*2));if(sn)p.push(PG(TCONE,0xffffff,0xdce8f2,0,y+h*0.68,0,0,R(),0,rad*1.6,h*0.62,rad*1.6));}
       p.push(P(CONE5,sn?0xffffff:tip,0,2.55,0,0,0,0,0.14,0.34,0.14));break;}
     case'poplar':{if(bare){trunkP(p,R,0x6a5a48,1.1,0.1,0x4e4234);for(let i=0;i<8;i++){const a=i*0.8,y=0.8+i*0.16;limb(p,0x5e5044,Math.cos(a)*0.04,y,Math.sin(a)*0.04,Math.cos(a)*0.2,y+0.45,Math.sin(a)*0.2,0.025);}break;}
       trunkP(p,R,0x6a5a48,0.42,0.1,0x4e4234);const n=p.length;canopy(p,R,C,0,1.42,0,0.34);stretchParts(p,n,0.74,2.2,0.74,0,1.42,0);break;}
