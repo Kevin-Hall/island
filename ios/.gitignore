@@ -1,0 +1,7 @@
+# Xcode per-user and build output
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+*.ipa
+*.xcarchive

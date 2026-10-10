@@ -6,6 +6,9 @@
   "scripts": {
     "build": "node tools/build.mjs",
     "check": "node tools/build.mjs --check",
-    "test": "node tools/build.mjs && node tools/smoke.mjs"
+    "test": "node tools/build.mjs && node tools/smoke.mjs",
+    "ios": "node tools/ios.mjs",
+    "ios:check": "node tools/ios.mjs --check",
+    "ios:icon": "node tools/ios-icon.mjs"
   }
 }

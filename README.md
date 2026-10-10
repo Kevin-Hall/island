@@ -50,3 +50,7 @@ npm run check   # CI: is index.html up to date?
 ```
 
 Open `index.html?debug` to get `window.DS`, a small console API for testing.
+
+## iPhone and iPad app
+
+`ios/Driftseed.xcodeproj` wraps the game as a native app, fully offline and ready for the App Store. `npm run ios` refreshes the app's copy of the game after you change `src/`. [ios/README.md](ios/README.md) covers signing, archiving and submitting. [ios/AppStore/](ios/AppStore/) has the listing copy, a privacy policy and screenshots.

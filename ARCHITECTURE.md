@@ -12,12 +12,16 @@ tools/build.mjs       builds index.html; parses the bundle so a syntax error fai
 tools/smoke.mjs       headless play-through test (uses window.DS from 95-debug.js), served over a local http server
 tools/gltf2glb.mjs    repacks an artist's .gltf as .glb (container only) for assets/characters
 tools/glbslim.mjs     slims a character .glb: keeps the mesh and a smaller base colour, drops the other maps
+tools/ios.mjs         builds the iOS app's offline copy of the game (ios/Driftseed/Web/index.html): local three.js and fonts
+tools/ios-icon.mjs    renders ios/art/AppIcon.svg to the app icon PNG
 vendor/three-r128/    three.js r128 add-ons (GLTFLoader, SkeletonUtils), inlined by the build: /*@vendor*/
 assets/characters/    the human player characters, loaded at runtime from beside index.html
 index.html            GENERATED. It's committed; host it with assets/ next to it (everything else is inside it)
+ios/                  the iPhone/iPad app: an Xcode project wrapping the game in a WKWebView (see ios/README.md)
 ```
 
 - **Work loop:** edit `src/…`, run `npm run build`, then `npm test`. CI runs `npm run check`, which fails if `index.html` is stale or the code doesn't parse.
+- **The iOS app** ships its own copy of the game: run `npm run ios` after changing `src/` (`npm run ios:check` fails if it's stale). The app adds a little to the page before the game runs (GameViewController's bridge script): it mirrors `localStorage` writes to a native save file and restores cleared slots on launch, gives the page a `navigator.vibrate` that plays haptics, and in Release builds sets `window.DRIFTSEED_RELEASE`, which hides the Developer settings (82-sheets). `window.claude` doesn't exist there, so Friends stays hidden.
 - **Shared scope:** every module shares one function scope, as if it were one big file.
   - A module can call any function from another module. Function declarations are hoisted.
   - Top-level `const` and `let` values must be defined in an earlier-numbered module before any code that runs at load time uses them. The number prefix sets load order, so keep it meaningful.

@@ -159,7 +159,8 @@ function renderSheet(){
     h+=`<div class="setrow"><span>Scanlines</span><button class="iswitch ${fxNow().scan?'on':''}" data-scan="${fxNow().scan?0:1}" aria-label="Scanlines"></button></div>`;
     h+=`<div class="setrow"><span>Pixel size</span><span class="seg">${[[1,'Big'],[0,'Normal'],[-1,'Small']].map(([v,l])=>`<button data-px="${v}" class="${S.pxAdj===v?'on':''}">${l}</button>`).join('')}</span></div></div>`;
     h+=`<p class="note" style="margin:10px 6px 0">Drag to turn the camera, pinch to zoom. Your island saves on this device.</p>`;
-    h+=`<h3 class="sech">Developer</h3><div class="group">`;
+    /* release builds of the iOS app set DRIFTSEED_RELEASE (ios/Driftseed/GameViewController.swift): no cheats for players */
+    if(!window.DRIFTSEED_RELEASE){h+=`<h3 class="sech">Developer</h3><div class="group">`;
     h+=`<div class="setrow col"><div class="rowtop"><span>Visual style</span><b>${(FXS[S.fx]||FXS.island).name}</b></div><div class="fxgrid">${Object.entries(FXS).map(([k,f])=>`<button class="fxb ${(S.fx||'island')===k?'on':''}" data-fx="${k}"><b>${f.name}</b><small>${f.desc}</small></button>`).join('')}</div></div>`;
     h+=`<div class="setrow col"><div class="rowtop"><span>Time of day</span><b id="devHourLbl">${clockStr(S.hour)}</b></div><input type="range" id="devHour" min="0" max="23.9" step="0.05" value="${S.hour.toFixed(2)}" aria-label="Time of day"></div>`;
     h+=`<div class="setrow"><span>Time speed</span><span class="seg">${[[0,'Pause'],[1,'Real'],[10,'10×'],[60,'60×']].map(([v,l])=>`<button data-spd="${v}" class="${devSpeed===v?'on':''}">${l}</button>`).join('')}</span></div>`;
@@ -175,8 +176,8 @@ function renderSheet(){
     h+=`<div class="setrow"><span>Hollyhock Cove (test island)</span><span class="seg"><button data-dev="cove">Load</button></span></div>`;
     h+=`<div class="setrow"><span>Acornfield island</span><span class="seg"><button data-dev="acorn">Load</button></span></div>`;
     h+=`<div class="setrow"><span>Showcase farm</span><span class="seg"><button data-dev="showcase">${S.showcase?'Rebuild':'Load'}</button>${hasRealSave()?'<button data-dev="realsave">Restore my save</button>':''}</span></div>`;
-    h+=`<div class="setrow"><span class="note" style="margin:0">Loads a fully built late-game farm: a big fenced field with sprinkler plots, an orchard, flower beds and a windmill, plus a Villa, max tools and every island restored. Your own save is backed up first.</span></div>`;
-    h+=`</div><div class="group" style="margin-top:16px"><div class="setrow"><span>Start over</span><button class="pbtn warn" data-reset="1">Reset world</button></div></div>`;}
+    h+=`<div class="setrow"><span class="note" style="margin:0">Loads a fully built late-game farm: a big fenced field with sprinkler plots, an orchard, flower beds and a windmill, plus a Villa, max tools and every island restored. Your own save is backed up first.</span></div>`;h+='</div>';}
+    h+=`<div class="group" style="margin-top:16px"><div class="setrow"><span>Start over</span><button class="pbtn warn" data-reset="1">Reset world</button></div></div>`;}
   body.innerHTML=h;
   if(sheet.kind==='chart')drawChart();
 }
