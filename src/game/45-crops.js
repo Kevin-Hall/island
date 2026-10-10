@@ -172,31 +172,48 @@ let cropBatch={},cropDirty=false;
 // the batch materials for rare fruit: the variant's own look, swaying with the rest (colours shared, so the prismatic
 // shimmer and the moonlit glow still animate)
 const VBM={};for(const v in VMAT){const m=VMAT[v].clone();m.color=VMAT[v].color;m.emissive=VMAT[v].emissive;m.onBeforeCompile=cropBatchMat.onBeforeCompile;VBM[v]=m;}
+/* Two levels: the full crops, and light twins (mergeLite: 8-triangle leaf cards, low-poly fruit; about a quarter of the
+   triangles) for the usual view, where a crop is a speck a couple of dozen pixels across. Only the level in use is
+   built (cropLv, picked from how big a tile is on screen by cropLOD); crossing over rebuilds the batch once. */
+let cropLv=1;
+function cropLOD(){const px=tilePx(),lv=cropLv?(px>40?0:1):(px<34?1:0);if(lv!==cropLv){cropLv=lv;cropDirty=true;}}
 function flushCrops(){if(!cropDirty)return;cropDirty=false;
   for(const k in cropBatch){cropRoot.remove(cropBatch[k]);cropBatch[k].geometry.dispose();}cropBatch={};
-  for(const key of ['base',...Object.keys(VMAT)]){let n=0;for(const e of cropMeshes.values())if(e.bake&&e.bake[key])n+=e.bake[key].n;if(!n)continue;
+  const bk=cropLv?'bakeLo':'bake';
+  for(const key of ['base',...Object.keys(VMAT)]){let n=0;for(const e of cropMeshes.values())if(e[bk]&&e[bk][key])n+=e[bk][key].n;if(!n)continue;
     const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3),sw=new Float32Array(n*3);let o=0;
-    for(const e of cropMeshes.values()){const B=e.bake&&e.bake[key];if(!B)continue;pos.set(B.pos,o*3);nor.set(B.nor,o*3);col.set(B.col,o*3);for(let i=0;i<B.n;i++){sw[(o+i)*3]=B.px;sw[(o+i)*3+1]=B.py;sw[(o+i)*3+2]=B.ph;}o+=B.n;}
+    for(const e of cropMeshes.values()){const B=e[bk]&&e[bk][key];if(!B)continue;pos.set(B.pos,o*3);nor.set(B.nor,o*3);col.set(B.col,o*3);for(let i=0;i<B.n;i++){sw[(o+i)*3]=B.px;sw[(o+i)*3+1]=B.py;sw[(o+i)*3+2]=B.ph;}o+=B.n;}
     const bg=new T.BufferGeometry();bg.setAttribute('position',new T.BufferAttribute(pos,3));bg.setAttribute('normal',new T.BufferAttribute(nor,3));bg.setAttribute('color',new T.BufferAttribute(col,3));bg.setAttribute('aSway',new T.BufferAttribute(sw,3));
     const m=new T.Mesh(bg,key==='base'?cropBatchMat:VBM[key]);m.castShadow=m.receiveShadow=true;m.frustumCulled=false;cropRoot.add(m);cropBatch[key]=m;}}
 // move a crop group's plain meshes into its bake (world-space arrays) for the batch
-function bakeCrop(e){const g=e.g;g.updateMatrixWorld(true);e.bake={};
+function bakeCrop(e){e.bake=bakeGroup(e.g,e.g);if(e.gL){e.bakeLo=bakeGroup(e.gL,e.g);e.gL=null;}}
+const _cropNM=new T.Matrix3();
+function bakeGroup(g,at){g.updateMatrixWorld(true);const out={};
   // plain parts go in the main batch; a rare harvest's fruit (golden, crystal…) goes in its variant's batch
   for(const key of ['base',...Object.keys(VMAT)]){const mat=key==='base'?vcMat:VMAT[key];const parts=g.children.filter(c=>c.isMesh&&c.material===mat&&!c.geometry.index);if(!parts.length)continue;
     let n=0;for(const c of parts)n+=c.geometry.attributes.position.count;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3);let o=0;
-    for(const c of parts){const G=c.geometry,g2=G.clone();g2.applyMatrix4(c.matrixWorld);pos.set(g2.attributes.position.array,o*3);nor.set(g2.attributes.normal.array,o*3);if(G.attributes.color)col.set(G.attributes.color.array,o*3);else col.fill(1,o*3,(o+G.attributes.position.count)*3);o+=G.attributes.position.count;g2.dispose();G.dispose();g.remove(c);}
-    e.bake[key]={n,pos,nor,col,px:g.position.x,py:g.position.y,ph:g.userData.ph};}}
+    for(const c of parts){const G=c.geometry,P=G.attributes.position.array,N=G.attributes.normal.array,m=c.matrixWorld.elements,cnt=G.attributes.position.count;_cropNM.getNormalMatrix(c.matrixWorld);const q=_cropNM.elements;
+      /* straight into the batch arrays (no geometry clone per part) */
+      for(let i=0,j=o*3;i<cnt*3;i+=3,j+=3){const x=P[i],y=P[i+1],z=P[i+2];pos[j]=m[0]*x+m[4]*y+m[8]*z+m[12];pos[j+1]=m[1]*x+m[5]*y+m[9]*z+m[13];pos[j+2]=m[2]*x+m[6]*y+m[10]*z+m[14];
+        const a=N[i],b=N[i+1],d=N[i+2];let nx=q[0]*a+q[3]*b+q[6]*d,ny=q[1]*a+q[4]*b+q[7]*d,nz=q[2]*a+q[5]*b+q[8]*d;const l=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;nor[j]=nx/l;nor[j+1]=ny/l;nor[j+2]=nz/l;}
+      if(G.attributes.color)col.set(G.attributes.color.array,o*3);else col.fill(1,o*3,(o+cnt)*3);o+=cnt;G.dispose();g.remove(c);}
+    out[key]={n,pos,nor,col,px:at.position.x,py:at.position.y,ph:at.userData.ph};}
+  return out;}
 function syncCrop(k){
   const old=cropMeshes.get(k);if(old){cropRoot.remove(old.g);old.g.traverse(o=>{if(o.geometry)o.geometry.dispose();});cropMeshes.delete(k);cropDirty=true;}
   const t=S.tiles[k];if(!t||!t.crop)return;const c=t.crop;
   const [x,z]=k.split(',').map(Number);const st=stageOf(c.p);
   const {leaf,fruit}=cropParts(c.t,st,x*73856093^z*19349663);const g=new T.Group();
+  const v=c.v&&c.v!=='normal'&&c.v!=='giant'?c.v:null,gL=new T.Group();
   if(leaf.length)g.add(M(leaf));
-  if(fruit.length){const v=c.v&&c.v!=='normal'&&c.v!=='giant'?c.v:null;g.add(M(fruit,v?VMAT[v]:vcMat));}
+  if(fruit.length)g.add(M(fruit,v?VMAT[v]:vcMat));
+  // and its light twin, placed the same (baked straight away, never added to the scene)
+  mergeLite=true;try{if(leaf.length)gL.add(M(leaf));if(fruit.length)gL.add(M(fruit,v?VMAT[v]:vcMat));}finally{mergeLite=false;}
   g.scale.setScalar(st===3&&c.v==='giant'?1.2:0.84);/* (a touch smaller than the tile, so the beds show between them) */
   g.position.set(x,topY(x,z)+0.06,z);g.rotation.y=CROPS[c.t].kind==='flower'?cam.yaw:hash(x,z)*6.28;
+  gL.position.copy(g.position);gL.rotation.copy(g.rotation);gL.scale.copy(g.scale);
   g.userData.tile={x,z};g.userData.ph=hash(z,x)*6;
-  cropRoot.add(g);const e={g,s:st,v:c.v};cropMeshes.set(k,e);bakeCrop(e);cropDirty=true;
+  cropRoot.add(g);const e={g,gL,s:st,v:c.v};cropMeshes.set(k,e);bakeCrop(e);cropDirty=true;
 }
 function syncAllCrops(){for(const k of [...cropMeshes.keys()])syncCrop(k);for(const k in S.tiles)syncCrop(k);flushCrops();}
 

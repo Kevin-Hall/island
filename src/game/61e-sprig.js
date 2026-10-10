@@ -64,8 +64,12 @@ const SPRIG_FACES={
   m2:(hit,put,S)=>{const m=hit(0,-0.44,1);put(S,0x5a2a30,m.p.clone().addScaledVector(m.n,0.001),m.n,0.012,0.015,0.006);},
   m3:(hit,put,S)=>{const m=hit(0,-0.42,1),arc=new T.TorusGeometry(0.009,0.0035,6,12,Math.PI);for(const s of [-1,1])put(arc,0x6a3236,m.p.clone().addScaledVector(m.n,0.003).add(new T.Vector3(s*0.009,0.006,0)),m.n,1,1,1,Math.PI);}};
 const _sprigBody={};let _sprigClips=null;
-function sprigScene(outfit=0){if(_sprigBody[outfit])return _sprigBody[outfit];
-  return _sprigBody[outfit]=dressRig({bones:SPRIG_BONES,parts:sprigParts(outfit),dress:SPRIG_DRESS,lo:[-0.26,-0.02,-0.26],hi:[0.26,0.82,0.24],h:0.01,c:new T.Vector3(0,0.6,0),name:'Sprig',
+/* two meshes of every Sprig shape: fine (a 1 cm grid) for the wardrobe's close-up, and coarser for everywhere else, where
+   Sprig is a few dozen pixels tall: the body and hat at about a third of the triangles. The surface's normals come from the
+   shape itself, so the shading stays just as smooth; only the outline is a little less round, which no one can see at that size */
+const SPRIG_H={body:[0.02,0.01],hat:[0.017,0.01]};
+function sprigScene(outfit=0,fine=false){const key=outfit+(fine?'f':'');if(_sprigBody[key])return _sprigBody[key];
+  return _sprigBody[key]=dressRig({bones:SPRIG_BONES,parts:sprigParts(outfit),dress:SPRIG_DRESS,lo:[-0.26,-0.02,-0.26],hi:[0.26,0.82,0.24],h:SPRIG_H.body[fine?1:0],c:new T.Vector3(0,0.6,0),name:'Sprig',
     face:(hit,put,S)=>{const eyes={};// where the eyes sit (their bones) and a hint of blush; the eyes and mouth themselves are SPRIG_FACES
       for(const s of [-1,1]){eyes[s]=sprigEye(hit,s).p;const b=hit(s*0.56,-0.36,0.78);put(S,0xf2b4ae,b.p.clone().addScaledVector(b.n,-0.003),b.n,0.03,0.016,0.01);}
       return eyes;},faces:SPRIG_FACES});}
@@ -82,9 +86,9 @@ function sprigHatTracks(clips){const {rest,R,V3}=rigKit(SPRIG_BONES),H0=rest('Ha
 function sprigRig(){if(!_sprigClips)_sprigClips=sprigHatTracks(pipClips(SPRIG_BONES));
   const [idle,walk,run,spin,flip]=_sprigClips;return{scene:T.SkeletonUtils.clone(sprigScene(0)),clips:[idle,walk,run],emotes:{spin,flip},speeds:[0.55,3.2]};}
 // dressing a Sprig: its outfit's body (charModel picks it), its eyes and mouth shown, its hat and any extra
-function sprigDress(m,look){const ey='SprigFace_e'+(look.eyes|0),mo='SprigFace_m'+(look.mouth|0);
+function sprigDress(m,look,fine=false){const ey='SprigFace_e'+(look.eyes|0),mo='SprigFace_m'+(look.mouth|0);
   m.traverse(o=>{if(o.isMesh&&o.name.startsWith('SprigFace_'))o.visible=o.name===ey||o.name===mo;});
-  const st=look.style|0;headMesh(m,dressGeo(sprigHat(st),look,sprigHatDress(st)),null,'Hat');
+  const st=look.style|0;headMesh(m,dressGeo(sprigHat(st,fine),look,sprigHatDress(st)),null,'Hat');
   const x=look.extra|0;if(x>0&&SPRIG_ACC[x])headMesh(m,dressGeo(sprigAcc(x),look,sprigAccDress(x)),null,SPRIG_ACC[x].bone);}
 // the hats, each built once: a smooth shape painted in its colour (hair: the Hat tab), its accent (band) and a third
 // (gill: the mushroom's gills, a pompom, frog eyes, a vine)
@@ -92,7 +96,7 @@ const _sprigHats={},SPRIG_HAT_LABELS=['hair','band','gill'];
 function sprigHatDress(st){const H=SPRIG_HATS[st];return{labels:SPRIG_HAT_LABELS,own:{hair:H.own,band:H.band,gill:H.gill||0xf2e4cc},cols:{hair:SPRIG_HAT_COLS}};}
 // a shape turned about the z axis (round a centre), for leaves at an angle
 const sdRotZ=(f,a,c)=>{const ca=Math.cos(a),sa=Math.sin(a);return(x,y,z)=>{const dx=x-c.x,dy=y-c.y;return f(c.x+dx*ca+dy*sa,c.y-dx*sa+dy*ca,z);};};
-function sprigHat(st){if(_sprigHats[st])return _sprigHats[st];const V=(x,y,z)=>new T.Vector3(x,y,z),P=[];let k=0.03;
+function sprigHat(st,fine=false){const key=st+(fine?'f':'');if(_sprigHats[key])return _sprigHats[key];const V=(x,y,z)=>new T.Vector3(x,y,z),P=[];let k=0.03;
   if(st===0){/* the straw hat: a wide brim drooping at its edge, a tall crown leaning back to a soft point, a band */
     P.push({d:sdBrim(0.735,0.35,0.016,0.05),col:'hair'},
       {d:sdC(V(0,0.73,0),V(0,0.9,-0.025),0.168,0.105),col:'hair'},{d:sdC(V(0,0.9,-0.025),V(0.01,1.04,-0.1),0.105,0.014),col:'hair'},{d:sdRing(0.775,0.158,0.024),col:'band'});}
@@ -124,7 +128,7 @@ function sprigHat(st){if(_sprigHats[st])return _sprigHats[st];const V=(x,y,z)=>n
     const dome=sdE(V(0,0.74,0),V(0.232,0.19,0.25));P.push({d:(x,y,z)=>sdMax(dome(x,y,z),0.72-y,0.02),col:'hair'},{d:(x,y,z)=>sdBrim(0.722,0.29,0.015,0.015,1.08)(x,y,z-0.012),col:'hair'},
       {d:sdRing(0.758,0.226,0.02),col:'band'},{d:sdE(V(0,0.928,0),V(0.024,0.016,0.024)),col:'band'});k=0.02;}
   const f=(x,y,z)=>{let d=1e9;for(const p of P)d=smin(d,p.d(x,y,z),k);return d;};
-  return _sprigHats[st]=dressWeights(mochiSurface(f,[-0.42,0.6,-0.42],[0.42,1.12,0.42],0.01),P,SPRIG_HAT_LABELS);}
+  return _sprigHats[key]=dressWeights(mochiSurface(f,[-0.42,0.6,-0.42],[0.42,1.12,0.42],SPRIG_H.hat[fine?1:0]),P,SPRIG_HAT_LABELS);}
 
 // the extras, each built once: a smooth shape in your colour (acc) with a fixed accent (abit)
 const _sprigAcc={},SPRIG_ACC_LABELS=['acc','abit'];

@@ -72,8 +72,10 @@ function farParts(parts){const out=[];for(const p of parts){if(p.lo==='drop')con
 function addVeg(isl,g,parts){if(!parts.length)return;
   // a frontier island (44b) is built out on the horizon: only its far version is made now, the rest when you come near (vegReal)
   if(isl.fr){const fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([null,null,fa,parts,g]);return;}
-  const hi=M(parts,leafMat),lo=M(lowParts(parts),leafMat),fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;lo.visible=false;g.add(hi,lo);if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([hi,lo,fa]);}
-function vegReal(isl,e){if(e[0])return;e[0]=M(e[3],leafMat);e[1]=M(lowParts(e[3]),leafMat);e[1].visible=false;e[4].add(e[0],e[1]);e[3]=null;isl.casters=null;isl.shadowOn=undefined;}
+  const hi=M(parts,leafMat),lo=liteM(lowParts(parts),leafMat),fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;lo.visible=false;g.add(hi,lo);if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([hi,lo,fa]);}
+// the light trees: fewer leaf cards (lowParts) and every small shape at its lightest (mergeLite)
+function liteM(parts,mat){mergeLite=true;try{return M(parts,mat);}finally{mergeLite=false;}}
+function vegReal(isl,e){if(e[0])return;e[0]=M(e[3],leafMat);e[1]=liteM(lowParts(e[3]),leafMat);e[1].visible=false;e[4].add(e[0],e[1]);e[3]=null;isl.casters=null;isl.shadowOn=undefined;}
 // beach tiles a palm can stand on: flat sand (not the slope into the water), spread a few tiles apart
 function palmSpots(isl,R,n,ok){const out=[];for(const [x,z] of shuffle(isl.sand.slice(),R)){if(out.length>=n)break;const c=SAND_CH.get(K(x,z));if(!c||Math.min(...c)<0.17||!ok(x,z))continue;
   if(out.some(([a,b])=>Math.abs(a-x)+Math.abs(b-z)<3))continue;out.push([x,z]);}return out;}

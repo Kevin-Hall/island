@@ -146,9 +146,9 @@ function reefPush(dt){const d=reefD(vil.x,vil.z),R0=reefR();if(d<=R0-0.3)return;
 function updateSwim(dt,tt){causU.uT.value=kelpU.uT.value=uwSurf.userData.u.uT.value=tt;
   if((reefDirty||reefJob)&&swim.on)reefStep(8);/* the coast changed while you swim: the reef catches up over a few frames */
   // get the reef ready as you come down to the shore, a few milliseconds a frame, so wading in never stalls
-  else if(reefJob)reefStep(5);
+  else if(reefJob)reefStep(3);
   else if(reefDirty&&!S.sea&&!inside&&(swim.prebT=(swim.prebT||0)-dt)<=0){swim.prebT=0.5;const rx=Math.round(vil.x),rz=Math.round(vil.z);let sea=false;
-    for(let dx=-6;dx<=6&&!sea;dx++)for(let dz=-6;dz<=6;dz++)if(isSeaT(landMap.get(K(rx+dx,rz+dz)))){sea=true;break;}if(sea&&islMap.get(K(rx,rz))===0)reefStep(5);}
+    for(let dx=-6;dx<=6&&!sea;dx++)for(let dz=-6;dz<=6;dz++)if(isSeaT(landMap.get(K(rx+dx,rz+dz)))){sea=true;break;}if(sea&&islMap.get(K(rx,rz))===0)reefStep(3);}
   const wet=!S.sea&&!inside&&reef&&swimmable(vil.x,vil.z)&&!isLand(Math.round(vil.x),Math.round(vil.z));
   if(wet&&!swim.on)enterWater();else if(!wet&&swim.on)leaveWater();
   if(!swim.on){swim.uw=Math.max(0,swim.uw-dt*3);applyUw(dt,tt);return;}

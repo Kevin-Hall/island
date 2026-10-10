@@ -15,11 +15,18 @@ function islandBounds(isl){let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const k of isl.
   isl.bc={x:(x0+x1)/2,z:(z0+z1)/2,r:Math.hypot(x1-x0,z1-z0)/2+2};}
 // hide islands out of view; and only islands near the sun's shadow box (±18 around the camera target) render into the
 // shadow map, since shadows further out are never drawn: this halves the triangles when zoomed out
-function cullIslands(){const view=cam.dist+110;for(const isl of islands){const b=isl.bc;if(!b)continue;const d=Math.hypot(b.x-cam.tx,b.z-cam.tz)-b.r,vis=d<view;
+// is an island's bounding circle in the camera's view? Tested where the curved world really draws it (sunk by
+// curveDropFor), with room for its height and for the bend across its width. The island meshes are merged with
+// frustumCulled off, so without this every island within reach was drawn, even behind you or off the sides of a phone
+const _cFr=new T.Frustum(),_cSph=new T.Sphere(),_cFm=new T.Matrix4();let _cFrOn=false;/* (set once the first view is known) */
+function islandInView(b){const dx=b.x-camera.position.x,dz=b.z-camera.position.z,dist=Math.hypot(dx,dz);
+  _cSph.center.set(b.x,2-curveDropFor(camera,b.x,b.z),b.z);_cSph.radius=b.r*1.1+6+2*dist*b.r*CURVE;return _cFr.intersectsSphere(_cSph);}
+function cullIslands(){camera.updateMatrixWorld();_cFm.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);_cFr.setFromProjectionMatrix(_cFm);if(!_cFrOn){_cFrOn=true;lodAt=null;}
+  const view=cam.dist+110,tp=tilePx();for(const isl of islands){const b=isl.bc;if(!b)continue;const d=Math.hypot(b.x-cam.tx,b.z-cam.tz)-b.r,vis=d<view&&(d<32||islandInView(b));/* (one close enough to throw shadows into view stays) */
     // wild plants are small: only draw them when you're reasonably close (each one is its own mesh)
     if(isl.group)isl.group.visible=vis;if(isl.pgroup)isl.pgroup.visible=vis&&cam.dist+Math.max(0,d)<60;
     // level of detail for trees: light meshes when the island is far away or you're zoomed well out (with a little hysteresis)
-    const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>56:far>61,lv=low?(far>(isl.vegLv===2?92:100)?2:1):0;/* 0 full, 1 light, 2 horizon */
+    const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>56||tp<34:far>61||tp<30,/* the light trees also whenever a tile is small on screen (the usual view): they look the same there */lv=low?(far>(isl.vegLv===2?92:100)?2:1):0;/* 0 full, 1 light, 2 horizon */
     if(isl.veg&&lv!==isl.vegLv){isl.vegLv=lv;for(const e of isl.veg){if(!e[0]&&(lv<2||!e[2]))vegReal(isl,e);const [hi,lo,fa]=e;if(!hi){if(fa)fa.visible=true;continue;}hi.visible=lv===0;if(lo)lo.visible=lv===1||lv===2&&!fa;if(fa)fa.visible=lv===2;}
       if(isl.tMesh)for(const k of ['underG','underS'])if(isl.tMesh[k])isl.tMesh[k].visible=lv<2;/* the little corner notches vanish on the horizon */
       if(isl.riverG)isl.riverG.children.forEach((o,i)=>{if(i>1)o.visible=lv<2;});/* keep the river's bed and water, drop its pebbles, reeds and lilies */}

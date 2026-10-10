@@ -6188,7 +6188,9 @@ const PIX={};for(const k in PIX_ART){const [rows,pal]=PIX_ART[k];PIX[k]=pixIcon(
    Renderer, camera, post-process (pixelate + outline + dither)
    ========================================================= */
 const canvas=$('c');
-const renderer=new T.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
+// the screen itself only ever gets the post pass (a flat full-screen quad): it needs no depth or stencil buffer of its own,
+// which saves memory and bandwidth on phones (the scene renders into rt, which has its depth)
+const renderer=new T.WebGLRenderer({canvas,antialias:false,depth:false,stencil:false,powerPreference:'high-performance'});
 renderer.setPixelRatio(1);
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap; // soft-edged little shadows
 renderer.shadowMap.autoUpdate=false;let shadowFrame=0;/* the shadow map is redrawn every other frame (90-main): the sun barely moves, and it halves the cost of the shadow pass */
@@ -6197,6 +6199,9 @@ scene.fog=new T.Fog(0xbfe0ff,40,150);
 const NEAR=1.5,FAR=640;
 const camera=new T.PerspectiveCamera(2*Math.atan(Math.tan(18*Math.PI/180)/LENS)*180/Math.PI,1,NEAR,FAR);
 const camD=()=>cam.dist*LENS; // how far the camera really is from what it looks at (cam.dist is the zoom)
+// how many of the game's (big) pixels one tile spans where you're looking: what level-of-detail choices go by. About
+// 20 at the usual view on a phone or a computer, 80 or so zoomed right in
+const tilePx=()=>H/(2*camD()*Math.tan(camera.fov*Math.PI/360));
 let W=1,H=1,PX=2,rt=null;
 const post={scene:new T.Scene(),cam:new T.OrthographicCamera(-1,1,1,-1,0,1)};
 const postMat=new T.ShaderMaterial({
@@ -6365,7 +6370,14 @@ const ICO0=new T.IcosahedronGeometry(0.5,0),CYL5=new T.CylinderGeometry(0.5,0.5,
 const smoothG=g=>{g.userData.smooth=true;return g;};
 const SPH=smoothG(new T.SphereGeometry(0.5,12,8)),SPH_LO=smoothG(new T.SphereGeometry(0.5,8,6)),SPH_XS=smoothG(new T.SphereGeometry(0.5,6,4)),
   SCONE=smoothG(new T.ConeGeometry(0.5,1,16,1,true)),SCONE_LO=smoothG(new T.ConeGeometry(0.5,1,8,1,true)),STRUNK=smoothG(new T.CylinderGeometry(0.36,0.5,1,10,1,true)),SCYL=smoothG(new T.CylinderGeometry(0.5,0.5,1,10));
+/* mergeLite: while it's set, merge() swaps every shape it knows for its lightest twin (leaf cards to 8 triangles, spheres
+   and gems to 20-36 and specks like berries to 8, stems to five sides; only big blobs such as a crown keep a middling
+   sphere), for the light versions of things built from many small parts: crops (45-crops), wild trees and bushes (74-life) */
+let mergeLite=false;
 function lodGeo(p){const g=p.geo,big=Math.max(p.sx,p.sy,p.sz),rad=Math.max(p.sx,p.sz);
+  if(mergeLite){if(g===LEAF_CARD)return LEAF_CARD_LO;if(g===SPH||g===SPH_LO||g===SPH_XS)return big>0.5?SPH_LO:big<0.1?OCT:SPH_XS;/* (a berry: a speck) */
+    if(g===ICO2||g===ICO)return big>0.5?ICO:ICO0;if(g===SCONE)return SCONE_LO;
+    if(g===CYL12||g===CYL8||g===CYL6)return CYL5;if(g===CONE12||g===CONE8||g===CONE6)return CONE5;}
   if(g===SPH)return big<0.12?SPH_XS:big<0.35?SPH_LO:g;if(g===SPH_LO)return big<0.12?SPH_XS:g;
   if(g===ICO2)return big<0.13?ICO0:big<0.4?ICO:g;
   if(g===ICO)return big<0.13?ICO0:g;
@@ -6393,7 +6405,7 @@ function merge(parts){
     const e=_m.elements,q=_nm3.elements;_c.set(p.color);const grad=p.c2!==undefined;if(grad)cB.set(p.c2);
     for(let i=0;i<n;i++){const i3=i*3,x=P0[i3],y=P0[i3+1],z=P0[i3+2],j=(o+i)*3;
       pos[j]=e[0]*x+e[4]*y+e[8]*z+e[12];pos[j+1]=e[1]*x+e[5]*y+e[9]*z+e[13];pos[j+2]=e[2]*x+e[6]*y+e[10]*z+e[14];
-      const nx=N0[i3],ny=N0[i3+1],nz=N0[i3+2];let a=q[0]*nx+q[3]*ny+q[6]*nz,b=q[1]*nx+q[4]*ny+q[7]*nz,c=q[2]*nx+q[5]*ny+q[8]*nz;const l=Math.hypot(a,b,c)||1;
+      const nx=N0[i3],ny=N0[i3+1],nz=N0[i3+2];let a=q[0]*nx+q[3]*ny+q[6]*nz,b=q[1]*nx+q[4]*ny+q[7]*nz,c=q[2]*nx+q[5]*ny+q[8]*nz;const l=Math.sqrt(a*a+b*b+c*c)||1;
       nor[j]=a/l;nor[j+1]=b/l;nor[j+2]=c/l;
       if(grad){const t=r.ys[i];col[j]=cB.r+(_c.r-cB.r)*t;col[j+1]=cB.g+(_c.g-cB.g)*t;col[j+2]=cB.b+(_c.b-cB.b)*t;}else{col[j]=_c.r;col[j+1]=_c.g;col[j+2]=_c.b;}}
     o+=n;}
@@ -6883,8 +6895,10 @@ function farParts(parts){const out=[];for(const p of parts){if(p.lo==='drop')con
 function addVeg(isl,g,parts){if(!parts.length)return;
   // a frontier island (44b) is built out on the horizon: only its far version is made now, the rest when you come near (vegReal)
   if(isl.fr){const fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([null,null,fa,parts,g]);return;}
-  const hi=M(parts,leafMat),lo=M(lowParts(parts),leafMat),fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;lo.visible=false;g.add(hi,lo);if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([hi,lo,fa]);}
-function vegReal(isl,e){if(e[0])return;e[0]=M(e[3],leafMat);e[1]=M(lowParts(e[3]),leafMat);e[1].visible=false;e[4].add(e[0],e[1]);e[3]=null;isl.casters=null;isl.shadowOn=undefined;}
+  const hi=M(parts,leafMat),lo=liteM(lowParts(parts),leafMat),fp=farParts(parts),fa=fp.length?M(fp,leafMat):null;lo.visible=false;g.add(hi,lo);if(fa){fa.visible=false;fa.castShadow=false;g.add(fa);}(isl.veg||(isl.veg=[])).push([hi,lo,fa]);}
+// the light trees: fewer leaf cards (lowParts) and every small shape at its lightest (mergeLite)
+function liteM(parts,mat){mergeLite=true;try{return M(parts,mat);}finally{mergeLite=false;}}
+function vegReal(isl,e){if(e[0])return;e[0]=M(e[3],leafMat);e[1]=liteM(lowParts(e[3]),leafMat);e[1].visible=false;e[4].add(e[0],e[1]);e[3]=null;isl.casters=null;isl.shadowOn=undefined;}
 // beach tiles a palm can stand on: flat sand (not the slope into the water), spread a few tiles apart
 function palmSpots(isl,R,n,ok){const out=[];for(const [x,z] of shuffle(isl.sand.slice(),R)){if(out.length>=n)break;const c=SAND_CH.get(K(x,z));if(!c||Math.min(...c)<0.17||!ok(x,z))continue;
   if(out.some(([a,b])=>Math.abs(a-x)+Math.abs(b-z)<3))continue;out.push([x,z]);}return out;}
@@ -7278,11 +7292,18 @@ function islandBounds(isl){let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const k of isl.
   isl.bc={x:(x0+x1)/2,z:(z0+z1)/2,r:Math.hypot(x1-x0,z1-z0)/2+2};}
 // hide islands out of view; and only islands near the sun's shadow box (±18 around the camera target) render into the
 // shadow map, since shadows further out are never drawn: this halves the triangles when zoomed out
-function cullIslands(){const view=cam.dist+110;for(const isl of islands){const b=isl.bc;if(!b)continue;const d=Math.hypot(b.x-cam.tx,b.z-cam.tz)-b.r,vis=d<view;
+// is an island's bounding circle in the camera's view? Tested where the curved world really draws it (sunk by
+// curveDropFor), with room for its height and for the bend across its width. The island meshes are merged with
+// frustumCulled off, so without this every island within reach was drawn, even behind you or off the sides of a phone
+const _cFr=new T.Frustum(),_cSph=new T.Sphere(),_cFm=new T.Matrix4();let _cFrOn=false;/* (set once the first view is known) */
+function islandInView(b){const dx=b.x-camera.position.x,dz=b.z-camera.position.z,dist=Math.hypot(dx,dz);
+  _cSph.center.set(b.x,2-curveDropFor(camera,b.x,b.z),b.z);_cSph.radius=b.r*1.1+6+2*dist*b.r*CURVE;return _cFr.intersectsSphere(_cSph);}
+function cullIslands(){camera.updateMatrixWorld();_cFm.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);_cFr.setFromProjectionMatrix(_cFm);if(!_cFrOn){_cFrOn=true;lodAt=null;}
+  const view=cam.dist+110,tp=tilePx();for(const isl of islands){const b=isl.bc;if(!b)continue;const d=Math.hypot(b.x-cam.tx,b.z-cam.tz)-b.r,vis=d<view&&(d<32||islandInView(b));/* (one close enough to throw shadows into view stays) */
     // wild plants are small: only draw them when you're reasonably close (each one is its own mesh)
     if(isl.group)isl.group.visible=vis;if(isl.pgroup)isl.pgroup.visible=vis&&cam.dist+Math.max(0,d)<60;
     // level of detail for trees: light meshes when the island is far away or you're zoomed well out (with a little hysteresis)
-    const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>56:far>61,lv=low?(far>(isl.vegLv===2?92:100)?2:1):0;/* 0 full, 1 light, 2 horizon */
+    const far=cam.dist+Math.max(0,d),low=isl.lowOn?far>56||tp<34:far>61||tp<30,/* the light trees also whenever a tile is small on screen (the usual view): they look the same there */lv=low?(far>(isl.vegLv===2?92:100)?2:1):0;/* 0 full, 1 light, 2 horizon */
     if(isl.veg&&lv!==isl.vegLv){isl.vegLv=lv;for(const e of isl.veg){if(!e[0]&&(lv<2||!e[2]))vegReal(isl,e);const [hi,lo,fa]=e;if(!hi){if(fa)fa.visible=true;continue;}hi.visible=lv===0;if(lo)lo.visible=lv===1||lv===2&&!fa;if(fa)fa.visible=lv===2;}
       if(isl.tMesh)for(const k of ['underG','underS'])if(isl.tMesh[k])isl.tMesh[k].visible=lv<2;/* the little corner notches vanish on the horizon */
       if(isl.riverG)isl.riverG.children.forEach((o,i)=>{if(i>1)o.visible=lv<2;});/* keep the river's bed and water, drop its pebbles, reeds and lilies */}
@@ -7829,31 +7850,48 @@ let cropBatch={},cropDirty=false;
 // the batch materials for rare fruit: the variant's own look, swaying with the rest (colours shared, so the prismatic
 // shimmer and the moonlit glow still animate)
 const VBM={};for(const v in VMAT){const m=VMAT[v].clone();m.color=VMAT[v].color;m.emissive=VMAT[v].emissive;m.onBeforeCompile=cropBatchMat.onBeforeCompile;VBM[v]=m;}
+/* Two levels: the full crops, and light twins (mergeLite: 8-triangle leaf cards, low-poly fruit; about a quarter of the
+   triangles) for the usual view, where a crop is a speck a couple of dozen pixels across. Only the level in use is
+   built (cropLv, picked from how big a tile is on screen by cropLOD); crossing over rebuilds the batch once. */
+let cropLv=1;
+function cropLOD(){const px=tilePx(),lv=cropLv?(px>40?0:1):(px<34?1:0);if(lv!==cropLv){cropLv=lv;cropDirty=true;}}
 function flushCrops(){if(!cropDirty)return;cropDirty=false;
   for(const k in cropBatch){cropRoot.remove(cropBatch[k]);cropBatch[k].geometry.dispose();}cropBatch={};
-  for(const key of ['base',...Object.keys(VMAT)]){let n=0;for(const e of cropMeshes.values())if(e.bake&&e.bake[key])n+=e.bake[key].n;if(!n)continue;
+  const bk=cropLv?'bakeLo':'bake';
+  for(const key of ['base',...Object.keys(VMAT)]){let n=0;for(const e of cropMeshes.values())if(e[bk]&&e[bk][key])n+=e[bk][key].n;if(!n)continue;
     const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3),sw=new Float32Array(n*3);let o=0;
-    for(const e of cropMeshes.values()){const B=e.bake&&e.bake[key];if(!B)continue;pos.set(B.pos,o*3);nor.set(B.nor,o*3);col.set(B.col,o*3);for(let i=0;i<B.n;i++){sw[(o+i)*3]=B.px;sw[(o+i)*3+1]=B.py;sw[(o+i)*3+2]=B.ph;}o+=B.n;}
+    for(const e of cropMeshes.values()){const B=e[bk]&&e[bk][key];if(!B)continue;pos.set(B.pos,o*3);nor.set(B.nor,o*3);col.set(B.col,o*3);for(let i=0;i<B.n;i++){sw[(o+i)*3]=B.px;sw[(o+i)*3+1]=B.py;sw[(o+i)*3+2]=B.ph;}o+=B.n;}
     const bg=new T.BufferGeometry();bg.setAttribute('position',new T.BufferAttribute(pos,3));bg.setAttribute('normal',new T.BufferAttribute(nor,3));bg.setAttribute('color',new T.BufferAttribute(col,3));bg.setAttribute('aSway',new T.BufferAttribute(sw,3));
     const m=new T.Mesh(bg,key==='base'?cropBatchMat:VBM[key]);m.castShadow=m.receiveShadow=true;m.frustumCulled=false;cropRoot.add(m);cropBatch[key]=m;}}
 // move a crop group's plain meshes into its bake (world-space arrays) for the batch
-function bakeCrop(e){const g=e.g;g.updateMatrixWorld(true);e.bake={};
+function bakeCrop(e){e.bake=bakeGroup(e.g,e.g);if(e.gL){e.bakeLo=bakeGroup(e.gL,e.g);e.gL=null;}}
+const _cropNM=new T.Matrix3();
+function bakeGroup(g,at){g.updateMatrixWorld(true);const out={};
   // plain parts go in the main batch; a rare harvest's fruit (golden, crystal…) goes in its variant's batch
   for(const key of ['base',...Object.keys(VMAT)]){const mat=key==='base'?vcMat:VMAT[key];const parts=g.children.filter(c=>c.isMesh&&c.material===mat&&!c.geometry.index);if(!parts.length)continue;
     let n=0;for(const c of parts)n+=c.geometry.attributes.position.count;const pos=new Float32Array(n*3),nor=new Float32Array(n*3),col=new Float32Array(n*3);let o=0;
-    for(const c of parts){const G=c.geometry,g2=G.clone();g2.applyMatrix4(c.matrixWorld);pos.set(g2.attributes.position.array,o*3);nor.set(g2.attributes.normal.array,o*3);if(G.attributes.color)col.set(G.attributes.color.array,o*3);else col.fill(1,o*3,(o+G.attributes.position.count)*3);o+=G.attributes.position.count;g2.dispose();G.dispose();g.remove(c);}
-    e.bake[key]={n,pos,nor,col,px:g.position.x,py:g.position.y,ph:g.userData.ph};}}
+    for(const c of parts){const G=c.geometry,P=G.attributes.position.array,N=G.attributes.normal.array,m=c.matrixWorld.elements,cnt=G.attributes.position.count;_cropNM.getNormalMatrix(c.matrixWorld);const q=_cropNM.elements;
+      /* straight into the batch arrays (no geometry clone per part) */
+      for(let i=0,j=o*3;i<cnt*3;i+=3,j+=3){const x=P[i],y=P[i+1],z=P[i+2];pos[j]=m[0]*x+m[4]*y+m[8]*z+m[12];pos[j+1]=m[1]*x+m[5]*y+m[9]*z+m[13];pos[j+2]=m[2]*x+m[6]*y+m[10]*z+m[14];
+        const a=N[i],b=N[i+1],d=N[i+2];let nx=q[0]*a+q[3]*b+q[6]*d,ny=q[1]*a+q[4]*b+q[7]*d,nz=q[2]*a+q[5]*b+q[8]*d;const l=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;nor[j]=nx/l;nor[j+1]=ny/l;nor[j+2]=nz/l;}
+      if(G.attributes.color)col.set(G.attributes.color.array,o*3);else col.fill(1,o*3,(o+cnt)*3);o+=cnt;G.dispose();g.remove(c);}
+    out[key]={n,pos,nor,col,px:at.position.x,py:at.position.y,ph:at.userData.ph};}
+  return out;}
 function syncCrop(k){
   const old=cropMeshes.get(k);if(old){cropRoot.remove(old.g);old.g.traverse(o=>{if(o.geometry)o.geometry.dispose();});cropMeshes.delete(k);cropDirty=true;}
   const t=S.tiles[k];if(!t||!t.crop)return;const c=t.crop;
   const [x,z]=k.split(',').map(Number);const st=stageOf(c.p);
   const {leaf,fruit}=cropParts(c.t,st,x*73856093^z*19349663);const g=new T.Group();
+  const v=c.v&&c.v!=='normal'&&c.v!=='giant'?c.v:null,gL=new T.Group();
   if(leaf.length)g.add(M(leaf));
-  if(fruit.length){const v=c.v&&c.v!=='normal'&&c.v!=='giant'?c.v:null;g.add(M(fruit,v?VMAT[v]:vcMat));}
+  if(fruit.length)g.add(M(fruit,v?VMAT[v]:vcMat));
+  // and its light twin, placed the same (baked straight away, never added to the scene)
+  mergeLite=true;try{if(leaf.length)gL.add(M(leaf));if(fruit.length)gL.add(M(fruit,v?VMAT[v]:vcMat));}finally{mergeLite=false;}
   g.scale.setScalar(st===3&&c.v==='giant'?1.2:0.84);/* (a touch smaller than the tile, so the beds show between them) */
   g.position.set(x,topY(x,z)+0.06,z);g.rotation.y=CROPS[c.t].kind==='flower'?cam.yaw:hash(x,z)*6.28;
+  gL.position.copy(g.position);gL.rotation.copy(g.rotation);gL.scale.copy(g.scale);
   g.userData.tile={x,z};g.userData.ph=hash(z,x)*6;
-  cropRoot.add(g);const e={g,s:st,v:c.v};cropMeshes.set(k,e);bakeCrop(e);cropDirty=true;
+  cropRoot.add(g);const e={g,gL,s:st,v:c.v};cropMeshes.set(k,e);bakeCrop(e);cropDirty=true;
 }
 function syncAllCrops(){for(const k of [...cropMeshes.keys()])syncCrop(k);for(const k in S.tiles)syncCrop(k);flushCrops();}
 
@@ -10998,11 +11036,12 @@ function headMesh(m,g,col,bone='Head'){/* (col null: the mesh's own vertex colou
   const k='hair|'+col,me=new T.SkinnedMesh(g,charMats[k]||(charMats[k]=toon(col===null?{vertexColors:true,skinning:true}:{color:col,skinning:true})));me.bind(b.skeleton,b.bindMatrix);me.castShadow=true;me.receiveShadow=true;me.frustumCulled=false;b.parent.add(me);}
 // a character, ready to place: a group holding a clone of the loaded model (empty until it has loaded); a rigged one is
 // already in its idle pose (never a T-pose), with its CharacterAnimator in userData.anim
-function charModel(h){const g=new T.Group(),C=charDef(h.c),id=C.id,look=charLook(C,h);g.userData.char=look;
-  charLoad(id,s=>{const m=T.SkeletonUtils.clone(C.build==='sprig'?sprigScene(look.outfit|0):s.scene);/* (a Sprig's body is its outfit's) */m.scale.setScalar(s.scale);
+// fine: the wardrobe's close-up model (a Sprig's finer mesh); everywhere else gets the lighter one
+function charModel(h,fine=false){const g=new T.Group(),C=charDef(h.c),id=C.id,look=charLook(C,h);g.userData.char=look;
+  charLoad(id,s=>{const m=T.SkeletonUtils.clone(C.build==='sprig'?sprigScene(look.outfit|0,fine):s.scene);/* (a Sprig's body is its outfit's) */m.scale.setScalar(s.scale);
     m.traverse(o=>{if(o.isMesh){if(o.userData.dress)o.geometry=dressGeo(o.geometry,look,o.userData.dress);else if(s.atlas||o.userData.skin)o.material=charMat(id,look);o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;}});
     if(C.hair)addHair(m,look,s);if(C.build==='pip')headMesh(m,pipHair(look.style|0),look.hair>=0?OUTFIT.hair.cols[look.hair]:PIP_OWN.hair);
-    if(C.build==='sprig')sprigDress(m,look);g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds,s.emotes);});
+    if(C.build==='sprig')sprigDress(m,look,fine);g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds,s.emotes);});
   return g;}
 // idle when standing; when moving, walk blending into run with speed, each played at the rate that keeps its feet planted
 // (speeds: how far the walk and run clips carry it a second, in its own units; the Quaternius ones' by default). Swimming
@@ -11045,7 +11084,7 @@ const edScene=new T.Scene(),edCam=new T.PerspectiveCamera(30,1,0.05,60);
   const st=M([P(CYL12,0xe8dcc8,0,-0.05,0,0,0,0,1.5,0.1,1.5),P(CYL12,0xc8b498,0,-0.12,0,0,0,0,1.56,0.06,1.56),P(CYL12,0xe0b8a0,0,0.002,0,0,0,0,1.1,0.004,1.1)]);st.castShadow=false;edScene.add(st);
   for(let i=0;i<14;i++){const an=i/14*6.283,r=2.2+Math.random()*1.5;const m=M([P(SPH_LO,[0xf8c8d8,0xfff0b0,0xc8e8ff,0xd8f0c8][i%4],0,0,0,0,0,0,0.12,0.12,0.12)],lumMat);m.position.set(Math.cos(an)*r,0.3+Math.random()*1.6,Math.sin(an)*r-1.5);m.userData.ph=Math.random()*6;edScene.add(m);}}
 let edModel=null;
-function edRebuild(){if(edModel)edScene.remove(edModel);edModel=charModel(curHuman());edScene.add(edModel);}
+function edRebuild(){if(edModel)edScene.remove(edModel);edModel=charModel(curHuman(),true);edScene.add(edModel);}
 function openCharEd(){closeSheet&&closeSheet();if(chat)chatEnd();if(deco)decoClose();
   for(const c of CHARS)charLoad(c.id,()=>{if(charEd)renderCharEd();});/* every preset, so picking one swaps at once */
   if(S.look.sp!=='human'){S.look.prev=S.look.sp;S.look.sp='human';curHuman();applyLook();}
@@ -11388,8 +11427,12 @@ const SPRIG_FACES={
   m2:(hit,put,S)=>{const m=hit(0,-0.44,1);put(S,0x5a2a30,m.p.clone().addScaledVector(m.n,0.001),m.n,0.012,0.015,0.006);},
   m3:(hit,put,S)=>{const m=hit(0,-0.42,1),arc=new T.TorusGeometry(0.009,0.0035,6,12,Math.PI);for(const s of [-1,1])put(arc,0x6a3236,m.p.clone().addScaledVector(m.n,0.003).add(new T.Vector3(s*0.009,0.006,0)),m.n,1,1,1,Math.PI);}};
 const _sprigBody={};let _sprigClips=null;
-function sprigScene(outfit=0){if(_sprigBody[outfit])return _sprigBody[outfit];
-  return _sprigBody[outfit]=dressRig({bones:SPRIG_BONES,parts:sprigParts(outfit),dress:SPRIG_DRESS,lo:[-0.26,-0.02,-0.26],hi:[0.26,0.82,0.24],h:0.01,c:new T.Vector3(0,0.6,0),name:'Sprig',
+/* two meshes of every Sprig shape: fine (a 1 cm grid) for the wardrobe's close-up, and coarser for everywhere else, where
+   Sprig is a few dozen pixels tall: the body and hat at about a third of the triangles. The surface's normals come from the
+   shape itself, so the shading stays just as smooth; only the outline is a little less round, which no one can see at that size */
+const SPRIG_H={body:[0.02,0.01],hat:[0.017,0.01]};
+function sprigScene(outfit=0,fine=false){const key=outfit+(fine?'f':'');if(_sprigBody[key])return _sprigBody[key];
+  return _sprigBody[key]=dressRig({bones:SPRIG_BONES,parts:sprigParts(outfit),dress:SPRIG_DRESS,lo:[-0.26,-0.02,-0.26],hi:[0.26,0.82,0.24],h:SPRIG_H.body[fine?1:0],c:new T.Vector3(0,0.6,0),name:'Sprig',
     face:(hit,put,S)=>{const eyes={};// where the eyes sit (their bones) and a hint of blush; the eyes and mouth themselves are SPRIG_FACES
       for(const s of [-1,1]){eyes[s]=sprigEye(hit,s).p;const b=hit(s*0.56,-0.36,0.78);put(S,0xf2b4ae,b.p.clone().addScaledVector(b.n,-0.003),b.n,0.03,0.016,0.01);}
       return eyes;},faces:SPRIG_FACES});}
@@ -11406,9 +11449,9 @@ function sprigHatTracks(clips){const {rest,R,V3}=rigKit(SPRIG_BONES),H0=rest('Ha
 function sprigRig(){if(!_sprigClips)_sprigClips=sprigHatTracks(pipClips(SPRIG_BONES));
   const [idle,walk,run,spin,flip]=_sprigClips;return{scene:T.SkeletonUtils.clone(sprigScene(0)),clips:[idle,walk,run],emotes:{spin,flip},speeds:[0.55,3.2]};}
 // dressing a Sprig: its outfit's body (charModel picks it), its eyes and mouth shown, its hat and any extra
-function sprigDress(m,look){const ey='SprigFace_e'+(look.eyes|0),mo='SprigFace_m'+(look.mouth|0);
+function sprigDress(m,look,fine=false){const ey='SprigFace_e'+(look.eyes|0),mo='SprigFace_m'+(look.mouth|0);
   m.traverse(o=>{if(o.isMesh&&o.name.startsWith('SprigFace_'))o.visible=o.name===ey||o.name===mo;});
-  const st=look.style|0;headMesh(m,dressGeo(sprigHat(st),look,sprigHatDress(st)),null,'Hat');
+  const st=look.style|0;headMesh(m,dressGeo(sprigHat(st,fine),look,sprigHatDress(st)),null,'Hat');
   const x=look.extra|0;if(x>0&&SPRIG_ACC[x])headMesh(m,dressGeo(sprigAcc(x),look,sprigAccDress(x)),null,SPRIG_ACC[x].bone);}
 // the hats, each built once: a smooth shape painted in its colour (hair: the Hat tab), its accent (band) and a third
 // (gill: the mushroom's gills, a pompom, frog eyes, a vine)
@@ -11416,7 +11459,7 @@ const _sprigHats={},SPRIG_HAT_LABELS=['hair','band','gill'];
 function sprigHatDress(st){const H=SPRIG_HATS[st];return{labels:SPRIG_HAT_LABELS,own:{hair:H.own,band:H.band,gill:H.gill||0xf2e4cc},cols:{hair:SPRIG_HAT_COLS}};}
 // a shape turned about the z axis (round a centre), for leaves at an angle
 const sdRotZ=(f,a,c)=>{const ca=Math.cos(a),sa=Math.sin(a);return(x,y,z)=>{const dx=x-c.x,dy=y-c.y;return f(c.x+dx*ca+dy*sa,c.y-dx*sa+dy*ca,z);};};
-function sprigHat(st){if(_sprigHats[st])return _sprigHats[st];const V=(x,y,z)=>new T.Vector3(x,y,z),P=[];let k=0.03;
+function sprigHat(st,fine=false){const key=st+(fine?'f':'');if(_sprigHats[key])return _sprigHats[key];const V=(x,y,z)=>new T.Vector3(x,y,z),P=[];let k=0.03;
   if(st===0){/* the straw hat: a wide brim drooping at its edge, a tall crown leaning back to a soft point, a band */
     P.push({d:sdBrim(0.735,0.35,0.016,0.05),col:'hair'},
       {d:sdC(V(0,0.73,0),V(0,0.9,-0.025),0.168,0.105),col:'hair'},{d:sdC(V(0,0.9,-0.025),V(0.01,1.04,-0.1),0.105,0.014),col:'hair'},{d:sdRing(0.775,0.158,0.024),col:'band'});}
@@ -11448,7 +11491,7 @@ function sprigHat(st){if(_sprigHats[st])return _sprigHats[st];const V=(x,y,z)=>n
     const dome=sdE(V(0,0.74,0),V(0.232,0.19,0.25));P.push({d:(x,y,z)=>sdMax(dome(x,y,z),0.72-y,0.02),col:'hair'},{d:(x,y,z)=>sdBrim(0.722,0.29,0.015,0.015,1.08)(x,y,z-0.012),col:'hair'},
       {d:sdRing(0.758,0.226,0.02),col:'band'},{d:sdE(V(0,0.928,0),V(0.024,0.016,0.024)),col:'band'});k=0.02;}
   const f=(x,y,z)=>{let d=1e9;for(const p of P)d=smin(d,p.d(x,y,z),k);return d;};
-  return _sprigHats[st]=dressWeights(mochiSurface(f,[-0.42,0.6,-0.42],[0.42,1.12,0.42],0.01),P,SPRIG_HAT_LABELS);}
+  return _sprigHats[key]=dressWeights(mochiSurface(f,[-0.42,0.6,-0.42],[0.42,1.12,0.42],SPRIG_H.hat[fine?1:0]),P,SPRIG_HAT_LABELS);}
 
 // the extras, each built once: a smooth shape in your colour (acc) with a fixed accent (abit)
 const _sprigAcc={},SPRIG_ACC_LABELS=['acc','abit'];
@@ -12506,15 +12549,24 @@ function bushParts(v,bk){const s=season(),R=mulberry(hi(v,57,S.worldSeed|0)),p=[
     berryOne(bk||'berries',p,x,y,z,0.75,a);}/* each patch of berry bushes bears its own kind (berryKindAt, 77-forage) */
   if(s==='winter')p.push(PG(SPH_LO,0xffffff,0xdce8f2,0,0.52*sc,0,0,0,0,0.78*sc,0.3*sc,0.78*sc));
   return p;}
-function debrisGeo(k,v,lo,sub){const id=k+v+(k==='bush'?season()+(sub||''):'')+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo'+lo:''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v,sub);debGeo[id]=merge(lo==='far'?farParts(parts):lo?lowParts(parts):parts);}return debGeo[id];}
+// lo: the light twin (trees: fewer leaf cards; trees and bushes: every small shape at its lightest, mergeLite)
+function debrisGeo(k,v,lo,sub){const id=k+v+(k==='bush'?season()+(sub||''):'')+(lo&&k!=='tree'?'lo':'')+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo'+lo:''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v,sub);
+  if(!lo)debGeo[id]=merge(parts);else{mergeLite=true;try{debGeo[id]=merge(k==='tree'?lowParts(parts):parts);}finally{mergeLite=false;}}}return debGeo[id];}
+const triN=g=>(g.index?g.index.count:g.attributes.position.count)/3;
 // debris is drawn instanced: one batch per model variant (a handful of draw calls for the whole field); debMesh maps a tile to its slot
 // debris is drawn instanced, one batch per model variant; debMesh maps a tile to its slot. Only what's in range of the camera
 // is drawn (the range widens as you zoom out), and wild trees come in two builds: full detail near you, lighter further off.
 // debLOD re-sorts the slots as you move; an entry out of range has i=-1.
 const debGroups=[];let lodAt=null,lodT=0;
 const lodR=tree=>tree?24+cam.dist*1.0:14+cam.dist*0.7;/* trees stand out on the horizon; bushes and rocks are specks by then */
-function debLOD(gr){const R2=lodR(!!gr.lo)**2;let a=0,b=0,c=0,f=0;for(const e of gr.es){const d2=(e.x-cam.tx)**2+(e.z-cam.tz)**2;if(d2>R2){e.i=-1;e.fi=-1;continue;}
-  e.im=gr.lo&&d2>64?gr.lo:gr.hi;/* full detail within 8 tiles */e.i=e.im===gr.hi?a++:b++;e.fi=gr.fr&&fruitOn(e.d)?f++:-1;setDebrisMatrix(e,0);}gr.hi.count=a;gr.hi.visible=a>0;if(gr.lo){gr.lo.count=b;gr.lo.visible=b>0;}if(gr.fa){gr.fa.count=c;gr.fa.visible=c>0;}/* an empty batch still costs a draw call */if(gr.fr){gr.fr.count=f;gr.fr.visible=f>0;}}
+// within 8 tiles a tree or bush is drawn in full (a tree casting a real shadow); further out it's the light twin (a tree
+// with only its blob). At the usual zoom (a tile ~20 pixels across) the near ones use the light twin too, near trees in
+// their own shadow-casting batch (ln): at that size the two look the same, at a third to a half of the triangles
+// and only what's in view (cullIslands keeps the camera's frustum, _cFr): each slot is tested with room to spare, more
+// the further off it is, so turning the camera a little doesn't uncover gaps before the next pass (debrisLodDue)
+function debLOD(gr){const R2=lodR(gr.tree)**2,zo=gr.lo&&tilePx()<30,fr=_cFrOn;let a=0,b=0,n=0,f=0;for(const e of gr.es){const d2=(e.x-cam.tx)**2+(e.z-cam.tz)**2;if(d2>R2){e.i=-1;e.fi=-1;continue;}
+  if(fr){_cSph.center.set(e.x,e.y+1.5-curveDropFor(camera,e.x,e.z),e.z);_cSph.radius=3.5+Math.sqrt(d2)*0.16;if(!_cFr.intersectsSphere(_cSph)){e.i=-1;e.fi=-1;continue;}}
+  e.im=!gr.lo?gr.hi:d2>64?gr.lo:zo?gr.ln||gr.lo:gr.hi;e.i=e.im===gr.hi?a++:e.im===gr.lo?b++:n++;e.fi=gr.fr&&fruitOn(e.d)?f++:-1;setDebrisMatrix(e,0);}gr.hi.count=a;gr.hi.visible=a>0;if(gr.lo){gr.lo.count=b;gr.lo.visible=b>0;}if(gr.ln){gr.ln.count=n;gr.ln.visible=n>0;}/* an empty batch still costs a draw call */if(gr.fr){gr.fr.count=f;gr.fr.visible=f>0;}}
 // a fruit tree has fruit on it in season, on most trees, unless it was shaken off in the last few days
 function fruitOn(d){if(!d||d.k!=='tree'||!fruitSeason(d.v)||hash(d.x*2.1+1,d.z*1.7-2)>0.85)return false;const t=S.fruitT&&S.fruitT[K(d.x,d.z)];return t===undefined||S.day-t>=3;}
 function fruitGeo(v){const id='fruit'+v+season()+(S.worldSeed|0);return debGeo[id]||(debGeo[id]=merge(fruitParts(v)));}
@@ -12524,8 +12576,8 @@ function syncDebris(){const blobT=[],blobB=[];while(debrisRoot.children.length){
     const mk=lo=>{const im=new T.InstancedMesh(debrisGeo(k,list[0].v,lo,k==='bush'&&list[0].v===2?berryKindAt(list[0].x,list[0].z):''),tree?leafMat:k==='bush'?bushMat:vcMat,list.length);
       /* trees cast real shadows near you; bushes rely on their soft blob shadow */im.castShadow=tree?!lo:k!=='bush';im.receiveShadow=true;im.frustumCulled=false;
       /* white instance colours: vcMat's cached program may expect them (r128 shares one program per material) */for(let i=0;i<list.length;i++)im.setColorAt(i,_c.setHex(0xffffff));debrisRoot.add(im);return im;};
-    const gr={hi:mk(false),lo:tree?mk(true):null,fa:tree?mk('far'):null,es:list.map(d=>{const e={im:null,i:-1,fi:-1,d,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,vr:tree?treeVar(d):null,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};
-    gr.es.forEach(e=>e.gr=gr);if(tree&&fruitSeason(list[0].v)){gr.fr=new T.InstancedMesh(fruitGeo(list[0].v),fruitMat,list.length);gr.fr.frustumCulled=false;gr.fr.castShadow=true;debrisRoot.add(gr.fr);}
+    const gr={tree,hi:mk(false),lo:mk(true),ln:tree?mk(true):null,es:list.map(d=>{const e={im:null,i:-1,fi:-1,d,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,vr:tree?treeVar(d):null,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};
+    if(gr.ln)gr.ln.castShadow=true;/* a light twin that saves little (a twig) isn't worth its extra draw call */if(!tree&&triN(gr.lo.geometry)>triN(gr.hi.geometry)*0.8){debrisRoot.remove(gr.lo);gr.lo.dispose();gr.lo=null;}gr.es.forEach(e=>e.gr=gr);if(tree&&fruitSeason(list[0].v)){gr.fr=new T.InstancedMesh(fruitGeo(list[0].v),fruitMat,list.length);gr.fr.frustumCulled=false;gr.fr.castShadow=true;debrisRoot.add(gr.fr);}
     debLOD(gr);debGroups.push(gr);if(tree)blobT.push(...list);else if(k==='bush')blobB.push(...list);}
   addBlobs(blobT,0.62);addBlobs(blobB,0.42);/* one soft-shadow batch for all the trees, one for the bushes */}
 function setDebrisMatrix(e,tilt){if(e.i<0)return;const sc=e.sc||1,w=e.vr?e.vr.w:1,h=e.vr?e.vr.h:1;_e.set(0,e.r,tilt,'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(e.x,e.y,e.z),_q,_s.set(sc*w,sc*h,sc*w));e.im.setMatrixAt(e.i,_m);e.im.instanceMatrix.needsUpdate=true;
@@ -12551,10 +12603,11 @@ function hitDebris(d){walkTo(d.x,d.z);vil.hop=0.2;d.hp--;const m=debMesh.get(K(d
   floatText(d.x,1.1,d.z,got.join(' · '),'gold');SFX.pop();addXP(d.k==='boulder'||d.k==='stump'?2:1);burst(d.x,y,d.z,stone?0xc4c4d0:wood?0xb08050:0x8aba5a,14,1.8,0.08);
   if(!S.farmClear&&!S.debris.some(q=>farmQ(q.x,q.z)<1.05)){S.farmClear=1;SFX.level();toast('The whole farm field is cleared. Room for a proper harvest!','rare',ICON.sprout);}}
 let lifeLodAt=null;
-function lifeLOD(){const R2=(12+cam.dist*0.8)**2;for(const c of lifeRoot.children)c.visible=(c.position.x-cam.tx)**2+(c.position.z-cam.tz)**2<R2;
+function lifeLOD(){cropLOD();const R2=(12+cam.dist*0.8)**2;for(const c of lifeRoot.children)c.visible=(c.position.x-cam.tx)**2+(c.position.z-cam.tz)**2<R2;
   // crops: far ones aren't drawn, and only those near you cast shadows (each crop is its own little model, drawn twice with its shadow)
   const C2=(14+cam.dist*0.7)**2;for(const {g} of cropMeshes.values()){const d2=(g.position.x-cam.tx)**2+(g.position.z-cam.tz)**2,sh=d2<110;g.visible=d2<C2;if(g.userData.sh!==sh){g.userData.sh=sh;g.traverse(o=>{if(o.isMesh)o.castShadow=sh;});}}}
-function updateDebris(dt,tt){updateFallers(dt);if(!lifeLodAt||Math.hypot(cam.tx-lifeLodAt[0],cam.tz-lifeLodAt[1])>1.5||Math.abs(cam.dist-lifeLodAt[2])>3){lifeLodAt=[cam.tx,cam.tz,cam.dist];lifeLOD();}lodT-=dt;if(lodT<=0&&debGroups.length){lodT=0.4;if(!lodAt||Math.hypot(cam.tx-lodAt[0],cam.tz-lodAt[1])>1.5||Math.abs(cam.dist-lodAt[2])>3){lodAt=[cam.tx,cam.tz,cam.dist];for(const gr of debGroups)debLOD(gr);}}for(const e of debMesh.values())if(e.shake>0){e.shake=Math.max(0,e.shake-dt);setDebrisMatrix(e,e.shake>0?Math.sin(tt*60)*e.shake*0.35:0);}}
+const debrisLodDue=()=>!lodAt||Math.hypot(cam.tx-lodAt[0],cam.tz-lodAt[1])>1.5||Math.abs(cam.dist-lodAt[2])>3||Math.abs(cam.yaw-lodAt[3])>0.1||Math.abs(cam.pitch-lodAt[4])>0.08;
+function updateDebris(dt,tt){updateFallers(dt);if(!lifeLodAt||Math.hypot(cam.tx-lifeLodAt[0],cam.tz-lifeLodAt[1])>1.5||Math.abs(cam.dist-lifeLodAt[2])>3){lifeLodAt=[cam.tx,cam.tz,cam.dist];lifeLOD();}lodT-=dt;if(lodT<=0&&debGroups.length&&debrisLodDue()){lodT=0.12;lodAt=[cam.tx,cam.tz,cam.dist,cam.yaw,cam.pitch];for(const gr of debGroups)debLOD(gr);}for(const e of debMesh.values())if(e.shake>0){e.shake=Math.max(0,e.shake-dt);setDebrisMatrix(e,e.shake>0?Math.sin(tt*60)*e.shake*0.35:0);}}
 function syncLife(){syncDebris();
   while(lifeRoot.children.length){const c=lifeRoot.children[0];lifeRoot.remove(c);c.traverse(o=>{if(o.geometry&&!o.geometry.userData.keep)o.geometry.dispose();});}lifeLodAt=null;
   S.finds=S.finds.filter(f=>isLand(f.x,f.z)&&FINDS[f.k]);S.weeds=S.weeds.filter(w=>isLand(w.x,w.z)&&!S.tiles[K(w.x,w.z)]);
@@ -14041,9 +14094,9 @@ function reefPush(dt){const d=reefD(vil.x,vil.z),R0=reefR();if(d<=R0-0.3)return;
 function updateSwim(dt,tt){causU.uT.value=kelpU.uT.value=uwSurf.userData.u.uT.value=tt;
   if((reefDirty||reefJob)&&swim.on)reefStep(8);/* the coast changed while you swim: the reef catches up over a few frames */
   // get the reef ready as you come down to the shore, a few milliseconds a frame, so wading in never stalls
-  else if(reefJob)reefStep(5);
+  else if(reefJob)reefStep(3);
   else if(reefDirty&&!S.sea&&!inside&&(swim.prebT=(swim.prebT||0)-dt)<=0){swim.prebT=0.5;const rx=Math.round(vil.x),rz=Math.round(vil.z);let sea=false;
-    for(let dx=-6;dx<=6&&!sea;dx++)for(let dz=-6;dz<=6;dz++)if(isSeaT(landMap.get(K(rx+dx,rz+dz)))){sea=true;break;}if(sea&&islMap.get(K(rx,rz))===0)reefStep(5);}
+    for(let dx=-6;dx<=6&&!sea;dx++)for(let dz=-6;dz<=6;dz++)if(isSeaT(landMap.get(K(rx+dx,rz+dz)))){sea=true;break;}if(sea&&islMap.get(K(rx,rz))===0)reefStep(3);}
   const wet=!S.sea&&!inside&&reef&&swimmable(vil.x,vil.z)&&!isLand(Math.round(vil.x),Math.round(vil.z));
   if(wet&&!swim.on)enterWater();else if(!wet&&swim.on)leaveWater();
   if(!swim.on){swim.uw=Math.max(0,swim.uw-dt*3);applyUw(dt,tt);return;}

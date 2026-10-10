@@ -68,15 +68,24 @@ function bushParts(v,bk){const s=season(),R=mulberry(hi(v,57,S.worldSeed|0)),p=[
     berryOne(bk||'berries',p,x,y,z,0.75,a);}/* each patch of berry bushes bears its own kind (berryKindAt, 77-forage) */
   if(s==='winter')p.push(PG(SPH_LO,0xffffff,0xdce8f2,0,0.52*sc,0,0,0,0,0.78*sc,0.3*sc,0.78*sc));
   return p;}
-function debrisGeo(k,v,lo,sub){const id=k+v+(k==='bush'?season()+(sub||''):'')+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo'+lo:''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v,sub);debGeo[id]=merge(lo==='far'?farParts(parts):lo?lowParts(parts):parts);}return debGeo[id];}
+// lo: the light twin (trees: fewer leaf cards; trees and bushes: every small shape at its lightest, mergeLite)
+function debrisGeo(k,v,lo,sub){const id=k+v+(k==='bush'?season()+(sub||''):'')+(lo&&k!=='tree'?'lo':'')+(k==='tree'?wildTreeKinds().join()+(S.worldSeed|0)+(lo?'lo'+lo:''):'');if(!debGeo[id]){const parts=debrisParts(k,mulberry(hi(k.length,v,77)),v,sub);
+  if(!lo)debGeo[id]=merge(parts);else{mergeLite=true;try{debGeo[id]=merge(k==='tree'?lowParts(parts):parts);}finally{mergeLite=false;}}}return debGeo[id];}
+const triN=g=>(g.index?g.index.count:g.attributes.position.count)/3;
 // debris is drawn instanced: one batch per model variant (a handful of draw calls for the whole field); debMesh maps a tile to its slot
 // debris is drawn instanced, one batch per model variant; debMesh maps a tile to its slot. Only what's in range of the camera
 // is drawn (the range widens as you zoom out), and wild trees come in two builds: full detail near you, lighter further off.
 // debLOD re-sorts the slots as you move; an entry out of range has i=-1.
 const debGroups=[];let lodAt=null,lodT=0;
 const lodR=tree=>tree?24+cam.dist*1.0:14+cam.dist*0.7;/* trees stand out on the horizon; bushes and rocks are specks by then */
-function debLOD(gr){const R2=lodR(!!gr.lo)**2;let a=0,b=0,c=0,f=0;for(const e of gr.es){const d2=(e.x-cam.tx)**2+(e.z-cam.tz)**2;if(d2>R2){e.i=-1;e.fi=-1;continue;}
-  e.im=gr.lo&&d2>64?gr.lo:gr.hi;/* full detail within 8 tiles */e.i=e.im===gr.hi?a++:b++;e.fi=gr.fr&&fruitOn(e.d)?f++:-1;setDebrisMatrix(e,0);}gr.hi.count=a;gr.hi.visible=a>0;if(gr.lo){gr.lo.count=b;gr.lo.visible=b>0;}if(gr.fa){gr.fa.count=c;gr.fa.visible=c>0;}/* an empty batch still costs a draw call */if(gr.fr){gr.fr.count=f;gr.fr.visible=f>0;}}
+// within 8 tiles a tree or bush is drawn in full (a tree casting a real shadow); further out it's the light twin (a tree
+// with only its blob). At the usual zoom (a tile ~20 pixels across) the near ones use the light twin too, near trees in
+// their own shadow-casting batch (ln): at that size the two look the same, at a third to a half of the triangles
+// and only what's in view (cullIslands keeps the camera's frustum, _cFr): each slot is tested with room to spare, more
+// the further off it is, so turning the camera a little doesn't uncover gaps before the next pass (debrisLodDue)
+function debLOD(gr){const R2=lodR(gr.tree)**2,zo=gr.lo&&tilePx()<30,fr=_cFrOn;let a=0,b=0,n=0,f=0;for(const e of gr.es){const d2=(e.x-cam.tx)**2+(e.z-cam.tz)**2;if(d2>R2){e.i=-1;e.fi=-1;continue;}
+  if(fr){_cSph.center.set(e.x,e.y+1.5-curveDropFor(camera,e.x,e.z),e.z);_cSph.radius=3.5+Math.sqrt(d2)*0.16;if(!_cFr.intersectsSphere(_cSph)){e.i=-1;e.fi=-1;continue;}}
+  e.im=!gr.lo?gr.hi:d2>64?gr.lo:zo?gr.ln||gr.lo:gr.hi;e.i=e.im===gr.hi?a++:e.im===gr.lo?b++:n++;e.fi=gr.fr&&fruitOn(e.d)?f++:-1;setDebrisMatrix(e,0);}gr.hi.count=a;gr.hi.visible=a>0;if(gr.lo){gr.lo.count=b;gr.lo.visible=b>0;}if(gr.ln){gr.ln.count=n;gr.ln.visible=n>0;}/* an empty batch still costs a draw call */if(gr.fr){gr.fr.count=f;gr.fr.visible=f>0;}}
 // a fruit tree has fruit on it in season, on most trees, unless it was shaken off in the last few days
 function fruitOn(d){if(!d||d.k!=='tree'||!fruitSeason(d.v)||hash(d.x*2.1+1,d.z*1.7-2)>0.85)return false;const t=S.fruitT&&S.fruitT[K(d.x,d.z)];return t===undefined||S.day-t>=3;}
 function fruitGeo(v){const id='fruit'+v+season()+(S.worldSeed|0);return debGeo[id]||(debGeo[id]=merge(fruitParts(v)));}
@@ -86,8 +95,8 @@ function syncDebris(){const blobT=[],blobB=[];while(debrisRoot.children.length){
     const mk=lo=>{const im=new T.InstancedMesh(debrisGeo(k,list[0].v,lo,k==='bush'&&list[0].v===2?berryKindAt(list[0].x,list[0].z):''),tree?leafMat:k==='bush'?bushMat:vcMat,list.length);
       /* trees cast real shadows near you; bushes rely on their soft blob shadow */im.castShadow=tree?!lo:k!=='bush';im.receiveShadow=true;im.frustumCulled=false;
       /* white instance colours: vcMat's cached program may expect them (r128 shares one program per material) */for(let i=0;i<list.length;i++)im.setColorAt(i,_c.setHex(0xffffff));debrisRoot.add(im);return im;};
-    const gr={hi:mk(false),lo:tree?mk(true):null,fa:tree?mk('far'):null,es:list.map(d=>{const e={im:null,i:-1,fi:-1,d,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,vr:tree?treeVar(d):null,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};
-    gr.es.forEach(e=>e.gr=gr);if(tree&&fruitSeason(list[0].v)){gr.fr=new T.InstancedMesh(fruitGeo(list[0].v),fruitMat,list.length);gr.fr.frustumCulled=false;gr.fr.castShadow=true;debrisRoot.add(gr.fr);}
+    const gr={tree,hi:mk(false),lo:mk(true),ln:tree?mk(true):null,es:list.map(d=>{const e={im:null,i:-1,fi:-1,d,x:d.x,y:topY(d.x,d.z),z:d.z,r:d.r,sc:d.sc||1,vr:tree?treeVar(d):null,shake:0};debMesh.set(K(d.x,d.z),e);return e;})};
+    if(gr.ln)gr.ln.castShadow=true;/* a light twin that saves little (a twig) isn't worth its extra draw call */if(!tree&&triN(gr.lo.geometry)>triN(gr.hi.geometry)*0.8){debrisRoot.remove(gr.lo);gr.lo.dispose();gr.lo=null;}gr.es.forEach(e=>e.gr=gr);if(tree&&fruitSeason(list[0].v)){gr.fr=new T.InstancedMesh(fruitGeo(list[0].v),fruitMat,list.length);gr.fr.frustumCulled=false;gr.fr.castShadow=true;debrisRoot.add(gr.fr);}
     debLOD(gr);debGroups.push(gr);if(tree)blobT.push(...list);else if(k==='bush')blobB.push(...list);}
   addBlobs(blobT,0.62);addBlobs(blobB,0.42);/* one soft-shadow batch for all the trees, one for the bushes */}
 function setDebrisMatrix(e,tilt){if(e.i<0)return;const sc=e.sc||1,w=e.vr?e.vr.w:1,h=e.vr?e.vr.h:1;_e.set(0,e.r,tilt,'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(e.x,e.y,e.z),_q,_s.set(sc*w,sc*h,sc*w));e.im.setMatrixAt(e.i,_m);e.im.instanceMatrix.needsUpdate=true;
@@ -113,10 +122,11 @@ function hitDebris(d){walkTo(d.x,d.z);vil.hop=0.2;d.hp--;const m=debMesh.get(K(d
   floatText(d.x,1.1,d.z,got.join(' · '),'gold');SFX.pop();addXP(d.k==='boulder'||d.k==='stump'?2:1);burst(d.x,y,d.z,stone?0xc4c4d0:wood?0xb08050:0x8aba5a,14,1.8,0.08);
   if(!S.farmClear&&!S.debris.some(q=>farmQ(q.x,q.z)<1.05)){S.farmClear=1;SFX.level();toast('The whole farm field is cleared. Room for a proper harvest!','rare',ICON.sprout);}}
 let lifeLodAt=null;
-function lifeLOD(){const R2=(12+cam.dist*0.8)**2;for(const c of lifeRoot.children)c.visible=(c.position.x-cam.tx)**2+(c.position.z-cam.tz)**2<R2;
+function lifeLOD(){cropLOD();const R2=(12+cam.dist*0.8)**2;for(const c of lifeRoot.children)c.visible=(c.position.x-cam.tx)**2+(c.position.z-cam.tz)**2<R2;
   // crops: far ones aren't drawn, and only those near you cast shadows (each crop is its own little model, drawn twice with its shadow)
   const C2=(14+cam.dist*0.7)**2;for(const {g} of cropMeshes.values()){const d2=(g.position.x-cam.tx)**2+(g.position.z-cam.tz)**2,sh=d2<110;g.visible=d2<C2;if(g.userData.sh!==sh){g.userData.sh=sh;g.traverse(o=>{if(o.isMesh)o.castShadow=sh;});}}}
-function updateDebris(dt,tt){updateFallers(dt);if(!lifeLodAt||Math.hypot(cam.tx-lifeLodAt[0],cam.tz-lifeLodAt[1])>1.5||Math.abs(cam.dist-lifeLodAt[2])>3){lifeLodAt=[cam.tx,cam.tz,cam.dist];lifeLOD();}lodT-=dt;if(lodT<=0&&debGroups.length){lodT=0.4;if(!lodAt||Math.hypot(cam.tx-lodAt[0],cam.tz-lodAt[1])>1.5||Math.abs(cam.dist-lodAt[2])>3){lodAt=[cam.tx,cam.tz,cam.dist];for(const gr of debGroups)debLOD(gr);}}for(const e of debMesh.values())if(e.shake>0){e.shake=Math.max(0,e.shake-dt);setDebrisMatrix(e,e.shake>0?Math.sin(tt*60)*e.shake*0.35:0);}}
+const debrisLodDue=()=>!lodAt||Math.hypot(cam.tx-lodAt[0],cam.tz-lodAt[1])>1.5||Math.abs(cam.dist-lodAt[2])>3||Math.abs(cam.yaw-lodAt[3])>0.1||Math.abs(cam.pitch-lodAt[4])>0.08;
+function updateDebris(dt,tt){updateFallers(dt);if(!lifeLodAt||Math.hypot(cam.tx-lifeLodAt[0],cam.tz-lifeLodAt[1])>1.5||Math.abs(cam.dist-lifeLodAt[2])>3){lifeLodAt=[cam.tx,cam.tz,cam.dist];lifeLOD();}lodT-=dt;if(lodT<=0&&debGroups.length&&debrisLodDue()){lodT=0.12;lodAt=[cam.tx,cam.tz,cam.dist,cam.yaw,cam.pitch];for(const gr of debGroups)debLOD(gr);}for(const e of debMesh.values())if(e.shake>0){e.shake=Math.max(0,e.shake-dt);setDebrisMatrix(e,e.shake>0?Math.sin(tt*60)*e.shake*0.35:0);}}
 function syncLife(){syncDebris();
   while(lifeRoot.children.length){const c=lifeRoot.children[0];lifeRoot.remove(c);c.traverse(o=>{if(o.geometry&&!o.geometry.userData.keep)o.geometry.dispose();});}lifeLodAt=null;
   S.finds=S.finds.filter(f=>isLand(f.x,f.z)&&FINDS[f.k]);S.weeds=S.weeds.filter(w=>isLand(w.x,w.z)&&!S.tiles[K(w.x,w.z)]);

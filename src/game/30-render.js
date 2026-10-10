@@ -2,7 +2,9 @@
    Renderer, camera, post-process (pixelate + outline + dither)
    ========================================================= */
 const canvas=$('c');
-const renderer=new T.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
+// the screen itself only ever gets the post pass (a flat full-screen quad): it needs no depth or stencil buffer of its own,
+// which saves memory and bandwidth on phones (the scene renders into rt, which has its depth)
+const renderer=new T.WebGLRenderer({canvas,antialias:false,depth:false,stencil:false,powerPreference:'high-performance'});
 renderer.setPixelRatio(1);
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap; // soft-edged little shadows
 renderer.shadowMap.autoUpdate=false;let shadowFrame=0;/* the shadow map is redrawn every other frame (90-main): the sun barely moves, and it halves the cost of the shadow pass */
@@ -11,6 +13,9 @@ scene.fog=new T.Fog(0xbfe0ff,40,150);
 const NEAR=1.5,FAR=640;
 const camera=new T.PerspectiveCamera(2*Math.atan(Math.tan(18*Math.PI/180)/LENS)*180/Math.PI,1,NEAR,FAR);
 const camD=()=>cam.dist*LENS; // how far the camera really is from what it looks at (cam.dist is the zoom)
+// how many of the game's (big) pixels one tile spans where you're looking: what level-of-detail choices go by. About
+// 20 at the usual view on a phone or a computer, 80 or so zoomed right in
+const tilePx=()=>H/(2*camD()*Math.tan(camera.fov*Math.PI/360));
 let W=1,H=1,PX=2,rt=null;
 const post={scene:new T.Scene(),cam:new T.OrthographicCamera(-1,1,1,-1,0,1)};
 const postMat=new T.ShaderMaterial({
@@ -179,7 +184,14 @@ const ICO0=new T.IcosahedronGeometry(0.5,0),CYL5=new T.CylinderGeometry(0.5,0.5,
 const smoothG=g=>{g.userData.smooth=true;return g;};
 const SPH=smoothG(new T.SphereGeometry(0.5,12,8)),SPH_LO=smoothG(new T.SphereGeometry(0.5,8,6)),SPH_XS=smoothG(new T.SphereGeometry(0.5,6,4)),
   SCONE=smoothG(new T.ConeGeometry(0.5,1,16,1,true)),SCONE_LO=smoothG(new T.ConeGeometry(0.5,1,8,1,true)),STRUNK=smoothG(new T.CylinderGeometry(0.36,0.5,1,10,1,true)),SCYL=smoothG(new T.CylinderGeometry(0.5,0.5,1,10));
+/* mergeLite: while it's set, merge() swaps every shape it knows for its lightest twin (leaf cards to 8 triangles, spheres
+   and gems to 20-36 and specks like berries to 8, stems to five sides; only big blobs such as a crown keep a middling
+   sphere), for the light versions of things built from many small parts: crops (45-crops), wild trees and bushes (74-life) */
+let mergeLite=false;
 function lodGeo(p){const g=p.geo,big=Math.max(p.sx,p.sy,p.sz),rad=Math.max(p.sx,p.sz);
+  if(mergeLite){if(g===LEAF_CARD)return LEAF_CARD_LO;if(g===SPH||g===SPH_LO||g===SPH_XS)return big>0.5?SPH_LO:big<0.1?OCT:SPH_XS;/* (a berry: a speck) */
+    if(g===ICO2||g===ICO)return big>0.5?ICO:ICO0;if(g===SCONE)return SCONE_LO;
+    if(g===CYL12||g===CYL8||g===CYL6)return CYL5;if(g===CONE12||g===CONE8||g===CONE6)return CONE5;}
   if(g===SPH)return big<0.12?SPH_XS:big<0.35?SPH_LO:g;if(g===SPH_LO)return big<0.12?SPH_XS:g;
   if(g===ICO2)return big<0.13?ICO0:big<0.4?ICO:g;
   if(g===ICO)return big<0.13?ICO0:g;
@@ -207,7 +219,7 @@ function merge(parts){
     const e=_m.elements,q=_nm3.elements;_c.set(p.color);const grad=p.c2!==undefined;if(grad)cB.set(p.c2);
     for(let i=0;i<n;i++){const i3=i*3,x=P0[i3],y=P0[i3+1],z=P0[i3+2],j=(o+i)*3;
       pos[j]=e[0]*x+e[4]*y+e[8]*z+e[12];pos[j+1]=e[1]*x+e[5]*y+e[9]*z+e[13];pos[j+2]=e[2]*x+e[6]*y+e[10]*z+e[14];
-      const nx=N0[i3],ny=N0[i3+1],nz=N0[i3+2];let a=q[0]*nx+q[3]*ny+q[6]*nz,b=q[1]*nx+q[4]*ny+q[7]*nz,c=q[2]*nx+q[5]*ny+q[8]*nz;const l=Math.hypot(a,b,c)||1;
+      const nx=N0[i3],ny=N0[i3+1],nz=N0[i3+2];let a=q[0]*nx+q[3]*ny+q[6]*nz,b=q[1]*nx+q[4]*ny+q[7]*nz,c=q[2]*nx+q[5]*ny+q[8]*nz;const l=Math.sqrt(a*a+b*b+c*c)||1;
       nor[j]=a/l;nor[j+1]=b/l;nor[j+2]=c/l;
       if(grad){const t=r.ys[i];col[j]=cB.r+(_c.r-cB.r)*t;col[j+1]=cB.g+(_c.g-cB.g)*t;col[j+2]=cB.b+(_c.b-cB.b)*t;}else{col[j]=_c.r;col[j+1]=_c.g;col[j+2]=_c.b;}}
     o+=n;}

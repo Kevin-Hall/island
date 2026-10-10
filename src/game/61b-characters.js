@@ -132,11 +132,12 @@ function headMesh(m,g,col,bone='Head'){/* (col null: the mesh's own vertex colou
   const k='hair|'+col,me=new T.SkinnedMesh(g,charMats[k]||(charMats[k]=toon(col===null?{vertexColors:true,skinning:true}:{color:col,skinning:true})));me.bind(b.skeleton,b.bindMatrix);me.castShadow=true;me.receiveShadow=true;me.frustumCulled=false;b.parent.add(me);}
 // a character, ready to place: a group holding a clone of the loaded model (empty until it has loaded); a rigged one is
 // already in its idle pose (never a T-pose), with its CharacterAnimator in userData.anim
-function charModel(h){const g=new T.Group(),C=charDef(h.c),id=C.id,look=charLook(C,h);g.userData.char=look;
-  charLoad(id,s=>{const m=T.SkeletonUtils.clone(C.build==='sprig'?sprigScene(look.outfit|0):s.scene);/* (a Sprig's body is its outfit's) */m.scale.setScalar(s.scale);
+// fine: the wardrobe's close-up model (a Sprig's finer mesh); everywhere else gets the lighter one
+function charModel(h,fine=false){const g=new T.Group(),C=charDef(h.c),id=C.id,look=charLook(C,h);g.userData.char=look;
+  charLoad(id,s=>{const m=T.SkeletonUtils.clone(C.build==='sprig'?sprigScene(look.outfit|0,fine):s.scene);/* (a Sprig's body is its outfit's) */m.scale.setScalar(s.scale);
     m.traverse(o=>{if(o.isMesh){if(o.userData.dress)o.geometry=dressGeo(o.geometry,look,o.userData.dress);else if(s.atlas||o.userData.skin)o.material=charMat(id,look);o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;}});
     if(C.hair)addHair(m,look,s);if(C.build==='pip')headMesh(m,pipHair(look.style|0),look.hair>=0?OUTFIT.hair.cols[look.hair]:PIP_OWN.hair);
-    if(C.build==='sprig')sprigDress(m,look);g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds,s.emotes);});
+    if(C.build==='sprig')sprigDress(m,look,fine);g.add(m);if(s.clips.length)g.userData.anim=new CharacterAnimator(m,s.clips,s.scale,s.speeds,s.emotes);});
   return g;}
 // idle when standing; when moving, walk blending into run with speed, each played at the rate that keeps its feet planted
 // (speeds: how far the walk and run clips carry it a second, in its own units; the Quaternius ones' by default). Swimming
@@ -179,7 +180,7 @@ const edScene=new T.Scene(),edCam=new T.PerspectiveCamera(30,1,0.05,60);
   const st=M([P(CYL12,0xe8dcc8,0,-0.05,0,0,0,0,1.5,0.1,1.5),P(CYL12,0xc8b498,0,-0.12,0,0,0,0,1.56,0.06,1.56),P(CYL12,0xe0b8a0,0,0.002,0,0,0,0,1.1,0.004,1.1)]);st.castShadow=false;edScene.add(st);
   for(let i=0;i<14;i++){const an=i/14*6.283,r=2.2+Math.random()*1.5;const m=M([P(SPH_LO,[0xf8c8d8,0xfff0b0,0xc8e8ff,0xd8f0c8][i%4],0,0,0,0,0,0,0.12,0.12,0.12)],lumMat);m.position.set(Math.cos(an)*r,0.3+Math.random()*1.6,Math.sin(an)*r-1.5);m.userData.ph=Math.random()*6;edScene.add(m);}}
 let edModel=null;
-function edRebuild(){if(edModel)edScene.remove(edModel);edModel=charModel(curHuman());edScene.add(edModel);}
+function edRebuild(){if(edModel)edScene.remove(edModel);edModel=charModel(curHuman(),true);edScene.add(edModel);}
 function openCharEd(){closeSheet&&closeSheet();if(chat)chatEnd();if(deco)decoClose();
   for(const c of CHARS)charLoad(c.id,()=>{if(charEd)renderCharEd();});/* every preset, so picking one swaps at once */
   if(S.look.sp!=='human'){S.look.prev=S.look.sp;S.look.sp='human';curHuman();applyLook();}
